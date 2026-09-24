@@ -421,7 +421,10 @@ fun ShootingScreen(
                                                 pageState.shutterIndex,
                                                 onShutterForPage,
                                                 visibleCount = 3,
-                                                itemHeight = 34.dp,
+                                                // The filter wheels' own minimum, not a
+                                                // second literal that has to agree with it
+                                                // (FILTER-STACK-008).
+                                                itemHeight = WheelItemHeight,
                                                 accessibilityLabel = baseShutterCaption,
                                             )
                                         }

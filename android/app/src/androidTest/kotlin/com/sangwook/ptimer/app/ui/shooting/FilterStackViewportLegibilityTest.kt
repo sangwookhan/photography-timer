@@ -121,7 +121,23 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
          */
         private val Viewports = listOf(360.dp, 411.dp)
 
-        /** The default and the largest system "Font size" step. */
+        /**
+         * The system "Font size" steps these cases render at.
+         *
+         * KNOWN AND UNRESOLVED: the shipping app never renders above
+         * `MaxCappedFontScale` (1.3x) — `ShootingApp` wraps the whole
+         * shooting surface in `CappedFontScale`. This harness composes
+         * `ShootingScreen` directly rather than through `ShootingApp`,
+         * so anything above 1.3x here is a scale the app cannot reach.
+         * Those cases are kept because they are the only place the
+         * uncapped layout is visible at all, and because whether
+         * "every supported standard text size" means the OS's 2.0x or
+         * the app's effective 1.3x is with the spec owner: SHELL-020
+         * allows a cap on non-primary chrome but not on "primary
+         * readable content", which the wheel values are. Do not read a
+         * pass above 1.3x as proof about the shipping app, or a failure
+         * there as a shipping defect, until that is settled.
+         */
         private val Scales = listOf(1.0f, 2.0f)
 
         /** One wheel, the three-wheel composition with Plus, and the cap. */
@@ -321,14 +337,6 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         return matches.single()
     }
 
-    /**
-     * The laid-out line is wider than the box it was given — a digit cut
-     * off the side, which `maxLines = 1, softWrap = false` and no
-     * overflow do in silence.
-     */
-    private fun TextLayoutResult.overflowsHorizontally() =
-        getLineRight(0) - getLineLeft(0) > size.width + RoundingSlackPx
-
     private fun geometry(): String {
         val wheels = rendered.entries.joinToString(" | ") { (name, render) ->
             val label = render.label
@@ -412,7 +420,14 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     /**
      * FILTER-STACK-007 for every real wheel, at every viewport, locale
      * and supported text size: the persistent label and the numeric
-     * values stay whole, and the source and type cues stay drawn.
+     * values stay whole in BOTH axes, and the source and type cues stay
+     * drawn.
+     *
+     * The rows are asserted with `hasVisualOverflow` entire. That is
+     * only meaningful because the row height follows the rendered text
+     * metrics (`snapWheelItemHeight`); while it was a fixed 34dp, every
+     * wheel's line box outgrew its row at a raised font scale and the
+     * assertion had to be narrowed to width to say anything at all.
      */
     @Test
     fun everyWheelKeepsItsLabelValueAndCues() {
@@ -424,6 +439,26 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             case.wheelCount,
             filterWheels.size,
         )
+
+        // The Base Shutter column is measured with them: its row height
+        // is the one the filter wheels share (FILTER-STACK-008), so a
+        // row too short for its line shows up there first — its values
+        // are the widest text in the card.
+        rendered.forEach { (wheel, render) ->
+            val clipped = render.rows.filterValues { it.hasVisualOverflow }
+            assertTrue(
+                "$case: ${clipped.size} of `$wheel`'s numeric rows overflow their row: " +
+                    clipped.values.joinToString {
+                        "`${it.layoutInput.text.text}` needs " +
+                            "${(it.getLineRight(0) - it.getLineLeft(0)).toInt()}x" +
+                            "${(it.getLineBottom(0) - it.getLineTop(0)).toInt()}px in " +
+                            "${it.size.width}x${it.size.height}px"
+                    } +
+                    ". The rows are `maxLines = 1, softWrap = false` with no overflow, so a row " +
+                    "a pixel too small cuts the value in silence. ${geometry()}",
+                clipped.isEmpty(),
+            )
+        }
 
         filterWheels.forEach { wheel ->
             val render = rendered.getValue(wheel)
@@ -440,25 +475,6 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
                     "column and is cut — the mode word disappears and Record only becomes " +
                     "indistinguishable from Apply full value. ${geometry()}",
                 label.hasVisualOverflow.not(),
-            )
-
-            // Width only. The row box is a fixed 34dp tall at every font
-            // scale, so at 2x every wheel's line BOX — Base Shutter's
-            // included — is taller than its row and `hasVisualOverflow`
-            // is true of all of them; that is the wheel's item height,
-            // not the column allocation under test here, and the glyphs
-            // still draw inside the row. What a narrow column does is
-            // cut a digit off the side, in silence.
-            val clipped = render.rows.filterValues { it.overflowsHorizontally() }
-            assertTrue(
-                "$case: ${clipped.size} of `$wheel`'s numeric rows are cut at the side: " +
-                    clipped.values.joinToString {
-                        "`${it.layoutInput.text.text}` needs " +
-                            "${it.getLineRight(0) - it.getLineLeft(0)}px in ${it.size.width}px"
-                    } +
-                    ". The rows are `maxLines = 1, softWrap = false` with no overflow, so a column " +
-                    "a pixel too narrow cuts a digit off in silence. ${geometry()}",
-                clipped.isEmpty(),
             )
 
             val unrailed = render.rows.keys - render.railedRows

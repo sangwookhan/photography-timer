@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -129,6 +130,53 @@ internal interface WheelRenderProbe {
 internal val LocalWheelRenderProbe = staticCompositionLocalOf<WheelRenderProbe?> { null }
 
 /**
+ * The row height a [SnapWheel] uses for [minimum] at the current system
+ * font scale: [minimum], or the tallest line any of the wheel's row
+ * styles renders if that is taller.
+ *
+ * The wheels' row height used to be a fixed 34dp at every font scale.
+ * Every row's `Text` is measured against it, so a raised scale left the
+ * line box larger than the row it was laid out in, on the Base Shutter
+ * column as much as on the filter wheels. Measured at 360dp with three
+ * wheels, on the selected row (which renders one style step larger than
+ * its neighbours): Base Shutter's `1/30` took 111px of line in an 89px
+ * row and a filter wheel's `0` took 98px in 89px, both at the 89px the
+ * fixed 34dp gave them. FILTER-STACK-007 and the large-text rules in
+ * `cross-cutting/presentation.md` want the numeric value legible at
+ * every supported standard text size, so the row follows the metrics
+ * instead and the card grows. The same case now reports 111/111px and
+ * 98/98px: line box and row are equal.
+ *
+ * It measures EVERY style a row can take — centered or not, dense or
+ * not — rather than the one this wheel will use, so a dense filter
+ * wheel and the non-dense Base Shutter beside it always reserve the
+ * same height. FILTER-STACK-008's shared viewport, selection band and
+ * vertical touch center then hold by construction rather than by two
+ * call sites agreeing on a number. Callers that size a sibling to the
+ * viewport (the Plus control) resolve it through this function too.
+ */
+@Composable
+internal fun snapWheelItemHeight(minimum: Dp): Dp {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val typography = MaterialTheme.typography
+    val styles = listOf(
+        typography.titleMedium,
+        typography.bodyLarge,
+        typography.bodyMedium,
+        typography.bodySmall,
+    )
+    // One line of any of them is the same height whatever digits it
+    // holds, so a single probe character stands for every row.
+    val tallest: Int = styles.maxOf { style ->
+        measurer.measure(RowHeightProbe, style, maxLines = 1, softWrap = false).size.height
+    }
+    return maxOf(minimum, with(density) { tallest.toDp() })
+}
+
+private const val RowHeightProbe = "0"
+
+/**
  * Reusable snap wheel (the Android analogue of the iOS picker wheel; used for
  * base shutter, ND, and target shutter).
  *
@@ -146,6 +194,8 @@ fun SnapWheel(
     onSelectedIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
     visibleCount: Int = 5,
+    /** MINIMUM row height: [snapWheelItemHeight] grows it when the
+     *  system font scale makes a row's line taller than this. */
     itemHeight: Dp = 44.dp,
     edgeColor: Color = MaterialTheme.colorScheme.background,
     accessibilityLabel: String? = null,
@@ -182,6 +232,10 @@ fun SnapWheel(
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
     val renderProbe = LocalWheelRenderProbe.current
+    // Every measurement below uses the RESOLVED height, so a raised
+    // font scale grows the viewport, the rows, the rails, the snap
+    // grid and the overscroll threshold together.
+    val rowHeight = snapWheelItemHeight(itemHeight)
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -241,7 +295,7 @@ fun SnapWheel(
     var overscrollPx by remember { mutableFloatStateOf(0f) }
     val currentOnOverscrollRemoval by rememberUpdatedState(onOverscrollRemoval)
     val overscrollActive = overscrollRemovalEnabled && onOverscrollRemoval != null
-    val removalThresholdPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val removalThresholdPx = with(LocalDensity.current) { rowHeight.toPx() }
     val overscrollConnection = remember(removalThresholdPx) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -404,7 +458,7 @@ fun SnapWheel(
 
     Box(
         modifier = modifier
-            .height(itemHeight * visibleCount)
+            .height(rowHeight * visibleCount)
             .then(accessibilityModifier)
             .then(pressTrackingModifier)
             // Fence OUTSIDE the overscroll connection: the removal
@@ -418,7 +472,7 @@ fun SnapWheel(
             state = listState,
             flingBehavior = flingBehavior,
             horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(vertical = itemHeight * halfVisible),
+            contentPadding = PaddingValues(vertical = rowHeight * halfVisible),
             modifier = Modifier
                 .fillMaxSize()
                 // Damped live push-out while the wheel is pulled past zero.
@@ -433,7 +487,7 @@ fun SnapWheel(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(itemHeight),
+                        .height(rowHeight),
                     contentAlignment = Alignment.Center,
                 ) {
                     // Type-color rail inside the row's own bounds
@@ -446,7 +500,7 @@ fun SnapWheel(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
                                 .width(RowRailWidth)
-                                .height(itemHeight * RowRailHeightFraction)
+                                .height(rowHeight * RowRailHeightFraction)
                                 .background(
                                     color = railColor.copy(alpha = railColor.alpha * alpha),
                                     shape = RoundedCornerShape(RowRailWidth / 2),
@@ -501,7 +555,7 @@ fun SnapWheel(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
-                .height(itemHeight),
+                .height(rowHeight),
         ) {
             HorizontalDivider(modifier = Modifier.align(Alignment.TopCenter), color = boundColor)
             HorizontalDivider(modifier = Modifier.align(Alignment.BottomCenter), color = boundColor)

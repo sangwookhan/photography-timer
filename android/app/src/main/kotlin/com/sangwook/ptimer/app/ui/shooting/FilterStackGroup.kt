@@ -49,6 +49,7 @@ import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.ui.component.LocalWheelRenderProbe
 import com.sangwook.ptimer.ui.component.SnapWheel
+import com.sangwook.ptimer.ui.component.snapWheelItemHeight
 import com.sangwook.ptimer.ui.theme.FilterTypePalette
 import com.sangwook.ptimer.ui.theme.filterSetColor
 import com.sangwook.ptimer.ui.theme.filterTypePalette
@@ -57,7 +58,12 @@ import com.sangwook.ptimer.ui.theme.filterTypePalette
  *  four wheels keep usable value width). */
 internal val FilterWheelRowSpacing = 4.dp
 
-private val WheelItemHeight = 34.dp
+/**
+ * MINIMUM row height of every wheel in the card, the Base Shutter
+ * column included (`snapWheelItemHeight` grows it with the font scale,
+ * identically for both columns, so the shared axis holds).
+ */
+internal val WheelItemHeight = 34.dp
 private const val WheelVisibleCount = 3
 
 /**
@@ -156,7 +162,10 @@ internal fun FilterStackGroup(
                                 Spacer(Modifier.height(FilterWheelLabelRowHeight))
                                 FilterSourcePlusControl(
                                     plus = state.plus,
-                                    height = WheelItemHeight * WheelVisibleCount,
+                                    // Through the same resolver as the wheels,
+                                    // so a raised font scale does not leave the
+                                    // Plus control short of the viewport.
+                                    height = snapWheelItemHeight(WheelItemHeight) * WheelVisibleCount,
                                     onAdd = onAddFilterWheel,
                                     onManage = onManageFilterSets,
                                     onBrowsingChanged = { browsing = it },

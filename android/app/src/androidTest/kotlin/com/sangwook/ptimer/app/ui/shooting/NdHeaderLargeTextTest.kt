@@ -122,6 +122,16 @@ class NdHeaderLargeTextTest(private val case: Case) {
          * The system "Font size" steps the defect was measured across.
          * 1.15 is where the controls started shrinking and 1.3 is where
          * they disappeared.
+         *
+         * KNOWN AND UNRESOLVED: the shipping app never renders above
+         * `MaxCappedFontScale` (1.3x) — `ShootingApp` wraps the whole
+         * shooting surface in `CappedFontScale`, and this harness
+         * composes `ShootingScreen` directly rather than through it. The
+         * 1.5x and 2.0x cases are therefore scales the app cannot reach.
+         * Whether "every supported standard text size" means the OS's
+         * 2.0x or the app's effective 1.3x is with the spec owner, so
+         * those cases are kept but must not be read as evidence about
+         * the shipping app either way.
          */
         private val Scales = listOf(1.0f, 1.15f, 1.3f, 1.5f, 2.0f)
 

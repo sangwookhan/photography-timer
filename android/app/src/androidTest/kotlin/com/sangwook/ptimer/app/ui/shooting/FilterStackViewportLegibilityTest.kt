@@ -130,13 +130,22 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
          * `ShootingScreen` directly rather than through `ShootingApp`,
          * so anything above 1.3x here is a scale the app cannot reach.
          * Those cases are kept because they are the only place the
-         * uncapped layout is visible at all, and because whether
-         * "every supported standard text size" means the OS's 2.0x or
-         * the app's effective 1.3x is with the spec owner: SHELL-020
-         * allows a cap on non-primary chrome but not on "primary
-         * readable content", which the wheel values are. Do not read a
-         * pass above 1.3x as proof about the shipping app, or a failure
-         * there as a shipping defect, until that is settled.
+         * uncapped layout is visible at all.
+         *
+         * SETTLED by the accepted [SPEC-CONFLICT] of 2026-09-24:
+         * SHELL-020 allows a font-scale cap on non-primary chrome but
+         * not on primary readable content, which the wheel values, the
+         * Base Shutter value and the persistent labels are. So 2.0x is
+         * REQUIRED uncapped component coverage for primary content, and
+         * a failure at 2.0x blocks PR #67.
+         *
+         * A pass at 2.0x is component evidence only. It is not
+         * shipping-path evidence, because this harness composes
+         * `ShootingScreen` directly while `ShootingApp` wraps the whole
+         * shooting surface in `CappedFontScale` (`MaxCappedFontScale`,
+         * 1.3x). Correcting that cap is a separate Android Code PR,
+         * linked to #67 as a merge dependency; shipping-path evidence
+         * only exists once the two are verified combined.
          */
         private val Scales = listOf(1.0f, 2.0f)
 

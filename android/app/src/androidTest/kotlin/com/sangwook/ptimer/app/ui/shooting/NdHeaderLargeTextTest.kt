@@ -127,11 +127,23 @@ class NdHeaderLargeTextTest(private val case: Case) {
          * `MaxCappedFontScale` (1.3x) — `ShootingApp` wraps the whole
          * shooting surface in `CappedFontScale`, and this harness
          * composes `ShootingScreen` directly rather than through it. The
-         * 1.5x and 2.0x cases are therefore scales the app cannot reach.
-         * Whether "every supported standard text size" means the OS's
-         * 2.0x or the app's effective 1.3x is with the spec owner, so
-         * those cases are kept but must not be read as evidence about
-         * the shipping app either way.
+         * 1.5x and 2.0x cases are therefore scales the app cannot reach
+         * today.
+         *
+         * SETTLED by the accepted [SPEC-CONFLICT] of 2026-09-24:
+         * SHELL-020 allows a font-scale cap on non-primary chrome but
+         * not on primary readable content, which the wheel values, the
+         * Base Shutter value and the persistent labels are. So 2.0x is
+         * REQUIRED uncapped component coverage for primary content, and
+         * a failure at 2.0x blocks PR #67.
+         *
+         * A pass at 2.0x is component evidence only. It is not
+         * shipping-path evidence, because this harness composes
+         * `ShootingScreen` directly while `ShootingApp` wraps the whole
+         * shooting surface in `CappedFontScale` (`MaxCappedFontScale`,
+         * 1.3x). Correcting that cap is a separate Android Code PR,
+         * linked to #67 as a merge dependency; shipping-path evidence
+         * only exists once the two are verified combined.
          */
         private val Scales = listOf(1.0f, 1.15f, 1.3f, 1.5f, 2.0f)
 

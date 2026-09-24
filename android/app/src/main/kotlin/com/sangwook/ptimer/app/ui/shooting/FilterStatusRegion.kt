@@ -31,10 +31,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,10 +49,47 @@ import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.ui.theme.filterSetColor
 import kotlinx.coroutines.delay
 
-/** Height reserved for the one-row status region (FILTER-STACK-008). The
- *  region never grows or disappears, so a state change cannot move a
- *  picker or its touch center. */
+/** MINIMUM height reserved for the one-row status region
+ *  (FILTER-STACK-008). The region never grows or disappears with its
+ *  CONTENT, so a state change cannot move a picker or its touch center;
+ *  [filterStatusRegionHeight] grows it with the text size. */
 internal val FilterStatusRegionHeight = 20.dp
+
+/**
+ * The height the one-row status region reserves at the current system
+ * font scale: [FilterStatusRegionHeight], or the line its own style
+ * renders if that is taller.
+ *
+ * FILTER-STACK-008 reserves "only the height required for one visual
+ * row plus its normal vertical padding" and asks for the total to stay
+ * "visible and untruncated". A fixed 20dp is the height that row needs
+ * at the DEFAULT text size only. Measured on the rendered screen at
+ * 360dp in Korean, the row's line box was 55px at 1.3x and 84px at 2.0x
+ * inside 52px of reserved height — and the card clips its content, so
+ * the total lost the bottom of its glyphs. The row follows its rendered
+ * metrics instead and the card grows, exactly as the wheels' rows
+ * already do.
+ *
+ * Measured from a fixed probe rather than from the text on screen, so
+ * the height stays the same in every state and in every language: the
+ * probe carries a Latin ascender, a Latin descender and a Hangul
+ * syllable, which is the tallest line either shipping language can put
+ * in this row.
+ */
+@Composable
+internal fun filterStatusRegionHeight(): Dp {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val line = measurer.measure(
+        StatusRowProbe,
+        MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        softWrap = false,
+    ).size.height
+    return maxOf(FilterStatusRegionHeight, with(density) { line.toDp() })
+}
+
+private const val StatusRowProbe = "Agp합" 
 
 /** Diameter of a Filter Set source-color cue. */
 private val SourceCueSize = 8.dp
@@ -113,7 +152,7 @@ internal fun FilterStatusRegion(
     }
 
     val shown = visible
-    Box(modifier = modifier.fillMaxWidth().height(FilterStatusRegionHeight)) {
+    Box(modifier = modifier.fillMaxWidth().height(filterStatusRegionHeight())) {
         if (shown == null) return@Box
         val leading = leadingContent(shown.leading, notationMode)
         Row(

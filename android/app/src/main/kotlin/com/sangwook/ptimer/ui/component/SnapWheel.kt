@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -77,7 +78,7 @@ import kotlin.math.roundToInt
 private const val OverscrollVisualDamping = 0.5f
 
 /** Width of the per-row type-color rail (FILTER-STACK-007). */
-private val RowRailWidth = 3.dp
+internal val RowRailWidth = 3.dp
 
 /** Share of the row height the rail spans, so it reads as a mark on the
  *  row rather than a divider between rows. */
@@ -202,7 +203,7 @@ private fun TextStyle.scaledBy(scale: Float): TextStyle = if (scale == 1f) {
 }
 
 /** Granularity of [sharedWheelNumericScale]'s ladder. */
-private const val NumericScaleStep = 0.05f
+private const val NumericScaleStep = 0.02f
 
 /**
  * One numeric column of a wheel row: the width it was given, every
@@ -212,7 +213,22 @@ internal data class WheelNumericColumn(
     val width: Dp,
     val labels: List<String>,
     val dense: Boolean,
+    /** Whether this column's rows carry a type rail. @see RowRailWidth */
+    val railed: Boolean = false,
 )
+
+/**
+ * The leading lane [RowRailWidth] takes out of a railed row.
+ *
+ * The rail is drawn at the row's leading edge and the value is centered
+ * in what is left, so the two can be adjacent but never overlap. They
+ * used to share the whole row: with a narrow value that was invisible,
+ * but at four wheels with the widest legal content the rail was painted
+ * over the leading digit — FILTER-STACK-007 asks for the numeric value
+ * AND the type rail to stay legible, which two marks in one place are
+ * not.
+ */
+private fun WheelNumericColumn.railLane(): Dp = if (railed) RowRailWidth else 0.dp
 
 /** The styles a row of this column is drawn with. @see SnapWheel */
 private fun WheelNumericColumn.rowStyles(typography: Typography): List<TextStyle> = if (dense) {
@@ -275,8 +291,11 @@ internal fun sharedWheelNumericScale(columns: List<WheelNumericColumn>): Float {
         val binding = columns.flatMap { column ->
             // Rounded the way `Modifier.width` rounds it, so the room
             // measured against is the constraint the row will actually
-            // be given rather than a fraction of a pixel more.
-            val room = with(density) { column.width.roundToPx().toFloat() }
+            // be given rather than a fraction of a pixel more — less the
+            // rail's lane, which the value does not get to use.
+            val room = with(density) {
+                (column.width.roundToPx() - column.railLane().roundToPx()).toFloat()
+            }
             column.rowStyles(typography).mapNotNull { style ->
                 val widest = column.labels.maxByOrNull { width(it, style) }
                 widest?.let { Triple(it, style, room) }
@@ -631,6 +650,14 @@ fun SnapWheel(
                     }
                     Text(
                         text = label,
+                        // The rail's lane, reserved whether or not THIS
+                        // row draws one, so the value does not shift as
+                        // the wheel scrolls past a row without a rail.
+                        modifier = if (rowRailColor != null) {
+                            Modifier.padding(start = RowRailWidth)
+                        } else {
+                            Modifier
+                        },
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,

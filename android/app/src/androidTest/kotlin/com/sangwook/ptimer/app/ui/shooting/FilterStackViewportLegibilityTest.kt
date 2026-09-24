@@ -49,6 +49,7 @@ import com.sangwook.ptimer.core.exposure.GndCalculationMode
 import com.sangwook.ptimer.core.exposure.NDNotationFormatter
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.ui.component.LocalWheelRenderProbe
+import com.sangwook.ptimer.ui.component.RowRailWidth
 import com.sangwook.ptimer.ui.component.WheelRenderProbe
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 import org.junit.Assert.assertEquals
@@ -600,6 +601,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             val rows = render.rows.entries.joinToString(",") { (index, row) ->
                 "$index:`${row.layoutInput.text.text}`" +
                     "${row.lineWidth().toInt()}w/${row.size.width}" +
+                    "c${row.layoutInput.constraints.maxWidth}" +
                     "h${row.lineHeight().toInt()}/${row.size.height}px" +
                     (if (row.hasVisualOverflow) " OVERFLOW" else "") +
                     (if (index in render.railedRows) "" else " NORAIL")
@@ -635,9 +637,62 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         render()
         assertTheWidestContentIsOnScreen()
         assertLabelsValuesAndCues()
+        assertTheRailHasItsOwnLane()
         assertOneNumericSizeAcrossTheRow()
         assertNotationOptionsOwnFullTouchTargets()
         assertSharedBaseShutterAxis()
+    }
+
+    /**
+     * FILTER-STACK-007 wants the numeric value AND the type rail legible,
+     * and two marks drawn in one place are not. So the rail's leading
+     * lane is reserved out of the row and the value is centered in what
+     * remains.
+     *
+     * Asserted on the CONSTRAINT each row was measured with, not on the
+     * text that came out of it: a narrow value clears the rail wherever
+     * it is drawn, so only the reserved lane says the widest one will
+     * too. Found by looking at a rendered capture of the worst content —
+     * the rail was painted over the leading digit of `30 2/3`, and every
+     * assertion in this suite was green, because a value that fills its
+     * row still overflows nothing.
+     */
+    private fun assertTheRailHasItsOwnLane() {
+        val filters = liveWheels().filterKeys { it != baseShutterTitle }
+        val rooms = filters.mapValues { (_, render) ->
+            render.rows.values.map { it.layoutInput.constraints.maxWidth }.distinct()
+        }
+        rooms.forEach { (wheel, widths) ->
+            assertEquals(
+                "$case: `$wheel` measured its rows against ${widths.size} different widths " +
+                    "($widths), so they cannot share one numeric column. ${geometry()}",
+                1,
+                widths.size,
+            )
+        }
+        val room = rooms.values.map { it.single() }.distinct()
+        assertEquals(
+            "$case: the wheels divide the column evenly, so every one of them should measure its " +
+                "value against the same width; they used $room. ${geometry()}",
+            1,
+            room.size,
+        )
+
+        // The Standard wheel carries a rail and no source cue, so its
+        // persistent label row IS the whole column, and the difference
+        // between the two is the lane exactly. Every other wheel shares
+        // that width by the assertion above.
+        val standard = filters.entries.firstOrNull { !it.value.hasSourceCue } ?: return
+        val label = standard.value.label ?: return
+        assertEquals(
+            "$case: `${standard.key}` measured its value against ${room.single()}px inside a " +
+                "${label.layoutInput.constraints.maxWidth}px column, leaving the type rail no " +
+                "lane of its own. The rail is drawn at the row's leading edge, so a value that " +
+                "fills the row is painted under it — which a rendered capture of `30 2/3` at four " +
+                "wheels showed while every other assertion here was green. ${geometry()}",
+            with(composedDensity) { RowRailWidth.roundToPx() },
+            label.layoutInput.constraints.maxWidth - room.single(),
+        )
     }
 
     /**

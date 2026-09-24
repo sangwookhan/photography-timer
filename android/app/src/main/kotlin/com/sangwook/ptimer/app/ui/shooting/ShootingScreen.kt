@@ -798,11 +798,19 @@ private fun numericColumns(
     split: NdCardColumnSplit,
 ): List<WheelNumericColumn> = buildList {
     val dense = isDenseFilterWheelRow(state.filterWheels.size)
-    add(WheelNumericColumn(split.shutterWidth, state.shutterLabels, dense))
+    // Base Shutter draws no type rail, so its value has the whole column.
+    add(WheelNumericColumn(split.shutterWidth, state.shutterLabels, dense, railed = false))
     if (state.filterWheels.isEmpty()) return@buildList
     val wheelWidth = filterWheelWidth(split.ndWidth, state.filterWheels.size, state.plus.isVisible)
     state.filterWheels.forEach { wheel ->
-        add(WheelNumericColumn(wheelWidth, wheel.rows.map { it.compactValueText }, dense))
+        add(
+            WheelNumericColumn(
+                width = wheelWidth,
+                labels = wheel.rows.map { it.compactValueText },
+                dense = dense,
+                railed = true,
+            ),
+        )
     }
 }
 

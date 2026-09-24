@@ -285,10 +285,13 @@ TalkBack on the emulator.
 - `com.sangwook.ptimer.app.vm.FilterWheelPresenterTest.unavailableRowsCarryTheirReason`
 - `com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest.a moving wheel outranks the idle summary`
 - `com.sangwook.ptimer.app.ui.shooting.FilterStackInteractionTest.refusedSettle_returnsTheViewportToTheCommittedRow` — at rest the viewport shows the committed row
+- `com.sangwook.ptimer.app.ui.shooting.FilterStackViewportLegibilityTest.theStackStaysLegibleWithItsWidestContent` — 180 cases: two viewports, two locales, three text sizes, one/three/four wheels, three notations, two seedings. Every wheel seeded to the widest row it can legally hold, then the persistent label, numeric value, source cue and type rail measured on the rendered screen: no overflow in either axis, the rail with a lane of its own, one numeric size across the whole row, and the shared vertical axis with Base Shutter
+- `com.sangwook.ptimer.app.ui.shooting.FilterWheelLabelLegibilityTest` — the persistent label's shrink-to-fit, measured
+- `com.sangwook.ptimer.app.ui.shooting.NdHeaderLargeTextTest` — the header band and its controls at large text
 
-Manual only: the rendered visual quietness (centered value size, per-row
-type rail, persistent label) during touch, drag, and inertial settling.
-Verify on the emulator.
+Manual only: the visual quietness of a wheel DURING touch, drag, and
+inertial settling. The suites above measure the rendered result at rest;
+the motion itself is still eyeballed on the emulator.
 
 ### FILTER-STACK-008 — one stable status region, leading summary and trailing total
 
@@ -302,6 +305,7 @@ Verify on the emulator.
 - `com.sangwook.ptimer.app.ui.shooting.FilterStatusRegionLayoutTest.movingContent_putsTheRowDetailLeadingAndTheTotalTrailing`
 - `com.sangwook.ptimer.app.ui.shooting.FilterStatusRegionLayoutTest.rejectionContent_putsTheReasonLeadingAndTheTotalTrailing`
 - `com.sangwook.ptimer.app.ui.shooting.FilterStatusRegionLayoutTest.anOverflowingSummaryYieldsSpaceWhileTheTotalKeepsItsFullWidth`
+- `com.sangwook.ptimer.app.ui.shooting.FilterStatusRegionTextSizeTest.theRegionReservesTheRowItsOwnTextNeeds` — the region reserves the height one visual row needs at every supported text size, in both shipping languages, so the total is never clipped
 
 Manual only:
 

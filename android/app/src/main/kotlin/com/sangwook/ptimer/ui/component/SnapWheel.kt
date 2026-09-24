@@ -22,6 +22,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +46,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -55,12 +57,14 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import com.sangwook.ptimer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -150,13 +154,13 @@ internal val LocalWheelRenderProbe = staticCompositionLocalOf<WheelRenderProbe?>
  * It measures EVERY style a row can take — centered or not, dense or
  * not — rather than the one this wheel will use, so a dense filter
  * wheel and the non-dense Base Shutter beside it always reserve the
- * same height. FILTER-STACK-008's shared viewport, selection band and
+ * same height. FILTER-STACK-007's shared viewport, selection band and
  * vertical touch center then hold by construction rather than by two
  * call sites agreeing on a number. Callers that size a sibling to the
  * viewport (the Plus control) resolve it through this function too.
  */
 @Composable
-internal fun snapWheelItemHeight(minimum: Dp): Dp {
+internal fun snapWheelItemHeight(minimum: Dp, numericScale: Float = 1f): Dp {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val typography = MaterialTheme.typography
@@ -169,12 +173,127 @@ internal fun snapWheelItemHeight(minimum: Dp): Dp {
     // One line of any of them is the same height whatever digits it
     // holds, so a single probe character stands for every row.
     val tallest: Int = styles.maxOf { style ->
-        measurer.measure(RowHeightProbe, style, maxLines = 1, softWrap = false).size.height
+        measurer.measure(
+            RowHeightProbe,
+            style.scaledBy(numericScale),
+            maxLines = 1,
+            softWrap = false,
+        ).size.height
     }
     return maxOf(minimum, with(density) { tallest.toDp() })
 }
 
 private const val RowHeightProbe = "0"
+
+/**
+ * [this] rendered [scale] times as large: the size, and with it the
+ * line height and the tracking, so a shrunk value keeps the
+ * proportions of the style it came from instead of a smaller face
+ * spaced out for a larger one.
+ */
+private fun TextStyle.scaledBy(scale: Float): TextStyle = if (scale == 1f) {
+    this
+} else {
+    copy(
+        fontSize = fontSize * scale,
+        lineHeight = if (lineHeight.isSpecified) lineHeight * scale else lineHeight,
+        letterSpacing = if (letterSpacing.isSpecified) letterSpacing * scale else letterSpacing,
+    )
+}
+
+/** Granularity of [sharedWheelNumericScale]'s ladder. */
+private const val NumericScaleStep = 0.05f
+
+/**
+ * One numeric column of a wheel row: the width it was given, every
+ * value it can show, and whether it renders dense.
+ */
+internal data class WheelNumericColumn(
+    val width: Dp,
+    val labels: List<String>,
+    val dense: Boolean,
+)
+
+/** The styles a row of this column is drawn with. @see SnapWheel */
+private fun WheelNumericColumn.rowStyles(typography: Typography): List<TextStyle> = if (dense) {
+    listOf(typography.bodyMedium, typography.bodySmall)
+} else {
+    listOf(typography.titleMedium, typography.bodyLarge)
+}
+
+/**
+ * The ONE numeric text size every column in [columns] renders at,
+ * expressed as a scale of the style each row already uses: `1f` when
+ * every column's widest value fits the width it was given, and
+ * otherwise the largest step down at which they all do.
+ *
+ * The wheel rows are `maxLines = 1, softWrap = false` with no overflow,
+ * so a column a pixel too narrow cuts the value in silence. Once the
+ * text size is raised, the widest legal value stops fitting the column
+ * a four-wheel stack leaves: measured on the rendered screen, `30 2/3`
+ * needed 149px of a 126px column at 360dp and 1.3x, and `1017M` 217px
+ * of 141px at 411dp and 2.0x — where `128M`, straight off the shipping
+ * Standard ladder, needed 178px of the same 141px. FILTER-STACK-007
+ * wants that value legible without ellipsis at every supported text
+ * size, so it shrinks to fit rather than being cut.
+ *
+ * Resolved for the WHOLE row at once, which is the part that matters:
+ * FILTER-STACK-007 requires "Base Shutter and every filter wheel in the
+ * row" to "use the same numeric size", so a per-column fit — each wheel
+ * shrinking only as far as its own content needs — would satisfy the
+ * clipping rule by breaking the shared-size one. The row narrows
+ * together or not at all.
+ *
+ * The floor is the scale that exactly undoes the system font scale:
+ * shrink-to-fit only ever gives back width that a raised text size took,
+ * and the value never renders smaller than it does at the default size.
+ * If a column cannot hold its widest value even at the default size,
+ * that is a column too narrow to ship rather than something to shrink
+ * out of, and the layout suites say so.
+ */
+@Composable
+internal fun sharedWheelNumericScale(columns: List<WheelNumericColumn>): Float {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val typography = MaterialTheme.typography
+    return remember(columns, density, layoutDirection, typography) {
+        fun width(text: String, style: TextStyle) = measurer.measure(
+            text,
+            style,
+            maxLines = 1,
+            softWrap = false,
+            density = density,
+            layoutDirection = layoutDirection,
+        ).size.width.toFloat()
+
+        // The binding case of every (column, style): the value that
+        // takes the most width, and the room it has to fit into.
+        // Ranking two strings by width does not depend on the size they
+        // are drawn at, so the widest at 1x is the widest at every
+        // scale and the ladder below re-measures only these.
+        val binding = columns.flatMap { column ->
+            // Rounded the way `Modifier.width` rounds it, so the room
+            // measured against is the constraint the row will actually
+            // be given rather than a fraction of a pixel more.
+            val room = with(density) { column.width.roundToPx().toFloat() }
+            column.rowStyles(typography).mapNotNull { style ->
+                val widest = column.labels.maxByOrNull { width(it, style) }
+                widest?.let { Triple(it, style, room) }
+            }
+        }
+
+        fun fits(scale: Float) = binding.all { (text, style, room) ->
+            width(text, style.scaledBy(scale)) <= room
+        }
+
+        val floor = (1f / density.fontScale).coerceAtMost(1f)
+        generateSequence(1f) { it - NumericScaleStep }
+            .takeWhile { it > floor }
+            .firstOrNull(::fits)
+            ?: floor
+    }
+}
 
 /**
  * Reusable snap wheel (the Android analogue of the iOS picker wheel; used for
@@ -228,6 +347,9 @@ fun SnapWheel(
     /** Overrides the default `labels[selectedIndex]` state description
      *  (FILTER-A11Y-005). */
     accessibilityValue: String? = null,
+    /** Scale of the numeric rows' own text size, shared by every wheel
+     *  in the row (FILTER-STACK-007). @see sharedWheelNumericScale */
+    numericScale: Float = 1f,
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -235,7 +357,7 @@ fun SnapWheel(
     // Every measurement below uses the RESOLVED height, so a raised
     // font scale grows the viewport, the rows, the rails, the snap
     // grid and the overscroll threshold together.
-    val rowHeight = snapWheelItemHeight(itemHeight)
+    val rowHeight = snapWheelItemHeight(itemHeight, numericScale)
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -517,7 +639,7 @@ fun SnapWheel(
                             isCenter -> MaterialTheme.typography.titleMedium
                             dense -> MaterialTheme.typography.bodySmall
                             else -> MaterialTheme.typography.bodyLarge
-                        },
+                        }.scaledBy(numericScale),
                         color = LocalContentColor.current.copy(alpha = alpha),
                         // The rows are inside the wheel's cleared semantics,
                         // so only the laid-out text can show a silent clip.

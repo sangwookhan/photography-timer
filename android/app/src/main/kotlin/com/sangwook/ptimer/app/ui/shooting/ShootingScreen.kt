@@ -85,6 +85,8 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
+import com.sangwook.ptimer.ui.component.WheelNumericColumn
+import com.sangwook.ptimer.ui.component.sharedWheelNumericScale
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
@@ -365,12 +367,19 @@ fun ShootingScreen(
                                     wheelCount = pageState.filterWheels.size,
                                     plusVisible = pageState.plus.isVisible,
                                 )
+                                // FILTER-STACK-007's "same numeric
+                                // size": one scale for the whole row,
+                                // resolved here because this is the
+                                // only place that knows both columns
+                                // before either of them renders.
+                                val numericScale =
+                                    sharedWheelNumericScale(numericColumns(pageState, split))
                                 // Three rows, not two columns: a caption band,
                                 // the notation/management band, then the picker
                                 // band. Whatever height the first two take is
                                 // the height BOTH columns reserve, so the
                                 // pickers start on one line without anyone
-                                // measuring anyone (FILTER-STACK-008).
+                                // measuring anyone (FILTER-STACK-007).
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(modifier = Modifier.fillMaxWidth()) {
                                         // No fixed height: the caption has no
@@ -423,13 +432,16 @@ fun ShootingScreen(
                                                 visibleCount = 3,
                                                 // The filter wheels' own minimum, not a
                                                 // second literal that has to agree with it
-                                                // (FILTER-STACK-008).
+                                                // (FILTER-STACK-007).
                                                 itemHeight = WheelItemHeight,
                                                 accessibilityLabel = baseShutterCaption,
+                                                numericScale = numericScale,
                                             )
                                         }
                                         Spacer(Modifier.width(NdColumnGutter))
-                                        Box(modifier = Modifier.width(split.ndWidth)) { wheels() }
+                                        Box(modifier = Modifier.width(split.ndWidth)) {
+                                            wheels(numericScale)
+                                        }
                                     }
                                 }
                             }
@@ -754,6 +766,30 @@ private fun ndCardColumnSplit(
     }.coerceIn(0.dp, available)
 
     return NdCardColumnSplit(shutterWidth, ndWidth = available - shutterWidth)
+}
+
+/**
+ * The card's numeric columns in the order they sit: the Base Shutter
+ * column at the width [split] gave it, then every filter wheel at the
+ * width they divide between them.
+ *
+ * The row renders all of them at one shared numeric size
+ * (FILTER-STACK-007), and that size has to be resolved before the first
+ * of them lays itself out — so the widths come from the same two
+ * functions the columns are then built with, rather than from a second
+ * copy of the arithmetic.
+ */
+private fun numericColumns(
+    state: CalculatorUiState,
+    split: NdCardColumnSplit,
+): List<WheelNumericColumn> = buildList {
+    add(WheelNumericColumn(split.shutterWidth, state.shutterLabels, dense = false))
+    if (state.filterWheels.isEmpty()) return@buildList
+    val wheelWidth = filterWheelWidth(split.ndWidth, state.filterWheels.size, state.plus.isVisible)
+    val dense = isDenseFilterWheelRow(state.filterWheels.size)
+    state.filterWheels.forEach { wheel ->
+        add(WheelNumericColumn(wheelWidth, wheel.rows.map { it.compactValueText }, dense))
+    }
 }
 
 /**

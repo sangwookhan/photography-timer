@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import android.content.res.Configuration
+import android.graphics.Paint
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
@@ -27,20 +28,25 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.persistence.PersistenceWriter
+import com.sangwook.ptimer.app.ui.MaxCappedFontScale
 import com.sangwook.ptimer.app.vm.CalculatorController
 import com.sangwook.ptimer.app.vm.FilterInventoryModel
+import com.sangwook.ptimer.app.vm.FilterRowTypeCategory
+import com.sangwook.ptimer.app.vm.FilterWheelPresenter
+import com.sangwook.ptimer.app.vm.FilterWheelRowUiState
+import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
+import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemBehavior
 import com.sangwook.ptimer.core.exposure.FilterRegisteredValue
-import com.sangwook.ptimer.core.exposure.FilterRowChoice
-import com.sangwook.ptimer.core.exposure.FilterRowSelection
 import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
-import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
+import com.sangwook.ptimer.core.exposure.NDNotationFormatter
+import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.ui.component.LocalWheelRenderProbe
 import com.sangwook.ptimer.ui.component.WheelRenderProbe
 import com.sangwook.ptimer.ui.theme.PTimerTheme
@@ -53,8 +59,8 @@ import org.junit.runners.Parameterized
 import java.util.Locale
 
 /**
- * PTIMER-221, the two gaps `NdHeaderLargeTextTest` reported rather than
- * closed.
+ * PTIMER-221 FILTER-STACK-007 / FILTER-A11Y-002 / SHELL-030, across the
+ * card's whole viewport matrix.
  *
  * `SHELL-030`: "Primary shooting/timer action controls and ND notation
  * controls provide a comfortably tappable interactive area, independent
@@ -66,13 +72,39 @@ import java.util.Locale
  * actual wheels with Plus and four actual wheels, the persistent
  * type/mode label, numeric value, source cue, and type rail shall remain
  * legible without ellipsis at the default and every supported standard
- * text size." `FILTER-STACK-008`: every filter wheel's "picker viewport
- * top and bottom, selected-row band, selected-value baseline, and
- * vertical touch center shall align with" the Base Shutter column's.
- * `FILTER-A11Y-002` carries both under the large-text rules. The
- * previous suite verified the header and the Base Shutter column at
- * 360dp and 2x, but not the wheels beside them — which is where the
- * width that the header gave up actually went.
+ * text size." The same contract also holds the row together: every
+ * filter wheel's "picker viewport top and bottom, selected-row band,
+ * selected-value baseline, and vertical touch center shall align with"
+ * the Base Shutter column's, and "Base Shutter and every filter wheel in
+ * the row shall use the same numeric size".
+ *
+ * ## The content under test is derived, not chosen
+ *
+ * A wheel showing `0` proves nothing about a 47dp column. So every wheel
+ * is seeded to the WIDEST row it can legally hold, and the widest is
+ * derived by walking the legal value domain through the shipping
+ * formatters rather than by naming a value:
+ *
+ * - [widestStops] walks every canonical stops value a wheel can carry —
+ *   the shipping ladder of `ND-001` plus the decimal registrations
+ *   `FILTER-ITEM-004` admits ("finite, greater than 0, and no greater
+ *   than 30 stops") — through [NDNotationFormatter], and takes the
+ *   widest rendering for the case's notation. Because the decimal
+ *   registrations are in the domain, the formatter's reserved
+ *   mixed-fraction branch is in the ranking too, which is where its
+ *   widest output actually lives in `Stops`.
+ * - [widestCplLoss] does the same over the exposure-loss choices
+ *   `FILTER-CPL-002` admits, through [FilterWheelPresenter.decimalStopsValue]
+ *   — CPL bypasses the notation setting.
+ * - The per-wheel seeding then picks, from the rows the controller
+ *   itself reports AVAILABLE, the one whose value is widest. Availability
+ *   matters: the 30-stop cap is what bounds the widest SIMULTANEOUS
+ *   content, and a GND Record-only row is how four wheels can each
+ *   display a 30-stop value while contributing almost nothing.
+ *
+ * [assertTheWidestContentIsOnScreen] then asserts the seeding
+ * actually achieved that, so the fixture cannot quietly degrade back to
+ * narrow digits.
  *
  * ## What is asserted, and why in this form
  *
@@ -92,22 +124,48 @@ import java.util.Locale
  * its own (FILTER-A11Y-001), so a semantics assertion cannot see a
  * silent clip — `FilterWheelLabelLegibilityTest` already measures the
  * laid-out text for this reason, and this suite does the same against
- * the real screen instead of a width harness.
+ * the real screen instead of a width harness. `hasVisualOverflow` covers
+ * BOTH axes: the row height follows the rendered metrics
+ * (`snapWheelItemHeight`), so a line box taller than its row is a defect
+ * here rather than a fact of life.
  */
 @RunWith(Parameterized::class)
 class FilterStackViewportLegibilityTest(private val case: Case) {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    /** One (viewport, locale, font scale, wheel count) rendering. */
+    /**
+     * How the stack is seeded. Both fill every wheel with the widest row
+     * it can legally take; they differ in which rows are eligible.
+     */
+    enum class Seeding {
+        /**
+         * The widest available row of any kind. The real worst case: it
+         * finds the GND Record-only rows, which display a 30-stop value
+         * on every wheel at once because they contribute zero.
+         */
+        widest,
+
+        /**
+         * The widest available row of the type assigned to each wheel,
+         * cycling GND / Fixed / CPL / Empty, so Fixed, CPL, GND and
+         * Empty are all on screen together where the wheel count allows.
+         */
+        typeSpread,
+    }
+
+    /** One (viewport, locale, font scale, wheel count, notation, seeding). */
     data class Case(
         val viewport: Dp,
         val locale: Locale,
         val fontScale: Float,
         val wheelCount: Int,
+        val notation: NDNotationMode,
+        val seeding: Seeding,
     ) {
         override fun toString() =
-            "${viewport.value.toInt()}dp ${locale.toLanguageTag()} ${fontScale}x ${wheelCount}w"
+            "${viewport.value.toInt()}dp ${locale.toLanguageTag()} ${fontScale}x ${wheelCount}w " +
+                "${notation.name.lowercase()} ${seeding.name}"
     }
 
     companion object {
@@ -122,15 +180,16 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         private val Viewports = listOf(360.dp, 411.dp)
 
         /**
-         * The system "Font size" steps these cases render at.
+         * Default, the app's own cap, and the largest system "Font size"
+         * step.
          *
-         * KNOWN AND UNRESOLVED: the shipping app never renders above
-         * `MaxCappedFontScale` (1.3x) — `ShootingApp` wraps the whole
-         * shooting surface in `CappedFontScale`. This harness composes
-         * `ShootingScreen` directly rather than through `ShootingApp`,
-         * so anything above 1.3x here is a scale the app cannot reach.
-         * Those cases are kept because they are the only place the
-         * uncapped layout is visible at all.
+         * [MaxCappedFontScale] is the scale the shipping app actually
+         * reaches: `ShootingApp` wraps the whole shooting surface in
+         * `CappedFontScale`, so however far the system slider is pushed,
+         * 1.3x is the largest scale the screen renders at today. This
+         * harness composes `ShootingScreen` directly rather than through
+         * `ShootingApp`, so it is also the only place the uncapped
+         * layout above that is visible at all.
          *
          * SETTLED by the accepted [SPEC-CONFLICT] of 2026-09-24:
          * SHELL-020 allows a font-scale cap on non-primary chrome but
@@ -147,7 +206,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
          * linked to #67 as a merge dependency; shipping-path evidence
          * only exists once the two are verified combined.
          */
-        private val Scales = listOf(1.0f, 2.0f)
+        private val Scales = listOf(1.0f, MaxCappedFontScale, 2.0f)
 
         /** One wheel, the three-wheel composition with Plus, and the cap. */
         private val WheelCounts = listOf(1, 3, 4)
@@ -162,12 +221,71 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
          */
         private const val SetName = "Lee holder"
 
+        /**
+         * Ranks candidate renderings with the platform's default
+         * typeface. Only the ORDER is used, and the order of two strings
+         * in one typeface does not depend on the size they are drawn at;
+         * every assertion below measures the real laid-out text instead.
+         */
+        private val rankingPaint = Paint().apply { textSize = 100f }
+
+        private fun rank(text: String): Float = rankingPaint.measureText(text)
+
+        /**
+         * Every canonical stops value a wheel can legally carry: the
+         * shipping ladder (`ND-001`) and the decimal registrations
+         * `FILTER-ITEM-004` admits, sampled finely enough to visit every
+         * branch of the formatter — whole stop, commercial preset, and
+         * the mixed-fraction path a decimal falls into.
+         */
+        private val legalStops: List<Double> by lazy {
+            val cap = ExposureScale.MAXIMUM_WHOLE_ND_STOPS
+            val sampled = (1..cap * 100).map { it / 100.0 } + listOf(6.6, 7.6, 16.6)
+            sampled.filter { FilterRegisteredValue(it, FilterValueUnit.stops).canonicalStops != null }
+        }
+
+        /**
+         * The canonical stops value whose rendering is widest in [mode],
+         * and that rendering. Derived from the formatter over the whole
+         * legal domain — never named here.
+         *
+         * Digits are tabular, so many renderings tie on width; ties go
+         * to the LARGEST stops value, which is also the one that puts
+         * the most pressure on the other legality bound, the 30-stop
+         * cap.
+         */
+        private val widestStops: Map<NDNotationMode, Pair<Double, String>> by lazy {
+            NDNotationMode.entries.associateWith { mode ->
+                legalStops
+                    .map { it to NDNotationFormatter.display(it, mode).value }
+                    .maxWith(compareBy({ rank(it.second) }, { it.first }))
+            }
+        }
+
+        /** The same, over the exposure-loss choices `FILTER-CPL-002` admits. */
+        private val widestCplLoss: Pair<Double, String> by lazy {
+            (1..99).map { it / 10.0 }
+                .filter { CplExposureLossChoices.isValidChoice(it) }
+                .map { it to FilterWheelPresenter.decimalStopsValue(it) }
+                .maxWith(compareBy({ rank(it.second) }, { it.first }))
+        }
+
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases(): List<Array<Any>> = Viewports.flatMap { viewport ->
             listOf(Locale.US, Locale.KOREA).flatMap { locale ->
                 Scales.flatMap { scale ->
-                    WheelCounts.map { wheels -> arrayOf<Any>(Case(viewport, locale, scale, wheels)) }
+                    WheelCounts.flatMap { wheels ->
+                        NDNotationMode.entries.flatMap { notation ->
+                            // One wheel has no second type to spread
+                            // onto, so the two seedings coincide there.
+                            val seedings =
+                                if (wheels == 1) listOf(Seeding.widest) else Seeding.entries
+                            seedings.map { seeding ->
+                                arrayOf<Any>(Case(viewport, locale, scale, wheels, notation, seeding))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -221,27 +339,32 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         }
     }
 
+    private lateinit var controller: CalculatorController
+
     /**
-     * A stack of [wheelCount] actual wheels. Every wheel past the first
-     * comes from a Filter Set, so it carries a source cue, and one of
-     * them sits on its GND row in Apply full value mode — `GND FULL` is
-     * the widest persistent label the stack can produce.
+     * A Filter Set holding, for this case's notation, an item of every
+     * behavior kind at its own widest legal value — four GND items, so a
+     * four-wheel stack can put the widest value on every wheel at once
+     * (three of them Record-only, which is how that stays under the
+     * 30-stop cap).
      */
-    private fun stack(wheelCount: Int): CalculatorController {
-        val soft = FilterItem(
-            "Lee soft GND",
-            FilterItemBehavior.Gnd(FilterRegisteredValue(3.0, FilterValueUnit.stops)),
-        )
-        val lee = FilterSet(
-            SetName,
-            FilterSetColor.blue,
-            listOf(
-                soft,
-                FilterItem("Lee ND 3", FilterItemBehavior.Fixed(FilterRegisteredValue(3.0, FilterValueUnit.stops))),
-                FilterItem("Lee ND 6", FilterItemBehavior.Fixed(FilterRegisteredValue(6.0, FilterValueUnit.stops))),
-            ),
-        )
-        val controller = CalculatorController(
+    private fun buildStack(): CalculatorController {
+        val (widestValue, _) = widestStops.getValue(case.notation)
+        val registered = FilterRegisteredValue(widestValue, FilterValueUnit.stops)
+        val items = buildList {
+            repeat(4) { add(FilterItem("Lee GND ${it + 1}", FilterItemBehavior.Gnd(registered))) }
+            add(FilterItem("Lee ND", FilterItemBehavior.Fixed(registered)))
+            add(
+                FilterItem(
+                    "Lee CPL",
+                    FilterItemBehavior.Cpl(
+                        CplExposureLossChoices(listOf(widestCplLoss.first, 1.0, 2.0)),
+                    ),
+                ),
+            )
+        }
+        val lee = FilterSet(SetName, FilterSetColor.blue, items)
+        val built = CalculatorController(
             films = emptyList(),
             onStart = { _, _ -> },
             inventoryModel = FilterInventoryModel(
@@ -249,32 +372,91 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
                 persistenceWriter = PersistenceWriter { it() },
             ),
         )
-        repeat(wheelCount - 1) { controller.addFilterWheel(FilterSource.FilterSet(lee.id)) }
-        if (wheelCount > 1) {
-            val target = FilterWheelSelection.Item(
-                FilterRowSelection(soft.id, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
-            )
-            val wheel = controller.state.value.filterWheels
-                .first { candidate -> candidate.rows.any { it.selection == target } }
-            controller.setNdWheelActive(wheel.id, true)
-            controller.setNdWheelValue(wheel.id, wheel.rows.indexOfFirst { it.selection == target })
-            controller.setNdWheelActive(wheel.id, false)
-            val committed = controller.state.value.filterWheels.first { it.id == wheel.id }
-            require(committed.rows[committed.committedIndex].selection == target) {
-                "the GND Apply full value row did not commit; `GND FULL` is not under test"
+        built.setNotationMode(case.notation)
+        // The widest base-shutter label sits at the head of the ladder,
+        // so the column renders it rather than a three-character one.
+        built.setShutterIndex(ExposureScale.oneThirdStopShutterCameraLabels.indices.maxBy {
+            rank(ExposureScale.oneThirdStopShutterCameraLabels[it])
+        })
+        repeat(case.wheelCount - 1) { built.addFilterWheel(FilterSource.FilterSet(lee.id)) }
+        require(built.state.value.filterWheels.size == case.wheelCount) {
+            "expected ${case.wheelCount} wheels, got ${built.state.value.filterWheels.size}"
+        }
+        return built
+    }
+
+    /** The row types [Seeding.typeSpread] cycles across the wheels. */
+    private val spreadTypes = listOf(
+        FilterRowTypeCategory.gnd,
+        FilterRowTypeCategory.nd,
+        FilterRowTypeCategory.cpl,
+        FilterRowTypeCategory.empty,
+    )
+
+    /**
+     * Eligible rows for the wheel at [index] under this case's seeding:
+     * the available ones, narrowed to the assigned type when that leaves
+     * anything (the Standard wheel has only ND rows, so the filter
+     * cannot be allowed to empty a wheel).
+     */
+    private fun eligible(rows: List<FilterWheelRowUiState>, index: Int): List<FilterWheelRowUiState> {
+        val available = rows.filter { it.isAvailable }
+        if (case.seeding == Seeding.widest) return available
+        val assigned = spreadTypes[index % spreadTypes.size]
+        return available.filter { it.typeCategory == assigned }.ifEmpty { available }
+    }
+
+    /**
+     * The widest of [rows]. Ties go to a GND Apply-full-value row, then
+     * to any GND row: `GND FULL` is the widest persistent label the
+     * stack can produce, so when two rows render the same value the one
+     * that also stresses the label wins.
+     */
+    private fun widest(rows: List<FilterWheelRowUiState>): FilterWheelRowUiState? = rows.maxWithOrNull(
+        compareBy(
+            { rank(it.compactValueText) },
+            { if (it.gndMode == GndCalculationMode.applyFullValue) 2 else 0 },
+            { if (it.typeCategory == FilterRowTypeCategory.gnd) 1 else 0 },
+        ),
+    )
+
+    /** Wheel id to the value the seeding committed on it. */
+    private val seeded = linkedMapOf<Int, String>()
+
+    /**
+     * Commits the widest eligible row on every wheel.
+     *
+     * Keyed by wheel ID, not by position: a settled selection can reorder
+     * the stack (FILTER-STACK-005), so walking positions seeds one wheel
+     * twice and skips another. Re-read between wheels on purpose —
+     * committing a contribution changes what the wheels after it may
+     * take, and the widest LEGAL content is the widest under that cap.
+     */
+    private fun seed() {
+        // One UI-thread pass: the controller publishes each commit
+        // synchronously, so the availability the next wheel sees is
+        // already up to date without a recomposition in between.
+        composeTestRule.runOnUiThread {
+            controller.state.value.filterWheels.map { it.id }.forEachIndexed { index, id ->
+                val wheel = controller.state.value.filterWheels.firstOrNull { it.id == id }
+                    ?: return@forEachIndexed
+                val target = widest(eligible(wheel.rows, index)) ?: return@forEachIndexed
+                val rowIndex = wheel.rows.indexOfFirst { it.selection == target.selection }
+                if (rowIndex < 0) return@forEachIndexed
+                controller.setNdWheelActive(id, true)
+                controller.setNdWheelValue(id, rowIndex)
+                controller.setNdWheelActive(id, false)
+                seeded[id] = target.compactValueText
             }
         }
-        require(controller.state.value.filterWheels.size == wheelCount) {
-            "expected $wheelCount wheels, got ${controller.state.value.filterWheels.size}"
-        }
-        return controller
+        composeTestRule.waitForIdle()
     }
 
     private lateinit var composedDensity: Density
     private lateinit var viewportBounds: Rect
 
     private fun render() {
-        val controller = stack(case.wheelCount)
+        controller = buildStack()
         val base = instrumentation.targetContext
         val configuration = Configuration(base.resources.configuration).apply {
             setLocale(case.locale)
@@ -302,20 +484,49 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             }
         }
         composeTestRule.waitForIdle()
+        seed()
 
         val root = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
         viewportBounds = Rect(root.left, root.top, root.left + case.viewport.px(), root.bottom)
     }
 
-    private fun mergedNodes(): List<SemanticsNode> {
-        val out = mutableListOf<SemanticsNode>()
+    /**
+     * The wheels the probe reported that are still on screen.
+     *
+     * A wheel's probe key is its content description, which carries its
+     * position and its source name — so seeding a Filter Set row, or a
+     * settle reordering the stack, renames wheels and leaves the old
+     * keys behind in [rendered]. The semantics tree is the authority on
+     * which of them exist now; what each one last laid out is still a
+     * true measurement, since the column widths and row heights do not
+     * change while the stack is seeded.
+     */
+    private fun liveWheels(): Map<String, WheelRender> = live ?: run {
+        val onScreen = mergedNodes().flatMap { it.descriptions() }.toSet()
+        rendered.filterKeys { it in onScreen }
+    }.also { live = it }
+
+    private var live: Map<String, WheelRender>? = null
+
+    /**
+     * The semantics tree as it stands after [render] has seeded the
+     * stack, walked once.
+     *
+     * Every assertion below names the nodes it is about, and the failure
+     * messages quote the whole geometry, so the tree was being fetched
+     * and walked dozens of times per case for one unchanging answer —
+     * about thirty seconds of a passing case. Nothing here mutates the
+     * tree, so one walk is the whole truth.
+     */
+    private fun mergedNodes(): List<SemanticsNode> = walked ?: buildList {
         fun walk(node: SemanticsNode) {
-            out += node
+            add(node)
             node.children.forEach(::walk)
         }
         walk(composeTestRule.onRoot().fetchSemanticsNode())
-        return out
-    }
+    }.also { walked = it }
+
+    private var walked: List<SemanticsNode>? = null
 
     private fun SemanticsNode.texts(): List<String> =
         if (config.contains(SemanticsProperties.Text)) {
@@ -333,6 +544,12 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
 
     private fun SemanticsNode.names(): List<String> = texts() + descriptions()
 
+    /** Width of the single line a wheel row lays out. */
+    private fun TextLayoutResult.lineWidth(): Float = getLineRight(0) - getLineLeft(0)
+
+    /** Height of that same line. */
+    private fun TextLayoutResult.lineHeight(): Float = getLineBottom(0) - getLineTop(0)
+
     private fun Float.toDp() = (this / composedDensity.density).dp
 
     private fun Dp.px() = value * composedDensity.density
@@ -346,13 +563,28 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         return matches.single()
     }
 
-    private fun geometry(): String {
-        val wheels = rendered.entries.joinToString(" | ") { (name, render) ->
+    /**
+     * Every failure message quotes this, and JUnit builds an assertion
+     * message whether or not the assertion fails, so it is built once
+     * per case — the state it describes does not change after [render].
+     */
+    private fun geometry(): String = described ?: buildGeometry().also { described = it }
+
+    private var described: String? = null
+
+    private fun buildGeometry(): String {
+        val committed = controller.state.value.filterWheels.joinToString(", ") { wheel ->
+            val row = wheel.rows.getOrNull(wheel.committedIndex)
+            "${wheel.sourceName}:${row?.typeCategory}${row?.gndMode?.let { "/$it" } ?: ""}=" +
+                "`${row?.compactValueText}`"
+        }
+        val wheels = liveWheels().entries.joinToString(" | ") { (name, render) ->
             val label = render.label
             val rows = render.rows.entries.joinToString(",") { (index, row) ->
                 "$index:`${row.layoutInput.text.text}`" +
-                    "${(row.getLineRight(0) - row.getLineLeft(0)).toInt()}/${row.size.width}px" +
-                    "h${(row.getLineBottom(0) - row.getLineTop(0)).toInt()}/${row.size.height}px" +
+                    "${row.lineWidth().toInt()}w/${row.size.width}" +
+                    "h${row.lineHeight().toInt()}/${row.size.height}px" +
+                    (if (row.hasVisualOverflow) " OVERFLOW" else "") +
                     (if (index in render.railedRows) "" else " NORAIL")
             }
             "$name label=" +
@@ -361,24 +593,166 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
                 " cue=${render.hasSourceCue} rows[$rows]"
         }
         val bounds = mergedNodes()
-            .filter { node -> rendered.keys.any { it in node.descriptions() } }
+            .filter { node -> liveWheels().keys.any { it in node.descriptions() } }
             .joinToString(" | ") { node ->
                 val b = node.boundsInRoot
                 "${node.descriptions().first()} ${b.left.toDp().value.toInt()}.." +
                     "${b.right.toDp().value.toInt()}dp (${b.width.toDp().value.toInt()}dp wide, " +
                     "y ${b.top.toDp().value.toInt()}..${b.bottom.toDp().value.toInt()}dp)"
             }
-        return "Viewport ${viewportBounds.width.toDp()}. Wheels drew: $wheels. Wheel boxes: $bounds"
+        return "Viewport ${viewportBounds.width.toDp()}. Widest legal value for " +
+            "${case.notation}: `${widestStops.getValue(case.notation).second}`, widest CPL loss " +
+            "`${widestCplLoss.second}`. Committed: $committed. Wheels drew: $wheels. " +
+            "Wheel boxes: $bounds"
     }
 
     /**
-     * SHELL-030 in both dimensions, which is the clause the previous
-     * suite only half-checked.
+     * One rendering per case, four groups of assertions against it.
+     * They are one test because each case has to drive the real screen
+     * and seed four wheels, and four renderings of the same state cost
+     * four times as long for nothing — every failure message carries
+     * the full geometry, so granularity is not lost.
      */
     @Test
-    fun everyNotationOptionOwnsAFullTouchTarget() {
+    fun theStackStaysLegibleWithItsWidestContent() {
         render()
+        assertTheWidestContentIsOnScreen()
+        assertLabelsValuesAndCues()
+        assertNotationOptionsOwnFullTouchTargets()
+        assertSharedBaseShutterAxis()
+    }
 
+    /**
+     * The fixture's own guard. Every wheel must be resting on the widest
+     * row it was allowed to take, and the widest legal rendering for the
+     * case's notation must actually be on screen once there is a Filter
+     * Set wheel to hold it — otherwise the assertions below are passing
+     * on digits that happened to be narrow.
+     */
+    private fun assertTheWidestContentIsOnScreen() {
+        val wheels = controller.state.value.filterWheels
+        // Not an equality: seeding a wheel to Empty can make the
+        // automatic cleanup remove it (FILTER-STACK-006), which is the
+        // contract working. What matters is that every wheel still
+        // standing was seeded.
+        assertTrue(
+            "$case: ${wheels.size - wheels.count { it.id in seeded }} wheel(s) in the stack were " +
+                "never seeded. ${geometry()}",
+            wheels.all { it.id in seeded },
+        )
+        wheels.forEach { wheel ->
+            val committed = wheel.rows.getOrNull(wheel.committedIndex)
+            assertTrue("$case: wheel ${wheel.id} has no committed row. ${geometry()}", committed != null)
+            assertEquals(
+                "$case: wheel ${wheel.id} was seeded to the widest row it could take but rests " +
+                    "on another value. ${geometry()}",
+                seeded[wheel.id],
+                committed!!.compactValueText,
+            )
+        }
+
+        if (case.wheelCount > 1 && case.seeding == Seeding.widest) {
+            val widestLegal = widestStops.getValue(case.notation).second
+            assertTrue(
+                "$case: the widest legal rendering `$widestLegal` is on no wheel, so this case " +
+                    "does not exercise the widest content. ${geometry()}",
+                wheels.any { it.rows.getOrNull(it.committedIndex)?.compactValueText == widestLegal },
+            )
+        }
+
+        if (case.wheelCount >= 4 && case.seeding == Seeding.typeSpread) {
+            val types = wheels.mapNotNull { it.rows.getOrNull(it.committedIndex)?.typeCategory }.toSet()
+            assertTrue(
+                "$case: four wheels seeded by type spread only reached $types; Fixed, CPL, GND " +
+                    "and Empty should all be on screen. ${geometry()}",
+                types.size >= 3,
+            )
+        }
+    }
+
+    /**
+     * FILTER-STACK-007 for every real wheel, at every viewport, locale,
+     * supported text size and notation, with the widest content it can
+     * legally hold: the persistent label and the numeric values stay
+     * whole in both axes, and the source and type cues stay drawn.
+     */
+    private fun assertLabelsValuesAndCues() {
+        val live = liveWheels()
+        val filterWheels = live.keys.filter { it != baseShutterTitle }
+        assertEquals(
+            "$case: expected every wheel in the stack to report. ${geometry()}",
+            controller.state.value.filterWheels.size,
+            filterWheels.size,
+        )
+
+        // The Base Shutter column's rows are measured too: its values are
+        // the widest text in the card and its row height is the one the
+        // filter wheels share.
+        live.forEach { (wheel, render) ->
+            // Both axes, and each named: `hasVisualOverflow` is the
+            // authority, and the measured line box beside it says which
+            // dimension gave way — the horizontal one is what the widest
+            // content above is here to find.
+            val clipped = render.rows.filterValues {
+                it.hasVisualOverflow || it.lineWidth() > it.size.width + RoundingSlackPx
+            }
+            assertTrue(
+                "$case: ${clipped.size} of `$wheel`'s numeric rows overflow their row: " +
+                    clipped.values.joinToString {
+                        val wide = it.lineWidth() > it.size.width + RoundingSlackPx
+                        val tall = it.lineHeight() > it.size.height + RoundingSlackPx
+                        "`${it.layoutInput.text.text}` needs ${it.lineWidth().toInt()}x" +
+                            "${it.lineHeight().toInt()}px in ${it.size.width}x${it.size.height}px " +
+                            "(" + listOfNotNull(
+                            "HORIZONTAL".takeIf { _ -> wide },
+                            "VERTICAL".takeIf { _ -> tall },
+                        ).ifEmpty { listOf("REPORTED") }.joinToString("+") + ")"
+                    } +
+                    ". The rows are `maxLines = 1, softWrap = false` with no overflow, so a row " +
+                    "a pixel too small cuts the value in silence. ${geometry()}",
+                clipped.isEmpty(),
+            )
+        }
+
+        filterWheels.forEach { wheel ->
+            val render = live.getValue(wheel)
+            val label = render.label
+            assertTrue("$case: `$wheel` never laid its persistent label out. ${geometry()}", label != null)
+            assertEquals(
+                "$case: `$wheel`'s persistent label wrapped onto ${label!!.lineCount} lines. " +
+                    geometry(),
+                1,
+                label.lineCount,
+            )
+            assertTrue(
+                "$case: `$wheel`'s persistent label `${label.layoutInput.text.text}` overflows its " +
+                    "column and is cut — the mode word disappears and Record only becomes " +
+                    "indistinguishable from Apply full value. ${geometry()}",
+                label.hasVisualOverflow.not(),
+            )
+
+            val unrailed = render.rows.keys - render.railedRows
+            assertTrue(
+                "$case: ${unrailed.size} of `$wheel`'s rows drew no type rail. ${geometry()}",
+                unrailed.isEmpty(),
+            )
+
+            // A Filter Set wheel leads its label with the set's source
+            // cue; the Standard wheel the stack starts with has none.
+            assertEquals(
+                "$case: `$wheel` drew ${if (render.hasSourceCue) "a" else "no"} source cue. " +
+                    geometry(),
+                SetName in wheel,
+                render.hasSourceCue,
+            )
+        }
+    }
+
+    /**
+     * SHELL-030 in both dimensions, which is the clause the header suite
+     * only half-checked, carried across this suite's viewport matrix.
+     */
+    private fun assertNotationOptionsOwnFullTouchTargets() {
         val options = notationOptions.associateWith { control(it) }
         options.forEach { (label, node) ->
             // The CLIPPED bounds, deliberately: a clipping ancestor
@@ -418,7 +792,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
                     val b = rightNode.touchBoundsInRoot
                     assertTrue(
                         "$case: the touch targets of `$leftName` ($a) and `$rightName` ($b) " +
-                            "overlap, so neither owns the ${MinTouchTarget} it reports. ${geometry()}",
+                            "overlap, so neither owns the $MinTouchTarget it reports. ${geometry()}",
                         a.overlaps(b).not(),
                     )
                 }
@@ -427,99 +801,19 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     }
 
     /**
-     * FILTER-STACK-007 for every real wheel, at every viewport, locale
-     * and supported text size: the persistent label and the numeric
-     * values stay whole in BOTH axes, and the source and type cues stay
-     * drawn.
-     *
-     * The rows are asserted with `hasVisualOverflow` entire. That is
-     * only meaningful because the row height follows the rendered text
-     * metrics (`snapWheelItemHeight`); while it was a fixed 34dp, every
-     * wheel's line box outgrew its row at a raised font scale and the
-     * assertion had to be narrowed to width to say anything at all.
-     */
-    @Test
-    fun everyWheelKeepsItsLabelValueAndCues() {
-        render()
-
-        val filterWheels = rendered.keys.filter { it != baseShutterTitle }
-        assertEquals(
-            "$case: expected ${case.wheelCount} filter wheels to report. ${geometry()}",
-            case.wheelCount,
-            filterWheels.size,
-        )
-
-        // The Base Shutter column is measured with them: its row height
-        // is the one the filter wheels share (FILTER-STACK-008), so a
-        // row too short for its line shows up there first — its values
-        // are the widest text in the card.
-        rendered.forEach { (wheel, render) ->
-            val clipped = render.rows.filterValues { it.hasVisualOverflow }
-            assertTrue(
-                "$case: ${clipped.size} of `$wheel`'s numeric rows overflow their row: " +
-                    clipped.values.joinToString {
-                        "`${it.layoutInput.text.text}` needs " +
-                            "${(it.getLineRight(0) - it.getLineLeft(0)).toInt()}x" +
-                            "${(it.getLineBottom(0) - it.getLineTop(0)).toInt()}px in " +
-                            "${it.size.width}x${it.size.height}px"
-                    } +
-                    ". The rows are `maxLines = 1, softWrap = false` with no overflow, so a row " +
-                    "a pixel too small cuts the value in silence. ${geometry()}",
-                clipped.isEmpty(),
-            )
-        }
-
-        filterWheels.forEach { wheel ->
-            val render = rendered.getValue(wheel)
-            val label = render.label
-            assertTrue("$case: `$wheel` never laid its persistent label out. ${geometry()}", label != null)
-            assertEquals(
-                "$case: `$wheel`'s persistent label wrapped onto " +
-                    "${label!!.lineCount} lines. ${geometry()}",
-                1,
-                label.lineCount,
-            )
-            assertTrue(
-                "$case: `$wheel`'s persistent label `${label.layoutInput.text.text}` overflows its " +
-                    "column and is cut — the mode word disappears and Record only becomes " +
-                    "indistinguishable from Apply full value. ${geometry()}",
-                label.hasVisualOverflow.not(),
-            )
-
-            val unrailed = render.rows.keys - render.railedRows
-            assertTrue(
-                "$case: ${unrailed.size} of `$wheel`'s rows drew no type rail. ${geometry()}",
-                unrailed.isEmpty(),
-            )
-
-            // A Filter Set wheel leads its label with the set's source
-            // cue; the Standard wheel the stack starts with has none.
-            assertEquals(
-                "$case: `$wheel` drew ${if (render.hasSourceCue) "a" else "no"} source cue. " +
-                    geometry(),
-                SetName in wheel,
-                render.hasSourceCue,
-            )
-        }
-    }
-
-    /**
-     * FILTER-STACK-008's shared vertical axis, under the same sweep:
+     * FILTER-STACK-007's shared vertical axis, under the same sweep:
      * every filter wheel's viewport top and bottom, and therefore its
      * selected-row band and vertical touch center, stay level with the
      * Base Shutter column's.
      */
-    @Test
-    fun everyWheelSharesTheBaseShutterAxis() {
-        render()
-
+    private fun assertSharedBaseShutterAxis() {
         val shutter = mergedNodes()
             .filter { baseShutterTitle in it.descriptions() }
             .also { assertEquals("$case: expected one base-shutter wheel. ${geometry()}", 1, it.size) }
             .single()
             .boundsInRoot
 
-        rendered.keys.filter { it != baseShutterTitle }.forEach { wheel ->
+        liveWheels().keys.filter { it != baseShutterTitle }.forEach { wheel ->
             val node = mergedNodes()
                 .filter { wheel in it.descriptions() }
                 .also { assertEquals("$case: expected one `$wheel` node. ${geometry()}", 1, it.size) }

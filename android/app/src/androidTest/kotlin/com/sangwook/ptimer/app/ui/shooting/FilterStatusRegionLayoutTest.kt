@@ -263,7 +263,7 @@ class FilterStatusRegionLayoutTest {
                             // Stands in for the Base Shutter column: the
                             // status row must clear it, not start after it.
                             Column(modifier = Modifier.weight(1f)) { Spacer(Modifier.width(1.dp)) }
-                            Column(modifier = Modifier.weight(1.6f)) { wheels() }
+                            Column(modifier = Modifier.weight(1.6f)) { wheels(1f) }
                         }
                     }
                 }
@@ -364,7 +364,7 @@ class FilterStatusRegionLayoutTest {
                             horizontalArrangement = Arrangement.SpaceEvenly,
                         ) {
                             Column(modifier = Modifier.weight(1f)) { Spacer(Modifier.width(1.dp)) }
-                            Column(modifier = Modifier.weight(1.6f)) { wheels() }
+                            Column(modifier = Modifier.weight(1.6f)) { wheels(1f) }
                         }
                     }
                 }

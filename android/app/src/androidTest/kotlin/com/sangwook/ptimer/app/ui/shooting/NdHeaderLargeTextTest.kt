@@ -324,7 +324,7 @@ class NdHeaderLargeTextTest(private val case: Case) {
      * Its floor is exact and independent of everything under test —
      * the base-shutter picker's own top, less the persistent
      * label-row height both columns reserve below the header
-     * (FILTER-STACK-008). Its ceiling is the higher of the two
+     * (FILTER-STACK-007). Its ceiling is the higher of the two
      * captions that sit in the band, which is the band's own top
      * whenever either of them is top-aligned in it.
      *
@@ -427,9 +427,7 @@ class NdHeaderLargeTextTest(private val case: Case) {
         //     `touchBoundsInRoot`: Compose pads that out to the platform
         //     minimum by itself for any node with a click action, so it
         //     reads 48dp of a 14dp segment.
-        //     `FilterStackViewportLegibilityTest` carries the same
-        //     assertion across the viewport matrix.
-        notationOptions.forEach { option ->
+        val optionNodes = notationOptions.map { option ->
             val matches = inHeader.filter { option in it.names() }
             assertEquals(
                 "$case: the `$option` notation option is not in the ND header's merged " +
@@ -444,6 +442,28 @@ class NdHeaderLargeTextTest(private val case: Case) {
                     geometry,
                 laidOut.width.toDp() >= MinTouchTarget && laidOut.height.toDp() >= MinTouchTarget,
             )
+            option to matches.single()
+        }
+
+        // (b2) …and none of those targets is paid for out of a
+        //      neighbour's. Compose's padding is what makes the naive
+        //      form of (b) vacuous, so the padded bounds of the three
+        //      options and the management entry are asserted disjoint:
+        //      overlapping expanded targets are exactly how a control
+        //      can report 48dp it does not own.
+        val targets = optionNodes + (manageFilterSets to entry)
+        targets.indices.forEach { i ->
+            (i + 1 until targets.size).forEach { j ->
+                val (leftName, leftNode) = targets[i]
+                val (rightName, rightNode) = targets[j]
+                val a = leftNode.touchBoundsInRoot
+                val b = rightNode.touchBoundsInRoot
+                assertTrue(
+                    "$case: the touch targets of `$leftName` ($a) and `$rightName` ($b) " +
+                        "overlap, so neither owns the $MinTouchTarget it reports. $geometry",
+                    a.overlaps(b).not(),
+                )
+            }
         }
 
         // (c) Nothing tappable in the header is left anonymous. This is

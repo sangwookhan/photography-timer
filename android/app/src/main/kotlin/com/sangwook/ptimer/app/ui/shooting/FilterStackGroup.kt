@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sangwook.ptimer.R
@@ -84,6 +85,23 @@ private val FilterWheelLabelMinFontSize = 7.sp
 private val FilterWheelLabelFontStep = 0.25.sp
 
 /**
+ * The width one wheel column gets when [wheelCount] wheels — and the
+ * Plus control, when [plusVisible] — divide [available].
+ *
+ * The card resolves the row's one shared numeric size before either
+ * column renders (FILTER-STACK-007), and that needs this width one
+ * composable above the row that lays it out. So the arithmetic lives
+ * here once rather than in two places that have to keep agreeing.
+ */
+internal fun filterWheelWidth(available: Dp, wheelCount: Int, plusVisible: Boolean): Dp {
+    val plusSlot = if (plusVisible) FilterPlusControlWidth + FilterWheelRowSpacing else 0.dp
+    return (available - plusSlot - FilterWheelRowSpacing * (wheelCount - 1)) / wheelCount
+}
+
+/** Three wheels or more render their values a style step smaller. */
+internal fun isDenseFilterWheelRow(wheelCount: Int) = wheelCount >= 3
+
+/**
  * The mixed Filter Stack wheel row (FILTER-STACK): 1–4 side-by-side
  * wheels keyed by wheel identity (a settled reorder animates each stable
  * identity directly to its new position, FILTER-STACK-005), each with
@@ -115,7 +133,7 @@ internal fun FilterStackGroup(
     onFilterAddUnavailability: (FilterSource) -> FilterAddUnavailability?,
     onManageFilterSets: () -> Unit,
     modifier: Modifier = Modifier,
-    wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
+    wheelRow: @Composable (wheels: @Composable (numericScale: Float) -> Unit) -> Unit = { it(1f) },
 ) {
     val wheels = state.filterWheels
     val palette = filterTypePalette()
@@ -131,10 +149,9 @@ internal fun FilterStackGroup(
     AnnounceEmptyWheelRemoval(state)
 
     Column(modifier = modifier.fillMaxWidth()) {
-        wheelRow {
+        wheelRow { numericScale ->
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val plusSlot = if (state.plus.isVisible) FilterPlusControlWidth + FilterWheelRowSpacing else 0.dp
-                val wheelWidth = (maxWidth - plusSlot - FilterWheelRowSpacing * (wheels.size - 1)) / wheels.size
+                val wheelWidth = filterWheelWidth(maxWidth, wheels.size, state.plus.isVisible)
 
                 LazyRow(
                     userScrollEnabled = false,
@@ -147,12 +164,13 @@ internal fun FilterStackGroup(
                             position = index + 1,
                             wheelCount = wheels.size,
                             palette = palette,
-                            dense = wheels.size >= 3,
+                            dense = isDenseFilterWheelRow(wheels.size),
                             totalText = totalText,
                             onActiveChange = { onWheelActive(wheel.id, it) },
                             onSelectedIndexChange = { onWheelValue(wheel.id, it) },
                             onOverscrollRemove = { onOverscrollRemove(wheel.id) },
                             onAdjust = { direction -> onAdjustFilterWheel(wheel.id, direction) },
+                            numericScale = numericScale,
                             modifier = Modifier.width(wheelWidth).animateItem(),
                         )
                     }
@@ -165,7 +183,8 @@ internal fun FilterStackGroup(
                                     // Through the same resolver as the wheels,
                                     // so a raised font scale does not leave the
                                     // Plus control short of the viewport.
-                                    height = snapWheelItemHeight(WheelItemHeight) * WheelVisibleCount,
+                                    height = snapWheelItemHeight(WheelItemHeight, numericScale) *
+                                        WheelVisibleCount,
                                     onAdd = onAddFilterWheel,
                                     onManage = onManageFilterSets,
                                     onBrowsingChanged = { browsing = it },
@@ -220,6 +239,7 @@ private fun FilterWheelColumn(
     onSelectedIndexChange: (Int) -> Unit,
     onOverscrollRemove: () -> Unit,
     onAdjust: (FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
+    numericScale: Float,
     modifier: Modifier = Modifier,
 ) {
     val displayed = wheel.rows.getOrNull(wheel.selectedIndex)
@@ -294,6 +314,7 @@ private fun FilterWheelColumn(
             rowEnabled = { index -> wheel.rows.getOrNull(index)?.isAvailable ?: true },
             onAccessibilityAdjust = onAccessibilityAdjust,
             accessibilityValue = committed?.let { filterRowAccessibilityValue(it, totalText) },
+            numericScale = numericScale,
         )
     }
 }
@@ -313,7 +334,7 @@ private fun FilterWheelColumn(
  * - The row holds its own text at scale 1x. Its height is fixed
  *   ([FilterWheelLabelRowHeight] is shared with the Base Shutter
  *   column's spacer and anchors the wheels' vertical axis,
- *   FILTER-STACK-008), so the label cannot grow with the system font
+ *   FILTER-STACK-007), so the label cannot grow with the system font
  *   scale in the first place; letting it try only clipped it. Nothing
  *   the contract sizes — the numeric values, the status region, the
  *   rest of the screen — is capped by this.

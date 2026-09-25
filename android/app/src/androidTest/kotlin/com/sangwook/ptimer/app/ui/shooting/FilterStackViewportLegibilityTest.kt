@@ -219,6 +219,24 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         /** A measured float against a laid-out one: one pixel of slack. */
         private const val RoundingSlackPx = 1f
 
+        /** Bound and cadence of [waitForStableGeometry]'s sampling. */
+        private const val StableGeometrySamples = 160
+        private const val StableGeometryPollMillis = 50L
+
+        /**
+         * How long the geometry has to hold still before it is measured.
+         *
+         * [SettleDwell] is enough for a layout pass and the reorder
+         * animation. [CleanupDwell] is for a stack the app is about to
+         * change on its own: when the seeding leaves a wheel on a
+         * cleanable row, FILTER-STACK-006 removes it after its idle
+         * interval, and that reap landing mid-assertion is what made
+         * this suite flaky. It has to outlast the longest interval the
+         * stack uses.
+         */
+        private const val SettleDwell = 150L
+        private const val CleanupDwell = 4_000L
+
         /**
          * The Filter Set every wheel past the first is mounted from. Set
          * names are user data, so this one word identifies the wheels
@@ -506,9 +524,71 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         }
         composeTestRule.waitForIdle()
         seed()
+        waitForStableGeometry()
 
         val root = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
         viewportBounds = Rect(root.left, root.top, root.left + case.viewport.px(), root.bottom)
+    }
+
+    /**
+     * Waits until the card stops moving.
+     *
+     * Seeding settles the stack, and a settled reorder ANIMATES each
+     * wheel into its new position (FILTER-STACK-005, through
+     * `animateItem`). `waitForIdle` returns before that animation has
+     * finished, so bounds read straight after it are mid-flight: a wheel
+     * sits a pixel or two off the Base Shutter axis it will land on, and
+     * a notation option's CLIPPED box is briefly a sliver of the box it
+     * settles at. Asserting on those made this suite flaky — a couple of
+     * its 180 cases failed per run, a different couple each time, which
+     * is worse than no gate at all.
+     *
+     * Samples the laid-out geometry until it has been unchanged for a
+     * dwell (see [SettleDwell] and [CleanupDwell]) AND every tappable
+     * node reports a non-empty clipped box. The
+     * second condition is the one that matters for the notation
+     * options: mid-layout their `boundsInRoot` is briefly `0 x 0` — the
+     * value Compose reports for a node it considers entirely clipped —
+     * while their unclipped box is already the full 101 x 48dp. A
+     * control that is really 0dp would never settle, so the wait costs
+     * nothing when there is a defect and removes the flake when there
+     * is not.
+     *
+     * Bounded, and the assertions below fail on their own terms if it
+     * ever runs out.
+     */
+    private fun waitForStableGeometry() {
+        // A wheel resting on a cleanable row will be removed by the app
+        // itself, so hold still long enough to let that happen first.
+        val dwell = if (
+            controller.state.value.filterWheels.any {
+                it.rows.getOrNull(it.committedIndex)?.isCleanable == true
+            }
+        ) {
+            CleanupDwell
+        } else {
+            SettleDwell
+        }
+        var previous: List<Rect> = emptyList()
+        var unchangedSince = System.currentTimeMillis()
+        repeat(StableGeometrySamples) {
+            composeTestRule.waitForIdle()
+            val tappable = mergedNodes().filter { it.config.contains(SemanticsActions.OnClick) }
+            val current = mergedNodes()
+                .filter { it.config.contains(SemanticsProperties.ContentDescription) }
+                .map { it.boundsInRoot }
+            walked = null
+            live = null
+            if (current != previous) unchangedSince = System.currentTimeMillis()
+            val settled = current.isNotEmpty() &&
+                current == previous &&
+                tappable.isNotEmpty() &&
+                tappable.none { it.boundsInRoot.isEmpty } &&
+                System.currentTimeMillis() - unchangedSince >= dwell
+            if (settled) return
+            previous = current
+            Thread.sleep(StableGeometryPollMillis)
+        }
     }
 
     /**
@@ -574,6 +654,29 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     private fun Float.toDp() = (this / composedDensity.density).dp
 
     private fun Dp.px() = value * composedDensity.density
+
+    /**
+     * [control], re-read until its CLIPPED box is non-empty.
+     *
+     * `boundsInRoot` reports `0 x 0` for a node Compose currently
+     * considers entirely clipped, and a control briefly reads that way
+     * while the card is still laying out — the unclipped box is already
+     * correct at that point. The clipped box is the one worth asserting
+     * (a clipping ancestor clips pointer input too), so it is re-read
+     * rather than relaxed: a control that really is clipped away never
+     * settles and the assertion still fails, with the same message.
+     */
+    private fun settledControl(name: String): SemanticsNode {
+        repeat(StableGeometrySamples) {
+            val node = control(name)
+            if (!node.boundsInRoot.isEmpty) return node
+            walked = null
+            live = null
+            composeTestRule.waitForIdle()
+            Thread.sleep(StableGeometryPollMillis)
+        }
+        return control(name)
+    }
 
     /** The one node that carries [name] and can be tapped. */
     private fun control(name: String): SemanticsNode {
@@ -861,7 +964,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
      * only half-checked, carried across this suite's viewport matrix.
      */
     private fun assertNotationOptionsOwnFullTouchTargets() {
-        val options = notationOptions.associateWith { control(it) }
+        val options = notationOptions.associateWith { settledControl(it) }
         options.forEach { (label, node) ->
             // The CLIPPED bounds, deliberately: a clipping ancestor
             // clips pointer input too, so a segment measured 48dp
@@ -890,7 +993,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         // And no option's target is paid for out of a neighbour's: the
         // padded bounds of the three options and the management entry
         // stay disjoint.
-        val targets = options + (manageFilterSets to control(manageFilterSets))
+        val targets = options + (manageFilterSets to settledControl(manageFilterSets))
         targets.entries.toList().let { entries ->
             entries.indices.forEach { i ->
                 (i + 1 until entries.size).forEach { j ->

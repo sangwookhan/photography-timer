@@ -72,9 +72,10 @@ class FilterStatusRegionTextSizeTest(private val case: Case) {
         @Parameterized.Parameters(name = "{0}")
         fun cases(): List<Array<Any>> = listOf(Locale.US, Locale.KOREA).flatMap { locale ->
             // Default, the app's own cap, and the largest system step.
-            // 2.0x is required uncapped coverage for primary readable
-            // content per the accepted SPEC-CONFLICT of 2026-09-24, and
-            // the total is primary readable content.
+            // The shipping app caps at 1.3x and Spec PR #68 permits
+            // that, so 2.0x here is stress coverage: the region asked to
+            // reserve its row at a scale the app does not render, which
+            // is where the fixed height gave way.
             listOf(1.0f, MaxCappedFontScale, 2.0f).map { scale ->
                 arrayOf<Any>(Case(locale, scale))
             }

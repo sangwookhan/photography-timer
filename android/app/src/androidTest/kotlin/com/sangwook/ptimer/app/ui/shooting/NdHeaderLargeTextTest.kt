@@ -123,27 +123,26 @@ class NdHeaderLargeTextTest(private val case: Case) {
          * 1.15 is where the controls started shrinking and 1.3 is where
          * they disappeared.
          *
-         * KNOWN AND UNRESOLVED: the shipping app never renders above
-         * `MaxCappedFontScale` (1.3x) — `ShootingApp` wraps the whole
-         * shooting surface in `CappedFontScale`, and this harness
-         * composes `ShootingScreen` directly rather than through it. The
-         * 1.5x and 2.0x cases are therefore scales the app cannot reach
-         * today.
+         * The shipping app never renders above [MaxCappedFontScale]
+         * (1.3x): `ShootingApp` wraps the whole shooting surface in
+         * `CappedFontScale`, and this harness composes `ShootingScreen`
+         * directly rather than through it. The 1.5x and 2.0x cases are
+         * therefore scales the app does not reach.
          *
-         * SETTLED by the accepted [SPEC-CONFLICT] of 2026-09-24:
-         * SHELL-020 allows a font-scale cap on non-primary chrome but
-         * not on primary readable content, which the wheel values, the
-         * Base Shutter value and the persistent labels are. So 2.0x is
-         * REQUIRED uncapped component coverage for primary content, and
-         * a failure at 2.0x blocks PR #67.
+         * SETTLED by the owner on 2026-09-25, and by Spec PR #68 at
+         * `4a2581b3bb49989fdb8d54f658512180298bd090`: SHELL-020 now
+         * permits an effective font-scale cap on the shooting surface or
+         * on individual areas, primary content included, to keep the
+         * layout usable. That cap is intentional design, and the earlier
+         * ruling that primary content must reach an effective 2.0x is
+         * withdrawn.
          *
-         * A pass at 2.0x is component evidence only. It is not
-         * shipping-path evidence, because this harness composes
-         * `ShootingScreen` directly while `ShootingApp` wraps the whole
-         * shooting surface in `CappedFontScale` (`MaxCappedFontScale`,
-         * 1.3x). Correcting that cap is a separate Android Code PR,
-         * linked to #67 as a merge dependency; shipping-path evidence
-         * only exists once the two are verified combined.
+         * So the cases above 1.3x are an OPTIONAL STRESS TEST rather
+         * than a requirement the shipped app has to meet, and must not
+         * be quoted as evidence of its effective scale. The shipping
+         * path is measured on the real screen instead; the observed
+         * figures are in the review artifacts under
+         * `30-shipping-path-font-scale`.
          */
         private val Scales = listOf(1.0f, 1.15f, 1.3f, 1.5f, 2.0f)
 

@@ -106,7 +106,8 @@ dump` node `bounds` on Android.
 | `26-timer-reference-after-delete` | The Filter Set behind that running timer renamed, then deleted. iOS: the timer card after the delete (`ios`), the confirmation dialog (`-b`), the collapsed stack (`-c`), the timer entry after cancelling (`-d`). Android: the timer card after the **rename**, with the set still named as captured (`android`), then the confirmation dialog (`-b`), the collapsed stack (`-c`), and the timer card after the delete (`-d`). The two platforms' supplementary frames are therefore not index-for-index; each is named for what it shows. |
 | `27-a11y-wheel` | One wheel's accessibility label and value. iOS read from source (the simulator accessibility tree tool was unavailable); Android label read from `uiautomator dump`, value read from source because the dump does not serialise `stateDescription`. |
 | `28-a11y-status` | The status region's accessibility structure: leading detail and total as separate elements. |
-| `29-large-text-narrow-android-only` | **Android only, not parity evidence. Rendered from a seeded fixture, not hand-driven.** The shooting card at 360dp with **four mounted wheels carrying the widest legal content** — three Record-only GND wheels at `30 2/3` plus the Standard wheel — in English and Korean, at the 1.3x the shipping app reaches today and at the uncapped 2.0x, four frames. Hand-driving cannot reach this state: FILTER-STACK-006 reaps the newly added Empty wheel before a fourth value can be committed, so the stack is seeded through the controller and the real screen is rendered and photographed (`Scenario29CaptureScratchTest`, local and not committed). Recorded because this is where the Android layout had to change, and each frame is the evidence for a fix: the notation options and the management entry span the whole card so each option owns a 48dp target; the row resolves ONE numeric size and shrinks it to fit rather than cutting the value; the type rail has a lane of its own instead of being painted over the leading digit; and the status region reserves the height its row needs, which is what the 2.0x frames show. iOS has no matching state — its sizing model and its Dynamic Type steps are different, so there is nothing to pair it with. |
+| `29-large-text-narrow-android-only` | **Android only, not parity evidence. Rendered from a seeded fixture, not hand-driven.** The shooting card at 360dp with **four mounted wheels carrying the widest legal content** — three Record-only GND wheels at the widest value the formatter produces, plus the Standard wheel — in English and Korean, at the 1.3x the shipping app reaches today and at an uncapped 2.0x, four frames. **The 2.0x pair is stress coverage, not shipping-path evidence** — the app caps this surface at 1.3x and Spec PR #68 permits that; for the shipped app's effective scale see `30-shipping-path-font-scale` below. Hand-driving cannot reach this state: FILTER-STACK-006 reaps the newly added Empty wheel before a fourth value can be committed, so the stack is seeded through the controller and the real screen is rendered and photographed (`Scenario29CaptureScratchTest`, local and not committed). Recorded because this is where the Android layout had to change, and each frame is the evidence for a fix: the notation options and the management entry span the whole card so each option owns a 48dp target; the row resolves ONE numeric size and shrinks it to fit rather than cutting the value; the type rail has a lane of its own instead of being painted over the leading digit; and the status region reserves the height its row needs, which is what the 2.0x frames show. iOS has no matching state — its sizing model and its Dynamic Type steps are different, so there is nothing to pair it with. |
+| `30-shipping-path-font-scale` | **The shipping path, driven by hand.** The real app through `ShootingApp` — not a `ShootingScreen` harness — with a four-wheel stack built by actual interaction: a Filter Set created in the management surface, four GND items registered at 29.7 stops, four wheels added from the Plus control and each mounted on its own item, one of them switched to Apply full value. Five representative frames out of a twelve-cell sweep (360dp and 411dp, English and Korean, system font at normal, at the app's cap, and above it). `android-411dp-en-1.0x` is the normal-text reference; `android-360dp-en-1.3x` and `android-411dp-ko-1.3x` are at the cap; `android-360dp-en-2.0x` and `android-360dp-ko-2.0x` have the system setting pushed **above** the cap, which SHELL-020 asks to be verified as its own case. The measured effective scale for every cell is in the table below. |
 
 ## Known gaps
 
@@ -126,3 +127,84 @@ dump` node `bounds` on Android.
 
 This directory is ticket-scoped review evidence and is expected to be
 removed before merge.
+
+
+## Observed effective font scale on the shipping path
+
+Measured off the rendered screen, not inferred from a passing test.
+Each number is the height in pixels of that text node as `uiautomator`
+reports it, with the ratio against the same cell at the system default.
+The twelve cells all carry the same four-wheel stack.
+
+| cell | Base Shutter caption | ND Filter title | Total | Adjusted Shutter |
+| --- | --- | --- | --- | --- |
+| 411dp en, system 1.0x | 53px | 53px | 42px | 42px |
+| 411dp en, system 1.3x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 55px (1.31x) |
+| 411dp en, system 2.0x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 55px (1.31x) |
+| 411dp ko, system 1.0x | 53px | 53px | 42px | 46px |
+| 411dp ko, system 1.3x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 59px (1.28x) |
+| 411dp ko, system 2.0x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 59px (1.28x) |
+| 360dp en, system 1.0x | 60px | 60px | 48px | 48px |
+| 360dp en, system 1.3x | 162px (two lines) | 81px (1.35x) | 63px (1.31x) | 63px (1.31x) |
+| 360dp en, system 2.0x | 162px (two lines) | 81px (1.35x) | 63px (1.31x) | 63px (1.31x) |
+| 360dp ko, system 1.0x | 61px | 61px | 48px | 52px |
+| 360dp ko, system 1.3x | 81px (1.33x) | 81px (1.33x) | 63px (1.31x) | 67px (1.29x) |
+| 360dp ko, system 2.0x | 81px (1.33x) | 81px (1.33x) | 63px (1.31x) | 67px (1.29x) |
+
+Two things this shows directly.
+
+**The cap holds, and it is 1.3x.** Every ratio at the system's 1.3x
+setting lands between 1.28x and 1.35x; the spread is line-box rounding,
+not different scales.
+
+**Above the cap nothing moves.** Each `2.0x` row is identical to the
+`1.3x` row above it, to the pixel. Raising the system setting past the
+app's cap changes no text on this surface — which is the behaviour
+SHELL-020 now permits, observed rather than assumed.
+
+The one apparent outlier is not a scale: at 360dp in English the
+`Base Shutter` caption is 162px, exactly twice the 81px of the title
+beside it, because the caption **wraps onto a second line**. It is
+complete, not clipped, which is what the card's stated precedence
+intends — the caption is the one label here that can yield without being
+cut.
+
+Two areas hold their own 1.0x cap and are meant to: the wheels'
+persistent type/mode labels (`GND FULL`, `GND REC`) and the notation
+options. They are visibly the same size in every frame. Under the
+approved SHELL-020 revision that is intentional area-specific capping,
+not a defect.
+
+### What was exercised by hand, and what was not
+
+- **Actual interaction:** creating the Filter Set, registering the four
+  GND items, adding each wheel from the Plus control, mounting each on
+  its own item, switching one to Apply full value, and the twelve-cell
+  sweep itself (each cell is a real configuration change and an app
+  restart, so the stack is also re-read from persistence twelve times).
+- **Seeded fixture:** scenario 29's four frames, and the 180-case
+  instrumented matrix. Those compose `ShootingScreen` directly and can
+  reach content the shipping path caps, so they are stress coverage, not
+  evidence of the shipped app's effective scale.
+- **Not re-run in this pass:** spoken TalkBack output. The gate for it
+  was closed earlier in this PR with real TalkBack; here TalkBack was
+  enabled but did not respond to injected `KEYCODE_TAB` or D-pad events,
+  so focus could not be walked from the shell. What this pass does show
+  at the large setting is the structure those announcements read from —
+  each wheel remains exactly one element (`필터 1/4, Lee holder` and its
+  three siblings in every Korean cell) — and that every interactive
+  target stays at or above 48dp.
+
+### Touch targets at 360dp with the system setting above the cap
+
+Measured from the live tree in Korean, the tightest cell:
+
+| control | size |
+| --- | --- |
+| `스톱` / `OD` / `ND` notation options | 84.0 x 48.0 dp each |
+| Filter Set management (gear) | 48.0 x 48.0 dp |
+| Start timer | 48.0 x 48.0 dp |
+| Camera rename / Reset / alert / About | 48.0+ x 48.0 dp |
+| Film row, Target Shutter row | 328.0 x 48.0 dp |
+
+Nothing on the surface falls below the 48dp minimum.

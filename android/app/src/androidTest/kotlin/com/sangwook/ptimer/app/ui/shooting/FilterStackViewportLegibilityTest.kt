@@ -193,20 +193,23 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
          * `ShootingApp`, so it is also the only place the uncapped
          * layout above that is visible at all.
          *
-         * SETTLED by the accepted [SPEC-CONFLICT] of 2026-09-24:
-         * SHELL-020 allows a font-scale cap on non-primary chrome but
-         * not on primary readable content, which the wheel values, the
-         * Base Shutter value and the persistent labels are. So 2.0x is
-         * REQUIRED uncapped component coverage for primary content, and
-         * a failure at 2.0x blocks PR #67.
+         * SETTLED by the owner on 2026-09-25, and by Spec PR #68 at
+         * `4a2581b3bb49989fdb8d54f658512180298bd090`: SHELL-020 now
+         * permits an effective font-scale cap on the shooting surface or
+         * on individual areas, primary content included, to keep the
+         * layout usable. The shooting surface's 1.3x cap and the
+         * persistent label's and notation options' 1.0x caps are
+         * intentional design. The earlier ruling that primary content
+         * must reach an effective 2.0x is withdrawn.
          *
-         * A pass at 2.0x is component evidence only. It is not
-         * shipping-path evidence, because this harness composes
-         * `ShootingScreen` directly while `ShootingApp` wraps the whole
-         * shooting surface in `CappedFontScale` (`MaxCappedFontScale`,
-         * 1.3x). Correcting that cap is a separate Android Code PR,
-         * linked to #67 as a merge dependency; shipping-path evidence
-         * only exists once the two are verified combined.
+         * So 2.0x here is an OPTIONAL STRESS TEST, not a requirement the
+         * shipped app has to meet: it is the layout asked to hold at a
+         * scale the app does not currently render, which is a cheap way
+         * to find the cases that bind. It says nothing about the shipped
+         * app's effective scale, and must not be quoted as if it did.
+         * The shipping path is measured on the real screen instead, and
+         * the observed figures live in the review artifacts under
+         * `30-shipping-path-font-scale`.
          */
         private val Scales = listOf(1.0f, MaxCappedFontScale, 2.0f)
 

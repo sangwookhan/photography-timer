@@ -1,0 +1,12 @@
+CONFIG|fontScale=2.0|screenWidthDp=360|locale=ko_KR|density=3.0
+RESET-STACK=1
+PLUS-SOURCE=[Lee holder]
+STACK=4 states=[Standard, ND, 19 스톱, 합계 19 스톱, Lee GND 1, GND, 기록만, 0 스톱, 합계 19 스톱, Lee GND 2, GND, 기록만, 0 스톱, 합계 19 스톱, Lee GND 3, GND, 기록만, 0 스톱, 합계 19 스톱]
+WHEEL|cd=[필터 1/4, Standard]|state=[Standard, ND, 19 스톱, 합계 19 스톱]|range=22.0
+ADJUST|0|applied=true|before=[Standard, ND, 19 스톱, 합계 19 스톱]|after=[Standard, ND, 20 스톱, 합계 20 스톱]
+ADJUST|1|applied=true|before=[Standard, ND, 20 스톱, 합계 20 스톱]|after=[Standard, ND, 21 스톱, 합계 21 스톱]
+ADJUST|2|applied=true|before=[Standard, ND, 21 스톱, 합계 21 스톱]|after=[Standard, ND, 22 스톱, 합계 22 스톱]
+EXHAUST|1|applied=true|before=[Lee GND 3, GND, 기록만, 0 스톱, 합계 22 스톱]|after=[Lee GND 4, GND, 기록만, 0 스톱, 합계 22 스톱]
+EXHAUST|2|applied=false|before=[Lee GND 4, GND, 기록만, 0 스톱, 합계 22 스톱]|after=[Lee GND 4, GND, 기록만, 0 스톱, 합계 22 스톱]
+SPEAK|refused|TYPE_ANNOUNCEMENT text=[30스톱 초과] src=[null/null]
+TOTAL|cd=[null]|text=[합계 22 스톱]|focusable=true

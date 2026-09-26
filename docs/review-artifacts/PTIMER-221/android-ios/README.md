@@ -108,6 +108,7 @@ dump` node `bounds` on Android.
 | `28-a11y-status` | The status region's accessibility structure: leading detail and total as separate elements. |
 | `29-large-text-narrow-android-only` | **Android only, not parity evidence. Rendered from a seeded fixture, not hand-driven.** The shooting card at 360dp with **four mounted wheels carrying the widest legal content** — three Record-only GND wheels at the widest value the formatter produces, plus the Standard wheel — in English and Korean, at the 1.3x the shipping app reaches today and at an uncapped 2.0x, four frames. **The 2.0x pair is stress coverage, not shipping-path evidence** — the app caps this surface at 1.3x and Spec PR #68 permits that; for the shipped app's effective scale see `30-shipping-path-font-scale` below. Hand-driving cannot reach this state: FILTER-STACK-006 reaps the newly added Empty wheel before a fourth value can be committed, so the stack is seeded through the controller and the real screen is rendered and photographed (`Scenario29CaptureScratchTest`, local and not committed). Recorded because this is where the Android layout had to change, and each frame is the evidence for a fix: the notation options and the management entry span the whole card so each option owns a 48dp target; the row resolves ONE numeric size and shrinks it to fit rather than cutting the value; the type rail has a lane of its own instead of being painted over the leading digit; and the status region reserves the height its row needs, which is what the 2.0x frames show. iOS has no matching state — its sizing model and its Dynamic Type steps are different, so there is nothing to pair it with. |
 | `30-shipping-path-font-scale` | **The shipping path, driven by hand.** The real app through `ShootingApp` — not a `ShootingScreen` harness — with a four-wheel stack built by actual interaction: a Filter Set created in the management surface, four GND items registered at 29.7 stops, four wheels added from the Plus control and each mounted on its own item, one of them switched to Apply full value. Five representative frames out of a twelve-cell sweep (360dp and 411dp, English and Korean, system font at normal, at the app's cap, and above it). `android-411dp-en-1.0x` is the normal-text reference; `android-360dp-en-1.3x` and `android-411dp-ko-1.3x` are at the cap; `android-360dp-en-2.0x` and `android-360dp-ko-2.0x` have the system setting pushed **above** the cap, which SHELL-020 asks to be verified as its own case. The measured effective scale for every cell is in the table below. |
+| `31-talkback-above-the-cap` | **TalkBack live, at a system text size above the app's cap.** The stage-2 review's open evidence gate. The four-wheel mixed stack is built through accessibility ACTIONS — the Plus stepped from Standard to the Filter Set as an adjustable, then added and each new wheel adjusted onto its own item — with TalkBack running and `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` so the service is not suppressed. 360dp Korean and 411dp English, both at system 2.0x. `talkback-360dp-ko.log` is the recorded run; the two frames show TalkBack's own focus rectangle. The INVENTORY is seeded in-process (registering four filters through the management surface is not what this gate is about); everything after it is interaction. |
 
 ## Known gaps
 
@@ -115,11 +116,17 @@ dump` node `bounds` on Android.
   any add, and building the state below the cap and then raising the total
   had to happen inside the 4 s idle interval, which the tooling round-trip
   could not beat.
-- **Neither platform was observed with its screen reader speaking.** The
-  iOS accessibility tree tool was disabled in this environment and
-  enabling VoiceOver would have left the handover simulator in a
-  screen-reader state; on Android the values were read from `uiautomator`
-  and from source. Both accessibility rows state their source.
+- **iOS was not observed with its screen reader speaking.** The iOS
+  accessibility tree tool was disabled in this environment and enabling
+  VoiceOver would have left the handover simulator in a screen-reader
+  state. The iOS accessibility rows state that their values were read
+  from source.
+
+  This used to say neither platform was observed. That is no longer
+  true of Android: the rows were first read from `uiautomator` and from
+  source, then the live-service run closed the gate, and
+  `31-talkback-above-the-cap` closes it again at a system text size
+  above the app's cap.
 - **iOS Plus tap-to-add is untested.** An injected zero-travel tap never
   fires SwiftUI's `DragGesture(minimumDistance: 0)` `onChanged`, so the
   arbiter never leaves its rest state. The browse-drag add and the
@@ -208,3 +215,23 @@ Measured from the live tree in Korean, the tightest cell:
 | Film row, Target Shutter row | 328.0 x 48.0 dp |
 
 Nothing on the surface falls below the 48dp minimum.
+
+
+## TalkBack above the cap
+
+From `31-talkback-above-the-cap/talkback-360dp-ko.log`, at 360dp in
+Korean with the system font at 2.0x — above the app's 1.3x cap.
+
+| what the review asked for | observed |
+| --- | --- |
+| wheel value, with GND mode and contribution | `Lee GND 1, GND, 기록만, 0 스톱, 합계 19 스톱` — item, type, **mode**, contribution, Total, on one element per wheel. English: `Lee GND 1, GND, Record only, 0 stops, Total 16.6 stops`. |
+| the Total as its own focus | `합계 22 스톱`, `focusable=true`, and TalkBack's focus rectangle sits on it alone in `android-360dp-ko-total-focused.png`. |
+| adjustment | three steps, each applied, the wheel and the Total moving together: 19 → 20 → 21 → 22 스톱. |
+| adjustment across an unavailable row | `EXHAUST|1` steps the trailing wheel from `Lee GND 3` to `Lee GND 4` in ONE step, skipping the rows whose items are mounted on the other wheels. |
+| the refusal at the end of the scan | `EXHAUST|2` does not move, and the app announces it: `TYPE_ANNOUNCEMENT text=[30스톱 초과]`. FILTER-A11Y-004, spoken. |
+| the Plus control's actions | adjustable — `ACTION_SET_PROGRESS` steps the source, `PLUS-SOURCE=[Lee holder]` — plus `ACTION_CLICK` and two custom actions, `필터 추가` and `Filter Set 관리`. |
+| focus targets clipped or hidden | none. Every labelled node reports `visible=true` with a non-empty box; the harness logs any that do not and logged nothing. |
+
+One wording nit for the follow-up list, not a gate: the refusal is
+announced as `30스톱 초과`, without the space the rest of the Korean UI
+puts before `스톱` (`합계 22 스톱`).

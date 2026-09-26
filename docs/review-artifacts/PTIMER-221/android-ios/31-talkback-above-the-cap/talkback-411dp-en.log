@@ -1,0 +1,15 @@
+CONFIG|fontScale=2.0|screenWidthDp=411|locale=en_US|density=2.625
+RESET-STACK=1
+PLUS-SOURCE=[Lee holder]
+STACK=4 states=[Standard, ND, 0 stops, Total 0 stops, Lee GND 1, GND, Record only, 0 stops, Total 0 stops, Lee GND 2, GND, Record only, 0 stops, Total 0 stops, Lee GND 3, GND, Record only, 0 stops, Total 0 stops]
+WHEEL|cd=[Filter 1 of 3, Lee holder]|state=[Lee GND 1, GND, Record only, 0 stops, Total 0 stops]|range=1.0
+ADJUST|0|applied=true|before=[Lee GND 1, GND, Record only, 0 stops, Total 0 stops]|after=[Lee GND 1, GND, Apply full value, 29.7 stops, Total 29.7 stops]
+ADJUST|1|applied=true|before=[Lee GND 1, GND, Apply full value, 29.7 stops, Total 29.7 stops]|after=[Lee GND 4, GND, Record only, 0 stops, Total 0 stops]
+ADJUST|2|applied=true|before=[Lee GND 4, GND, Record only, 0 stops, Total 0 stops]|after=[Lee GND 4, GND, Apply full value, 29.7 stops, Total 29.7 stops]
+EXHAUST|1|applied=false|before=[Lee GND 3, GND, Record only, 0 stops, Total 29.7 stops]|after=[Lee GND 3, GND, Record only, 0 stops, Total 29.7 stops]
+SPEAK|refused|TYPE_ANNOUNCEMENT text=[Exceeds 30 stops] src=[null/null]
+TOTAL|text=[Total 29.7 stops]|focusable=true
+PLUS|cd=[Add filter]|state=[Lee holder]|actions=64, Add filter, 131072, 256, 512, 8192, 16908349, Add filter, Manage Filter Sets
+FINAL|cd=[Filter 1 of 3, Lee holder]|state=[Lee GND 4, GND, Apply full value, 29.7 stops, Total 29.7 stops]|visible=true|bounds=154x268
+FINAL|cd=[Filter 2 of 3, Lee holder]|state=[Lee GND 2, GND, Record only, 0 stops, Total 29.7 stops]|visible=true|bounds=154x268
+FINAL|cd=[Filter 3 of 3, Lee holder]|state=[Lee GND 3, GND, Record only, 0 stops, Total 29.7 stops]|visible=true|bounds=136x268

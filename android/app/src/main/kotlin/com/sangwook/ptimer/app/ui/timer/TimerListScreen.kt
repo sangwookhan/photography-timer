@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,12 +71,16 @@ import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedFilmName
 import com.sangwook.ptimer.app.ui.localizedTimerSubtitle
 import com.sangwook.ptimer.app.ui.localizedTimerTitle
+import com.sangwook.ptimer.app.ui.shooting.localizedFilterReferenceText
 import com.sangwook.ptimer.app.vm.ShootingIntent
 import com.sangwook.ptimer.app.vm.ShootingUiState
 import com.sangwook.ptimer.app.vm.TimerCardState
 import com.sangwook.ptimer.core.exposure.ExposureCalculator
 import com.sangwook.ptimer.core.exposure.ExposureScale
+import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.app.ui.shooting.filterNotationText
+import com.sangwook.ptimer.app.ui.shooting.filterStopsText
 import com.sangwook.ptimer.core.timer.TimerBasisPresenter
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.delay
@@ -576,6 +581,7 @@ private fun TimerCard(
     // which ignores the user's locale conventions entirely. Recomputed on
     // locale/configuration change via LocalConfiguration.
     val locale = LocalConfiguration.current.locales[0]
+    val resources = LocalContext.current.resources
     val endFormatter = remember(locale) {
         DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale).withZone(ZoneId.systemDefault())
     }
@@ -709,6 +715,12 @@ private fun TimerCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Whether this timer captured at least one Filter Set row. It
+            // decides both the basis line's number form and whether the
+            // reference line below exists at all (FILTER-PERSIST-003).
+            val capturedSummary = card.identity.filterSummary
+            val showsReference = capturedSummary
+                ?.any { it.sourceKind == FilterSummaryEntry.SourceKind.filterSet } == true
             // Basis line rendered from structured ND/base inputs in the current
             // notation mode (PTIMER-187); falls back to any precomposed baseLine
             // from a pre-update timer that has no structured fields.
@@ -721,6 +733,22 @@ private fun TimerCard(
                 formatShutter = ::basisShutterLabel,
                 baseNdFormat = stringResource(R.string.timer_basis_base_nd),
                 baseNdAdjustedFormat = stringResource(R.string.timer_basis_base_nd_adj),
+                // FILTER-PERSIST-003: a mixed Filter Stack's primary value is
+                // the captured canonical total, which is a plain decimal in
+                // stops — neither the global OD/ND notation nor the ladder's
+                // reserved third-stop fractions describe it. A 29.6-stop
+                // stack reads `29.6 스톱`, not `29 2/3 스톱` and not `OD 8.9`.
+                // A Standard-only timer keeps following the global notation.
+                // FILTER-A11Y-003: either way the unit is a word, so the
+                // core default would leave an English `stops` in a Korean
+                // line.
+                formatNotation = { stops, notation ->
+                    if (showsReference) {
+                        filterStopsText(stops, resources)
+                    } else {
+                        filterNotationText(stops, notation, resources)
+                    }
+                },
             ) ?: card.identity.baseLine.takeIf { it.isNotEmpty() }
             if (basisText != null) {
                 Row(
@@ -757,12 +785,46 @@ private fun TimerCard(
                     }
                 }
             }
+            // Filter Set reference (FILTER-PERSIST-003): a descriptive second
+            // line composed from the summary captured at start, so renaming,
+            // editing, or deleting the inventory afterwards never rewrites it.
+            // The basis line above keeps the canonical total. A Standard-only
+            // timer has no Filter Set entry and shows no extra line.
+            val filterReference = when {
+                !showsReference -> null
+                // What the timer captured at start, in the language then
+                // in use. Renames, edits, deletions and a later app-language
+                // change all leave it alone.
+                card.identity.filterReferenceText != null -> card.identity.filterReferenceText
+                // Legacy or damaged payload with no captured string.
+                else -> localizedFilterReferenceText(capturedSummary!!)
+            }
+            if (filterReference != null) {
+                Text(
+                    filterReference,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // FILTER-PERSIST-003 asks the list to present the
+                    // reference string, and a realistic one — two Filter Set
+                    // items plus a Standard segment — does not fit a single
+                    // line on a phone. One line truncated it to a fragment
+                    // that no longer said which filters the timer used. Wrap
+                    // to a second line, as iOS does; the ellipsis stays for
+                    // anything longer still, and the node keeps the complete
+                    // string for accessibility either way.
+                    maxLines = FilterReferenceMaxLines,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
 
             Spacer(Modifier.size(12.dp))
             CardActions(card, onEvent, onConfirm)
         }
     }
 }
+
+/** Lines the timer card's Filter Set reference may occupy. */
+private const val FilterReferenceMaxLines = 2
 
 @Composable
 private fun StatusBadge(status: TimerStatus) {

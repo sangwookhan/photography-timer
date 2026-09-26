@@ -1,0 +1,252 @@
+# PTIMER-221 paired iOS/Android capture set
+
+Review evidence for the Android Code PR. One directory per scenario,
+each holding the iOS reference and the Android result for that scenario.
+Supplementary shots of the same scenario are suffixed `-b`, `-c`, `-d`.
+
+**The comparison itself is in [COMPARISON.md](COMPARISON.md)** — one row
+per scenario with the observed behavior on each platform, the contract
+id, and the classification.
+
+**Not every pair is identically seeded.** The first pass drove each
+platform to the same *situation*, not to the same set names, totals and
+interaction phase. COMPARISON.md marks every row `SAME SEED`,
+`DIFFERENT SEED`, or `RESEED PENDING`. Only a `SAME SEED` row may be read
+as visual or transition parity evidence; a `DIFFERENT SEED` row supports
+its behavioral claim only. Scenario 22 is Android-only and is not parity
+evidence at all.
+
+## Provenance
+
+| | iOS | Android |
+| --- | --- | --- |
+| build | `main` at `64565f7394fb6d3b00be3655e1b6fb84851c5967` (the merge of the iOS PTIMER-221 PR; also the baseline this Code PR is rebased onto) | `feature/PTIMER-221-android` — see the per-frame build table below |
+| device | iPhone 17 simulator, UDID `9144ED16-488D-41F0-B736-3E0564BC6874` | `emulator-5554`, Pixel_10 AVD, API 37 |
+| screen | 402 x 874 pt, 3x (1206 x 2622 px) | 411.43 x 923.43 dp, density 420 (2.625 px/dp, 1080 x 2424 px) |
+| appearance | light | dark — the app hard-codes `PTimerTheme(darkTheme = true, dynamicColor = false)`, and `cmd uimode night no` does not change it |
+| locale | ko-KR | ko-KR, set per-app with `cmd locale set-app-locales com.sangwook.ptimer.debug --locales ko-KR` |
+| bundle / package | `com.sangwook.PTimer.dev` | `com.sangwook.ptimer.debug` |
+| captured | 2026-09-23 22:43-23:32 KST, plus two retakes 2026-09-24 00:39-01:16 | 2026-09-23 23:39 - 2026-09-24 00:23 KST, re-driven to the iOS seeds 2026-09-24 01:08-02:05 |
+
+### Android frames come from two commits
+
+The Android set was reshot against the iOS seeds after the layout and
+localization corrections landed, and one further correction landed
+mid-pass, so the frames are not all from one build. They are labelled
+rather than averaged:
+
+| build | frames |
+| --- | --- |
+| `496a4ec4` | `09`, `13`, `13-b`, `15`, `16`, `17`, `18`, `19`, `19-b`, `21`, `28` |
+| `120bb559` | `07` |
+| `5d6db106` | `25`, `26`, `26-b`, `26-c`, `26-d` |
+| `79b339c9` | every scenario not listed above, unchanged from the first pass |
+
+`120bb559` changed how a mixed stack's total is formatted and
+`ed233a07` let the timer's reference line wrap, so only the timer-card
+frames were reshot against those. `5d6db106` then relaid the shooting
+card out from measured widths, which is visible in every frame that
+shows that card — the `ND 필터` label moves left, the base-shutter
+column narrows from about 45% of the card to 28%, and the wheels become
+separate boxes with their own type-cue rails. The five frames listed
+against it were retaken from one seeding for that reason; the timer
+card inside them is unchanged. `07` was
+additionally verified on `496a4ec4` before `120bb559` landed — same
+keypad, same input type, same focus behaviour — so it is cross-checked
+on both.
+
+Superseded frames are not in the working tree but are not lost: the
+first-pass images are in this repository's history, at the commit that
+added this directory. The ones replaced were replaced because they
+showed the wrong thing — `07` captured the item editor's autofocused
+name field instead of a focused choice field, `13` was taken after the
+status region's linger had expired, and the rest were driven to
+different set names, totals and stack compositions than iOS.
+
+Because the two platforms render in different appearances, **no colour
+comparison in the matrix is a measured hue match** — colour differences
+are stated as semantic roles (Material error vs iOS orange), not as
+pixel values.
+
+## How to read these images
+
+The committed PNGs are **downscaled to 1200 px tall and colour-quantised**
+so the set costs about 1.7 MB instead of 12 MB. They are for reading
+layout, wording, and ordering. **Do not measure geometry off them** — every
+geometric claim in the comparison matrix was measured on the full-size
+originals: by pixel-scanning the 3x PNGs on iOS, and from `uiautomator
+dump` node `bounds` on Android.
+
+## Scenarios
+
+| id | seeded state |
+| --- | --- |
+| `01-entry-point` | Any stack; locate the Filter Set management entry in the ND header. Also checked with four wheels, where the Plus control is hidden. |
+| `02-management-empty` | No Filter Sets. Management surface opened from the ND header. iOS `-b`: two sets, to show creation order. |
+| `03-create-filter-set` | Create-set surface, empty name then `NiSi` typed (`-b`). Opened four times in a row to check that the suggested colour varies. |
+| `04-edit-mode-controls` | One Filter Set in the list, at rest and in edit mode (`-b`). |
+| `05-editor-fixed-nd1000` | New Fixed item, value `1000`, ND notation; live conversion line. |
+| `06-editor-gnd-od` | New GND item, OD `0.9`; calculation-modes section. Android `-b`: the next new item opening with the remembered notation (FILTER-ITEM-007). |
+| `07-editor-cpl` | New CPL item with choices `1`, `1.5`, `2`, with **the first choice field focused** so the keyboard on screen is the one that field raises. The first-pass frames captured the autofocused *name* field's QWERTY on both platforms and evidenced nothing; both were reshot. |
+| `08-editor-cpl-invalid` | `2.341` typed into a CPL choice; inline validation and disabled save. |
+| `09-set-detail-three-items` | One set holding a Fixed, a GND and a CPL item, in registration order. |
+| `10-add-immediate-order` | A settled mixed stack, then one Plus add of a source whose group already leads. The frame is taken immediately after the add with nothing else touched. iOS `-b` is mid-animation, iOS `-c` and Android `-b` are the discriminating three-then-four-wheel case. |
+| `11-empty-wheel-idle-cleanup` | An unmounted Empty Filter Set wheel left idle past the ~4 s interval. |
+| `12-order-after-change` | The wheel added in scenario 10, after it commits an item. |
+| `13-fallback-commit` | A drag that traverses at least one selectable row and settles on a row already mounted on the same camera. `-b` is the mid-drag frame with the unavailable candidate at the touch centre. |
+| `14-rejection-no-fallback` | A one-row drag whose only traversed row is unavailable. |
+| `15-status-idle` / `16-status-moving` / `17-status-rejection` | The three status-region contents over the same mixed stack. |
+| `18-gnd-record-only` / `19-gnd-full` | One GND wheel in each calculation mode, same stack, to show the wheel does not move. |
+| `20-empty-vs-standard-zero` | A Standard 0 wheel and a Filter Set Empty wheel side by side. |
+| `21-cap-no-usable-row` | Total driven to exactly 30 stops, then a Plus add attempted on a source with no row that fits the remaining budget. |
+| `22-cap-record-only-addable` | Total at 30 stops with a free wheel slot and an unmounted Record-only GND. Android only: the iOS pass could not construct this state inside the idle interval, so there is no iOS reference. `android-b` is the same wheel after the ordinary idle interval removed it. |
+| `23-camera-switch` | Camera 2's independent stack and remembered Plus source, then camera 1 restored (`-b`). |
+| `24-after-relaunch` | The same stack after force-stop and relaunch. |
+| `25-timer-reference` | A timer started from a mixed stack; primary total line and secondary reference line. |
+| `26-timer-reference-after-delete` | The Filter Set behind that running timer renamed, then deleted. iOS: the timer card after the delete (`ios`), the confirmation dialog (`-b`), the collapsed stack (`-c`), the timer entry after cancelling (`-d`). Android: the timer card after the **rename**, with the set still named as captured (`android`), then the confirmation dialog (`-b`), the collapsed stack (`-c`), and the timer card after the delete (`-d`). The two platforms' supplementary frames are therefore not index-for-index; each is named for what it shows. |
+| `27-a11y-wheel` | One wheel's accessibility label and value. iOS read from source (the simulator accessibility tree tool was unavailable); Android label read from `uiautomator dump`, value read from source because the dump does not serialise `stateDescription`. |
+| `28-a11y-status` | The status region's accessibility structure: leading detail and total as separate elements. |
+| `29-large-text-narrow-android-only` | **Android only, not parity evidence. Rendered from a seeded fixture, not hand-driven.** The shooting card at 360dp with **four mounted wheels carrying the widest legal content** — three Record-only GND wheels at the widest value the formatter produces, plus the Standard wheel — in English and Korean, at the 1.3x the shipping app reaches today and at an uncapped 2.0x, four frames. **The 2.0x pair is stress coverage, not shipping-path evidence** — the app caps this surface at 1.3x and Spec PR #68 permits that; for the shipped app's effective scale see `30-shipping-path-font-scale` below. Hand-driving cannot reach this state: FILTER-STACK-006 reaps the newly added Empty wheel before a fourth value can be committed, so the stack is seeded through the controller and the real screen is rendered and photographed (`Scenario29CaptureScratchTest`, local and not committed). Recorded because this is where the Android layout had to change, and each frame is the evidence for a fix: the notation options and the management entry span the whole card so each option owns a 48dp target; the row resolves ONE numeric size and shrinks it to fit rather than cutting the value; the type rail has a lane of its own instead of being painted over the leading digit; and the status region reserves the height its row needs, which is what the 2.0x frames show. iOS has no matching state — its sizing model and its Dynamic Type steps are different, so there is nothing to pair it with. |
+| `30-shipping-path-font-scale` | **The shipping path, driven by hand.** The real app through `ShootingApp` — not a `ShootingScreen` harness — with a four-wheel stack built by actual interaction: a Filter Set created in the management surface, four GND items registered at 29.7 stops, four wheels added from the Plus control and each mounted on its own item, one of them switched to Apply full value. Five representative frames out of a twelve-cell sweep (360dp and 411dp, English and Korean, system font at normal, at the app's cap, and above it). `android-411dp-en-1.0x` is the normal-text reference; `android-360dp-en-1.3x` and `android-411dp-ko-1.3x` are at the cap; `android-360dp-en-2.0x` and `android-360dp-ko-2.0x` have the system setting pushed **above** the cap, which SHELL-020 asks to be verified as its own case. The measured effective scale for every cell is in the table below. |
+| `31-talkback-above-the-cap` | **TalkBack live, at a system text size above the app's cap.** The stage-2 review's open evidence gate. The four-wheel mixed stack is built through accessibility ACTIONS — the Plus stepped from Standard to the Filter Set as an adjustable, then added and each new wheel adjusted onto its own item — with TalkBack running and `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` so the service is not suppressed. 360dp Korean and 411dp English, both at system 2.0x, each with its own recorded run — `talkback-360dp-ko.log` and `talkback-411dp-en.log` — and frames showing TalkBack's own focus rectangle. The INVENTORY is seeded in-process (registering four filters through the management surface is not what this gate is about); everything after it is interaction. |
+
+## Known gaps
+
+- **iOS `22-cap-record-only-addable` is missing.** At 30 stops iOS refuses
+  any add, and building the state below the cap and then raising the total
+  had to happen inside the 4 s idle interval, which the tooling round-trip
+  could not beat.
+- **iOS was not observed with its screen reader speaking.** The iOS
+  accessibility tree tool was disabled in this environment and enabling
+  VoiceOver would have left the handover simulator in a screen-reader
+  state. The iOS accessibility rows state that their values were read
+  from source.
+
+  This used to say neither platform was observed. That is no longer
+  true of Android: the rows were first read from `uiautomator` and from
+  source, then the live-service run closed the gate, and
+  `31-talkback-above-the-cap` closes it again at a system text size
+  above the app's cap.
+- **iOS Plus tap-to-add is untested.** An injected zero-travel tap never
+  fires SwiftUI's `DragGesture(minimumDistance: 0)` `onChanged`, so the
+  arbiter never leaves its rest state. The browse-drag add and the
+  long-press manage paths were both exercised.
+
+This directory is ticket-scoped review evidence and is expected to be
+removed before merge.
+
+
+## Observed effective font scale on the shipping path
+
+Measured off the rendered screen, not inferred from a passing test.
+Each number is the height in pixels of that text node as `uiautomator`
+reports it, with the ratio against the same cell at the system default.
+The twelve cells all carry the same four-wheel stack.
+
+| cell | Base Shutter caption | ND Filter title | Total | Adjusted Shutter |
+| --- | --- | --- | --- | --- |
+| 411dp en, system 1.0x | 53px | 53px | 42px | 42px |
+| 411dp en, system 1.3x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 55px (1.31x) |
+| 411dp en, system 2.0x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 55px (1.31x) |
+| 411dp ko, system 1.0x | 53px | 53px | 42px | 46px |
+| 411dp ko, system 1.3x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 59px (1.28x) |
+| 411dp ko, system 2.0x | 71px (1.34x) | 71px (1.34x) | 55px (1.31x) | 59px (1.28x) |
+| 360dp en, system 1.0x | 60px | 60px | 48px | 48px |
+| 360dp en, system 1.3x | 162px (two lines) | 81px (1.35x) | 63px (1.31x) | 63px (1.31x) |
+| 360dp en, system 2.0x | 162px (two lines) | 81px (1.35x) | 63px (1.31x) | 63px (1.31x) |
+| 360dp ko, system 1.0x | 61px | 61px | 48px | 52px |
+| 360dp ko, system 1.3x | 81px (1.33x) | 81px (1.33x) | 63px (1.31x) | 67px (1.29x) |
+| 360dp ko, system 2.0x | 81px (1.33x) | 81px (1.33x) | 63px (1.31x) | 67px (1.29x) |
+
+Two things this shows directly.
+
+**The cap holds, and it is 1.3x.** Every ratio at the system's 1.3x
+setting lands between 1.28x and 1.35x; the spread is line-box rounding,
+not different scales.
+
+**Above the cap nothing moves.** Each `2.0x` row is identical to the
+`1.3x` row above it, to the pixel. Raising the system setting past the
+app's cap changes no text on this surface — which is the behaviour
+SHELL-020 now permits, observed rather than assumed.
+
+The one apparent outlier is not a scale: at 360dp in English the
+`Base Shutter` caption is 162px, exactly twice the 81px of the title
+beside it, because the caption **wraps onto a second line**. It is
+complete, not clipped, which is what the card's stated precedence
+intends — the caption is the one label here that can yield without being
+cut.
+
+Two areas hold their own 1.0x cap and are meant to: the wheels'
+persistent type/mode labels (`GND FULL`, `GND REC`) and the notation
+options. They are visibly the same size in every frame. Under the
+approved SHELL-020 revision that is intentional area-specific capping,
+not a defect.
+
+### What was exercised by hand, and what was not
+
+- **Actual interaction:** creating the Filter Set, registering the four
+  GND items, adding each wheel from the Plus control, mounting each on
+  its own item, switching one to Apply full value, and the twelve-cell
+  sweep itself (each cell is a real configuration change and an app
+  restart, so the stack is also re-read from persistence twelve times).
+- **Seeded fixture:** scenario 29's four frames, and the 180-case
+  instrumented matrix. Those compose `ShootingScreen` directly and can
+  reach content the shipping path caps, so they are stress coverage, not
+  evidence of the shipped app's effective scale.
+- **Not re-run in this pass:** spoken TalkBack output. The gate for it
+  was closed earlier in this PR with real TalkBack; here TalkBack was
+  enabled but did not respond to injected `KEYCODE_TAB` or D-pad events,
+  so focus could not be walked from the shell. What this pass does show
+  at the large setting is the structure those announcements read from —
+  each wheel remains exactly one element (`필터 1/4, Lee holder` and its
+  three siblings in every Korean cell) — and that every interactive
+  target stays at or above 48dp.
+
+### Touch targets at 360dp with the system setting above the cap
+
+Measured from the live tree in Korean, the tightest cell:
+
+| control | size |
+| --- | --- |
+| `스톱` / `OD` / `ND` notation options | 84.0 x 48.0 dp each |
+| Filter Set management (gear) | 48.0 x 48.0 dp |
+| Start timer | 48.0 x 48.0 dp |
+| Camera rename / Reset / alert / About | 48.0+ x 48.0 dp |
+| Film row, Target Shutter row | 328.0 x 48.0 dp |
+
+Nothing on the surface falls below the 48dp minimum.
+
+
+## TalkBack above the cap
+
+From the two recorded runs in `31-talkback-above-the-cap/`, at 360dp in
+Korean and 411dp in English, both with the system font at 2.0x — above
+the app's 1.3x cap. The table quotes the Korean run; the English one
+shows the same behaviour and is quoted where the two differ.
+
+| what the review asked for | observed |
+| --- | --- |
+| wheel value, with GND mode and contribution | `Lee GND 1, GND, 기록만, 0 스톱, 합계 19 스톱` — item, type, **mode**, contribution, Total, on one element per wheel. English: `Lee GND 1, GND, Record only, 0 stops, Total 16.6 stops`. |
+| the Total as its own focus | `합계 22 스톱`, `focusable=true`, and TalkBack's focus rectangle sits on it alone in `android-360dp-ko-total-focused.png`. |
+| adjustment | three steps, each applied, the wheel and the Total moving together: 19 → 20 → 21 → 22 스톱. |
+| adjustment across an unavailable row | `EXHAUST|1` steps the trailing wheel from `Lee GND 3` to `Lee GND 4` in ONE step, skipping the rows whose items are mounted on the other wheels. |
+| the refusal at the end of the scan | `EXHAUST|2` does not move, and the app announces it: `TYPE_ANNOUNCEMENT text=[30스톱 초과]`. FILTER-A11Y-004, spoken. |
+| the Plus control's actions | adjustable — `ACTION_SET_PROGRESS` steps the source, `PLUS-SOURCE=[Lee holder]` — plus `ACTION_CLICK` and two custom actions, `필터 추가` and `Filter Set 관리`. |
+| focus targets clipped or hidden | none. Every labelled node reports `visible=true` with a non-empty box; the harness logs any that do not and logged nothing. |
+
+The English run reaches the same conclusions and adds two things the
+Korean one did not happen to exercise:
+
+- **The GND mode changes under adjustment and is announced**:
+  `Lee GND 1, GND, Record only, 0 stops, Total 0 stops` becomes
+  `Lee GND 1, GND, Apply full value, 29.7 stops, Total 29.7 stops`.
+- **One step crosses several unavailable rows at once**: from
+  `Lee GND 1, Apply full value` straight to `Lee GND 4, Record only`,
+  skipping both the items mounted on the other wheels and the rows that
+  would take the stack past 30 stops. The step after that is refused and
+  announced: `Exceeds 30 stops`.
+
+One wording nit for the follow-up list, not a gate: the Korean refusal
+is announced as `30스톱 초과`, without the space the rest of the Korean UI
+puts before `스톱` (`합계 22 스톱`). The English string, `Exceeds 30 stops`,
+is well formed.

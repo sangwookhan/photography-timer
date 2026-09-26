@@ -8,9 +8,11 @@ import com.sangwook.ptimer.app.persistence.AppPersistenceWriter
 import com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStore
 import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
 import com.sangwook.ptimer.app.persistence.DataStoreDisplaySettingsStore
+import com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStore
 import com.sangwook.ptimer.app.persistence.DataStoreSlotSessionStore
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.customfilm.CustomFilmLibrary
+import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
@@ -39,6 +41,9 @@ class ShootingAppBootstrap(
     val library: CustomFilmLibrary,
     val initialSession: PersistentSlotSession?,
     val slotStore: DataStoreSlotSessionStore,
+    /** The user's Filter Sets and physical items, read during [load]. */
+    val initialInventory: FilterInventory,
+    val inventoryStore: DataStoreFilterInventoryStore,
     val displaySettingsStore: DataStoreDisplaySettingsStore,
     val initialNdNotationMode: NDNotationMode,
     val initialExactAlarmWarningDismissed: Boolean,
@@ -54,6 +59,7 @@ class ShootingAppBootstrap(
         suspend fun load(context: Context): ShootingAppBootstrap {
             val slotStore = DataStoreSlotSessionStore.create(context)
             val displaySettingsStore = DataStoreDisplaySettingsStore.create(context)
+            val inventoryStore = DataStoreFilterInventoryStore.create(context)
             // Library writes happen in main-thread UI callbacks; the async-write
             // decorator keeps those callbacks non-blocking (PTIMER-217).
             val libraryStore = AsyncWriteCustomFilmLibraryStore(DataStoreCustomFilmLibraryStore.create(context))
@@ -66,6 +72,9 @@ class ShootingAppBootstrap(
                     library = CustomFilmLibrary(store = libraryStore),
                     initialSession = slotStore.loadSession(),
                     slotStore = slotStore,
+                    initialInventory = inventoryStore.loadSnapshot()?.restoredInventory
+                        ?: FilterInventory.empty,
+                    inventoryStore = inventoryStore,
                     displaySettingsStore = displaySettingsStore,
                     initialNdNotationMode = displaySettingsStore.loadNdNotationMode(),
                     initialExactAlarmWarningDismissed = displaySettingsStore.loadExactAlarmWarningDismissed(),

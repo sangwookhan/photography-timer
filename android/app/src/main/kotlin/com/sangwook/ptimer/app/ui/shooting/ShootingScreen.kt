@@ -9,16 +9,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -46,10 +50,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -57,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -69,14 +77,20 @@ import com.sangwook.ptimer.core.customfilm.CustomFilmReferencePointRow
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
+import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
+import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.reciprocity.CustomProfileSourceType
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
+import com.sangwook.ptimer.ui.component.WheelNumericColumn
+import com.sangwook.ptimer.ui.component.sharedWheelNumericScale
 import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
 import androidx.compose.ui.res.stringResource
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
@@ -94,13 +108,16 @@ import com.sangwook.ptimer.app.ui.localizedFilmName
 fun ShootingScreen(
     state: CalculatorUiState,
     onShutterIndex: (Int) -> Unit,
-    // ND wheel stack (PTIMER-199): per-wheel activity/selection plus the
-    // structural add/remove/cleanup commands, all keyed by wheel identity.
+    // Mixed Filter Stack (PTIMER-199 / PTIMER-221): per-wheel activity and
+    // selection, the Plus addition for a chosen source, the assistive row
+    // scan, and the overscroll removal — all keyed by wheel identity.
     onNdWheelActive: (Int, Boolean) -> Unit,
     onNdWheelValue: (Int, Int) -> Unit,
-    onAddNdWheel: () -> Unit,
+    onAddFilterWheel: (FilterSource) -> Unit,
+    onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
+    onFilterAddUnavailability: (FilterSource) -> FilterAddUnavailability?,
     onRemoveNdWheelOverscroll: (Int) -> Unit,
-    onCleanupEmptyNdWheels: () -> Unit,
+    onManageFilterSets: () -> Unit,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
@@ -319,63 +336,128 @@ fun ShootingScreen(
 
                     // Base shutter + ND wheels (compact: 3 visible rows).
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(CardRowPadding),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                // Header height matches the ND column's title+toggle
-                                // row so the two wheels stay vertically aligned.
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
-                                    contentAlignment = Alignment.CenterStart,
-                                ) {
-                                    Text(stringResource(R.string.shooting_base_shutter), style = MaterialTheme.typography.labelLarge)
-                                }
-                                SnapWheel(
-                                    pageState.shutterLabels,
-                                    pageState.shutterIndex,
-                                    onShutterForPage,
-                                    visibleCount = 3,
-                                    itemHeight = 34.dp,
-                                    accessibilityLabel = stringResource(R.string.shooting_base_shutter),
+                        // The stack owns the card's whole content column so
+                        // its one-row status region spans the full content
+                        // width (FILTER-STACK-008) instead of starting at
+                        // the filter sub-column; the wheels come back
+                        // through the slot to sit beside Base Shutter.
+                        FilterStackGroup(
+                            state = pageState,
+                            onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
+                            onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
+                            onAddFilterWheel = if (writesActiveSlot) onAddFilterWheel else { _ -> },
+                            onAdjustFilterWheel = if (writesActiveSlot) {
+                                onAdjustFilterWheel
+                            } else {
+                                { _, _ -> FilterWheelAdjustmentOutcome.Boundary }
+                            },
+                            onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
+                            onFilterAddUnavailability = onFilterAddUnavailability,
+                            onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
+                            modifier = Modifier.padding(CardRowPadding),
+                        ) { wheels ->
+                            val baseShutterCaption = stringResource(R.string.shooting_base_shutter)
+                            val ndFilterTitle = stringResource(R.string.shooting_nd_filter)
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val split = ndCardColumnSplit(
+                                    available = maxWidth - NdColumnGutter,
+                                    ndTitle = ndFilterTitle,
+                                    baseShutterCaption = baseShutterCaption,
+                                    shutterLabels = pageState.shutterLabels,
+                                    wheelCount = pageState.filterWheels.size,
+                                    plusVisible = pageState.plus.isVisible,
                                 )
-                            }
-                            Column(
-                                // The ND column widens once wheels stack so
-                                // 3–4 side-by-side ladders keep readable
-                                // labels; the shutter wheel needs less room.
-                                modifier = Modifier.weight(
-                                    if (pageState.ndWheels.size >= 2) 1.6f else 1f,
-                                ),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                // One horizontal header row: a stronger "ND Filter"
-                                // title with the compact notation toggle, matching
-                                // the iOS placement (PTIMER-187).
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().height(NotationToggleHeight),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(stringResource(R.string.shooting_nd_filter), style = MaterialTheme.typography.labelLarge)
-                                    Spacer(Modifier.weight(1f))
-                                    NotationToggle(
+                                // FILTER-STACK-007's "same numeric
+                                // size": one scale for the whole row,
+                                // resolved here because this is the
+                                // only place that knows both columns
+                                // before either of them renders.
+                                val numericScale =
+                                    sharedWheelNumericScale(numericColumns(pageState, split))
+                                // Three rows, not two columns: a caption band,
+                                // the notation/management band, then the picker
+                                // band. Whatever height the first two take is
+                                // the height BOTH columns reserve, so the
+                                // pickers start on one line without anyone
+                                // measuring anyone (FILTER-STACK-007).
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        // No fixed height: the caption has no
+                                        // maxLines and no overflow, so a box too
+                                        // short for the line it needs used to cut
+                                        // it off in silence.
+                                        Box(
+                                            modifier = Modifier
+                                                .width(split.shutterWidth)
+                                                .heightIn(min = NotationToggleHeight),
+                                            contentAlignment = Alignment.CenterStart,
+                                        ) {
+                                            Text(baseShutterCaption, style = MaterialTheme.typography.labelLarge)
+                                        }
+                                        Spacer(Modifier.width(NdColumnGutter))
+                                        Box(
+                                            modifier = Modifier
+                                                .width(split.ndWidth)
+                                                .heightIn(min = NotationToggleHeight),
+                                            contentAlignment = Alignment.CenterStart,
+                                        ) {
+                                            Text(
+                                                ndFilterTitle,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                    }
+                                    NdNotationControls(
                                         mode = pageState.ndNotationMode,
                                         enabled = writesActiveSlot,
-                                        onSelect = onSelectNotation,
+                                        onSelectNotation = onSelectNotation,
+                                        onManageFilterSets = onManageFilterSets,
                                     )
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        Column(
+                                            modifier = Modifier.width(split.shutterWidth),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            // Reserve the filter columns' persistent
+                                            // type/mode label height (FILTER-STACK-007) so
+                                            // both pickers' viewports, selection bands, and
+                                            // touch centers share one vertical axis.
+                                            Spacer(Modifier.height(FilterWheelLabelRowHeight))
+                                            SnapWheel(
+                                                pageState.shutterLabels,
+                                                pageState.shutterIndex,
+                                                onShutterForPage,
+                                                visibleCount = 3,
+                                                // The filter wheels' own minimum, not a
+                                                // second literal that has to agree with it
+                                                // (FILTER-STACK-007).
+                                                itemHeight = WheelItemHeight,
+                                                accessibilityLabel = baseShutterCaption,
+                                                // FILTER-STACK-007: the
+                                                // whole row steps down
+                                                // together as wheels are
+                                                // added, Base Shutter
+                                                // included. It used to
+                                                // keep its own larger
+                                                // size while the filter
+                                                // wheels went dense,
+                                                // which is the one thing
+                                                // "the same numeric
+                                                // size" rules out.
+                                                dense = isDenseFilterWheelRow(
+                                                    pageState.filterWheels.size,
+                                                ),
+                                                numericScale = numericScale,
+                                            )
+                                        }
+                                        Spacer(Modifier.width(NdColumnGutter))
+                                        Box(modifier = Modifier.width(split.ndWidth)) {
+                                            wheels(numericScale)
+                                        }
+                                    }
                                 }
-                                NdFilterStackGroup(
-                                    state = pageState,
-                                    onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
-                                    onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
-                                    onAddWheel = if (writesActiveSlot) onAddNdWheel else fun() {},
-                                    onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
-                                    onCleanupEmptyWheels = if (writesActiveSlot) onCleanupEmptyNdWheels else fun() {},
-                                )
                             }
                         }
                     }
@@ -489,11 +571,40 @@ fun ShootingScreen(
  *  consistent value instead of each card picking its own (was 16/8/12dp). */
 private val CardRowPadding = 8.dp
 
-/** Header-row height reserved for the ND notation toggle (PTIMER-187). */
+/** Minimum height of the mixed-stack card's caption row (PTIMER-187). */
 private val NotationToggleHeight = 30.dp
+
+/**
+ * Gutter between the Base Shutter column and the ND column. Without
+ * one, a case where the shutter column gets exactly the width its
+ * caption needs — a narrow screen at a raised font scale — runs the two
+ * captions together: `Base ShutterND Filter`, observed at 360dp.
+ */
+private val NdColumnGutter = 8.dp
 
 /** Height of the notation toggle's rounded track. */
 private val NotationTrackHeight = 26.dp
+
+/** Inset between the notation toggle's track and its segments. */
+private val NotationTrackPadding = 2.dp
+
+/** Gap between two notation segments. */
+private val NotationSegmentSpacing = 2.dp
+
+/** The notation modes the toggle offers, in display order. */
+private val NotationOptionModes = listOf(
+    NDNotationMode.STOPS,
+    NDNotationMode.OPTICAL_DENSITY,
+    NDNotationMode.FILTER_FACTOR,
+)
+
+/** Labels for [NotationOptionModes], in the same order. */
+@Composable
+private fun notationOptionLabels(): List<String> = listOf(
+    stringResource(R.string.notation_stops),
+    "OD",
+    "ND",
+)
 
 /** Minimum accessible touch/semantics target size (PTIMER-218). */
 private val MinTouchTargetSize = 48.dp
@@ -569,99 +680,300 @@ private val CustomFilmDraftSaver: Saver<CustomFilmDraft?, Any> = mapSaver(
 )
 
 /**
- * Expands only the touch/semantics HEIGHT of the modified node to [minHeight],
- * centering its unmodified content — unlike Material3's
- * `minimumInteractiveComponentSize()` this leaves width untouched. The ND
- * notation segments (PTIMER-218) sit in a width-constrained row sharing space
- * with the "ND Filter" title; growing touch width there would overflow that
- * row, so only height is expanded. The wrapped content still measures and
- * draws at its natural (unchanged) size — this only enlarges the reported
- * layout bounds used for touch/semantics.
+ * How the mixed-stack card divides its content row between the Base
+ * Shutter column and the ND column.
  */
-private fun Modifier.expandedTouchHeight(minHeight: Dp): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val height = maxOf(placeable.height, minHeight.roundToPx())
-    layout(placeable.width, height) {
-        placeable.placeRelative(0, (height - placeable.height) / 2)
+private data class NdCardColumnSplit(
+    val shutterWidth: Dp,
+    val ndWidth: Dp,
+)
+
+/**
+ * The width one filter wheel wants: what
+ * `FilterWheelLabelLegibilityTest` holds the narrowest supported column
+ * to, so `GND FULL` and its source cue stay whole at every supported
+ * text size (FILTER-STACK-007). It is a want, not a floor — the label
+ * shrinks to fit below it — but the split spends the row's surplus on
+ * reaching it before it spends anything on the base-shutter column.
+ */
+private val FilterWheelWantedWidth = 48.dp
+
+/**
+ * Divides the card row by what each side actually needs at the current
+ * width, locale and font scale (SHELL-020, FILTER-A11Y-002).
+ *
+ * The split used to be a pair of fixed weights — a RATIO of whatever
+ * width the device happened to have. The ND header's need is not a
+ * ratio: the title scales with the font setting and the two controls
+ * are held at 1x, so the header needs a width in dp that a 360dp phone
+ * simply does not hand it at any ratio tuned on a 411dp one. Measuring
+ * both sides makes the decision exact instead.
+ *
+ * The notation toggle and the management entry are no longer part of
+ * this arithmetic: they sit on their own full-card-width row
+ * ([NdNotationControls]), which is what lets every notation option own
+ * a 48dp target (SHELL-030) without the ND column having to reserve
+ * 150dp of chrome it then cannot give to the wheels. What the ND column
+ * now has to hold is its title and the wheels beside it.
+ *
+ * Precedence, in order:
+ *
+ *  1. The base-shutter VALUE never clips. Its rows are
+ *     `maxLines = 1, softWrap = false` with no overflow, so a column a
+ *     pixel too narrow cuts a digit off in silence.
+ *  2. The ND column keeps its title whole and every wheel at
+ *     [FilterWheelWantedWidth] — FILTER-STACK-007's persistent label,
+ *     numeric value, source cue and type rail all live in that width.
+ *  3. The base-shutter CAPTION gets its own line's width. It is a
+ *     required persistent label, but it is the one thing here that can
+ *     yield without being cut: it has no `maxLines`, so a narrower
+ *     column wraps it instead of clipping it, which is why it sits
+ *     below them in this ordering rather than above.
+ *  4. Anything left over is split evenly.
+ */
+@Composable
+private fun ndCardColumnSplit(
+    available: Dp,
+    ndTitle: String,
+    baseShutterCaption: String,
+    shutterLabels: List<String>,
+    wheelCount: Int,
+    plusVisible: Boolean,
+): NdCardColumnSplit {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val labelStyle = MaterialTheme.typography.labelLarge
+    // The centered row of a non-dense SnapWheel: what the base-shutter
+    // values are drawn with.
+    val valueStyle = MaterialTheme.typography.titleMedium
+
+    fun textWidth(text: String, style: TextStyle) = with(density) {
+        measurer.measure(
+            text,
+            style,
+            softWrap = false,
+            maxLines = 1,
+            density = density,
+            layoutDirection = layoutDirection,
+        ).size.width.toDp()
+    }
+
+    val valueNeed = remember(shutterLabels, valueStyle, density, layoutDirection) {
+        shutterLabels.maxOfOrNull { textWidth(it, valueStyle) } ?: 0.dp
+    }
+    val captionNeed = textWidth(baseShutterCaption, labelStyle)
+    val titleNeed = textWidth(ndTitle, labelStyle)
+
+    val shutterNeed = maxOf(valueNeed, captionNeed)
+    // What the wheel row is laid out from, mirrored from FilterStackGroup
+    // so the column the card hands over is the column the wheels divide.
+    val wheelsNeed = FilterWheelWantedWidth * wheelCount +
+        FilterWheelRowSpacing * (wheelCount - 1) +
+        (if (plusVisible) FilterPlusControlWidth + FilterWheelRowSpacing else 0.dp)
+    val ndNeed = maxOf(titleNeed, wheelsNeed)
+
+    val shutterWidth = if (shutterNeed + ndNeed <= available) {
+        shutterNeed + (available - shutterNeed - ndNeed) / 2
+    } else {
+        shutterNeed.coerceAtMost((available - ndNeed).coerceAtLeast(valueNeed))
+    }.coerceIn(0.dp, available)
+
+    return NdCardColumnSplit(shutterWidth, ndWidth = available - shutterWidth)
+}
+
+/**
+ * The card's numeric columns in the order they sit: the Base Shutter
+ * column at the width [split] gave it, then every filter wheel at the
+ * width they divide between them.
+ *
+ * The row renders all of them at one shared numeric size
+ * (FILTER-STACK-007), and that size has to be resolved before the first
+ * of them lays itself out — so the widths come from the same two
+ * functions the columns are then built with, rather than from a second
+ * copy of the arithmetic.
+ */
+private fun numericColumns(
+    state: CalculatorUiState,
+    split: NdCardColumnSplit,
+): List<WheelNumericColumn> = buildList {
+    val dense = isDenseFilterWheelRow(state.filterWheels.size)
+    // Base Shutter draws no type rail, so its value has the whole column.
+    add(WheelNumericColumn(split.shutterWidth, state.shutterLabels, dense, railed = false))
+    if (state.filterWheels.isEmpty()) return@buildList
+    val wheelWidth = filterWheelWidth(split.ndWidth, state.filterWheels.size, state.plus.isVisible)
+    state.filterWheels.forEach { wheel ->
+        add(
+            WheelNumericColumn(
+                width = wheelWidth,
+                labels = wheel.rows.map { it.compactValueText },
+                dense = dense,
+                railed = true,
+            ),
+        )
     }
 }
 
 /**
- * Compact 3-state ND notation toggle (Stops / OD / ND) for the ND Filter
- * header. Reads as one cohesive segmented control: a single low-emphasis
- * rounded track with the current mode rendered as a filled segment. Current
- * mode is always highlighted; a tap selects a mode. Sized to sit on the
- * header row without adding vertical space below the picker (PTIMER-187).
+ * The ND notation toggle and the persistent Filter Set management entry
+ * (FILTER-SET-001), on their own row across the whole card.
+ *
+ * They used to share the ND column's header row with the `ND Filter`
+ * title. That column is a fraction of the card, and three notation
+ * options plus a gear do not fit a fraction of a 360dp phone: they were
+ * drawn 14–30dp wide, against SHELL-030's "minimum 48dp interactive
+ * target" for ND notation controls, and there was no width left in the
+ * column to take without re-clipping the title or the base-shutter
+ * caption. Given the whole card width there is: three 48dp options and
+ * the gear need about 200dp, and the narrowest supported card is 312dp.
+ *
+ * The row is 48dp tall and the track inside it stays 26dp. SHELL-030
+ * asks for interactive area "independent of their drawn visual size", so
+ * the options are laid out to the row's full height around a track that
+ * is not: the targets are real and they are contained, rather than
+ * overflowing onto the caption above or the wheels below where they
+ * would sit on top of something else.
+ */
+@Composable
+private fun NdNotationControls(
+    mode: NDNotationMode,
+    enabled: Boolean,
+    onSelectNotation: (NDNotationMode) -> Unit,
+    onManageFilterSets: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(MinTouchTargetSize),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        NotationToggle(
+            mode = mode,
+            enabled = enabled,
+            onSelect = onSelectNotation,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(NotationSegmentSpacing * 2))
+        CappedFontScale(maxFontScale = 1f) {
+            Box(
+                modifier = Modifier
+                    .requiredSize(MinTouchTargetSize)
+                    .clip(CircleShape)
+                    .clickable(enabled = enabled, onClick = onManageFilterSets),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.filter_manage_sets),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 3-state ND notation toggle (Stops / OD / ND). Reads as one cohesive
+ * segmented control: a single low-emphasis rounded track with the current
+ * mode rendered as a filled segment. Current mode is always highlighted;
+ * a tap selects a mode.
+ *
+ * The three options divide the track evenly rather than taking their
+ * label widths, so the widest and the narrowest option get the same
+ * target: on the row [NdNotationControls] gives it that is about 80dp
+ * each at 360dp, comfortably over SHELL-030's 48dp minimum, where the
+ * content-sized segments this replaces were 14–30dp wide. Each option is
+ * laid out 48dp tall independently of the track it is drawn in — the
+ * spec asks for interactive area, not for paint.
  */
 @Composable
 internal fun NotationToggle(
     mode: NDNotationMode,
     enabled: Boolean,
     onSelect: (NDNotationMode) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val options = listOf(
-        NDNotationMode.STOPS to stringResource(R.string.notation_stops),
-        NDNotationMode.OPTICAL_DENSITY to "OD",
-        NDNotationMode.FILTER_FACTOR to "ND",
-    )
-    // The track shares its row with the "ND Filter" title (PTIMER-219), so it
-    // only ever gets the ND column's leftover width — not enough room left
-    // for 3 segments once the system font scale grows past 1x, which silently
-    // clips the last label (no overflow/ellipsis on a 2-char string helps).
-    // Hold this control's own labels at 1x rather than reflowing the row.
+    val options = NotationOptionModes.zip(notationOptionLabels())
+    // The labels are chrome beside the values and the captions the same
+    // row has to fit, and two of the three are 2-character strings with
+    // nothing to ellipsize; hold them at 1x rather than letting the
+    // track grow with the system font scale (SHELL-020's cap for
+    // non-primary chrome).
     CappedFontScale(maxFontScale = 1f) {
-    Row(
-        modifier = Modifier
-            .height(NotationTrackHeight)
-            .clip(CircleShape)
-            // Track is a distinct, outlined surface (lighter than the
-            // card's surfaceVariant) so the control reads as a segmented
-            // control and the option labels never blend into the card.
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .padding(2.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        options.forEach { (optionMode, label) ->
-            val selected = optionMode == mode
+        // The track is DRAWN behind the options, not wrapped around
+        // them. It used to be the options' parent, and its
+        // `clip(CircleShape)` clipped their bounds — and a clipping
+        // layer clips pointer input too, so however tall a segment was
+        // laid out, only the track's own 26dp of it could ever be
+        // touched. Behind them it cannot take anything away.
+        Box(modifier = modifier.height(MinTouchTargetSize), contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
-                    // Expands the touch/semantics target to 48dp tall without
-                    // growing the segment's own width or the visible pill
-                    // (PTIMER-218) — the row only has room for its current,
-                    // content-driven width alongside the "ND Filter" title.
-                    .expandedTouchHeight(MinTouchTargetSize)
+                    .fillMaxWidth()
+                    .height(NotationTrackHeight)
                     .clip(CircleShape)
-                    .then(
-                        if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
-                        else Modifier
-                    )
-                    // selectable (not clickable) so TalkBack announces the
-                    // segment as a button with its selected state (PTIMER-182).
-                    .selectable(selected = selected, enabled = enabled, role = Role.Button) {
-                        onSelect(optionMode)
-                    }
-                    .padding(horizontal = 7.dp, vertical = 3.dp),
-                contentAlignment = Alignment.Center,
+                    // Track is a distinct, outlined surface (lighter than the
+                    // card's surfaceVariant) so the control reads as a segmented
+                    // control and the option labels never blend into the card.
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+            )
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = NotationTrackPadding),
+                horizontalArrangement = Arrangement.spacedBy(NotationSegmentSpacing),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Compact selector labels, a step smaller than the "ND Filter"
-                // title so the control stays subordinate. Both selected and
-                // unselected labels use full-contrast on-container/on-surface
-                // colors so every option stays clearly legible; the selected
-                // one adds weight + container fill for a calm highlight.
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    softWrap = false,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                    else MaterialTheme.colorScheme.onSurface,
-                )
+                options.forEach { (optionMode, label) ->
+                    val selected = optionMode == mode
+                    Box(
+                        modifier = Modifier
+                            // The interactive node itself: the row's full
+                            // 48dp of height, and a third of the track's
+                            // width rather than its label's (SHELL-030).
+                            .weight(1f)
+                            .fillMaxHeight()
+                            // selectable (not clickable) so TalkBack announces the
+                            // segment as a button with its selected state (PTIMER-182).
+                            .selectable(selected = selected, enabled = enabled, role = Role.Button) {
+                                onSelect(optionMode)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(NotationTrackHeight - NotationTrackPadding * 2)
+                                .clip(CircleShape)
+                                .then(
+                                    if (selected) {
+                                        Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // Compact selector labels, a step smaller than the "ND Filter"
+                            // title so the control stays subordinate. Both selected and
+                            // unselected labels use full-contrast on-container/on-surface
+                            // colors so every option stays clearly legible; the selected
+                            // one adds weight + container fill for a calm highlight.
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                softWrap = false,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
     }
 }
 

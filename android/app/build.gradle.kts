@@ -42,7 +42,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = 5
-        versionName = "0.8.1"
+        versionName = "0.8.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -132,7 +132,10 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    // androidx.test 1.7 / Espresso 3.7: 3.6.1 calls the hidden
+    // InputManager.getInstance, removed in Android 17 (API 37), so every
+    // Compose instrumented test failed to reach onIdle on that emulator.
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }

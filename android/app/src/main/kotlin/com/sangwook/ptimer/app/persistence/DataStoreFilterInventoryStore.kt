@@ -34,6 +34,12 @@ private val QUARANTINE_KEY = stringPreferencesKey("filter_inventory_json.quarant
  * pattern as [DataStoreCustomFilmLibraryStore]. A normal save never
  * touches the quarantine.
  *
+ * "Degraded" includes losses that only surface when the records are
+ * restored — a Filter Set that parses but cannot be restored, and items
+ * dropped inside a set that survives. Those are the user's own filter
+ * records, and the next edit writes the reduced inventory over the
+ * original bytes, so the copy has to be taken on the load that noticed.
+ *
  * Takes the [DataStore] directly so it is unit-testable with a JVM-local
  * instance; use [create] to build the production instance from a
  * [Context].
@@ -53,7 +59,8 @@ class DataStoreFilterInventoryStore(
                 Log.e(
                     "ptimer.persistence",
                     "Filter inventory decode degraded: outcome=${result.outcome} " +
-                        "dropped=${result.droppedRecordCount}; quarantining raw payload.",
+                        "droppedSets=${result.droppedRecordCount} " +
+                        "lostOnRestore=${result.droppedOnRestoreCount}; quarantining raw payload.",
                 )
                 // Best-effort: a quarantine write failure must not hide the
                 // Filter Sets the codec already recovered, so it is isolated

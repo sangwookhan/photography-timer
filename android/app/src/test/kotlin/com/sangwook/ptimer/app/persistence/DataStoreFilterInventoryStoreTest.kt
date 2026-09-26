@@ -105,6 +105,79 @@ class DataStoreFilterInventoryStoreTest {
         assertNull(DataStoreFilterInventoryStore(newDataStore("inventory_empty.preferences_pb")).loadSnapshot())
     }
 
+    /**
+     * The defect this guards: a Filter Set whose ITEMS are damaged still
+     * decodes as a set, so the outcome used to read `loaded`, nothing was
+     * quarantined, and the very next edit wrote the reduced inventory over
+     * the only copy of the user's filter records.
+     */
+    @Test
+    fun itemLevelDamageIsQuarantinedAndSurvivesTheNextSave() {
+        val ds = newDataStore("inventory_item_damage.preferences_pb")
+        val original = """
+            {"schemaVersion":1,"filterSets":[{"id":"s-lee","name":"Lee holder","color":"indigo","items":[
+              {"id":"i-ok","name":"Big Stopper","kind":"fixed","value":1000.0,"unit":"filterFactor"},
+              {"id":"i-torn","name":"Torn","kind":"fixed","value":"three","unit":"stops"},
+              {"id":"i-alien","name":"Unknown kind","kind":"laser"}
+            ]}]}
+        """.trimIndent()
+        ds.writeRaw(original)
+        val store = DataStoreFilterInventoryStore(ds)
+
+        // The set and its intact sibling survive the load.
+        val loaded = store.loadSnapshot()
+        assertNotNull(loaded)
+        val sets = loaded!!.restoredInventory.filterSets
+        assertEquals(listOf("Lee holder"), sets.map { it.name })
+        assertEquals(listOf("Big Stopper"), sets.single().items.map { it.name })
+
+        // And the two that did not are recoverable: the quarantine holds
+        // the original bytes, exactly.
+        assertEquals(original, ds.readQuarantine())
+
+        // A later edit overwrites the live inventory, as it must — and
+        // leaves the quarantined copy alone.
+        store.saveSnapshot(sample)
+        assertEquals(sample, store.loadSnapshot())
+        assertEquals(
+            "The user's damaged records stay recoverable after the save that replaced them.",
+            original,
+            ds.readQuarantine(),
+        )
+    }
+
+    /**
+     * The same, one level up: a record that parses and then restores to
+     * nothing. The collection decoder refuses nothing here, so this is
+     * invisible without the restore-time diagnostics.
+     */
+    @Test
+    fun aFilterSetThatCannotBeRestoredIsQuarantined() {
+        val ds = newDataStore("inventory_unrestorable.preferences_pb")
+        val original = """
+            {"schemaVersion":1,"filterSets":[
+              {"id":"s-lee","name":"Lee holder","color":"indigo","items":[]},
+              {"id":"  ","name":"Blank id","color":"red","items":[]}
+            ]}
+        """.trimIndent()
+        ds.writeRaw(original)
+
+        val loaded = DataStoreFilterInventoryStore(ds).loadSnapshot()
+        assertEquals(listOf("Lee holder"), loaded!!.restoredInventory.filterSets.map { it.name })
+        assertEquals(original, ds.readQuarantine())
+    }
+
+    /** An intact payload is never quarantined. */
+    @Test
+    fun anIntactPayloadLeavesNoQuarantineCopy() {
+        val ds = newDataStore("inventory_intact.preferences_pb")
+        val store = DataStoreFilterInventoryStore(ds)
+
+        store.saveSnapshot(sample)
+        assertEquals(sample, store.loadSnapshot())
+        assertNull(ds.readQuarantine())
+    }
+
     @Test
     fun corruptPayloadFailsSafeToNullAndIsQuarantined() {
         val ds = newDataStore("inventory_corrupt.preferences_pb")

@@ -15,6 +15,7 @@ import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -63,7 +64,6 @@ class FilterInventoryCodecTest {
             ]}]}
         """.trimIndent()
         val result = FilterInventoryCodec.decodeWithDiagnostics(json)
-        assertEquals(PersistenceLoadOutcome.loaded, result.outcome)
         val restored = result.snapshot.restoredInventory
         assertEquals(1, restored.filterSets.size)
         assertEquals(
@@ -71,6 +71,59 @@ class FilterInventoryCodecTest {
             listOf(nd8),
             restored.filterSets.first().items,
         )
+        // The set survived, so the collection decoder refused nothing...
+        assertEquals(0, result.droppedRecordCount)
+        // ...but two of the user's filters are gone, and the store
+        // quarantines on the OUTCOME. This read `loaded` until PTIMER-221,
+        // which left those losses with no copy of the original payload.
+        assertEquals(
+            "One item failed to parse and one had an unknown kind.",
+            2,
+            result.droppedOnRestoreCount,
+        )
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+        assertTrue(result.indicatesFailure)
+    }
+
+    @Test fun aFilterSetThatParsesButCannotBeRestoredDegradesTheOutcome() {
+        // A record with a blank id parses — `id` is a string — and then
+        // restores to nothing, so it never reaches the inventory.
+        val json = """
+            {"schemaVersion":1,"filterSets":[
+              {"id":"s-lee","name":"Lee","color":"green","items":[]},
+              {"id":"   ","name":"Blank id","color":"red","items":[]}
+            ]}
+        """.trimIndent()
+        val result = FilterInventoryCodec.decodeWithDiagnostics(json)
+        assertEquals(0, result.droppedRecordCount)
+        assertEquals(1, result.droppedOnRestoreCount)
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+        assertEquals(listOf("Lee"), result.snapshot.restoredInventory.filterSets.map { it.name })
+    }
+
+    @Test fun duplicateItemIdsDegradeTheOutcome() {
+        val json = """
+            {"schemaVersion":1,"filterSets":[{"id":"s","name":"Lee","color":"green","items":[
+              {"id":"i","name":"First","kind":"fixed","value":3.0,"unit":"stops"},
+              {"id":"i","name":"Second","kind":"fixed","value":6.0,"unit":"stops"}
+            ]}]}
+        """.trimIndent()
+        val result = FilterInventoryCodec.decodeWithDiagnostics(json)
+        assertEquals(1, result.droppedOnRestoreCount)
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+        assertEquals(
+            listOf("First"),
+            result.snapshot.restoredInventory.filterSets.single().items.map { it.name },
+        )
+    }
+
+    @Test fun anIntactInventoryStaysLoaded() {
+        val result = FilterInventoryCodec.decodeWithDiagnostics(
+            FilterInventoryCodec.encode(PersistentFilterInventorySnapshot.from(inventory)),
+        )
+        assertEquals(PersistenceLoadOutcome.loaded, result.outcome)
+        assertEquals(0, result.droppedRecordCount)
+        assertEquals(0, result.droppedOnRestoreCount)
     }
 
     @Test fun anUnknownColorRestoresAsTheDefault() {

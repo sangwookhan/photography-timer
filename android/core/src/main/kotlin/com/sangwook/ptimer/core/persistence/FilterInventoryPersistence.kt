@@ -16,6 +16,7 @@ import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -42,9 +43,17 @@ data class PersistentFilterInventorySnapshot(
     /**
      * Runtime inventory: records that do not restore (empty id or name)
      * are skipped safely.
+     *
+     * Skipping is safe for the session and NOT safe for the payload — the
+     * skipped record is the user's own Filter Set. [FilterInventoryCodec]
+     * counts these so the store can quarantine the original bytes before
+     * the reduced inventory is written back over them.
      */
     val restoredInventory: FilterInventory
         get() = FilterInventory(filterSets.mapNotNull { it.restoredFilterSet })
+
+    /** Records that parse but cannot be restored. @see restoredInventory */
+    val unrestorableRecordCount: Int get() = filterSets.count { it.restoredFilterSet == null }
 
     companion object {
         const val CURRENT_SCHEMA_VERSION: Int = 1
@@ -64,20 +73,50 @@ data class PersistentFilterSetRecord(
      *  color rather than dropping the set. */
     val color: String,
     val items: List<PersistentFilterItemRecord> = emptyList(),
+    /**
+     * Item elements the codec could not parse at all, so they never
+     * became an entry in [items]. Set by [FilterInventoryCodec]; never
+     * encoded, and zero on a record built from a runtime Filter Set.
+     */
+    @Transient
+    val undecodableItemCount: Int = 0,
 ) {
     val restoredFilterSet: FilterSet?
         get() {
             val trimmedId = id.trim()
             val trimmedName = name.trim()
             if (trimmedId.isEmpty() || trimmedName.isEmpty()) return null
-            val seen = HashSet<FilterItemId>()
-            val restoredItems = items.mapNotNull { it.restoredItem }.filter { seen.add(it.id) }
             return FilterSet(
                 name = trimmedName,
                 color = FilterSetColor.fromToken(color),
-                items = restoredItems,
+                items = restoration.items,
                 id = FilterSetId(trimmedId),
             )
+        }
+
+    /**
+     * Items of this record that do not survive restoration: an unknown
+     * kind, a missing or invalid value, no valid CPL choice, or a
+     * duplicate id. [undecodableItemCount] is on top of this — those were
+     * lost one step earlier, before they could become records.
+     */
+    val lostItemCount: Int get() = undecodableItemCount + restoration.droppedItemCount
+
+    /**
+     * The items that restore, and how many were lost getting there, from
+     * one walk — so the set that is handed to the app and the count that
+     * is handed to the store can never disagree about what went missing.
+     */
+    private val restoration: RestoredItems
+        get() {
+            val seen = HashSet<FilterItemId>()
+            val restored = ArrayList<FilterItem>()
+            var dropped = 0
+            for (record in items) {
+                val item = record.restoredItem
+                if (item == null || !seen.add(item.id)) dropped++ else restored.add(item)
+            }
+            return RestoredItems(restored, dropped)
         }
 
     companion object {
@@ -89,6 +128,9 @@ data class PersistentFilterSetRecord(
         )
     }
 }
+
+/** @see PersistentFilterSetRecord.restoration */
+private data class RestoredItems(val items: List<FilterItem>, val droppedItemCount: Int)
 
 @Serializable
 data class PersistentFilterItemRecord(
@@ -180,8 +222,13 @@ class NoOpFilterInventoryStore : FilterInventoryStoring {
  * version mismatch or a malformed root rejects the whole payload. A
  * malformed ITEM inside a surviving set is dropped on its own, which is why
  * the set record is decoded field by field here rather than through the
- * generated decoder. [decodeWithDiagnostics] reports the outcome so the
- * store can quarantine; [decode] is the fail-safe wrapper.
+ * generated decoder.
+ *
+ * Every one of those losses degrades the outcome, including the ones that
+ * only appear when the records are restored into runtime values. The store
+ * quarantines on the outcome, so a loss that does not reach
+ * [decodeWithDiagnostics] is a loss with no copy kept anywhere.
+ * [decode] is the fail-safe wrapper.
  */
 object FilterInventoryCodec {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -197,10 +244,24 @@ object FilterInventoryCodec {
             idOf = { it.id },
             decodeRecord = { decodeSetRecord(it) },
         )
+        val snapshot = PersistentFilterInventorySnapshot(filterSets = result.records)
+        // What the collection decoder cannot see. It counts the Filter
+        // Sets IT refused; it knows nothing about a set that parses and
+        // then cannot be restored, nor about items lost inside a set that
+        // survives. Both silently shrink the user's own inventory, and
+        // the store quarantines on this outcome alone — so if these do
+        // not reach it, the reduced inventory is written back over the
+        // original bytes on the next edit and the filter is gone.
+        val lostOnRestore = snapshot.unrestorableRecordCount + result.records.sumOf { it.lostItemCount }
         return SnapshotDecodeResult(
-            snapshot = PersistentFilterInventorySnapshot(filterSets = result.records),
-            outcome = result.outcome,
+            snapshot = snapshot,
+            outcome = when {
+                result.outcome != PersistenceLoadOutcome.loaded -> result.outcome
+                lostOnRestore > 0 -> PersistenceLoadOutcome.degraded
+                else -> PersistenceLoadOutcome.loaded
+            },
             droppedRecordCount = result.droppedRecordCount,
+            droppedOnRestoreCount = lostOnRestore,
         )
     }
 
@@ -216,14 +277,19 @@ object FilterInventoryCodec {
      *  set and its remaining items survive. */
     private fun decodeSetRecord(element: JsonElement): PersistentFilterSetRecord {
         val record = element.jsonObject
-        val items = record["items"] as? JsonArray ?: JsonArray(emptyList())
+        val elements = record["items"] as? JsonArray ?: JsonArray(emptyList())
+        val items = elements.mapNotNull { item ->
+            runCatching { json.decodeFromJsonElement<PersistentFilterItemRecord>(item) }.getOrNull()
+        }
         return PersistentFilterSetRecord(
             id = record.requiredString("id"),
             name = record.requiredString("name"),
             color = record.requiredString("color"),
-            items = items.mapNotNull { item ->
-                runCatching { json.decodeFromJsonElement<PersistentFilterItemRecord>(item) }.getOrNull()
-            },
+            items = items,
+            // Carried on the record so it reaches the diagnostics: these
+            // elements never became items, so nothing downstream can
+            // notice they were there.
+            undecodableItemCount = elements.size - items.size,
         )
     }
 

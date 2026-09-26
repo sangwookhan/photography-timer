@@ -47,6 +47,17 @@ data class SnapshotDecodeResult<T>(
     val snapshot: T,
     val outcome: PersistenceLoadOutcome,
     val droppedRecordCount: Int,
+    /**
+     * Content lost AFTER the records decoded: a record that parses but
+     * cannot be restored into a runtime value, and anything dropped from
+     * inside a record that survives.
+     *
+     * [droppedRecordCount] only counts what the collection decoder
+     * itself refused. A codec whose records carry their own nested
+     * content has a second place to lose data, and a store cannot
+     * quarantine what it is never told about.
+     */
+    val droppedOnRestoreCount: Int = 0,
 ) {
     val indicatesFailure: Boolean get() = outcome.indicatesFailure
 }

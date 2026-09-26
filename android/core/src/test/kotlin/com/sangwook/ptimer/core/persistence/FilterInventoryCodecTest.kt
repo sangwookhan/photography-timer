@@ -126,6 +126,47 @@ class FilterInventoryCodecTest {
         assertEquals(0, result.droppedOnRestoreCount)
     }
 
+    @Test fun aNonArrayItemsFieldDropsTheSetAndDegrades() {
+        // `as? JsonArray ?: empty` used to read this exactly like a set
+        // with no filters: nothing dropped, outcome `loaded`, no
+        // quarantine, and the next save overwrote the payload.
+        val json = """
+            {"schemaVersion":1,"filterSets":[
+              {"id":"s-lee","name":"Lee","color":"green","items":[]},
+              {"id":"s-torn","name":"Torn","color":"red","items":{"0":"was an array"}}
+            ]}
+        """.trimIndent()
+        val result = FilterInventoryCodec.decodeWithDiagnostics(json)
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+        assertEquals(1, result.droppedRecordCount)
+        assertEquals(listOf("s-lee"), result.snapshot.filterSets.map { it.id })
+    }
+
+    @Test fun aStringItemsFieldDropsTheSetAndDegrades() {
+        val json = """
+            {"schemaVersion":1,"filterSets":[
+              {"id":"s-torn","name":"Torn","color":"red","items":"damaged"}
+            ]}
+        """.trimIndent()
+        val result = FilterInventoryCodec.decodeWithDiagnostics(json)
+        assertEquals(PersistenceLoadOutcome.degraded, result.outcome)
+        assertEquals(1, result.droppedRecordCount)
+        assertTrue(result.snapshot.filterSets.isEmpty())
+    }
+
+    @Test fun anAbsentItemsFieldIsAnEmptySetNotDamage() {
+        // The legacy default, and the encoder's own output for a set with
+        // nothing registered. Nothing is lost, so nothing degrades.
+        val json = """
+            {"schemaVersion":1,"filterSets":[{"id":"s","name":"Lee","color":"green"}]}
+        """.trimIndent()
+        val result = FilterInventoryCodec.decodeWithDiagnostics(json)
+        assertEquals(PersistenceLoadOutcome.loaded, result.outcome)
+        assertEquals(0, result.droppedRecordCount)
+        assertEquals(0, result.droppedOnRestoreCount)
+        assertTrue(result.snapshot.restoredInventory.filterSets.single().items.isEmpty())
+    }
+
     @Test fun anUnknownColorRestoresAsTheDefault() {
         val json = """
             {"schemaVersion":1,"filterSets":[

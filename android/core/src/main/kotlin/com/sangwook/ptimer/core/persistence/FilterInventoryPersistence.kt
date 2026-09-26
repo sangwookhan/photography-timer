@@ -277,7 +277,20 @@ object FilterInventoryCodec {
      *  set and its remaining items survive. */
     private fun decodeSetRecord(element: JsonElement): PersistentFilterSetRecord {
         val record = element.jsonObject
-        val elements = record["items"] as? JsonArray ?: JsonArray(emptyList())
+        // An ABSENT `items` is the legacy default: a set with no filters
+        // registered. A present one that is not an array is corruption of
+        // the set's own structure, and it hid a whole set's worth of
+        // filters — `as? JsonArray ?: empty` read `"items": {}` exactly
+        // like an empty list, so nothing was dropped, nothing degraded,
+        // and nothing was quarantined. Rejecting the record is how this
+        // codec already answers a set whose own fields are damaged: the
+        // collection decoder counts it, the outcome degrades, and the raw
+        // payload is kept.
+        val declared = record["items"]
+        if (declared != null && declared !is JsonArray) {
+            throw SerializationException("Filter set record has a non-array `items`.")
+        }
+        val elements = declared as? JsonArray ?: JsonArray(emptyList())
         val items = elements.mapNotNull { item ->
             runCatching { json.decodeFromJsonElement<PersistentFilterItemRecord>(item) }.getOrNull()
         }

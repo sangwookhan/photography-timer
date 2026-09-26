@@ -167,6 +167,37 @@ class DataStoreFilterInventoryStoreTest {
         assertEquals(original, ds.readQuarantine())
     }
 
+    /**
+     * The container-level half of the same recoverability defect: an
+     * `items` field that is present but is not an array hid a whole
+     * set's worth of filters, because it read exactly like an empty one.
+     */
+    @Test
+    fun aNonArrayItemsFieldIsQuarantinedAndSurvivesTheNextSave() {
+        val ds = newDataStore("inventory_items_container.preferences_pb")
+        val original = """
+            {"schemaVersion":1,"filterSets":[
+              {"id":"s-lee","name":"Lee holder","color":"indigo","items":[]},
+              {"id":"s-torn","name":"Torn","color":"red","items":"damaged"}
+            ]}
+        """.trimIndent()
+        ds.writeRaw(original)
+        val store = DataStoreFilterInventoryStore(ds)
+
+        // The intact set still loads.
+        assertEquals(
+            listOf("Lee holder"),
+            store.loadSnapshot()!!.restoredInventory.filterSets.map { it.name },
+        )
+        // The damaged one is recoverable, byte for byte...
+        assertEquals(original, ds.readQuarantine())
+
+        // ...and stays so once the reduced inventory is written back.
+        store.saveSnapshot(sample)
+        assertEquals(sample, store.loadSnapshot())
+        assertEquals(original, ds.readQuarantine())
+    }
+
     /** An intact payload is never quarantined. */
     @Test
     fun anIntactPayloadLeavesNoQuarantineCopy() {

@@ -31,11 +31,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
@@ -132,6 +135,31 @@ fun ShootingApp(
     val library = holder.library
     val displaySettingsStore = bootstrap.displaySettingsStore
 
+    // FILTER-A11Y-006: while the platform's touch-exploration mode is
+    // active the Filter Stack freezes its wheel order; turning the mode
+    // off queues exactly one reconciliation. Detected as a platform
+    // capability, so every compatible screen reader behaves alike.
+    val touchExplorationEnabled = rememberTouchExplorationEnabled()
+    LaunchedEffect(touchExplorationEnabled) {
+        controller.setFilterStackOrderingSuspended(touchExplorationEnabled)
+    }
+    // FILTER-STACK-006: an automatic cleanup that actually removed
+    // wheels is announced once, while the same mode is active.
+    val view = LocalView.current
+    val resources = LocalResources.current
+    val announceRemovals by rememberUpdatedState(touchExplorationEnabled)
+    LaunchedEffect(controller) {
+        controller.emptyWheelRemovals.collect { removed ->
+            if (!announceRemovals) return@collect
+            view.announceForAccessibility(
+                if (removed <= 1) {
+                    resources.getString(R.string.filter_empty_wheel_removed)
+                } else {
+                    resources.getString(R.string.filter_empty_wheels_removed, removed)
+                },
+            )
+        }
+    }
     val aboutVersion = remember {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unavailable"

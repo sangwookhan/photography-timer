@@ -174,6 +174,12 @@ fun ShootingScreen(
         if (idx in state.slots.indices) onSelectSlot(state.slots[idx].id)
     }
 
+    // The shooting surface is laid out at 1x whatever the system font
+    // setting says: a larger setting must not add rows, push parts apart
+    // or grow the card, wheels or Total (owner direction on #67). The
+    // dialogs opened from here derive their own density and keep their
+    // own caps.
+    CappedFontScale(maxFontScale = 1f) {
     Scaffold(modifier = modifier) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             HorizontalPager(
@@ -442,6 +448,7 @@ fun ShootingScreen(
             PagerDots(count = state.slots.size, current = pagerState.currentPage)
             Spacer(Modifier.height(8.dp))
         }
+    }
     }
 
     if (showFilmPicker) {
@@ -779,11 +786,37 @@ private fun NdFilterHeaderRow(
         )
         Spacer(Modifier.width(NdHeaderGutter))
         Text(ndFilterTitle, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        FilterSetsEntry(enabled = enabled, onClick = onManageFilterSets)
         NotationToggle(
             mode = mode,
             enabled = enabled,
             onSelect = onSelectNotation,
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * The persistent Filter Set management entry (FILTER-SET-001), beside
+ * the title it manages: a layers mark, not a general settings gear.
+ *
+ * A real [MinTouchTargetSize] target around a mark drawn smaller
+ * (SHELL-030: interactive area independent of drawn size).
+ */
+@Composable
+private fun FilterSetsEntry(enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .requiredSize(MinTouchTargetSize)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            FilterSetsMark,
+            contentDescription = stringResource(R.string.filter_manage_sets),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
         )
     }
 }

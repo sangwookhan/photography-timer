@@ -69,11 +69,14 @@ compact presence, not folded into the shooting screen itself.
 ### Large text and constrained height
 
 - **SHELL-020** — Required shooting-flow controls and corrected-exposure
-  content remain reachable and readable when the system font scale is set
-  large and the available height is constrained, rather than becoming
-  unreachable or clipped. A platform may cap how far specific, non-primary
-  chrome (e.g. a compact toggle's label) scales, but that cap shall not
-  apply to primary readable content or to required controls.
+  content shall remain reachable, legible, and operable when the system font
+  scale is large and the available height is constrained. To preserve a
+  usable layout, a platform may cap the effective font scale for the shooting
+  surface or specific areas, including primary content, and use different
+  caps in different areas. The resulting presentation shall not clip or
+  obscure required values or controls, and the capped text shall remain
+  readable; where room permits, text may grow with the system setting up to
+  its area's cap. Verify both at the cap and with the system setting above it.
 - **SHELL-021** — On Android, a shooting-screen sheet or dialog that was
   open before a configuration/Activity recreation (not a full app restart)
   reopens automatically afterward, rather than silently closing.

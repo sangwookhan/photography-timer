@@ -65,8 +65,20 @@ object NDNotationFormatter {
         }
         val totalThirds = step.thirdStopCount
         val whole = totalThirds / 3
-        val frac = if (totalThirds % 3 == 1) "1/3" else "2/3"
-        return if (whole == 0) frac else "$whole $frac"
+        // A value whose NEAREST third is a whole stop has no fractional
+        // part to name. Without this case it fell through to the `2/3`
+        // branch, so 0.9 stops rendered as `1 2/3` and 29.9 as `30 2/3`
+        // — the rounding policy's own answer, overstated by two thirds.
+        val frac = when (totalThirds % 3) {
+            0 -> null
+            1 -> "1/3"
+            else -> "2/3"
+        }
+        return when {
+            frac == null -> whole.toString()
+            whole == 0 -> frac
+            else -> "$whole $frac"
+        }
     }
 
     private fun stopsInline(stops: Double, value: String): String {

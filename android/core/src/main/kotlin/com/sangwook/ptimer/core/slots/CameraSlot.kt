@@ -96,6 +96,22 @@ data class SlotCalculatorSnapshot(
      * time (never clamped) and fall back to the legacy scalar.
      */
     val ndStack: List<Double>? = null,
+    /**
+     * Mixed Filter Stack (Filter Set contract, FILTER-PERSIST-001): every
+     * wheel in display order, Standard and Filter Set sources alike.
+     * Additive optional so pre-Filter-Set payloads decode unchanged. When
+     * present and structurally sound it is authoritative, and [ndStack] /
+     * [ndIndex] / [ndStops] carry the Standard-only projection an older
+     * build restores.
+     */
+    val filterStack: List<PersistentFilterWheel>? = null,
+    /**
+     * The slot's last settled Filter Source (FILTER-PLUS-004):
+     * `"standard"` or `"filterSet"` (with [lastFilterSetId]). Additive
+     * optional; absent or unresolvable restores as Standard.
+     */
+    val lastFilterSourceKind: String? = null,
+    val lastFilterSetId: String? = null,
 )
 
 /**
@@ -198,6 +214,17 @@ class CameraSlotSession(
     /** Replaces the active slot's snapshot in place; other slots are untouched. */
     fun updateActiveSnapshot(transform: (SlotCalculatorSnapshot) -> SlotCalculatorSnapshot) {
         snapshots[activeSlotId] = transform(snapshots.getValue(activeSlotId))
+    }
+
+    /**
+     * Replaces any available slot's snapshot in place (active included);
+     * an unknown slot is a no-op. Used when a change outside the calculator
+     * — an inventory edit — has to be applied to every slot, not just the
+     * active one. (iOS: `updateInactiveSnapshots`.)
+     */
+    fun updateSnapshot(slotId: CameraSlotId, transform: (SlotCalculatorSnapshot) -> SlotCalculatorSnapshot) {
+        if (slotId !in availableSlots) return
+        snapshots[slotId] = transform(snapshots.getValue(slotId))
     }
 
     /**

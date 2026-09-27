@@ -61,6 +61,7 @@ import com.sangwook.ptimer.core.timer.TimerStatus
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
+import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBar
@@ -105,6 +106,11 @@ fun ShootingApp(
             timerStore = DataStoreTimerWorkspaceStore.create(context),
             alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
             slotStore = bootstrap.slotStore,
+            inventoryStore = bootstrap.inventoryStore,
+            initialInventory = bootstrap.initialInventory,
+            // Read per start, so the reference string a timer captures is
+            // written in the language in use at that moment.
+            referenceVocabulary = { filterReferenceVocabulary(context.resources) },
             // In-app completion alert, de-duped with the AlarmManager path in
             // TimerNotifications.notifyCompletion. The alarm remains the
             // delivery path when the app process is killed.
@@ -123,6 +129,7 @@ fun ShootingApp(
     val controller = holder.calculator
     val library = holder.library
     val displaySettingsStore = bootstrap.displaySettingsStore
+
     val aboutVersion = remember {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unavailable"
@@ -362,9 +369,10 @@ fun ShootingApp(
                     onShutterIndex = controller::setShutterIndex,
                     onNdWheelActive = controller::setNdWheelActive,
                     onNdWheelValue = controller::setNdWheelValue,
-                    onAddNdWheel = controller::addNdWheel,
+                    onAddFilterWheel = controller::addFilterWheel,
+                    onAdjustFilterWheel = controller::adjustFilterWheel,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
-                    onCleanupEmptyNdWheels = controller::cleanupEmptyNdWheels,
+                    onManageFilterSets = {},
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }

@@ -65,7 +65,11 @@ class ShootingScreenDialogRestorationTest {
                 ShootingScreen(
                     state = minimalState(),
                     onShutterIndex = {},
-                    onNdIndex = {},
+                    onNdWheelActive = { _, _ -> },
+                    onNdWheelValue = { _, _ -> },
+                    onAddNdWheel = {},
+                    onRemoveNdWheelOverscroll = {},
+                    onCleanupEmptyNdWheels = {},
                     onSelectNotation = {},
                     onSelectFilm = {},
                     onSelectProfile = {},

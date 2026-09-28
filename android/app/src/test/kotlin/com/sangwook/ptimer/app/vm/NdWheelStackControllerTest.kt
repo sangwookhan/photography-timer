@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
+import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
@@ -38,12 +39,12 @@ class NdWheelStackControllerTest {
 
     /** Ladder index of [stops] on wheel [wheel] of the CURRENT state. */
     private fun ladderIndex(c: CalculatorController, wheel: Int, label: String): Int =
-        c.state.value.ndWheels[wheel].labels.indexOf(label).also {
+        c.state.value.filterWheels[wheel].rows.indexOfFirst { it.compactValueText == label }.also {
             require(it >= 0) { "label $label not on wheel $wheel ladder" }
         }
 
     private fun commitStops(c: CalculatorController, wheel: Int, label: String) {
-        val id = c.state.value.ndWheels[wheel].id
+        val id = c.state.value.filterWheels[wheel].id
         c.setNdWheelActive(id, true)
         c.setNdWheelValue(id, ladderIndex(c, wheel, label))
         c.setNdWheelActive(id, false)
@@ -53,12 +54,13 @@ class NdWheelStackControllerTest {
 
     @Test
     fun startsWithASingleZeroWheelAndNonIndexIdentity() {
-        val s = controller().state.value
-        assertEquals(1, s.ndWheels.size)
-        assertTrue("IDs start at 101 (never index-like)", s.ndWheels[0].id >= 101)
-        assertTrue(s.showsAddNdWheel)
-        assertTrue(s.canAddNdWheel)
-        assertFalse(s.canRemoveEmptyNdWheel)
+        val c = controller()
+        val s = c.state.value
+        assertEquals(1, s.filterWheels.size)
+        assertTrue("IDs start at 101 (never index-like)", s.filterWheels[0].id >= 101)
+        assertTrue(s.plus.isVisible)
+        assertTrue(s.plus.canAdd)
+        assertFalse("A lone Standard 0 wheel is never cleanable.", c.runNdCleanupIfQuiet())
         assertNull(s.ndTotalStopsText)
     }
 
@@ -67,24 +69,25 @@ class NdWheelStackControllerTest {
     @Test
     fun commitSortsDescendingAndIdentityFollowsThePermutation() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "6")
-        val sixId = c.state.value.ndWheels[0].id
+        val sixId = c.state.value.filterWheels[0].id
         // Commit a larger value on the SECOND wheel: it sorts to the
         // front and carries its identity there.
         commitStops(c, 1, "13")
         val state = c.state.value
         assertEquals(listOf(13.0, 6.0), wheelStops(c))
-        assertEquals("13", state.ndWheels[0].labels[state.ndWheels[0].selectedIndex])
-        assertEquals(sixId, state.ndWheels[1].id)
+        val front = state.filterWheels[0]
+        assertEquals("13", front.rows[front.selectedIndex].compactValueText)
+        assertEquals(sixId, state.filterWheels[1].id)
     }
 
     @Test
     fun setCommitDefersWhileAnotherWheelIsActive() {
         val c = controller()
-        c.addNdWheel()
-        val idA = c.state.value.ndWheels[0].id
-        val idB = c.state.value.ndWheels[1].id
+        c.addFilterWheel()
+        val idA = c.state.value.filterWheels[0].id
+        val idB = c.state.value.filterWheels[1].id
         c.setNdWheelActive(idA, true)
         c.setNdWheelActive(idB, true)
 
@@ -103,9 +106,9 @@ class NdWheelStackControllerTest {
     @Test
     fun overBudgetSelectionIsRejectedInSettleOrder() {
         val c = controller()
-        c.addNdWheel()
-        val idA = c.state.value.ndWheels[0].id
-        val idB = c.state.value.ndWheels[1].id
+        c.addFilterWheel()
+        val idA = c.state.value.filterWheels[0].id
+        val idB = c.state.value.filterWheels[1].id
         c.setNdWheelActive(idA, true)
         c.setNdWheelActive(idB, true)
         c.setNdWheelValue(idA, ladderIndex(c, 0, "20"))
@@ -126,9 +129,9 @@ class NdWheelStackControllerTest {
         // apply A first (settle order), so A's 20 wins and B reverts —
         // last-change order would wrongly keep B.
         val c = controller()
-        c.addNdWheel()
-        val idA = c.state.value.ndWheels[0].id
-        val idB = c.state.value.ndWheels[1].id
+        c.addFilterWheel()
+        val idA = c.state.value.filterWheels[0].id
+        val idB = c.state.value.filterWheels[1].id
         c.setNdWheelActive(idA, true)
         c.setNdWheelActive(idB, true)
         c.setNdWheelValue(idB, ladderIndex(c, 1, "20"))
@@ -138,14 +141,14 @@ class NdWheelStackControllerTest {
         c.setNdWheelActive(idB, false)
 
         assertEquals(listOf(20.0, 0.0), wheelStops(c))
-        assertEquals("The surviving 20 must be A's wheel.", idA, c.state.value.ndWheels[0].id)
+        assertEquals("The surviving 20 must be A's wheel.", idA, c.state.value.filterWheels[0].id)
 
         // Same shape, other side: A's value changes last, B settles
         // first — B wins.
         val c2 = controller()
-        c2.addNdWheel()
-        val id2A = c2.state.value.ndWheels[0].id
-        val id2B = c2.state.value.ndWheels[1].id
+        c2.addFilterWheel()
+        val id2A = c2.state.value.filterWheels[0].id
+        val id2B = c2.state.value.filterWheels[1].id
         c2.setNdWheelActive(id2A, true)
         c2.setNdWheelActive(id2B, true)
         c2.setNdWheelValue(id2B, ladderIndex(c2, 1, "20"))
@@ -155,37 +158,34 @@ class NdWheelStackControllerTest {
         c2.setNdWheelActive(id2A, false)
 
         assertEquals(listOf(20.0, 0.0), wheelStops(c2))
-        assertEquals("The surviving 20 must be B's wheel.", id2B, c2.state.value.ndWheels[0].id)
+        assertEquals("The surviving 20 must be B's wheel.", id2B, c2.state.value.filterWheels[0].id)
     }
 
     @Test
-    fun cleanupActionAvailabilityRequiresAQuietMachine() {
+    fun cleanupJudgmentRequiresAQuietMachine() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
-        // [10, 0]: structurally removable AND quiet — both flags on.
-        assertTrue(c.state.value.canRemoveEmptyNdWheel)
-        assertTrue(c.state.value.canCleanupEmptyNdWheels)
-
-        // A moving wheel keeps the timer flag (fire-time judgment) but
-        // must withdraw the TalkBack action's availability.
-        val zeroId = c.state.value.ndWheels[1].id
+        // [10, 0] is structurally cleanable, but a moving wheel defers
+        // the fire-time judgment without touching the stack.
+        val zeroId = c.state.value.filterWheels[1].id
         c.setNdWheelActive(zeroId, true)
-        assertTrue(c.state.value.canRemoveEmptyNdWheel)
-        assertFalse(c.state.value.canCleanupEmptyNdWheels)
+        assertFalse(c.runNdCleanupIfQuiet())
+        assertEquals(2, c.state.value.filterWheels.size)
 
         c.setNdWheelActive(zeroId, false)
-        assertTrue(c.state.value.canCleanupEmptyNdWheels)
+        assertTrue(c.runNdCleanupIfQuiet())
+        assertEquals(1, c.state.value.filterWheels.size)
     }
 
     @Test
     fun maximumMarkerFollowsTheLiveTotal() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "29")
         // Pending 1 on the second wheel: the live total hits 30, so the
         // text and the Maximum marker must flip together, pre-commit.
-        val id = c.state.value.ndWheels[1].id
+        val id = c.state.value.filterWheels[1].id
         c.setNdWheelActive(id, true)
         c.setNdWheelValue(id, ladderIndex(c, 1, "1"))
         assertEquals("30", c.state.value.ndTotalStopsText)
@@ -198,10 +198,10 @@ class NdWheelStackControllerTest {
     @Test
     fun saturatedSetShedsLeftoverZerosInTheSameCommit() {
         val c = controller()
-        c.addNdWheel()
-        c.addNdWheel()
+        c.addFilterWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "29")
-        assertEquals(3, c.state.value.ndWheels.size)
+        assertEquals(3, c.state.value.filterWheels.size)
 
         commitStops(c, 1, "1")
 
@@ -214,38 +214,51 @@ class NdWheelStackControllerTest {
     @Test
     fun addRefusedWhenNewWheelCouldHoldNoValue() {
         // 16.6 + 13 = 29.6 leaves 0.4 stop — below every ladder value
-        // above 0, so C1 hides and refuses the add even though budget
-        // remains.
+        // above 0, so C1 refuses the add even though budget remains.
+        // PTIMER-221: Plus stays PRESENT (source browsing is always
+        // available below four wheels); only adding is disabled, with a
+        // reason (FILTER-PLUS-005).
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "16.6")
         commitStops(c, 1, "13")
-        assertFalse(c.state.value.showsAddNdWheel)
-        c.addNdWheel()
-        assertEquals(2, c.state.value.ndWheels.size)
+        assertTrue(c.state.value.plus.isVisible)
+        assertFalse(c.state.value.plus.canAdd)
+        assertEquals(FilterAddUnavailability.noSelectableValue, c.state.value.plus.addUnavailability)
+        c.addFilterWheel()
+        assertEquals(2, c.state.value.filterWheels.size)
+        assertEquals(
+            FilterAddUnavailability.noSelectableValue,
+            c.state.value.filterStatus.rejection?.addUnavailability,
+        )
     }
 
     @Test
     fun addRefusedAtSaturationAndWhileAWheelMoves() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "29")
         commitStops(c, 1, "1")
-        // Saturated at 30: C1 hides and refuses the add.
-        assertFalse(c.state.value.showsAddNdWheel)
-        c.addNdWheel()
-        assertEquals(2, c.state.value.ndWheels.size)
+        // Saturated at 30: Plus stays present but adding is refused.
+        assertTrue(c.state.value.plus.isVisible)
+        assertFalse(c.state.value.plus.canAdd)
+        c.addFilterWheel()
+        assertEquals(2, c.state.value.filterWheels.size)
+        assertEquals(
+            FilterAddUnavailability.noSelectableValue,
+            c.state.value.filterStatus.rejection?.addUnavailability,
+        )
 
         // While a wheel moves, availability drops but presence stays.
         val c2 = controller()
-        c2.addNdWheel()
-        val id = c2.state.value.ndWheels[1].id
+        c2.addFilterWheel()
+        val id = c2.state.value.filterWheels[1].id
         c2.setNdWheelActive(id, true)
-        assertTrue(c2.state.value.showsAddNdWheel)
+        assertTrue(c2.state.value.plus.isVisible)
         c2.setNdWheelValue(id, ladderIndex(c2, 1, "3"))
-        assertFalse(c2.state.value.canAddNdWheel)
-        c2.addNdWheel()
-        assertEquals(2, c2.state.value.ndWheels.size)
+        assertFalse(c2.state.value.plus.canAdd)
+        c2.addFilterWheel()
+        assertEquals(2, c2.state.value.filterWheels.size)
     }
 
     @Test
@@ -255,24 +268,24 @@ class NdWheelStackControllerTest {
         // commit, so the release publishes no commit — availability
         // must still flip back instead of showing a stale busy state.
         val c = controller()
-        c.addNdWheel()
-        c.addNdWheel()
+        c.addFilterWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "8")
         commitStops(c, 1, "5")
         commitStops(c, 2, "4")
         assertEquals(listOf(8.0, 5.0, 4.0), wheelStops(c))
-        assertTrue(c.state.value.canAddNdWheel)
+        assertTrue(c.state.value.plus.canAdd)
 
-        val id = c.state.value.ndWheels[0].id
+        val id = c.state.value.filterWheels[0].id
         c.setNdWheelActive(id, true)
         c.setNdWheelValue(id, ladderIndex(c, 0, "9"))
-        assertFalse(c.state.value.canAddNdWheel)
+        assertFalse(c.state.value.plus.canAdd)
         // Wiggle back to the committed 8: the pending entry clears.
         c.setNdWheelValue(id, ladderIndex(c, 0, "8"))
-        assertFalse("Still under the finger.", c.state.value.canAddNdWheel)
+        assertFalse("Still under the finger.", c.state.value.plus.canAdd)
 
         c.setNdWheelActive(id, false)
-        assertTrue("Release must re-enable Add.", c.state.value.canAddNdWheel)
+        assertTrue("Release must re-enable Add.", c.state.value.plus.canAdd)
         assertEquals(listOf(8.0, 5.0, 4.0), wheelStops(c))
     }
 
@@ -283,14 +296,14 @@ class NdWheelStackControllerTest {
         // is still settling. Whatever the interleaving, the end state
         // must be [7, 5, 4] with the machine quiet and Add available.
         val c = controller()
-        c.addNdWheel()
-        c.addNdWheel()
-        c.addNdWheel()
+        c.addFilterWheel()
+        c.addFilterWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "20")
         commitStops(c, 1, "5")
         commitStops(c, 2, "4")
-        val bigId = c.state.value.ndWheels[0].id
-        val zeroId = c.state.value.ndWheels[3].id
+        val bigId = c.state.value.filterWheels[0].id
+        val zeroId = c.state.value.filterWheels[3].id
 
         // Fling starts; the zero wheel is grabbed before it settles.
         c.setNdWheelActive(bigId, true)
@@ -298,7 +311,7 @@ class NdWheelStackControllerTest {
         c.setNdWheelActive(zeroId, true)
         // Pull released while the big wheel still moves: refused.
         c.removeNdWheelFromOverscroll(zeroId)
-        assertEquals(4, c.state.value.ndWheels.size)
+        assertEquals(4, c.state.value.filterWheels.size)
 
         // Big wheel settles (commit still deferred: zero wheel active).
         c.setNdWheelActive(bigId, false)
@@ -307,7 +320,7 @@ class NdWheelStackControllerTest {
         // pending: refused — a removal must never flush another
         // wheel's pending commit.
         c.removeNdWheelFromOverscroll(zeroId)
-        assertEquals(4, c.state.value.ndWheels.size)
+        assertEquals(4, c.state.value.filterWheels.size)
         // The zero wheel goes quiet, the set commits normally.
         c.setNdWheelActive(zeroId, false)
         assertEquals(listOf(7.0, 5.0, 4.0, 0.0), wheelStops(c))
@@ -315,20 +328,20 @@ class NdWheelStackControllerTest {
         c.removeNdWheelFromOverscroll(zeroId)
 
         assertEquals(listOf(7.0, 5.0, 4.0), wheelStops(c))
-        assertTrue("Machine must be quiet after the dust settles.", c.state.value.canAddNdWheel)
+        assertTrue("Machine must be quiet after the dust settles.", c.state.value.plus.canAdd)
         assertFalse(c.runNdCleanupIfQuiet())
 
         // Same story, reversed tail: the zero wheel releases first and
         // the removal happens via the delayed cleanup instead.
         val c2 = controller()
-        c2.addNdWheel()
-        c2.addNdWheel()
-        c2.addNdWheel()
+        c2.addFilterWheel()
+        c2.addFilterWheel()
+        c2.addFilterWheel()
         commitStops(c2, 0, "20")
         commitStops(c2, 1, "5")
         commitStops(c2, 2, "4")
-        val big2 = c2.state.value.ndWheels[0].id
-        val zero2 = c2.state.value.ndWheels[3].id
+        val big2 = c2.state.value.filterWheels[0].id
+        val zero2 = c2.state.value.filterWheels[3].id
         c2.setNdWheelActive(big2, true)
         c2.setNdWheelValue(big2, ladderIndex(c2, 0, "7"))
         c2.setNdWheelActive(zero2, true)
@@ -340,10 +353,10 @@ class NdWheelStackControllerTest {
         // Four wheels still present: Add is correctly absent (full
         // stack), but the machine itself must be quiet — the pending
         // flush must not be stuck behind the refused removal.
-        assertFalse(c2.state.value.showsAddNdWheel)
+        assertFalse(c2.state.value.plus.isVisible)
         assertTrue(c2.runNdCleanupIfQuiet())
         assertEquals(listOf(7.0, 5.0, 4.0), wheelStops(c2))
-        assertTrue(c2.state.value.canAddNdWheel)
+        assertTrue(c2.state.value.plus.canAdd)
     }
 
     // MARK: ViewModel-scope-owned cleanup timer (PTIMER-223 handoff)
@@ -351,7 +364,7 @@ class NdWheelStackControllerTest {
     @Test
     fun ownedTimerCleansAnUntouchedZeroAfterTheGracePeriod() = runTest {
         val c = CalculatorController(films = films, ndCleanupScope = backgroundScope)
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
         // [10, 0]: the commit write armed the timer.
         advanceTimeBy(4_001)
@@ -362,13 +375,13 @@ class NdWheelStackControllerTest {
     @Test
     fun ownedTimerDefersUnderAFingerThenCleansOnTheNextFire() = runTest {
         val c = CalculatorController(films = films, ndCleanupScope = backgroundScope)
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
-        val zeroId = c.state.value.ndWheels[1].id
+        val zeroId = c.state.value.filterWheels[1].id
         c.setNdWheelActive(zeroId, true)
         advanceTimeBy(4_001)
         runCurrent()
-        assertEquals("Fire is refused under the finger.", 2, c.state.value.ndWheels.size)
+        assertEquals("Fire is refused under the finger.", 2, c.state.value.filterWheels.size)
 
         c.setNdWheelActive(zeroId, false)
         advanceTimeBy(4_001)
@@ -379,16 +392,16 @@ class NdWheelStackControllerTest {
     @Test
     fun structuralChangeRestartsTheGracePeriodForNewZeros() = runTest {
         val c = CalculatorController(films = films, ndCleanupScope = backgroundScope)
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
         advanceTimeBy(3_900)
         runCurrent()
         // A wheel added just before the old fire time must get the
         // FULL grace period — the add re-arms the timer.
-        c.addNdWheel()
+        c.addFilterWheel()
         advanceTimeBy(200)
         runCurrent()
-        assertEquals(3, c.state.value.ndWheels.size)
+        assertEquals(3, c.state.value.filterWheels.size)
 
         advanceTimeBy(3_900)
         runCurrent()
@@ -400,13 +413,13 @@ class NdWheelStackControllerTest {
     @Test
     fun fireTimeCleanupRunsOnlyWhenQuiet() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
         // [10, 0]: cleanable — but a moving wheel defers the fire.
-        val zeroId = c.state.value.ndWheels[1].id
+        val zeroId = c.state.value.filterWheels[1].id
         c.setNdWheelActive(zeroId, true)
         assertFalse(c.runNdCleanupIfQuiet())
-        assertEquals(2, c.state.value.ndWheels.size)
+        assertEquals(2, c.state.value.filterWheels.size)
 
         c.setNdWheelActive(zeroId, false)
         assertTrue(c.runNdCleanupIfQuiet())
@@ -416,15 +429,15 @@ class NdWheelStackControllerTest {
     @Test
     fun cleanupRemovesAllZerosButKeepsOneWheelWhenAllZero() {
         val c = controller()
-        c.addNdWheel()
-        c.addNdWheel()
+        c.addFilterWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "7")
         c.cleanupEmptyNdWheels()
         assertEquals(listOf(7.0), wheelStops(c))
 
         val allZero = controller()
-        allZero.addNdWheel()
-        allZero.addNdWheel()
+        allZero.addFilterWheel()
+        allZero.addFilterWheel()
         allZero.cleanupEmptyNdWheels()
         assertEquals(listOf(0.0), wheelStops(allZero))
     }
@@ -434,40 +447,40 @@ class NdWheelStackControllerTest {
     @Test
     fun overscrollRemovesExactlyThePulledWheel() {
         val c = controller()
-        c.addNdWheel()
-        c.addNdWheel()
+        c.addFilterWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
         // [10, 0, 0]
-        val pulledId = c.state.value.ndWheels[1].id
-        val survivorId = c.state.value.ndWheels[2].id
+        val pulledId = c.state.value.filterWheels[1].id
+        val survivorId = c.state.value.filterWheels[2].id
         c.removeNdWheelFromOverscroll(pulledId)
 
         val state = c.state.value
         assertEquals(listOf(10.0, 0.0), wheelStops(c))
-        assertEquals(survivorId, state.ndWheels[1].id)
+        assertEquals(survivorId, state.filterWheels[1].id)
     }
 
     @Test
     fun overscrollRefusalsMatchTheRules() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
-        val tenId = c.state.value.ndWheels[0].id
-        val zeroId = c.state.value.ndWheels[1].id
+        val tenId = c.state.value.filterWheels[0].id
+        val zeroId = c.state.value.filterWheels[1].id
 
         // Refused while another wheel is in motion.
         c.setNdWheelActive(tenId, true)
         c.removeNdWheelFromOverscroll(zeroId)
-        assertEquals(2, c.state.value.ndWheels.size)
+        assertEquals(2, c.state.value.filterWheels.size)
         c.setNdWheelActive(tenId, false)
 
         // Non-zero wheel: refused. Last wheel: refused even at 0.
         c.removeNdWheelFromOverscroll(tenId)
-        assertEquals(2, c.state.value.ndWheels.size)
+        assertEquals(2, c.state.value.filterWheels.size)
         c.removeNdWheelFromOverscroll(zeroId)
         assertEquals(listOf(10.0), wheelStops(c))
         c.setNdIndex(0)
-        c.removeNdWheelFromOverscroll(c.state.value.ndWheels[0].id)
+        c.removeNdWheelFromOverscroll(c.state.value.filterWheels[0].id)
         assertEquals(listOf(0.0), wheelStops(c))
     }
 
@@ -477,15 +490,15 @@ class NdWheelStackControllerTest {
         // must leave every transient untouched: the pending survives
         // and commits normally afterwards.
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
-        val tenId = c.state.value.ndWheels[0].id
-        val zeroId = c.state.value.ndWheels[1].id
+        val tenId = c.state.value.filterWheels[0].id
+        val zeroId = c.state.value.filterWheels[1].id
 
         c.setNdWheelActive(tenId, true)
         c.setNdWheelValue(tenId, ladderIndex(c, 0, "12"))
         c.removeNdWheelFromOverscroll(zeroId)
-        assertEquals("Refused: pending selection open.", 2, c.state.value.ndWheels.size)
+        assertEquals("Refused: pending selection open.", 2, c.state.value.filterWheels.size)
 
         c.setNdWheelActive(tenId, false)
         assertEquals(
@@ -504,8 +517,8 @@ class NdWheelStackControllerTest {
         // neither touch camera2's stack nor disturb the active slot,
         // and camera1's in-flight selection is discarded.
         val c = controller()
-        c.addNdWheel()
-        val idA = c.state.value.ndWheels[0].id
+        c.addFilterWheel()
+        val idA = c.state.value.filterWheels[0].id
         c.setNdWheelActive(idA, true)
         c.setNdWheelValue(idA, ladderIndex(c, 0, "7"))
 
@@ -520,7 +533,7 @@ class NdWheelStackControllerTest {
             c.state.value.slots.first { it.isActive }.id,
         )
         assertEquals("camera2's stack is untouched.", listOf(0.0), wheelStops(c))
-        assertTrue("The machine is quiet on camera2.", c.state.value.canAddNdWheel)
+        assertTrue("The machine is quiet on camera2.", c.state.value.plus.canAdd)
 
         c.selectSlot(CameraSlotId.camera1)
         assertEquals(
@@ -535,7 +548,7 @@ class NdWheelStackControllerTest {
     @Test
     fun stackPersistsAndLegacyScalarCarriesTheMaximumWheel() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
         commitStops(c, 1, "6")
 
@@ -547,7 +560,7 @@ class NdWheelStackControllerTest {
         // Relaunch: the stack restores wholesale.
         val restored = controller(initial = exported)
         assertEquals(listOf(10.0, 6.0), wheelStops(restored))
-        assertEquals(2, restored.state.value.ndWheels.size)
+        assertEquals(2, restored.state.value.filterWheels.size)
     }
 
     @Test
@@ -572,8 +585,8 @@ class NdWheelStackControllerTest {
     @Test
     fun slotSwitchDiscardsInFlightSelections() {
         val c = controller()
-        c.addNdWheel()
-        val id = c.state.value.ndWheels[1].id
+        c.addFilterWheel()
+        val id = c.state.value.filterWheels[1].id
         c.setNdWheelActive(id, true)
         c.setNdWheelValue(id, ladderIndex(c, 1, "5"))
 
@@ -590,10 +603,10 @@ class NdWheelStackControllerTest {
     @Test
     fun legacySetNdIndexCollapsesTheStack() {
         val c = controller()
-        c.addNdWheel()
+        c.addFilterWheel()
         commitStops(c, 0, "10")
         c.setNdIndex(5)
         assertEquals(listOf(5.0), wheelStops(c))
-        assertEquals(1, c.state.value.ndWheels.size)
+        assertEquals(1, c.state.value.filterWheels.size)
     }
 }

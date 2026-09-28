@@ -88,6 +88,17 @@ final class NDNotationFormatterTests: XCTestCase {
     /// labels across all three notations. Stops render as a decimal
     /// (not a third-stop mixed fraction); OD falls out of `stops × 0.3`;
     /// the filter factor uses the commercial label, not `2^stops`.
+    /// A registered decimal whose nearest third is a whole stop renders
+    /// as that whole stop, the same as Android (PTIMER-221 ND-001 /
+    /// FILTER-ITEM-004). It used to fall through to `2/3`.
+    func testNearestThirdOnAWholeStopRendersTheWholeStop() {
+        let value = { NDNotationFormatter.display(forStops: $0, mode: .stops).value }
+        XCTAssertEqual(value(0.9), "1")
+        XCTAssertEqual(value(29.9), "30")
+        XCTAssertEqual(value(0.7), "2/3")
+        XCTAssertEqual(value(5.2), "5 1/3")
+    }
+
     func testCommercialPresetsRenderInEveryNotation() {
         struct PresetCase {
             let stops: Double

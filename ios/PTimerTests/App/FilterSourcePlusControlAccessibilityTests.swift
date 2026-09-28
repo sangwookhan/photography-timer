@@ -32,7 +32,7 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
         added: @escaping (FilterSource) -> Void = { _ in }
     ) -> FilterSourcePlusControl {
         FilterSourcePlusControl(
-            sources: [.standard, .filterSet(leeID)],
+            choices: [.source(.standard), .source(.filterSet(leeID)), .auxiliaryFilters],
             selectedSource: selectedSource,
             sourceName: { $0 == .standard ? "Standard" : "Lee" },
             sourceColor: { $0 == .standard ? nil : .red },
@@ -40,6 +40,7 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
             isInteractionQuiet: true,
             addUnavailabilityText: { $0 == .standard ? nil : self.leeReason },
             onAdd: added,
+            onOpenAuxiliaryFilters: {},
             onManage: {},
             onBrowsingChanged: { _ in }
         )
@@ -55,6 +56,7 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
         XCTAssertTrue(plus.traits.contains(.button), "An addable source is activatable.")
         XCTAssertTrue(plus.customActionNames.contains("Manage Filter Sets"), "Manage must be in the Actions rotor: \(plus.customActionNames)")
         XCTAssertTrue(plus.customActionNames.contains("Add filter"), plus.customActionNames.description)
+        XCTAssertTrue(plus.customActionNames.contains("Open auxiliary filters"), "The distinct auxiliary action (FILTER-A11Y-001): \(plus.customActionNames)")
     }
 
     /// FILTER-PLUS-004/005 with ND-A11Y-002: an assistive increment

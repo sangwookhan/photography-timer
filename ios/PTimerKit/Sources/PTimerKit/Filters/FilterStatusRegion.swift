@@ -54,14 +54,23 @@ public struct FilterStatusRegionContent: Equatable, Sendable {
     /// Filter Set wheel: rendered at accessible secondary emphasis so
     /// moving and rejection content reads as the active state.
     public let isSecondaryEmphasis: Bool
+    /// The Total's numeric stops value alone (`13.2`), so the view can
+    /// render it prominently beside its caption words while
+    /// `secondaryText` stays the complete spoken total
+    /// (FILTER-STACK-008). `nil` when the content carries no total.
+    public let totalValueText: String?
+    /// True at the 30-stop cap: the view appends the Maximum marker.
+    public let isTotalAtMaximum: Bool
 
-    public init(primaryText: String?, secondaryText: String?, isWarning: Bool = false, isHeld: Bool, isSecondaryEmphasis: Bool = false, idleSourceSummary: [FilterStatusSourceSummaryItem]? = nil) {
+    public init(primaryText: String?, secondaryText: String?, isWarning: Bool = false, isHeld: Bool, isSecondaryEmphasis: Bool = false, idleSourceSummary: [FilterStatusSourceSummaryItem]? = nil, totalValueText: String? = nil, isTotalAtMaximum: Bool = false) {
         self.primaryText = primaryText
         self.secondaryText = secondaryText
         self.isWarning = isWarning
         self.isHeld = isHeld
         self.isSecondaryEmphasis = isSecondaryEmphasis
         self.idleSourceSummary = idleSourceSummary
+        self.totalValueText = totalValueText
+        self.isTotalAtMaximum = isTotalAtMaximum
     }
 
     /// The persistent idle state: held, secondary, never a warning.
@@ -108,14 +117,16 @@ public enum FilterStatusRegionPresenter {
                 primaryText: rejection.text,
                 secondaryText: totalText,
                 isWarning: true,
-                isHeld: true
+                isHeld: true,
+                totalValueText: total.totalStopsText,
+                isTotalAtMaximum: total.isAtMaximum
             )
         }
         if let browsingSourceName {
-            return FilterStatusRegionContent(primaryText: browsingSourceName, secondaryText: totalText, isHeld: true)
+            return FilterStatusRegionContent(primaryText: browsingSourceName, secondaryText: totalText, isHeld: true, totalValueText: total.totalStopsText, isTotalAtMaximum: total.isAtMaximum)
         }
         if let moving {
-            return FilterStatusRegionContent(primaryText: moving.expandedLabel, secondaryText: totalText, isHeld: true)
+            return FilterStatusRegionContent(primaryText: moving.expandedLabel, secondaryText: totalText, isHeld: true, totalValueText: total.totalStopsText, isTotalAtMaximum: total.isAtMaximum)
         }
         if let idleSourceSummary, !idleSourceSummary.isEmpty {
             return FilterStatusRegionContent(
@@ -123,13 +134,26 @@ public enum FilterStatusRegionPresenter {
                 secondaryText: totalText,
                 isHeld: true,
                 isSecondaryEmphasis: true,
-                idleSourceSummary: idleSourceSummary
+                idleSourceSummary: idleSourceSummary,
+                totalValueText: total.totalStopsText,
+                isTotalAtMaximum: total.isAtMaximum
             )
         }
         guard total.isVisibleCandidate else {
             return nil
         }
-        return FilterStatusRegionContent(primaryText: nil, secondaryText: totalText, isHeld: false)
+        return FilterStatusRegionContent(primaryText: nil, secondaryText: totalText, isHeld: false, totalValueText: total.totalStopsText, isTotalAtMaximum: total.isAtMaximum)
+    }
+
+    /// The caption words around the prominent numeric value
+    /// (FILTER-STACK-008): `Total` before it, `stops` (or
+    /// `stops · Maximum`) after it.
+    public static func totalLeadingWord() -> String {
+        String(localized: "Total")
+    }
+
+    public static func totalTrailingWords(isAtMaximum: Bool) -> String {
+        isAtMaximum ? String(localized: "stops · Maximum") : String(localized: "stops")
     }
 
     /// Idle source identity for a stack containing any Filter Set

@@ -73,6 +73,33 @@ extension ExposureCalculatorViewModel {
             .compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: inventory) }
     }
 
+    /// What the shooting popup's working selection would yield if
+    /// applied now (FILTER-AUX-003): the effective total in stops, or
+    /// the rejection Apply would report. Nothing is committed.
+    public func auxiliaryFiltersPreview(_ mounts: [MountedAuxiliaryFilter]) -> Result<NDStep, FilterStackRejection> {
+        calculatorModel.filterStack
+            .replacingAuxiliaryFilters(with: mounts, inventory: filterInventory)
+            .map(\.effectiveStep)
+    }
+
+    /// The Plus wheel's vertical choices (FILTER-PLUS-001): Standard,
+    /// the candidate ND sources, then the Auxiliary filters action.
+    public var filterPlusChoices: [FilterPlusChoice] {
+        FilterPlusChoice.choices(for: filterSources)
+    }
+
+    /// The Main summary of the active camera's mounted auxiliary
+    /// filters; `nil` hides the space (FILTER-AUX-001).
+    public var auxiliaryFilterSummary: AuxiliaryFilterSummaryDisplayState? {
+        AuxiliaryFilterSummaryPresenter.displayState(for: mountedAuxiliaryFilters)
+    }
+
+    /// Page-aware summary: live for the active slot, the stored
+    /// snapshot for inactive pages.
+    public func auxiliaryFilterSummary(forPage pageState: CameraSlotPageState) -> AuxiliaryFilterSummaryDisplayState? {
+        AuxiliaryFilterSummaryPresenter.displayState(for: mountedAuxiliaryFilters(forPage: pageState))
+    }
+
     // MARK: Camera candidate Filter Sets (FILTER-CAMERA)
 
     /// The active camera's candidate Filter Sets in user-defined set

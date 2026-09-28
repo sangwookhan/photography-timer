@@ -1371,6 +1371,32 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertTrue(viewModel.showsAddFilterWheelControl)
     }
 
+    // MARK: FILTER-AUX-003 — the popup's preview mirrors Apply without committing
+
+    func testAuxiliaryPreviewReportsTheTotalOrTheRejectionAndCommitsNothing() throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "52mm", color: .orange))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 2), .red))
+        inventory.addItem(cpl, to: set.id)
+        inventory.addItem(red, to: set.id)
+        let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.setNDFilterStep(NDStep(stops: 27), at: 0)
+
+        XCTAssertEqual(viewModel.auxiliaryFiltersPreview([.mount(cpl, in: set, .cplLoss(1.5)), .mount(red, in: set)]), .failure(.exceedsTotalLimit), "27 + 1.5 + 2 exceeds the cap.")
+        XCTAssertEqual(viewModel.auxiliaryFiltersPreview([.mount(cpl, in: set, .cplLoss(1)), .mount(red, in: set)]), .success(NDStep(stops: 30)))
+        XCTAssertEqual(viewModel.auxiliaryFiltersPreview([.mount(cpl, in: set), .mount(cpl, in: set)]), .failure(.itemAlreadyMounted))
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty, "A preview commits nothing.")
+        XCTAssertNil(viewModel.auxiliaryFilterSummary)
+        XCTAssertEqual(viewModel.filterPlusChoices, [.source(.standard), .auxiliaryFilters])
+
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(red, in: set)]))
+        let summary = try XCTUnwrap(viewModel.auxiliaryFilterSummary)
+        XCTAssertEqual(summary.items.map(\.name), ["Red"])
+        XCTAssertEqual(summary.items.first?.contributionText, "2")
+        XCTAssertEqual(viewModel.ndStep.stops, 29, accuracy: 1e-9)
+    }
+
     // MARK: FILTER-CAMERA-001 — candidates are explicit, per camera, and never mount
 
     func testCandidateFilterSetsAreAssignedPerCameraWithoutMountingAndBlockExclusionOfReferencedSets() throws {

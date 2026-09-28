@@ -17,13 +17,17 @@ public enum FilterSource: Hashable, Sendable {
     }
 }
 
-/// Which shooting row of a physical item is selected.
+/// Which shooting row of a physical item is selected on an ND wheel.
+/// Only `fixed` resolves on a wheel today (FILTER-STACK-003); the CPL
+/// and GND cases survive as legacy wheel selections so a persisted
+/// mixed stack can be migrated into auxiliary filters
+/// (`FilterStack.migratingLegacyWheels`).
 public enum FilterRowChoice: Hashable, Sendable {
-    /// The single row of a Fixed item.
+    /// The single row of a Fixed (ND) item.
     case fixed
-    /// One of a CPL item's configured exposure-loss choices, in stops.
+    /// Legacy: one of a CPL item's exposure-loss choices, in stops.
     case cplLoss(Double)
-    /// A GND item's per-shot calculation mode.
+    /// Legacy: a GND item's per-shot calculation mode.
     case gnd(GNDCalculationMode)
 }
 
@@ -35,6 +39,71 @@ public struct FilterRowSelection: Hashable, Sendable {
     public init(itemID: FilterItemID, choice: FilterRowChoice) {
         self.itemID = itemID
         self.choice = choice
+    }
+}
+
+/// Per-shot choice for a mounted auxiliary filter (FILTER-AUX-003):
+/// a CPL's selected exposure-loss choice, a GND's calculation mode,
+/// or — for Color and Effect items — their registered loss.
+public enum AuxiliaryFilterChoice: Hashable, Sendable {
+    case cplLoss(Double)
+    case gnd(GNDCalculationMode)
+    case registeredLoss
+}
+
+/// One physical auxiliary filter mounted on the active camera, with
+/// the choice made for the current shot. Auxiliary filters share one
+/// summary space on Main; they are not wheels.
+public struct MountedAuxiliaryFilter: Hashable, Sendable {
+    public let filterSetID: FilterSetID
+    public let itemID: FilterItemID
+    public let choice: AuxiliaryFilterChoice
+
+    public init(filterSetID: FilterSetID, itemID: FilterItemID, choice: AuxiliaryFilterChoice) {
+        self.filterSetID = filterSetID
+        self.itemID = itemID
+        self.choice = choice
+    }
+
+    /// The default choice when an item is first mounted: a CPL's
+    /// first configured choice, Record only for a GND
+    /// (FILTER-GND-002), and the registered loss otherwise. `nil`
+    /// for an ND item, which is never an auxiliary filter.
+    public static func initialChoice(for item: FilterItem) -> AuxiliaryFilterChoice? {
+        switch item.behavior {
+        case .fixed:
+            return nil
+        case .cpl(let choices):
+            return choices.shootingChoices.first.map(AuxiliaryFilterChoice.cplLoss)
+        case .gnd:
+            return .gnd(.recordOnly)
+        case .color, .effect:
+            return .registeredLoss
+        }
+    }
+}
+
+/// A mounted auxiliary filter resolved against the inventory: the
+/// item it names, its owning set's presentation metadata, what it
+/// contributes now, and its registered value (a GND's full density, a
+/// CPL's selected choice, a Color / Effect item's loss).
+public struct ResolvedAuxiliaryFilter: Hashable, Sendable {
+    public let mount: MountedAuxiliaryFilter
+    public let item: FilterItem
+    public let filterSetName: String
+    public let filterSetColor: FilterSetColor
+    /// Active contribution in canonical stops (0 for Record only).
+    public let contributionStops: Double
+    /// Registered value in canonical stops.
+    public let registeredStops: Double
+
+    public init(mount: MountedAuxiliaryFilter, item: FilterItem, filterSetName: String, filterSetColor: FilterSetColor, contributionStops: Double, registeredStops: Double) {
+        self.mount = mount
+        self.item = item
+        self.filterSetName = filterSetName
+        self.filterSetColor = filterSetColor
+        self.contributionStops = contributionStops
+        self.registeredStops = registeredStops
     }
 }
 
@@ -146,14 +215,25 @@ public enum FilterStackRejection: Hashable, Sendable, Error {
     /// The selection does not resolve against the inventory or does
     /// not belong to the wheel's source.
     case unresolvedSelection
+    /// Mounting an auxiliary filter while four ND wheels exist: the
+    /// wheels are never removed or merged automatically
+    /// (FILTER-STACK-001, FILTER-AUX-003).
+    case tooManyNDWheels
+    /// More auxiliary items than one summary presents
+    /// (`FilterStack.maximumAuxiliaryFilterCount`).
+    case tooManyAuxiliaryFilters
 }
 
 /// Why the selected source cannot currently add a usable wheel.
 public enum FilterAddUnavailability: Hashable, Sendable {
+    /// The applicable ND-wheel limit is reached: four without
+    /// auxiliary filters, three with them (FILTER-STACK-001).
     case stackFull
     /// Standard: the budget-truncated ladder holds no value above 0.
     case noSelectableValue
     case unknownFilterSet
+    /// The Filter Set has no ND item; auxiliary items never make a
+    /// wheel (FILTER-STACK-003).
     case filterSetHasNoItems
     case allItemsMounted
     /// Every unmounted item's rows would exceed the 30-stop cap.
@@ -180,18 +260,40 @@ public struct FilterWheelRowOption: Hashable, Sendable {
     }
 }
 
-/// The active camera's mixed Filter Stack: one to four wheels drawn
-/// from Standard and Filter Set sources, resolved against the
-/// inventory. The 30-stop cap on active contributions and the
-/// one-item-per-camera rule are invariants of this type: `init`
-/// treats violations as programmer errors, and every mutation
+/// The active camera's Filter Stack: its ND wheels — drawn from
+/// Standard and Filter Set sources — together with its mounted
+/// auxiliary filters, all resolved against the inventory
+/// (FILTER-STACK-001). One to four wheels are allowed without
+/// auxiliary filters, one to three with them. The 30-stop cap on the
+/// combined active contributions and the one-item-per-camera rule
+/// across wheels and auxiliary filters are invariants of this type:
+/// `init` treats violations as programmer errors, and every mutation
 /// returns either a valid stack or a rejection.
 public struct FilterStack: Equatable, Sendable {
+    /// Absolute ND-wheel maximum, reached only without auxiliary
+    /// filters.
     public static let maximumWheelCount = NDFilterStack.maximumWheelCount
+    /// ND-wheel maximum while any auxiliary filter is mounted: the
+    /// summary occupies one of the four spaces.
+    public static let maximumWheelCountWithAuxiliaryFilters = 3
+    /// How many physical auxiliary items one summary presents with
+    /// every identity and contribution readable (FILTER-AUX-002).
+    public static let maximumAuxiliaryFilterCount = 3
     static let totalLimit = Double(ExposureScale.maximumWholeNDStops)
 
     public private(set) var wheels: [FilterWheel]
     public private(set) var rows: [ResolvedFilterRow]
+    /// Mounted auxiliary filters in mount order; empty when the
+    /// summary is hidden.
+    public private(set) var auxiliaryFilters: [MountedAuxiliaryFilter]
+    /// Resolved auxiliary filters parallel to `auxiliaryFilters`.
+    public private(set) var auxiliaryRows: [ResolvedAuxiliaryFilter]
+
+    /// The ND-wheel limit that applies with or without auxiliary
+    /// filters (FILTER-STACK-001).
+    public static func wheelLimit(hasAuxiliaryFilters: Bool) -> Int {
+        hasAuxiliaryFilters ? maximumWheelCountWithAuxiliaryFilters : maximumWheelCount
+    }
 
     /// Module-internal construction for wheel sets known to resolve
     /// (the Standard-only shapes). Everything else goes through
@@ -203,9 +305,11 @@ public struct FilterStack: Equatable, Sendable {
         self = stack
     }
 
-    private init(wheels: [FilterWheel], rows: [ResolvedFilterRow]) {
+    private init(wheels: [FilterWheel], rows: [ResolvedFilterRow], auxiliaryFilters: [MountedAuxiliaryFilter] = [], auxiliaryRows: [ResolvedAuxiliaryFilter] = []) {
         self.wheels = wheels
         self.rows = rows
+        self.auxiliaryFilters = auxiliaryFilters
+        self.auxiliaryRows = auxiliaryRows
     }
 
     /// A single Standard wheel — the default and legacy shape.
@@ -221,10 +325,19 @@ public struct FilterStack: Equatable, Sendable {
         self.init(wheels: standardSteps.map(FilterWheel.standard), inventory: .empty)
     }
 
-    /// Validating construction: `nil` when any wheel fails to resolve,
-    /// the count is outside 1–4, or the contributions exceed the cap.
+    /// Validating construction without auxiliary filters.
     public static func validated(wheels: [FilterWheel], inventory: FilterInventory) -> FilterStack? {
-        guard (1...maximumWheelCount).contains(wheels.count) else {
+        validated(wheels: wheels, auxiliaryFilters: [], inventory: inventory)
+    }
+
+    /// Validating construction: `nil` when any wheel or auxiliary
+    /// filter fails to resolve, the wheel count is outside the
+    /// applicable limit, more auxiliary items are mounted than one
+    /// summary presents, a physical item appears twice, or the
+    /// combined contributions exceed the cap.
+    public static func validated(wheels: [FilterWheel], auxiliaryFilters: [MountedAuxiliaryFilter], inventory: FilterInventory) -> FilterStack? {
+        guard (1...wheelLimit(hasAuxiliaryFilters: !auxiliaryFilters.isEmpty)).contains(wheels.count),
+              auxiliaryFilters.count <= maximumAuxiliaryFilterCount else {
             return nil
         }
         var rows: [ResolvedFilterRow] = []
@@ -240,10 +353,18 @@ public struct FilterStack: Equatable, Sendable {
             }
             rows.append(row)
         }
-        guard isWithinTotalLimit(rows.map(\.contributionStops)) else {
+        var auxiliaryRows: [ResolvedAuxiliaryFilter] = []
+        for mount in auxiliaryFilters {
+            guard let resolved = resolvedAuxiliaryFilter(mount, inventory: inventory),
+                  mounted.insert(mount.itemID).inserted else {
+                return nil
+            }
+            auxiliaryRows.append(resolved)
+        }
+        guard isWithinTotalLimit(rows.map(\.contributionStops) + auxiliaryRows.map(\.contributionStops)) else {
             return nil
         }
-        return FilterStack(wheels: wheels, rows: rows)
+        return FilterStack(wheels: wheels, rows: rows, auxiliaryFilters: auxiliaryFilters, auxiliaryRows: auxiliaryRows)
     }
 
     public static func isWithinTotalLimit(_ contributions: [Double]) -> Bool {
@@ -278,47 +399,114 @@ public struct FilterStack: Equatable, Sendable {
         }
     }
 
+    /// An ND wheel resolves ND items only (FILTER-STACK-003): a CPL,
+    /// GND, Color, or Effect selection on a wheel is unresolvable.
     static func resolvedRow(item: FilterItem, choice: FilterRowChoice) -> ResolvedFilterRow? {
-        let selection = FilterWheelSelection.item(FilterRowSelection(itemID: item.id, choice: choice))
-        switch (item.behavior, choice) {
-        case (.fixed(let value), .fixed):
-            guard let stops = value.canonicalStops else { return nil }
-            return ResolvedFilterRow(selection: selection, contributionStops: stops, registeredStops: stops, item: item)
+        guard case .fixed(let value) = item.behavior, choice == .fixed,
+              let stops = value.canonicalStops else {
+            return nil
+        }
+        let selection = FilterWheelSelection.item(FilterRowSelection(itemID: item.id, choice: .fixed))
+        return ResolvedFilterRow(selection: selection, contributionStops: stops, registeredStops: stops, item: item)
+    }
+
+    /// The single wheel row an ND item offers; auxiliary items never
+    /// appear on a wheel (FILTER-ITEM-003, FILTER-STACK-003).
+    static func rows(for item: FilterItem) -> [ResolvedFilterRow] {
+        [resolvedRow(item: item, choice: .fixed)].compactMap { $0 }
+    }
+
+    /// Resolves one mounted auxiliary filter against the inventory:
+    /// `nil` when its set or item no longer exists, the item is not
+    /// an auxiliary kind, or the choice does not fit the item — a CPL
+    /// choice that is no longer configured is never replaced by
+    /// another (FILTER-PERSIST-002). A CPL choice resolves to the
+    /// configured value it matches.
+    public static func resolvedAuxiliaryFilter(_ mount: MountedAuxiliaryFilter, inventory: FilterInventory) -> ResolvedAuxiliaryFilter? {
+        guard let filterSet = inventory.filterSet(withID: mount.filterSetID),
+              let item = filterSet.item(withID: mount.itemID) else {
+            return nil
+        }
+        let contribution: Double
+        let registered: Double
+        var choice = mount.choice
+        switch (item.behavior, mount.choice) {
         case (.cpl(let choices), .cplLoss(let loss)):
             guard let matched = choices.shootingChoices.first(where: {
                 abs($0 - loss) <= ExposureCalculator.stabilityEpsilon
             }) else { return nil }
-            let normalized = FilterWheelSelection.item(FilterRowSelection(itemID: item.id, choice: .cplLoss(matched)))
-            return ResolvedFilterRow(selection: normalized, contributionStops: matched, registeredStops: matched, item: item)
+            choice = .cplLoss(matched)
+            contribution = matched
+            registered = matched
         case (.gnd(let value), .gnd(let mode)):
             guard let stops = value.canonicalStops else { return nil }
-            return ResolvedFilterRow(
-                selection: selection,
-                contributionStops: mode == .applyFullValue ? stops : 0,
-                registeredStops: stops,
-                item: item
-            )
+            contribution = mode == .applyFullValue ? stops : 0
+            registered = stops
+        case (.color(let loss, _), .registeredLoss), (.effect(let loss), .registeredLoss):
+            guard loss.isValid else { return nil }
+            contribution = loss.stops
+            registered = loss.stops
         default:
             return nil
         }
+        return ResolvedAuxiliaryFilter(
+            mount: MountedAuxiliaryFilter(filterSetID: mount.filterSetID, itemID: mount.itemID, choice: choice),
+            item: item,
+            filterSetName: filterSet.name,
+            filterSetColor: filterSet.color,
+            contributionStops: contribution,
+            registeredStops: registered
+        )
     }
 
-    /// Every shooting row an item offers, in wheel order: Fixed → one
-    /// row; CPL → one row per distinct configured choice; GND → Record
-    /// only, then Apply full value. Color and Effect items are
-    /// auxiliary filters and never appear on a wheel
-    /// (FILTER-ITEM-003).
-    static func rows(for item: FilterItem) -> [ResolvedFilterRow] {
-        switch item.behavior {
-        case .fixed:
-            return [resolvedRow(item: item, choice: .fixed)].compactMap { $0 }
-        case .cpl(let choices):
-            return choices.shootingChoices.compactMap { resolvedRow(item: item, choice: .cplLoss($0)) }
-        case .gnd:
-            return GNDCalculationMode.allCases.compactMap { resolvedRow(item: item, choice: .gnd($0)) }
-        case .color, .effect:
-            return []
+    /// Safe re-resolution of persisted or previously valid auxiliary
+    /// filters (FILTER-PERSIST-002): an unresolvable mount — unknown
+    /// set or item, a CPL choice that no longer exists, a kind change
+    /// — is unmounted rather than substituted, a later duplicate of a
+    /// physical item is dropped, and the list is cut to the summary's
+    /// maximum.
+    public static func normalizedAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter], inventory: FilterInventory) -> [MountedAuxiliaryFilter] {
+        var seen: Set<FilterItemID> = []
+        var normalized: [MountedAuxiliaryFilter] = []
+        for mount in mounts {
+            guard let resolved = resolvedAuxiliaryFilter(mount, inventory: inventory),
+                  seen.insert(mount.itemID).inserted else {
+                continue
+            }
+            normalized.append(resolved.mount)
         }
+        return Array(normalized.prefix(maximumAuxiliaryFilterCount))
+    }
+
+    /// Splits a legacy mixed stack into its two halves
+    /// (FILTER-PERSIST-002): a wheel mounting a CPL or GND row becomes
+    /// an auxiliary filter with the same item, choice, and mode, and
+    /// that wheel is dropped; every other wheel stays. A stack that
+    /// held only auxiliary rows receives one Standard 0 wheel. The
+    /// result is not yet validated against the inventory.
+    public static func migratingLegacyWheels(_ wheels: [FilterWheel]) -> (wheels: [FilterWheel], auxiliaryFilters: [MountedAuxiliaryFilter]) {
+        var remaining: [FilterWheel] = []
+        var auxiliary: [MountedAuxiliaryFilter] = []
+        for wheel in wheels {
+            if case .item(let selection) = wheel.selection,
+               let filterSetID = wheel.source.filterSetID {
+                switch selection.choice {
+                case .cplLoss(let loss):
+                    auxiliary.append(MountedAuxiliaryFilter(filterSetID: filterSetID, itemID: selection.itemID, choice: .cplLoss(loss)))
+                    continue
+                case .gnd(let mode):
+                    auxiliary.append(MountedAuxiliaryFilter(filterSetID: filterSetID, itemID: selection.itemID, choice: .gnd(mode)))
+                    continue
+                case .fixed:
+                    break
+                }
+            }
+            remaining.append(wheel)
+        }
+        if remaining.isEmpty {
+            remaining = [.standard(NDStep(stops: 0))]
+        }
+        return (remaining, auxiliary)
     }
 
     /// Safe re-resolution of persisted or previously valid wheels
@@ -380,30 +568,48 @@ public struct FilterStack: Equatable, Sendable {
 
     // MARK: Derived values
 
+    /// Per-wheel active contributions in wheel order.
     public var contributions: [Double] {
         rows.map(\.contributionStops)
     }
 
+    /// Per-item active contributions of the mounted auxiliary filters.
+    public var auxiliaryContributions: [Double] {
+        auxiliaryRows.map(\.contributionStops)
+    }
+
+    public var hasAuxiliaryFilters: Bool {
+        !auxiliaryFilters.isEmpty
+    }
+
+    /// The ND-wheel limit currently in force (FILTER-STACK-001).
+    public var wheelLimit: Int {
+        Self.wheelLimit(hasAuxiliaryFilters: hasAuxiliaryFilters)
+    }
+
     /// The one effective value the calculation consumes: the sum of
-    /// active contributions in canonical stops.
+    /// every wheel's and every auxiliary filter's active contribution
+    /// in canonical stops (FILTER-STACK-004).
     public var effectiveStep: NDStep {
-        NDStep(stops: contributions.reduce(0, +))
+        NDStep(stops: (contributions + auxiliaryContributions).reduce(0, +))
     }
 
     /// Remaining budget for the wheel at `index`: the cap minus every
-    /// OTHER wheel's active contribution.
+    /// OTHER wheel's and every auxiliary filter's active contribution.
     public func remainingBudget(excludingWheelAt index: Int) -> Double {
         precondition(wheels.indices.contains(index), "Wheel index out of range.")
         let others = rows.enumerated()
             .filter { $0.offset != index }
             .reduce(0.0) { $0 + $1.element.contributionStops }
-        return Self.totalLimit - others
+        return Self.totalLimit - others - auxiliaryContributions.reduce(0, +)
     }
 
+    /// Every physical item mounted on this camera — on a wheel other
+    /// than `index`, or as an auxiliary filter (FILTER-AUX-004).
     func mountedItemIDs(excludingWheelAt index: Int?) -> Set<FilterItemID> {
         Set(wheels.enumerated().compactMap { offset, wheel in
             offset == index ? nil : wheel.mountedItemID
-        })
+        }).union(auxiliaryFilters.map(\.itemID))
     }
 
     // MARK: Row options
@@ -411,9 +617,10 @@ public struct FilterStack: Equatable, Sendable {
     /// Picker rows for the wheel at `index`. Standard wheels get the
     /// active scale's ladder truncated from the top to the remaining
     /// budget (every row selectable); Filter Set wheels get Empty plus
-    /// every row of the set's items, each marked unavailable when its
-    /// item is mounted elsewhere on this camera or its contribution
-    /// would exceed the cap. The wheel's own current row is always
+    /// the set's ND items (FILTER-STACK-003), each marked unavailable
+    /// when its item is mounted elsewhere on this camera — on another
+    /// wheel or as an auxiliary filter — or its contribution would
+    /// exceed the cap. The wheel's own current row is always
     /// available.
     public func rowOptions(forWheelAt index: Int, inventory: FilterInventory, scale: ExposureScale) -> [FilterWheelRowOption] {
         guard wheels.indices.contains(index) else {
@@ -441,7 +648,7 @@ public struct FilterStack: Equatable, Sendable {
                     unavailability: nil
                 ),
             ]
-            for item in filterSet.items {
+            for item in filterSet.ndItems {
                 for row in Self.rows(for: item) {
                     let unavailability: FilterStackRejection?
                     if row.selection == current {
@@ -462,13 +669,15 @@ public struct FilterStack: Equatable, Sendable {
 
     // MARK: Adding wheels
 
+    /// Whether another ND wheel fits under the applicable limit
+    /// (FILTER-STACK-001).
     public var canAddWheel: Bool {
-        wheels.count < Self.maximumWheelCount
+        wheels.count < wheelLimit
     }
 
     /// Why `source` cannot add a usable wheel right now, or `nil` when
-    /// it can. A Record-only row keeps a Filter Set addable at a
-    /// 30-stop total as long as a slot and an unmounted item remain.
+    /// it can: the applicable wheel limit, or no unmounted ND item of
+    /// the set whose value fits the remaining budget.
     public func addUnavailability(for source: FilterSource, inventory: FilterInventory, scale: ExposureScale) -> FilterAddUnavailability? {
         guard canAddWheel else {
             return .stackFull
@@ -482,11 +691,12 @@ public struct FilterStack: Equatable, Sendable {
             guard let filterSet = inventory.filterSet(withID: filterSetID) else {
                 return .unknownFilterSet
             }
-            guard !filterSet.items.isEmpty else {
+            let ndItems = filterSet.ndItems
+            guard !ndItems.isEmpty else {
                 return .filterSetHasNoItems
             }
             let mounted = mountedItemIDs(excludingWheelAt: nil)
-            let unmounted = filterSet.items.filter { !mounted.contains($0.id) }
+            let unmounted = ndItems.filter { !mounted.contains($0.id) }
             guard !unmounted.isEmpty else {
                 return .allItemsMounted
             }
@@ -570,6 +780,43 @@ public struct FilterStack: Equatable, Sendable {
         return .success(copy)
     }
 
+    // MARK: Replacing the mounted auxiliary filters
+
+    /// Writes the complete mounted auxiliary selection at once
+    /// (FILTER-AUX-003 Apply). Rejected — leaving the stack unchanged —
+    /// when a mount does not resolve, a physical item would be mounted
+    /// twice (across auxiliary filters and wheels), more items are
+    /// mounted than one summary presents, the current ND wheels exceed
+    /// the limit that applies with auxiliary filters, or the combined
+    /// contributions would exceed 30 stops. Existing ND wheels are
+    /// never removed or merged to make room.
+    public func replacingAuxiliaryFilters(with mounts: [MountedAuxiliaryFilter], inventory: FilterInventory) -> Result<FilterStack, FilterStackRejection> {
+        var resolved: [ResolvedAuxiliaryFilter] = []
+        var mounted = Set(wheels.compactMap(\.mountedItemID))
+        for mount in mounts {
+            guard let row = Self.resolvedAuxiliaryFilter(mount, inventory: inventory) else {
+                return .failure(.unresolvedSelection)
+            }
+            guard mounted.insert(mount.itemID).inserted else {
+                return .failure(.itemAlreadyMounted)
+            }
+            resolved.append(row)
+        }
+        guard mounts.count <= Self.maximumAuxiliaryFilterCount else {
+            return .failure(.tooManyAuxiliaryFilters)
+        }
+        guard wheels.count <= Self.wheelLimit(hasAuxiliaryFilters: !mounts.isEmpty) else {
+            return .failure(.tooManyNDWheels)
+        }
+        guard Self.isWithinTotalLimit(contributions + resolved.map(\.contributionStops)) else {
+            return .failure(.exceedsTotalLimit)
+        }
+        var copy = self
+        copy.auxiliaryFilters = resolved.map(\.mount)
+        copy.auxiliaryRows = resolved
+        return .success(copy)
+    }
+
     // MARK: Post-commit ordering
 
     /// A row's sort value (FILTER-STACK-005): a Standard row's selected
@@ -627,11 +874,15 @@ public struct FilterStack: Equatable, Sendable {
         }
     }
 
+    /// Wheels in commit order; the auxiliary filters stay as they are
+    /// (FILTER-STACK-005: they never take part in ND ordering).
     public func sortedForCommit(inventory: FilterInventory) -> FilterStack {
         let permutation = commitSortPermutation(inventory: inventory)
         return FilterStack(
             wheels: permutation.map { wheels[$0] },
-            rows: permutation.map { rows[$0] }
+            rows: permutation.map { rows[$0] },
+            auxiliaryFilters: auxiliaryFilters,
+            auxiliaryRows: auxiliaryRows
         )
     }
 }

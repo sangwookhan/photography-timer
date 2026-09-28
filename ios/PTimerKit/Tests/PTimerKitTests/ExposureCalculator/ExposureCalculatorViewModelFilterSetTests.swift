@@ -37,6 +37,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let item = fixed("Big Stopper", 10)
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
 
         viewModel.selectFilterSource(.filterSet(set.id))
         XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(set.id))
@@ -136,13 +137,14 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
 
     func testUnknownSourceIsRefused() throws {
         let viewModel = makeViewModel(inventoryModel: FilterInventoryModel())
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(FilterSetID.generate()))
         XCTAssertEqual(viewModel.selectedFilterSource, .standard)
     }
 
     // MARK: FILTER-PLUS-005 — Plus stays visible, adding disabled with a reason
 
-    func testPlusRemainsVisibleAtCapAndRecordOnlyStaysAddable() throws {
+    func testRecordOnlyMountsAtCapAndEnablingContributionIsRejected() throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "GND", color: .purple))
         let gnd = FilterItem(name: "GND 0.6", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
@@ -151,48 +153,45 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         viewModel.setNDFilterStep(NDStep(stops: 30), at: 0)
 
         XCTAssertTrue(viewModel.showsAddFilterWheelControl)
-        XCTAssertFalse(viewModel.isNDWheelInteractionQuiet && viewModel.filterAddUnavailability == nil)
         XCTAssertEqual(viewModel.filterAddUnavailability, .noSelectableValue)
         XCTAssertNotNil(viewModel.filterAddUnavailabilityText(for: .standard))
+        XCTAssertEqual(viewModel.filterAddUnavailabilityText(for: .filterSet(set.id)), FilterWheelPresenter.addUnavailabilityText(for: .filterSetHasNoItems), "A set without ND items adds no wheel; its GND mounts through the popup.")
 
-        viewModel.selectFilterSource(.filterSet(set.id))
-        XCTAssertNil(viewModel.filterAddUnavailability, "A Record-only row keeps the set addable at the cap.")
-        viewModel.addFilterWheel()
-        XCTAssertEqual(viewModel.filterWheels.count, 2)
-        // The Empty wheel is usable (Record only fits), so the A0
-        // saturation rule must not remove it before the selection.
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
+        // A Record-only GND mounts at the cap (FILTER-PLUS-005).
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]))
         XCTAssertEqual(viewModel.ndStep.stops, 30, accuracy: 1e-9)
-        XCTAssertEqual(viewModel.filterWheels.count, 2)
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.contributionStops), [0])
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 30))], "Mounting never touches the ND wheels.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [set.id], "A mounted set is a candidate.")
+        XCTAssertEqual(viewModel.occupiedFilterSpaceCount, 2)
 
         // Example 6: enabling the contribution is rejected, state intact.
-        let before = viewModel.filterWheels
-        viewModel.setWheelSelection(select(gnd, .gnd(.applyFullValue)), at: 1)
-        XCTAssertEqual(viewModel.filterWheels, before)
-        XCTAssertEqual(viewModel.filterRejectionNotice?.rejection, .exceedsTotalLimit)
+        XCTAssertEqual(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set, .gnd(.applyFullValue))]), .exceedsTotalLimit)
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(gnd, in: set)])
+        XCTAssertEqual(viewModel.ndStep.stops, 30, accuracy: 1e-9)
     }
 
     // MARK: FILTER-STACK-006 — cleanup never removes a mounted Record-only item
 
-    func testCleanupRemovesEmptyButKeepsRecordOnly() async throws {
+    func testCleanupRemovesEmptyWheelsButKeepsMountedAuxiliaryFilters() async throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "GND", color: .purple))
         let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
+        let nd8 = fixed("ND8", 3)
         inventory.addItem(gnd, to: set.id)
+        inventory.addItem(nd8, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelCleanupDelay = 0.05
         viewModel.setNDFilterStep(NDStep(stops: 5), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
-        // [5, gnd(rec), empty]
-        XCTAssertEqual(viewModel.filterWheels.count, 3)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]))
+        // [5, empty] + GND (Record only)
+        XCTAssertEqual(viewModel.filterWheels.count, 2)
         await awaitCleanupFire()
-        XCTAssertEqual(viewModel.filterWheels, [
-            .standard(NDStep(stops: 5)),
-            FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))),
-        ])
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 5))])
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(gnd, in: set)], "Wheel cleanup never removes a mounted Record-only GND.")
         XCTAssertFalse(viewModel.calculatorModel.canRemoveEmptyFilterWheel)
     }
 
@@ -213,11 +212,13 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             inventory.addItem(itemA, to: setA.id)
             inventory.addItem(itemB, to: setB.id)
             let viewModel = makeViewModel(inventoryModel: inventory)
+            viewModel.assignAllFilterSetsAsCandidates()
             // Camera 1 mounts B; camera 2 mounts A.
             viewModel.selectFilterSource(.filterSet(setB.id))
             viewModel.addFilterWheel()
             viewModel.setWheelSelection(select(itemB), at: 1)
             viewModel.selectCameraSlot(.camera2)
+            viewModel.assignAllFilterSetsAsCandidates()
             viewModel.selectFilterSource(.filterSet(setA.id))
             viewModel.addFilterWheel()
             viewModel.setWheelSelection(select(itemA), at: 1)
@@ -257,24 +258,19 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
         inventory.addItem(gnd, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
-        viewModel.selectFilterSource(.filterSet(set.id))
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]))
         viewModel.selectCameraSlot(.camera2)
-        viewModel.selectFilterSource(.filterSet(set.id))
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty, "Mounting is per camera.")
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]), "The same inventory item may be mounted on another camera.")
         XCTAssertEqual(viewModel.ndStep.stops, 0)
-        // The GND's registered 2 stops lead Standard 0 after the commit.
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(gnd, .gnd(.recordOnly)))
 
-        viewModel.setWheelSelection(select(gnd, .gnd(.applyFullValue)), at: 0)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set, .gnd(.applyFullValue))]))
         XCTAssertEqual(viewModel.ndStep.stops, 2)
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(gnd, .gnd(.applyFullValue)), "A mode switch never moves the GND.")
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.count, 1, "A mode switch updates the same mounted item.")
 
         viewModel.selectCameraSlot(.camera1)
         XCTAssertEqual(viewModel.ndStep.stops, 0, "Camera 1 keeps Record only.")
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(gnd, .gnd(.recordOnly)))
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.first?.mount.choice, .gnd(.recordOnly))
     }
 
     // MARK: FILTER-ITEM-005/006 — edits follow into every camera
@@ -285,10 +281,12 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let item = fixed("X", 4)
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(item), at: 1)
         viewModel.selectCameraSlot(.camera2)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(item), at: 1)
@@ -310,6 +308,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let item = fixed("X", 4)
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelCleanupDelay = 0.05
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -332,6 +331,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let item = fixed("X", 4)
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.setNDFilterStep(NDStep(stops: 20), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -364,10 +364,8 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             cameraSlotSessionPersistenceStore: sessionStore,
             filterInventoryModel: inventory
         )
-        viewModel.selectFilterSource(.filterSet(set.id))
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(cpl, .cplLoss(1.5)), at: 1)
-        let cameraOneWheels = viewModel.filterWheels
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set, .cplLoss(1.5))]))
+        let cameraOneMounts = viewModel.mountedAuxiliaryFilters.map(\.mount)
         let persistedBefore = sessionStore.stored
         let inventoryBefore = viewModel.filterInventory
 
@@ -376,35 +374,32 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         withoutOnePointFive.behavior = .cpl(CPLExposureLossChoices(fields: [1, nil, 2]))
         XCTAssertEqual(viewModel.filterItemSaveConflicts(for: withoutOnePointFive, in: set.id), ["Camera 1"])
         XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFive, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
-        XCTAssertEqual(viewModel.filterWheels, cameraOneWheels, "The previous valid stack stays intact.")
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), cameraOneMounts, "The previous valid state stays intact.")
         XCTAssertEqual(viewModel.filterInventory, inventoryBefore, "The previous inventory stays intact.")
         XCTAssertEqual(sessionStore.stored, persistedBefore, "A blocked save persists nothing.")
         XCTAssertEqual(viewModel.ndStep.stops, 1.5, accuracy: 1e-9)
 
         // Two cameras affected: camera 2 mounts the same CPL at 2.
         viewModel.selectCameraSlot(.camera2)
-        viewModel.selectFilterSource(.filterSet(set.id))
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(cpl, .cplLoss(2)), at: 1)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set, .cplLoss(2))]))
         var onlyOne = cpl
         onlyOne.behavior = .cpl(CPLExposureLossChoices(fields: [1, nil, nil]))
         XCTAssertEqual(Set(viewModel.filterItemSaveConflicts(for: onlyOne, in: set.id)), ["Camera 1", "Camera 2"])
         XCTAssertEqual(viewModel.saveFilterItem(onlyOne, in: set.id), .blocked(affectedCameras: ["Camera 1", "Camera 2"], reason: .removesSelectedChoice))
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(cpl, .cplLoss(2)), "The CPL group (2) leads Standard 0.")
 
-        // Keeping every selected choice (adding a fourth value is not
-        // possible, but changing the unselected slot is) saves.
+        // Keeping every selected choice (changing the unselected slot) saves.
         var keepsSelected = cpl
         keepsSelected.behavior = .cpl(CPLExposureLossChoices(fields: [0.5, 1.5, 2]))
         XCTAssertEqual(viewModel.saveFilterItem(keepsSelected, in: set.id), .saved)
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(cpl, .cplLoss(2)))
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.first?.mount.choice, .cplLoss(2))
         viewModel.selectCameraSlot(.camera1)
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(cpl, .cplLoss(1.5)))
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.first?.mount.choice, .cplLoss(1.5))
 
-        // After the camera changes its wheel, the removal is allowed.
-        viewModel.setWheelSelection(select(cpl, .cplLoss(2)), at: 0)
+        // After the cameras change their selection, the removal is allowed.
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set, .cplLoss(2))]))
         viewModel.selectCameraSlot(.camera2)
-        viewModel.setWheelSelection(.empty, at: 0)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([]))
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty, "Removing the last item hides the summary.")
         var withoutOnePointFiveAgain = cpl
         withoutOnePointFiveAgain.behavior = .cpl(CPLExposureLossChoices(fields: [0.5, nil, 2]))
         XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFiveAgain, in: set.id), .saved)
@@ -414,8 +409,11 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
         let item = fixed("X", 3)
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
         inventory.addItem(item, to: set.id)
+        inventory.addItem(cpl, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(item), at: 1)
@@ -423,6 +421,13 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         asGND.behavior = .gnd(FilterRegisteredValue(value: 3, unit: .stops))
         XCTAssertEqual(viewModel.saveFilterItem(asGND, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
         XCTAssertEqual(viewModel.filterWheels[0].selection, select(item))
+
+        // The same rule protects a mounted auxiliary filter.
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set)]))
+        var asND = cpl
+        asND.behavior = .fixed(FilterRegisteredValue(value: 1, unit: .stops))
+        XCTAssertEqual(viewModel.saveFilterItem(asND, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(cpl, in: set)])
     }
 
     // MARK: FILTER-STACK-002 — rejection notice for a mounted item
@@ -433,6 +438,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let item = fixed("X", 4)
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.addFilterWheel()
@@ -455,14 +461,12 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let nd3 = fixed("ND 3", 3)
         let nd6 = fixed("ND 6", 6)
         let nd10 = fixed("ND 10", 10)
-        let cpl = FilterItem(
-            name: "CPL",
-            behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, nil]))
-        )
-        for item in [nd3, nd6, nd10, cpl] {
+        let nd1 = fixed("ND 1", 1)
+        for item in [nd3, nd6, nd10, nd1] {
             inventory.addItem(item, to: set.id)
         }
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -471,11 +475,11 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let emptyIndex = try XCTUnwrap(
             viewModel.filterWheels.firstIndex(where: { $0.source == .filterSet(set.id) && $0.selection == .empty })
         )
-        viewModel.setWheelSelection(select(cpl, .cplLoss(1)), at: emptyIndex)
+        viewModel.setWheelSelection(select(nd1), at: emptyIndex)
         try? await Task.sleep(nanoseconds: 100_000_000)
 
         let cplIndex = try XCTUnwrap(
-            viewModel.filterWheels.firstIndex(where: { $0.selection == select(cpl, .cplLoss(1)) })
+            viewModel.filterWheels.firstIndex(where: { $0.selection == select(nd1) })
         )
         let options = viewModel.filterWheelRowOptions(forWheel: cplIndex)
         XCTAssertEqual(
@@ -483,7 +487,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             .itemAlreadyMounted
         )
         let outcome = FilterWheelAccessibilityAdjustment.outcome(
-            from: select(cpl, .cplLoss(1)),
+            from: select(nd1),
             direction: .decrement,
             options: options
         )
@@ -516,6 +520,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             inventory.addItem(item, to: set.id)
         }
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -738,6 +743,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             timerManager: timerManager,
             filterInventoryModel: inventory
         )
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))
@@ -769,29 +775,34 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let haida = try XCTUnwrap(inventory.createFilterSet(name: "Haida 100mm", color: .red))
         let nd400 = FilterItem(name: "ND400", behavior: .fixed(FilterRegisteredValue(value: 400, unit: .filterFactor)))
         let gnd = FilterItem(name: "GND 2", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
+        let red = FilterItem(name: "Red 25A", behavior: .color(FilterExposureLoss(stops: 3), .red))
         inventory.addItem(nd400, to: haida.id)
         inventory.addItem(gnd, to: haida.id)
+        inventory.addItem(red, to: haida.id)
         let timerManager = RuntimeBackedTimerManaging(tickInterval: 60, dateProvider: { Date(timeIntervalSince1970: 100) })
         let viewModel = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: timerManager,
             filterInventoryModel: inventory
         )
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
         viewModel.selectFilterSource(.filterSet(haida.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd400, .fixed), at: 1)
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 2)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: haida), .mount(red, in: haida)]))
         viewModel.startTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        // Settled order: Haida (log2(400) + registered 2) leads Standard 2.
-        let expected = "Haida 100mm: ND400 ND400 + GND 2 2 stops (Record only) · Standard 2 stops"
+        // Main-row order: the auxiliary filters first, then Haida's ND
+        // wheel (log2(400) leads Standard 2); one set group either way.
+        let expected = "Haida 100mm: GND 2 2 stops (Record only) + Red 25A 3 stops + ND400 ND400 · Standard 2 stops"
         XCTAssertEqual(timer.filterReferenceText, expected)
-        XCTAssertEqual(try XCTUnwrap(timer.ndStops), 2 + log2(400), accuracy: 1e-9, "The primary value is the canonical total.")
-        XCTAssertEqual(timer.filterSummary?[1].contributedStops, 0, "Record only contributes 0 yet appears in the reference.")
+        XCTAssertEqual(try XCTUnwrap(timer.ndStops), 2 + 3 + log2(400), accuracy: 1e-9, "The primary value is the canonical total, Color loss included.")
+        XCTAssertEqual(timer.filterSummary?[0].contributedStops, 0, "Record only contributes 0 yet appears in the reference.")
+        XCTAssertEqual(timer.filterSummary?[1].itemKind, .color)
+        XCTAssertEqual(timer.filterSummary?[1].contributedStops, 3)
 
         // Rename, edit, reorder, delete — the captured record never moves.
         viewModel.renameFilterSet(id: haida.id, name: "Renamed")
@@ -803,9 +814,10 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.timers.first?.filterReferenceText, expected)
         XCTAssertEqual(viewModel.timers.first?.filterSummary, timer.filterSummary)
         XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 2))], "The live stack lost the deleted set's wheels.")
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty, "... and its mounted auxiliary filters.")
     }
 
-    func testStalePersistedCPLChoiceRestoresAsEmpty() throws {
+    func testStalePersistedCPLChoiceIsUnmountedNeverSubstituted() throws {
         let sessionStore = InMemoryMixedSessionStore()
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
@@ -824,8 +836,11 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
                     ndStack: [PersistentNDFilterWheelSnapshot(ndStop: 3)],
                     filterStack: [
                         PersistentFilterWheelSnapshot(sourceKind: "standard", ndStop: 3),
+                        // Legacy CPL wheel row whose 1.5 choice is gone.
                         PersistentFilterWheelSnapshot(sourceKind: "filterSet", filterSetID: set.id.rawValue, itemID: cpl.id.rawValue, rowKind: "cpl", cplLossStops: 1.5),
-                    ]
+                    ],
+                    // A stored auxiliary CPL with the same stale choice.
+                    auxiliaryFilters: [PersistentAuxiliaryFilterSnapshot(filterSetID: set.id.rawValue, itemID: cpl.id.rawValue, kind: "cpl", cplLossStops: 1.5)]
                 ),
             ]
         )
@@ -835,7 +850,8 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             cameraSlotSessionPersistenceStore: sessionStore,
             filterInventoryModel: inventory
         )
-        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 3)), .empty(in: set.id)])
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 3))], "The legacy CPL wheel migrates out of the wheels.")
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty, "A vanished CPL choice unmounts the item; no other choice is substituted.")
         XCTAssertEqual(viewModel.ndStep.stops, 3)
     }
 
@@ -846,6 +862,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         inventory.addItem(item, to: set.id)
         let timerManager = RuntimeBackedTimerManaging(tickInterval: 60, dateProvider: { Date(timeIntervalSince1970: 100) })
         let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: timerManager, filterInventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))
@@ -872,40 +889,44 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
     func testTrackedSelectionsFollowTheLiveRowAndSettleAfterCommit() async throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
-        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        inventory.addItem(gnd, to: set.id)
+        let nd3 = fixed("ND3", 3)
+        let nd6 = fixed("ND6", 6)
+        inventory.addItem(nd3, to: set.id)
+        inventory.addItem(nd6, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
+        viewModel.setWheelSelection(select(nd3), at: 1)
         try? await Task.sleep(nanoseconds: 100_000_000)
-        // The GND's registered 3 stops lead Standard 0 after the commit.
-        XCTAssertEqual(viewModel.trackedWheelSelections[0], select(gnd, .gnd(.recordOnly)))
+        // The set's registered 3 stops lead Standard 0 after the commit.
+        XCTAssertEqual(viewModel.trackedWheelSelections[0], select(nd3))
 
         // The label follows the candidate at the touch center while moving.
         let wheelID = viewModel.ndFilterWheelIDs[0]
-        viewModel.filterWheelDidObserveRow(select(gnd, .gnd(.applyFullValue)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
-        XCTAssertEqual(viewModel.trackedWheelSelections[0], select(gnd, .gnd(.applyFullValue)))
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(gnd, .gnd(.recordOnly)), "Committed row unchanged until the commit.")
+        viewModel.filterWheelDidObserveRow(select(nd6), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        XCTAssertEqual(viewModel.trackedWheelSelections[0], select(nd6))
+        XCTAssertEqual(viewModel.filterWheels[0].selection, select(nd3), "Committed row unchanged until the commit.")
 
         // Selecting settles: the tracked selection is the committed row.
-        viewModel.filterWheelDidSelect(select(gnd, .gnd(.applyFullValue)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        viewModel.filterWheelDidSelect(select(nd6), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
         try? await Task.sleep(nanoseconds: 100_000_000)
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(gnd, .gnd(.applyFullValue)))
-        XCTAssertEqual(viewModel.trackedWheelSelections[0], select(gnd, .gnd(.applyFullValue)))
+        XCTAssertEqual(viewModel.filterWheels[0].selection, select(nd6))
+        XCTAssertEqual(viewModel.trackedWheelSelections[0], select(nd6))
     }
 
     func testRowTypeCategoriesStayBoundToTheirCandidatesThroughObservationCommitAndRejection() async throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
         let nd = fixed("ND8", 3)
+        let nd6 = fixed("ND6", 6)
         let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, nil])))
-        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
         inventory.addItem(nd, to: set.id)
         inventory.addItem(cpl, to: set.id)
-        inventory.addItem(gnd, to: set.id)
+        inventory.addItem(nd6, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -915,17 +936,16 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         // Settled: [ND8, Empty, Standard 0]; wheel 1 is the Empty set wheel.
         XCTAssertEqual(viewModel.filterWheels.map(\.selection), [select(nd), .empty, .standard(NDStep(stops: 0))])
         let wheelID = viewModel.ndFilterWheelIDs[1]
-        let expected: [FilterRowTypeCategory] = [.empty, .nd, .cpl, .gnd, .gnd]
+        // Empty plus the set's ND items; the CPL is never a wheel row.
+        let expected: [FilterRowTypeCategory] = [.empty, .nd, .nd]
         func categories() -> [FilterRowTypeCategory] {
             viewModel.filterWheelRowOptions(forWheel: 1).map { FilterWheelPresenter.rowDisplay(for: $0, notationMode: viewModel.ndNotationMode).typeCategory }
         }
         XCTAssertEqual(categories(), expected)
 
-        // Observing the CPL row (fast fling) moves the tracked header, not the rails.
-        viewModel.filterWheelDidObserveRow(select(cpl, .cplLoss(1)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
-        XCTAssertEqual(viewModel.trackedWheelSelections[1], select(cpl, .cplLoss(1)))
-        XCTAssertEqual(categories(), expected)
-        viewModel.filterWheelDidObserveRow(select(gnd, .gnd(.applyFullValue)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        // Observing the ND6 row (fast fling) moves the tracked header, not the rails.
+        viewModel.filterWheelDidObserveRow(select(nd6), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        XCTAssertEqual(viewModel.trackedWheelSelections[1], select(nd6))
         XCTAssertEqual(categories(), expected)
 
         // A rejected commit (ND8 is mounted on the sibling) snaps back.
@@ -935,15 +955,13 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.filterWheels[1].selection, .empty)
         XCTAssertEqual(categories(), expected)
 
-        // An accepted GND Record only commit: every row keeps its category.
-        viewModel.filterWheelDidSelect(select(gnd, .gnd(.recordOnly)), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
+        // An accepted ND6 commit: every row keeps its category.
+        viewModel.filterWheelDidSelect(select(nd6), wheelID: wheelID, generation: viewModel.ndWheelGeneration)
         try? await Task.sleep(nanoseconds: 100_000_000)
-        let gndIndex = try XCTUnwrap(viewModel.ndFilterWheelIDs.firstIndex(of: wheelID))
-        XCTAssertEqual(viewModel.filterWheels[gndIndex].selection, select(gnd, .gnd(.recordOnly)))
-        let displays = viewModel.filterWheelRowOptions(forWheel: gndIndex).map { FilterWheelPresenter.rowDisplay(for: $0, notationMode: .stops) }
+        let nd6Index = try XCTUnwrap(viewModel.ndFilterWheelIDs.firstIndex(of: wheelID))
+        XCTAssertEqual(viewModel.filterWheels[nd6Index].selection, select(nd6))
+        let displays = viewModel.filterWheelRowOptions(forWheel: nd6Index).map { FilterWheelPresenter.rowDisplay(for: $0, notationMode: .stops) }
         XCTAssertEqual(displays.map(\.typeCategory), expected)
-        XCTAssertEqual(displays.first { $0.selection == select(gnd, .gnd(.recordOnly)) }?.typeCategory, .gnd)
-        XCTAssertEqual(displays.first { $0.selection == select(gnd, .gnd(.applyFullValue)) }?.typeCategory, .gnd)
     }
 
     /// A touch that never moves the wheel leaves no presentation state
@@ -954,6 +972,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .red))
         inventory.addItem(fixed("ND8", 3), to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -1051,20 +1070,17 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         viewModel.ndWheelReshapeDuration = 0
         viewModel.ndWheelCleanupDelay = 0.05
         viewModel.setNDFilterStep(NDStep(stops: 5), at: 0)
-        viewModel.selectFilterSource(.filterSet(set.id))
-        viewModel.addFilterWheel()
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 1)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]))
         viewModel.addFilterWheel(from: .standard)
-        // [5, gnd(rec, 0 stops), empty, standard 0]
-        XCTAssertEqual(viewModel.filterWheels.count, 4)
+        viewModel.addFilterWheel(from: .standard)
+        // [5, standard 0, standard 0] + GND (Record only, 0 stops)
+        XCTAssertEqual(viewModel.filterWheels.count, 3)
+        XCTAssertFalse(viewModel.showsAddFilterWheelControl, "Three wheels is the limit while an auxiliary filter is mounted.")
 
         try? await Task.sleep(nanoseconds: 250_000_000)
 
-        XCTAssertEqual(viewModel.filterWheels, [
-            .standard(NDStep(stops: 5)),
-            FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))),
-        ], "The mounted Record-only GND stays although it contributes 0.")
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 5))])
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(gnd, in: set)], "The mounted Record-only GND stays although it contributes 0.")
         XCTAssertEqual(viewModel.emptyFilterWheelRemoval, EmptyFilterWheelRemoval(sequence: 1, removedCount: 2))
         XCTAssertEqual(FilterWheelPresenter.emptyWheelRemovalText(count: 1), String(localized: "Empty filter wheel removed"))
         XCTAssertEqual(FilterWheelPresenter.emptyWheelRemovalText(count: 2), String(localized: "2 empty filter wheels removed"))
@@ -1189,6 +1205,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         let item = fixed("X", 4)
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.addFilterWheel()
@@ -1221,6 +1238,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             timerManager: timerManager,
             filterInventoryModel: inventory
         )
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.baseShutter = 1.0 / 30.0
         viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
@@ -1271,53 +1289,129 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.emptyFilterWheelRemoval?.sequence, 1)
     }
 
-    func testSaturationKeepsAnEmptyWheelThatCanStillMountRecordOnlyAndAnnouncesNothing() async throws {
+    func testSaturationRemovesAnEmptyWheelWhoseNDItemsNoLongerFit() async throws {
         let inventory = FilterInventoryModel()
-        let set = try XCTUnwrap(inventory.createFilterSet(name: "GND", color: .purple))
-        let gnd = FilterItem(name: "GND 0.6", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
-        inventory.addItem(gnd, to: set.id)
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "ND", color: .purple))
+        inventory.addItem(fixed("ND 0.6", 2), to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
         viewModel.ndWheelReshapeDuration = 0
         viewModel.setFilterStackOrderingSuspended(true)
-        viewModel.setNDFilterStep(NDStep(stops: 29), at: 0)
+        viewModel.setNDFilterStep(NDStep(stops: 28), at: 0)
         viewModel.addFilterWheel(from: .filterSet(set.id))
         try? await Task.sleep(nanoseconds: 20_000_000)
-        XCTAssertEqual(viewModel.filterWheels.count, 2)
+        XCTAssertEqual(viewModel.filterWheels.count, 2, "The 2-stop ND item still fits.")
 
         viewModel.setNDFilterStep(NDStep(stops: 30), at: 0)
 
-        XCTAssertEqual(viewModel.filterWheels.count, 2, "An Empty wheel that can mount a Record-only GND is usable at the cap (FILTER-PLUS-005).")
-        XCTAssertNil(viewModel.emptyFilterWheelRemoval, "Nothing was removed, so nothing is announced.")
+        XCTAssertEqual(viewModel.filterWheels.count, 1, "At the cap an Empty wheel with no fitting ND item is removed immediately (ND-CLEANUP-003); a Record-only GND is no longer a wheel row that could keep it.")
     }
 
     // MARK: FILTER-PLUS-005 — availability follows the displayed source
 
     func testAddAvailabilityIsAnsweredPerSourceInBothDirections() throws {
         let inventory = FilterInventoryModel()
-        let gndSet = try XCTUnwrap(inventory.createFilterSet(name: "GND", color: .purple))
-        inventory.addItem(FilterItem(name: "GND 0.6", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops))), to: gndSet.id)
+        let ndSet = try XCTUnwrap(inventory.createFilterSet(name: "ND", color: .purple))
+        inventory.addItem(fixed("ND 0.6", 2), to: ndSet.id)
         let emptySet = try XCTUnwrap(inventory.createFilterSet(name: "Empty pouch", color: .red))
         let viewModel = makeViewModel(inventoryModel: inventory)
 
-        // Remembered Standard is unavailable at the cap; the browsed
-        // GND set is available (Record-only mounts at 30 stops).
+        // Remembered Standard is unavailable at the cap; so is the browsed
+        // ND set whose only item would exceed it.
         viewModel.setNDFilterStep(NDStep(stops: 30), at: 0)
         XCTAssertEqual(viewModel.selectedFilterSource, .standard)
         XCTAssertEqual(viewModel.filterAddUnavailabilityText(for: .standard), FilterWheelPresenter.addUnavailabilityText(for: .noSelectableValue))
-        XCTAssertNil(viewModel.filterAddUnavailabilityText(for: .filterSet(gndSet.id)))
+        XCTAssertEqual(viewModel.filterAddUnavailabilityText(for: .filterSet(ndSet.id)), FilterWheelPresenter.addUnavailabilityText(for: .exceedsTotalLimit))
         XCTAssertEqual(viewModel.selectedFilterSource, .standard, "Asking never changes the remembered source.")
 
         // Remembered source available; the browsed item-less set is not.
         viewModel.setNDFilterStep(NDStep(stops: 10), at: 0)
         XCTAssertNil(viewModel.filterAddUnavailabilityText(for: .standard))
+        XCTAssertNil(viewModel.filterAddUnavailabilityText(for: .filterSet(ndSet.id)))
         XCTAssertEqual(viewModel.filterAddUnavailabilityText(for: .filterSet(emptySet.id)), FilterWheelPresenter.addUnavailabilityText(for: .filterSetHasNoItems))
 
         // A refused add from the browsed candidate leaves the memory; a
-        // successful one moves it.
+        // successful one moves it and makes the set a candidate.
         viewModel.addFilterWheel(from: .filterSet(emptySet.id))
         XCTAssertEqual(viewModel.selectedFilterSource, .standard)
-        viewModel.addFilterWheel(from: .filterSet(gndSet.id))
-        XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(gndSet.id))
+        viewModel.addFilterWheel(from: .filterSet(ndSet.id))
+        XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(ndSet.id))
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [ndSet.id])
+    }
+
+    // MARK: FILTER-STACK-001 / FILTER-AUX-003 — the wheel limit with auxiliary filters
+
+    func testMountingWithFourNDWheelsIsRefusedAndNeverRemovesAWheel() throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "52mm", color: .orange))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
+        inventory.addItem(cpl, to: set.id)
+        let viewModel = makeViewModel(inventoryModel: inventory)
+        for _ in 0..<3 {
+            viewModel.addFilterWheel(from: .standard)
+        }
+        XCTAssertEqual(viewModel.filterWheels.count, 4)
+        XCTAssertFalse(viewModel.showsAddFilterWheelControl)
+
+        XCTAssertEqual(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set)]), .tooManyNDWheels)
+        XCTAssertEqual(viewModel.filterWheels.count, 4, "No ND wheel is removed or merged to make room.")
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
+        XCTAssertTrue(viewModel.candidateFilterSetIDs.isEmpty, "A refused Apply assigns nothing.")
+
+        // With three wheels the same Apply succeeds, Plus disappears,
+        // and clearing the auxiliary filters restores the fourth space.
+        viewModel.setWheelSelection(.standard(NDStep(stops: 0)), at: 3)
+        viewModel.calculatorModel.removeEmptyFilterWheel(at: 3)
+        XCTAssertEqual(viewModel.filterWheels.count, 3)
+        XCTAssertTrue(viewModel.showsAddFilterWheelControl)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set, .cplLoss(1.5))]))
+        XCTAssertFalse(viewModel.showsAddFilterWheelControl, "Three ND wheels plus the summary fill the row.")
+        XCTAssertEqual(viewModel.occupiedFilterSpaceCount, 4)
+        XCTAssertEqual(viewModel.filterAddUnavailabilityText(for: .standard), FilterWheelPresenter.addUnavailabilityText(for: .stackFull))
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([]))
+        XCTAssertTrue(viewModel.showsAddFilterWheelControl)
+    }
+
+    // MARK: FILTER-CAMERA-001 — candidates are explicit, per camera, and never mount
+
+    func testCandidateFilterSetsAreAssignedPerCameraWithoutMountingAndBlockExclusionOfReferencedSets() throws {
+        let inventory = FilterInventoryModel()
+        let color = try XCTUnwrap(inventory.createFilterSet(name: "52mm Color", color: .red))
+        let nd = try XCTUnwrap(inventory.createFilterSet(name: "Film ND", color: .blue))
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 2), .red))
+        let nd8 = fixed("ND8", 3)
+        inventory.addItem(red, to: color.id)
+        inventory.addItem(nd8, to: nd.id)
+        let viewModel = makeViewModel(inventoryModel: inventory)
+        XCTAssertEqual(viewModel.filterSources, [.standard], "Standard is always available without setup.")
+
+        XCTAssertEqual(viewModel.setCandidateFilterSetIDs([nd.id, color.id]), .assigned)
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [color.id, nd.id], "Candidates follow the user-defined set order.")
+        XCTAssertEqual(viewModel.filterSources, [.standard, .filterSet(nd.id)], "Plus offers the candidates that hold ND items.")
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 0))], "Assignment mounts nothing.")
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
+
+        viewModel.selectCameraSlot(.camera2)
+        XCTAssertTrue(viewModel.candidateFilterSetIDs.isEmpty, "Candidates are per camera.")
+        XCTAssertEqual(viewModel.setCandidateFilterSetIDs([color.id]), .assigned, "The same set may be assigned to several cameras.")
+        viewModel.selectCameraSlot(.camera1)
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [color.id, nd.id])
+
+        // A referenced set cannot leave the candidates until its
+        // selections are cleared; nothing changes on a blocked attempt.
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(red, in: color)]))
+        viewModel.addFilterWheel(from: .filterSet(nd.id))
+        XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(nd.id))
+        XCTAssertEqual(viewModel.setCandidateFilterSetIDs([nd.id]), .blocked(referencedFilterSetNames: ["52mm Color"]))
+        XCTAssertEqual(viewModel.setCandidateFilterSetIDs([color.id]), .blocked(referencedFilterSetNames: ["Film ND"]), "An Empty wheel still references its set.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [color.id, nd.id])
+        XCTAssertEqual(viewModel.ndStep.stops, 2, accuracy: 1e-9, "A candidate change never alters the calculation.")
+
+        // After clearing the wheel, excluding its set is allowed and the
+        // remembered ND source falls back to Standard.
+        viewModel.calculatorModel.removeEmptyFilterWheel(at: 1)
+        XCTAssertEqual(viewModel.setCandidateFilterSetIDs([color.id]), .assigned)
+        XCTAssertEqual(viewModel.selectedFilterSource, .standard)
+        XCTAssertEqual(viewModel.filterSources, [.standard])
     }
 
     // MARK: Helpers
@@ -1332,6 +1426,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
             inventory.addItem(item, to: set.id)
         }
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelCleanupDelay = 0.05
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))

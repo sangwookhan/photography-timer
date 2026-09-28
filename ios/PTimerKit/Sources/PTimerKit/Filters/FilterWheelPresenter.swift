@@ -310,6 +310,10 @@ public enum FilterWheelPresenter {
             return String(localized: "Already mounted on this camera")
         case .unresolvedSelection:
             return String(localized: "Filter not available")
+        case .tooManyNDWheels:
+            return String(localized: "Reduce the ND wheels to three or fewer")
+        case .tooManyAuxiliaryFilters:
+            return String(localized: "Up to \(FilterStack.maximumAuxiliaryFilterCount) auxiliary filters can be mounted")
         }
     }
 

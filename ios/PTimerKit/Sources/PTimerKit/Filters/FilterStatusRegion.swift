@@ -133,22 +133,32 @@ public enum FilterStatusRegionPresenter {
     }
 
     /// Idle source identity for a stack containing any Filter Set
-    /// wheel (FILTER-STACK-008): each source once, in the wheels'
-    /// settled left-to-right order, with its wheel count and — for a
-    /// Filter Set — its user-selected source color; Standard carries
-    /// no color. `nil` for a Standard-only stack, which keeps the
-    /// existing ND status behavior. Sources are identified by text,
-    /// never by color alone.
+    /// wheel or mounted auxiliary filter (FILTER-STACK-008): each
+    /// source once in main-row order — the auxiliary filters' sets
+    /// first, then the wheels' settled left-to-right order — with its
+    /// ND-wheel count when it owns more than one and, for a Filter
+    /// Set, its user-selected source color; Standard carries no color.
+    /// `nil` for a Standard-only stack, which keeps the existing ND
+    /// status behavior. Sources are identified by text, never by color
+    /// alone.
     public static func sourceSummary(
         wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter] = [],
         sourceName: (FilterSource) -> String,
         sourceColor: (FilterSource) -> FilterSetColor?
     ) -> [FilterStatusSourceSummaryItem]? {
-        guard wheels.contains(where: { $0.source != .standard }) else {
+        guard wheels.contains(where: { $0.source != .standard }) || !auxiliaryFilters.isEmpty else {
             return nil
         }
         var order: [FilterSource] = []
         var counts: [FilterSource: Int] = [:]
+        for mount in auxiliaryFilters {
+            let source = FilterSource.filterSet(mount.filterSetID)
+            if counts[source] == nil {
+                order.append(source)
+                counts[source] = 0
+            }
+        }
         for wheel in wheels {
             if counts[wheel.source] == nil {
                 order.append(wheel.source)

@@ -107,6 +107,17 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     /// absent or unresolvable restores as Standard.
     public let lastFilterSourceKind: String?
     public let lastFilterSetID: String?
+    /// Mounted auxiliary filters (FILTER-AUX-001), one entry per
+    /// mounted item in mount order. Additive Optional: a snapshot
+    /// written before auxiliary filters existed omits the key, and
+    /// any CPL / GND rows still inside `filterStack` migrate into
+    /// auxiliary filters on restore (FILTER-PERSIST-002).
+    public let auxiliaryFilters: [PersistentAuxiliaryFilterSnapshot]?
+    /// The slot's candidate Filter Sets (FILTER-CAMERA-001) by stable
+    /// id, in user-defined set order. Additive Optional: absent means
+    /// no explicit assignment; the sets referenced by the restored
+    /// wheels and auxiliary filters are always included on restore.
+    public let candidateFilterSetIDs: [String]?
 
     public init(
         slotIDRaw: String,
@@ -122,7 +133,9 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         ndStack: [PersistentNDFilterWheelSnapshot]? = nil,
         filterStack: [PersistentFilterWheelSnapshot]? = nil,
         lastFilterSourceKind: String? = nil,
-        lastFilterSetID: String? = nil
+        lastFilterSetID: String? = nil,
+        auxiliaryFilters: [PersistentAuxiliaryFilterSnapshot]? = nil,
+        candidateFilterSetIDs: [String]? = nil
     ) {
         self.slotIDRaw = slotIDRaw
         self.selectedPresetFilmID = selectedPresetFilmID
@@ -138,6 +151,8 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         self.filterStack = filterStack
         self.lastFilterSourceKind = lastFilterSourceKind
         self.lastFilterSetID = lastFilterSetID
+        self.auxiliaryFilters = auxiliaryFilters
+        self.candidateFilterSetIDs = candidateFilterSetIDs
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -155,6 +170,8 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         case filterStack
         case lastFilterSourceKind
         case lastFilterSetID
+        case auxiliaryFilters
+        case candidateFilterSetIDs
     }
 
     /// Custom decode ONLY for `ndStack` isolation (PTIMER-199 §7): a
@@ -189,6 +206,76 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
         )
         lastFilterSourceKind = try? container.decodeIfPresent(String.self, forKey: .lastFilterSourceKind)
         lastFilterSetID = try? container.decodeIfPresent(String.self, forKey: .lastFilterSetID)
+        // Same isolation for the auxiliary and candidate fields: a
+        // malformed array decodes as absent and the slot restores its
+        // wheels without them.
+        auxiliaryFilters = try? container.decodeIfPresent(
+            [PersistentAuxiliaryFilterSnapshot].self,
+            forKey: .auxiliaryFilters
+        )
+        candidateFilterSetIDs = try? container.decodeIfPresent([String].self, forKey: .candidateFilterSetIDs)
+    }
+}
+
+/// One mounted auxiliary filter in its on-disk shape (FILTER-AUX,
+/// FILTER-PERSIST-001): the owning set, the item, the item's kind, and
+/// the per-shot choice — a CPL's loss in stops or a GND's mode; Color
+/// and Effect items carry neither and contribute their registered
+/// loss.
+public struct PersistentAuxiliaryFilterSnapshot: Codable, Equatable {
+    public let filterSetID: String
+    public let itemID: String
+    /// `FilterItemKind.rawValue` of the mounted item.
+    public let kind: String
+    public let cplLossStops: Double?
+    /// `GNDCalculationMode.rawValue`.
+    public let gndMode: String?
+
+    public init(filterSetID: String, itemID: String, kind: String, cplLossStops: Double? = nil, gndMode: String? = nil) {
+        self.filterSetID = filterSetID
+        self.itemID = itemID
+        self.kind = kind
+        self.cplLossStops = cplLossStops
+        self.gndMode = gndMode
+    }
+
+    public init(mount: MountedAuxiliaryFilter, kind: FilterItemKind) {
+        switch mount.choice {
+        case .cplLoss(let loss):
+            self.init(filterSetID: mount.filterSetID.rawValue, itemID: mount.itemID.rawValue, kind: kind.rawValue, cplLossStops: loss)
+        case .gnd(let mode):
+            self.init(filterSetID: mount.filterSetID.rawValue, itemID: mount.itemID.rawValue, kind: kind.rawValue, gndMode: mode.rawValue)
+        case .registeredLoss:
+            self.init(filterSetID: mount.filterSetID.rawValue, itemID: mount.itemID.rawValue, kind: kind.rawValue)
+        }
+    }
+
+    /// The mount reference; whether the set and item still exist, and
+    /// whether the choice still fits the item, is decided against the
+    /// live inventory by the caller. `nil` marks a structurally
+    /// corrupted entry.
+    public var restoredMount: MountedAuxiliaryFilter? {
+        guard !filterSetID.isEmpty, !itemID.isEmpty else {
+            return nil
+        }
+        let choice: AuxiliaryFilterChoice
+        switch FilterItemKind(rawValue: kind) {
+        case .cpl:
+            guard let cplLossStops, cplLossStops.isFinite else { return nil }
+            choice = .cplLoss(cplLossStops)
+        case .gnd:
+            guard let mode = gndMode.flatMap(GNDCalculationMode.init(rawValue:)) else { return nil }
+            choice = .gnd(mode)
+        case .color, .effect:
+            choice = .registeredLoss
+        case .fixed, nil:
+            return nil
+        }
+        return MountedAuxiliaryFilter(
+            filterSetID: FilterSetID(rawValue: filterSetID),
+            itemID: FilterItemID(rawValue: itemID),
+            choice: choice
+        )
     }
 }
 

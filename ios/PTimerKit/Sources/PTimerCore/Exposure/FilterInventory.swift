@@ -435,4 +435,21 @@ public struct FilterInventory: Hashable, Sendable {
             return filterSet(withID: id) != nil
         }
     }
+
+    /// A camera's candidate Filter Sets made consistent with this
+    /// inventory and its stack (FILTER-CAMERA-001, FILTER-PERSIST-002):
+    /// unknown sets are dropped, every set a wheel or a mounted
+    /// auxiliary filter still references is included so the restored
+    /// selections stay reachable, and the result follows the
+    /// user-defined set order.
+    public func normalizedCandidateFilterSetIDs(
+        _ candidates: [FilterSetID],
+        referencedBy wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter]
+    ) -> [FilterSetID] {
+        let referenced = Set(candidates)
+            .union(wheels.compactMap { $0.source.filterSetID })
+            .union(auxiliaryFilters.map(\.filterSetID))
+        return filterSets.map(\.id).filter(referenced.contains)
+    }
 }

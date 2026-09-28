@@ -324,6 +324,17 @@
         }
       }
     },
+    "Effect" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "효과"
+          }
+        }
+      }
+    },
     "Empty" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -375,6 +386,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "0보다 크고 30스톱 이하인 값을 입력하세요."
+          }
+        }
+      }
+    },
+    "Enter a value from 0 to 30 stops." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0에서 30스톱 사이의 값을 입력하세요."
+          }
+        }
+      }
+    },
+    "Enter the loss in stops from the maker's data or your own metering. Zero is allowed for a filter with no measurable loss." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제조사 자료나 직접 측정한 감광량을 스톱 단위로 입력하세요. 측정할 만한 감광이 없는 필터는 0을 입력할 수 있습니다."
           }
         }
       }
@@ -808,6 +841,17 @@
         }
       }
     },
+    "Optical color" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "광학 색상"
+          }
+        }
+      }
+    },
     "Orange" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -973,6 +1017,17 @@
         }
       }
     },
+    "The optical color identifies the filter. It never sets the exposure loss." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "광학 색상은 필터를 식별하기 위한 정보이며, 감광량을 정하지 않습니다."
+          }
+        }
+      }
+    },
     "This Filter Set has no filters yet" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -1068,6 +1123,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "노랑"
+          }
+        }
+      }
+    },
+    "Yellow-green" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "황록"
           }
         }
       }

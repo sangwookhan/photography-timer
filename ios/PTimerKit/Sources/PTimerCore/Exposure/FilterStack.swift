@@ -305,7 +305,9 @@ public struct FilterStack: Equatable, Sendable {
 
     /// Every shooting row an item offers, in wheel order: Fixed → one
     /// row; CPL → one row per distinct configured choice; GND → Record
-    /// only, then Apply full value.
+    /// only, then Apply full value. Color and Effect items are
+    /// auxiliary filters and never appear on a wheel
+    /// (FILTER-ITEM-003).
     static func rows(for item: FilterItem) -> [ResolvedFilterRow] {
         switch item.behavior {
         case .fixed:
@@ -314,6 +316,8 @@ public struct FilterStack: Equatable, Sendable {
             return choices.shootingChoices.compactMap { resolvedRow(item: item, choice: .cplLoss($0)) }
         case .gnd:
             return GNDCalculationMode.allCases.compactMap { resolvedRow(item: item, choice: .gnd($0)) }
+        case .color, .effect:
+            return []
         }
     }
 

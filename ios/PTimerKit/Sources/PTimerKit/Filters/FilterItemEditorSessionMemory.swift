@@ -21,13 +21,14 @@ public struct FilterItemEditorSessionMemory: Equatable, Sendable {
     public var initialKind: FilterItemKind { .fixed }
 
     /// A new item was saved in this session. Fixed and GND carry a
-    /// registered notation and update the memory; a CPL has none and
-    /// leaves it unchanged. Editing an existing item never calls this.
+    /// registered notation and update the memory; CPL, Color, and
+    /// Effect items have none and leave it unchanged. Editing an
+    /// existing item never calls this.
     public mutating func didSaveNewItem(_ item: FilterItem) {
         switch item.behavior {
         case .fixed(let value), .gnd(let value):
             initialUnit = value.unit
-        case .cpl:
+        case .cpl, .color, .effect:
             break
         }
     }

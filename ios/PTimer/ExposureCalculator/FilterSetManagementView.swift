@@ -469,6 +469,9 @@ private struct FilterItemRow: View {
             return "\(FilterWheelPresenter.kindName(.cpl)) · \(list) \(String(localized: "stops"))"
         case .gnd(let value):
             return "\(FilterWheelPresenter.kindName(.gnd)) · \(registeredText(value))"
+        case .color, .effect:
+            let detail = FilterWheelPresenter.auxiliaryLossDetailText(for: item.behavior) ?? ""
+            return "\(FilterWheelPresenter.kindName(item.behavior.kind)) · \(detail)"
         }
     }
 

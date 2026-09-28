@@ -126,14 +126,19 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
     public let unit: String?
     /// The three CPL fields; `null` entries are empty fields.
     public let cplChoices: [Double?]?
+    /// `FilterOpticalColor.rawValue` for Color items. Additive: Color
+    /// and Effect items store their loss in `value` (always stops, so
+    /// `unit` stays `nil`) and pre-Color records omit this key.
+    public let opticalColor: String?
 
-    public init(id: String, name: String, kind: String, value: Double?, unit: String?, cplChoices: [Double?]?) {
+    public init(id: String, name: String, kind: String, value: Double?, unit: String?, cplChoices: [Double?]?, opticalColor: String? = nil) {
         self.id = id
         self.name = name
         self.kind = kind
         self.value = value
         self.unit = unit
         self.cplChoices = cplChoices
+        self.opticalColor = opticalColor
     }
 
     public init(item: FilterItem) {
@@ -142,11 +147,16 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
             self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: value.value, unit: value.unit.rawValue, cplChoices: nil)
         case .cpl(let choices):
             self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: nil, unit: nil, cplChoices: choices.fields)
+        case .color(let loss, let color):
+            self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: loss.stops, unit: nil, cplChoices: nil, opticalColor: color.rawValue)
+        case .effect(let loss):
+            self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: loss.stops, unit: nil, cplChoices: nil)
         }
     }
 
     /// `nil` when the record cannot restore as a well-formed item
-    /// (unknown kind, missing or invalid value, no valid CPL choice).
+    /// (unknown kind, missing or invalid value, no valid CPL choice,
+    /// a Color item without a known optical color).
     public var restoredItem: FilterItem? {
         let trimmedID = id.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -167,6 +177,16 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
                 return nil
             }
             behavior = .cpl(CPLExposureLossChoices(fields: cplChoices))
+        case .color:
+            guard let value, let colorRaw = opticalColor, let color = FilterOpticalColor(rawValue: colorRaw) else {
+                return nil
+            }
+            behavior = .color(FilterExposureLoss(stops: value), color)
+        case .effect:
+            guard let value else {
+                return nil
+            }
+            behavior = .effect(FilterExposureLoss(stops: value))
         }
         let item = FilterItem(id: FilterItemID(rawValue: trimmedID), name: trimmedName, behavior: behavior)
         return item.isWellFormed ? item : nil

@@ -75,9 +75,19 @@ final class FilterInventoryModelTests: XCTestCase {
         let fixed = FilterItem(name: "ND1000", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
         let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, 2.5])))
         let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.6, unit: .opticalDensity)))
+        let red = FilterItem(name: "Red 25A", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let night = FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 0)))
         model.addItem(fixed, to: set.id)
         model.addItem(cpl, to: set.id)
         model.addItem(gnd, to: set.id)
+        model.addItem(red, to: set.id)
+        model.addItem(night, to: set.id)
+
+        let redRecord = try XCTUnwrap(store.stored?.filterSets.first?.items.first { $0.id == red.id.rawValue })
+        XCTAssertEqual(redRecord.kind, "color")
+        XCTAssertEqual(redRecord.opticalColor, "red")
+        XCTAssertEqual(redRecord.value, 3)
+        XCTAssertNil(redRecord.unit, "Color / Effect loss is always stops.")
 
         let data = try JSONEncoder().encode(try XCTUnwrap(store.stored))
         let decoded = PersistentFilterInventorySnapshot.decode(from: data)
@@ -98,6 +108,8 @@ final class FilterInventoryModelTests: XCTestCase {
                 { "id": "i1", "name": "ND8", "kind": "fixed", "value": 3, "unit": "stops" },
                 { "id": "i2", "name": "Bad kind", "kind": "prism", "value": 3, "unit": "stops" },
                 { "id": "i3", "name": "CPL", "kind": "cpl", "cplChoices": [1, null, 12] },
+                { "id": "i4", "name": "Red", "kind": "color", "value": 2 },
+                { "id": "i5", "name": "Night", "kind": "effect", "value": 0.5 },
                 "not an object"
               ] },
             { "id": 42, "name": "Broken" }
@@ -110,7 +122,8 @@ final class FilterInventoryModelTests: XCTestCase {
         let inventory = result.snapshot.restoredInventory
         XCTAssertEqual(inventory.filterSets.count, 1)
         XCTAssertEqual(inventory.filterSets[0].color, .blue, "Unknown color token falls back instead of dropping the set.")
-        XCTAssertEqual(inventory.filterSets[0].items.map(\.id.rawValue), ["i1"], "Unknown kind and invalid CPL choices drop only that item.")
+        XCTAssertEqual(inventory.filterSets[0].items.map(\.id.rawValue), ["i1", "i5"], "Unknown kind, invalid CPL choices, and a Color item without an optical color drop only that item.")
+        XCTAssertEqual(inventory.filterSets[0].items[1].behavior, .effect(FilterExposureLoss(stops: 0.5)))
     }
 }
 

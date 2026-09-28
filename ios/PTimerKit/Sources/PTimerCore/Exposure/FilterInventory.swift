@@ -227,35 +227,100 @@ public enum GNDCalculationMode: String, CaseIterable, Sendable {
 }
 
 /// Behavior kind of a physical item — chosen explicitly by the user,
-/// never inferred from the name.
+/// never inferred from the name. `fixed` is the ND kind: the only
+/// kind an ND wheel offers. CPL, GND, Color, and Effect are auxiliary
+/// kinds, mounted through the shooting selection surface instead.
 public enum FilterItemKind: String, CaseIterable, Sendable {
     case fixed
     case cpl
     case gnd
+    case color
+    case effect
+
+    /// Whether items of this kind are mounted as auxiliary filters
+    /// rather than selected on an ND wheel (FILTER-ITEM-003).
+    public var isAuxiliary: Bool {
+        self != .fixed
+    }
+}
+
+/// Optical color of a Color filter (FILTER-COLOR-001) — equipment
+/// identity separate from the source-set color and from the loss.
+/// Persisted by `rawValue`, shared by both platforms.
+public enum FilterOpticalColor: String, CaseIterable, Sendable {
+    case red
+    case orange
+    case yellow
+    case yellowGreen
+    case green
+}
+
+/// User-supplied exposure loss of a Color or Effect filter, in stops
+/// (FILTER-COLOR-001/002). Distinct from `FilterRegisteredValue`: no
+/// unit conversion, and zero is allowed so a filter with no measurable
+/// loss can still be mounted and recorded. Valid when finite and in
+/// the closed range 0–30 stops.
+public struct FilterExposureLoss: Hashable, Sendable {
+    public static let range: ClosedRange<Double> = 0...Double(ExposureScale.maximumWholeNDStops)
+
+    public let stops: Double
+
+    public init(stops: Double) {
+        self.stops = stops
+    }
+
+    public var isValid: Bool {
+        stops.isFinite && Self.range.contains(stops)
+    }
 }
 
 public enum FilterItemBehavior: Hashable, Sendable {
     case fixed(FilterRegisteredValue)
     case cpl(CPLExposureLossChoices)
     case gnd(FilterRegisteredValue)
+    /// A Color filter: its optical color and its explicit loss.
+    case color(FilterExposureLoss, FilterOpticalColor)
+    /// An Effect filter (for example a night light-pollution filter)
+    /// with its explicit loss.
+    case effect(FilterExposureLoss)
 
     public var kind: FilterItemKind {
         switch self {
         case .fixed: return .fixed
         case .cpl: return .cpl
         case .gnd: return .gnd
+        case .color: return .color
+        case .effect: return .effect
         }
     }
 
-    /// Registered full-density value for Fixed and GND items; CPL
-    /// items carry choices instead.
+    /// Registered full-density value for Fixed and GND items; the
+    /// other kinds carry choices or a plain loss instead.
     public var registeredValue: FilterRegisteredValue? {
         switch self {
         case .fixed(let value), .gnd(let value):
             return value
-        case .cpl:
+        case .cpl, .color, .effect:
             return nil
         }
+    }
+
+    /// The explicit loss of a Color or Effect item; `nil` otherwise.
+    public var exposureLoss: FilterExposureLoss? {
+        switch self {
+        case .color(let loss, _), .effect(let loss):
+            return loss
+        case .fixed, .cpl, .gnd:
+            return nil
+        }
+    }
+
+    /// The optical color of a Color item; `nil` otherwise.
+    public var opticalColor: FilterOpticalColor? {
+        if case .color(_, let color) = self {
+            return color
+        }
+        return nil
     }
 
     public var isValid: Bool {
@@ -264,6 +329,8 @@ public enum FilterItemBehavior: Hashable, Sendable {
             return value.isValid
         case .cpl(let choices):
             return choices.isValid
+        case .color(let loss, _), .effect(let loss):
+            return loss.isValid
         }
     }
 }
@@ -307,6 +374,18 @@ public struct FilterSet: Identifiable, Hashable, Sendable {
 
     public func item(withID id: FilterItemID) -> FilterItem? {
         items.first { $0.id == id }
+    }
+
+    /// The set's ND items — the only items an ND wheel offers
+    /// (FILTER-STACK-003).
+    public var ndItems: [FilterItem] {
+        items.filter { !$0.behavior.kind.isAuxiliary }
+    }
+
+    /// The set's auxiliary items (CPL, GND, Color, Effect), mounted
+    /// through shooting selection.
+    public var auxiliaryItems: [FilterItem] {
+        items.filter { $0.behavior.kind.isAuxiliary }
     }
 }
 

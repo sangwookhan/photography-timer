@@ -300,7 +300,8 @@ public struct PersistentFilterWheelSnapshot: Codable, Equatable {
             case .gnd:
                 guard let mode = gndMode.flatMap(GNDCalculationMode.init(rawValue:)) else { return nil }
                 choice = .gnd(mode)
-            case nil:
+            case .color, .effect, nil:
+                // Color and Effect items are never wheel rows.
                 return nil
             }
             return FilterWheel(

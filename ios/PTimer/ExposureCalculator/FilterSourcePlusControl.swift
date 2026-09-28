@@ -252,6 +252,21 @@ extension Color {
     }
 }
 
+extension Color {
+    /// Swatch behind a Color filter's optical color (FILTER-COLOR-003):
+    /// always paired with the color's name, and distinct from the
+    /// user-selected Filter Set color palette.
+    static func filterOptical(_ color: FilterOpticalColor) -> Color {
+        switch color {
+        case .red: return Color(red: 0.85, green: 0.15, blue: 0.15)
+        case .orange: return Color(red: 0.95, green: 0.55, blue: 0.10)
+        case .yellow: return Color(red: 0.95, green: 0.82, blue: 0.10)
+        case .yellowGreen: return Color(red: 0.62, green: 0.78, blue: 0.15)
+        case .green: return Color(red: 0.20, green: 0.62, blue: 0.25)
+        }
+    }
+}
+
 extension FilterSetColor {
     /// Localized color name — color is never the only identifying cue
     /// (FILTER-SET-005 / FILTER-A11Y-002).

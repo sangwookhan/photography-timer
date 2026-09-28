@@ -397,6 +397,34 @@ public enum FilterWheelPresenter {
         case .fixed: return String(localized: "Fixed")
         case .cpl: return String(localized: "CPL")
         case .gnd: return String(localized: "GND")
+        case .color: return String(localized: "Color")
+        case .effect: return String(localized: "Effect")
+        }
+    }
+
+    /// Localized optical color name of a Color filter
+    /// (FILTER-COLOR-001) — always shown as text beside any swatch.
+    public static func opticalColorName(_ color: FilterOpticalColor) -> String {
+        switch color {
+        case .red: return String(localized: "Red")
+        case .orange: return String(localized: "Orange")
+        case .yellow: return String(localized: "Yellow")
+        case .yellowGreen: return String(localized: "Yellow-green")
+        case .green: return String(localized: "Green")
+        }
+    }
+
+    /// `Red · 2 stops` / `0.5 stops` — the registered detail of a
+    /// Color or Effect item: the optical color by name (Color only)
+    /// and its explicit loss. `nil` for the other kinds.
+    public static func auxiliaryLossDetailText(for behavior: FilterItemBehavior) -> String? {
+        switch behavior {
+        case .color(let loss, let color):
+            return "\(opticalColorName(color)) · \(stopsText(loss.stops))"
+        case .effect(let loss):
+            return stopsText(loss.stops)
+        case .fixed, .cpl, .gnd:
+            return nil
         }
     }
 

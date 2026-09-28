@@ -340,6 +340,14 @@ can resolve within the rules in this document are not escalated.
   but does not resolve a product-impacting question on its own. It is
   expected to keep working on unaffected parts of a task rather than
   stalling entirely on one open question.
+- **Decision routing follows the source of the instruction.** When Claude /
+  Codex needs clarification, approval, or a choice about an instruction
+  issued by ChatGPT, it raises that question back to ChatGPT through the
+  working PR rather than asking the user to resolve it directly. ChatGPT
+  answers within the approved contract when possible and escalates to the
+  user only when a genuine product decision is required. This routing does
+  not prevent the user from giving Claude / Codex direct instructions or
+  from answering questions directly when the user chooses to intervene.
 
 ## 10. Spec PR / Code PR model
 

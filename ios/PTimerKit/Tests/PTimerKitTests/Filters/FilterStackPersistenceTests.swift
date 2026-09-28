@@ -35,28 +35,116 @@ final class FilterStackPersistenceTests: XCTestCase {
         inventory.addItem(gnd, to: set.id)
 
         let viewModel = makeViewModel(sessionStore: sessionStore, inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.setNDFilterStep(NDStep(stops: 6.6), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(item), at: 1)
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(gnd, .gnd(.recordOnly)), at: 2)
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]))
         XCTAssertEqual(viewModel.ndStep.stops, 16.6, accuracy: 1e-9)
+
+        let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        XCTAssertEqual(slot.auxiliaryFilters, [PersistentAuxiliaryFilterSnapshot(filterSetID: set.id.rawValue, itemID: gnd.id.rawValue, kind: "gnd", gndMode: "recordOnly")])
+        XCTAssertEqual(slot.candidateFilterSetIDs, [set.id.rawValue])
 
         let restored = makeViewModel(
             sessionStore: sessionStore,
             inventoryModel: FilterInventoryModel(store: inventoryStore)
         )
-        // Settled order (FILTER-STACK-005): Lee (10 + registered 3) leads
-        // Standard 6.6; the persisted order restores as is.
+        // Settled order (FILTER-STACK-005): Lee (10) leads Standard 6.6;
+        // the persisted order restores as is, the GND stays mounted as
+        // an auxiliary filter, and the set stays a candidate.
         XCTAssertEqual(restored.filterWheels, [
             FilterWheel(source: .filterSet(set.id), selection: select(item)),
-            FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))),
             .standard(NDStep(stops: 6.6)),
         ])
+        XCTAssertEqual(restored.mountedAuxiliaryFilters.map(\.mount), [.mount(gnd, in: set)])
+        XCTAssertEqual(restored.candidateFilterSetIDs, [set.id])
         XCTAssertEqual(restored.ndStep.stops, 16.6, accuracy: 1e-9)
         XCTAssertEqual(restored.ndFilterSteps[0].stops, 10, "ND1000 restores as exactly 10 stops.")
         XCTAssertEqual(restored.selectedFilterSource, .filterSet(set.id))
+    }
+
+    func testLegacyMixedSnapshotMigratesCPLAndGNDRowsIntoAuxiliaryFilters() throws {
+        let sessionStore = InMemoryMixedSessionStore()
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "Kit", color: .teal))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
+        let nd8 = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        for item in [cpl, gnd, nd8] {
+            inventory.addItem(item, to: set.id)
+        }
+        sessionStore.stored = PersistentCameraSlotSessionSnapshot(
+            schemaVersion: 1,
+            activeSlotIDRaw: CameraSlotID.camera1.rawValue,
+            slots: [
+                PersistentCameraSlotCalculatorSnapshot(
+                    slotIDRaw: CameraSlotID.camera1.rawValue,
+                    selectedPresetFilmID: nil,
+                    selectedProfileID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: 2,
+                    ndStack: [PersistentNDFilterWheelSnapshot(ndStop: 2)],
+                    // A pre-auxiliary mixed stack: CPL and GND rows on wheels.
+                    filterStack: [
+                        PersistentFilterWheelSnapshot(sourceKind: "filterSet", filterSetID: set.id.rawValue, itemID: nd8.id.rawValue, rowKind: "fixed"),
+                        PersistentFilterWheelSnapshot(sourceKind: "filterSet", filterSetID: set.id.rawValue, itemID: cpl.id.rawValue, rowKind: "cpl", cplLossStops: 1.5),
+                        PersistentFilterWheelSnapshot(sourceKind: "filterSet", filterSetID: set.id.rawValue, itemID: gnd.id.rawValue, rowKind: "gnd", gndMode: "applyFullValue"),
+                        PersistentFilterWheelSnapshot(sourceKind: "standard", ndStop: 2),
+                    ],
+                    lastFilterSourceKind: "filterSet",
+                    lastFilterSetID: set.id.rawValue
+                ),
+            ]
+        )
+        let viewModel = makeViewModel(sessionStore: sessionStore, inventoryModel: inventory)
+        XCTAssertEqual(viewModel.filterWheels, [
+            FilterWheel(source: .filterSet(set.id), selection: select(nd8)),
+            .standard(NDStep(stops: 2)),
+        ], "ND rows stay wheels; CPL and GND rows leave the wheels.")
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [
+            .mount(cpl, in: set, .cplLoss(1.5)),
+            .mount(gnd, in: set, .gnd(.applyFullValue)),
+        ], "Identity, choice, and mode are preserved.")
+        XCTAssertEqual(viewModel.ndStep.stops, 3 + 1.5 + 2 + 2, accuracy: 1e-9, "The effective total is preserved.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [set.id], "The referenced legacy set becomes a candidate.")
+        XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(set.id))
+
+        // The migrated shape is what persists from now on.
+        viewModel.setNDFilterStep(NDStep(stops: 3), at: 1)
+        let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        XCTAssertEqual(slot.filterStack?.compactMap(\.rowKind), ["fixed"])
+        XCTAssertEqual(slot.auxiliaryFilters?.map(\.kind), ["cpl", "gnd"])
+    }
+
+    func testLegacyAuxiliaryOnlyStackReceivesOneStandardZeroWheel() throws {
+        let sessionStore = InMemoryMixedSessionStore()
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "Kit", color: .teal))
+        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
+        inventory.addItem(gnd, to: set.id)
+        sessionStore.stored = PersistentCameraSlotSessionSnapshot(
+            schemaVersion: 1,
+            activeSlotIDRaw: CameraSlotID.camera1.rawValue,
+            slots: [
+                PersistentCameraSlotCalculatorSnapshot(
+                    slotIDRaw: CameraSlotID.camera1.rawValue,
+                    selectedPresetFilmID: nil,
+                    selectedProfileID: nil,
+                    baseShutterSeconds: 1.0 / 30.0,
+                    ndStop: 0,
+                    ndStack: [PersistentNDFilterWheelSnapshot(ndStop: 0)],
+                    filterStack: [
+                        PersistentFilterWheelSnapshot(sourceKind: "filterSet", filterSetID: set.id.rawValue, itemID: gnd.id.rawValue, rowKind: "gnd", gndMode: "recordOnly"),
+                    ]
+                ),
+            ]
+        )
+        let viewModel = makeViewModel(sessionStore: sessionStore, inventoryModel: inventory)
+        XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 0))])
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(gnd, in: set)])
+        XCTAssertEqual(viewModel.ndStep.stops, 0, "Record only is not reinterpreted as loss.")
     }
 
     func testDowngradeFieldsCarryStandardWheelsOnly() async throws {
@@ -66,6 +154,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         let item = FilterItem(name: "X", behavior: .fixed(FilterRegisteredValue(value: 12, unit: .stops)))
         inventory.addItem(item, to: set.id)
         let viewModel = makeViewModel(sessionStore: sessionStore, inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelCleanupDelay = 0.05
         viewModel.setNDFilterStep(NDStep(stops: 3), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))
@@ -102,12 +191,13 @@ final class FilterStackPersistenceTests: XCTestCase {
         let lee = try XCTUnwrap(inventory.createFilterSet(name: "Lee", color: .green))
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
         let nd8 = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let cpl = FilterItem(name: "ND2", behavior: .fixed(FilterRegisteredValue(value: 1, unit: .stops)))
         inventory.addItem(nd1000, to: nisi.id)
         inventory.addItem(nd8, to: lee.id)
         inventory.addItem(cpl, to: lee.id)
 
         let viewModel = makeViewModel(sessionStore: sessionStore, inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
         let standardID = viewModel.ndFilterWheelIDs[0]
         viewModel.selectFilterSource(.filterSet(lee.id))
@@ -118,8 +208,8 @@ final class FilterStackPersistenceTests: XCTestCase {
         XCTAssertEqual(viewModel.ndFilterWheelIDs, [nd8ID, standardID])
         viewModel.addFilterWheel()
         let cplID = viewModel.ndFilterWheelIDs[2]
-        viewModel.setWheelSelection(select(cpl, .cplLoss(1)), at: 2)
-        // Lee (3 + 1) stays contiguous ahead of Standard (2); CPL after ND8.
+        viewModel.setWheelSelection(select(cpl), at: 2)
+        // Lee (3 + 1) stays contiguous ahead of Standard (2); ND2 after ND8.
         XCTAssertEqual(viewModel.ndFilterWheelIDs, [nd8ID, cplID, standardID])
 
         viewModel.selectFilterSource(.filterSet(nisi.id))
@@ -130,7 +220,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         // NiSi (10) > Lee (4) > Standard (2): identity follows the wheel.
         XCTAssertEqual(viewModel.ndFilterWheelIDs, [nisiID, nd8ID, cplID, standardID])
         XCTAssertEqual(viewModel.filterWheels.map(\.source), [.filterSet(nisi.id), .filterSet(lee.id), .filterSet(lee.id), .standard])
-        XCTAssertEqual(viewModel.filterWheels.map(\.selection), [select(nd1000), select(nd8), select(cpl, .cplLoss(1)), .standard(NDStep(stops: 2))])
+        XCTAssertEqual(viewModel.filterWheels.map(\.selection), [select(nd1000), select(nd8), select(cpl), .standard(NDStep(stops: 2))])
         XCTAssertEqual(viewModel.ndStep.stops, 16, accuracy: 1e-9)
         XCTAssertFalse(viewModel.canRemoveEmptyFilterWheel, "No cleanable wheel appeared through sorting.")
 

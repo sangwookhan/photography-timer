@@ -300,6 +300,7 @@ final class FilterStatusRegionTests: XCTestCase {
             cameraSlotSessionPersistenceStore: sessionStore,
             filterInventoryModel: inventory
         )
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.ndWheelCleanupDelay = 0.05
         XCTAssertNil(viewModel.filterSourceSummaryText, "Standard-only stacks keep the existing ND behavior.")
@@ -310,22 +311,23 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(viewModel.filterSourceSummaryText, "Standard · Lee holder", "An Empty wheel already identifies its source.")
         viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd8.id, choice: .fixed)), at: 1)
         XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · Standard", "The summary follows the settled order.")
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: cpl.id, choice: .cplLoss(1))), at: 2)
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder ×2 · Standard")
+        // A mounted auxiliary filter names its set first (main-row
+        // order); an ND-wheel count appears only for actual wheels.
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: leeSet, .cplLoss(1))]))
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · Standard")
 
         viewModel.selectFilterSource(.filterSet(nisiSet.id))
         viewModel.addFilterWheel()
-        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd1000.id, choice: .fixed)), at: 3)
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Lee holder ×2 · Standard")
-        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.color), [.red, .green, nil], "Each Filter Set carries its own color; Standard none.")
-        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.count), [1, 2, 1])
+        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd1000.id, choice: .fixed)), at: 2)
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · NiSi kit · Standard", "Auxiliary sets first, then the settled ND groups.")
+        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.color), [.green, .red, nil], "Each Filter Set carries its own color; Standard none.")
+        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.count), [1, 1, 1])
 
         // Another camera has its own (Standard-only) identity; restore keeps camera 1's.
         viewModel.selectCameraSlot(.camera2)
         XCTAssertNil(viewModel.filterSourceSummaryText)
         viewModel.selectCameraSlot(.camera1)
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Lee holder ×2 · Standard")
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · NiSi kit · Standard")
         let restored = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: FakeTimerManaging(),
@@ -333,13 +335,15 @@ final class FilterStatusRegionTests: XCTestCase {
             cameraSlotSessionPersistenceStore: sessionStore,
             filterInventoryModel: FilterInventoryModel(store: inventoryStore)
         )
-        XCTAssertEqual(restored.filterSourceSummaryText, "NiSi kit · Lee holder ×2 · Standard")
+        XCTAssertEqual(restored.filterSourceSummaryText, "Lee holder · NiSi kit · Standard")
 
-        // Rename follows; deleting a set removes its wheels from the summary.
+        // Rename follows; deleting a set removes its wheels and its
+        // mounted auxiliary filter from the summary.
         viewModel.renameFilterSet(id: leeSet.id, name: "Lee 100")
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Lee 100 ×2 · Standard")
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee 100 · NiSi kit · Standard")
         viewModel.deleteFilterSet(id: leeSet.id)
         XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Standard")
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
         // Removing the last Filter Set wheel returns to the Standard-only behavior.
         viewModel.setWheelSelection(.empty, at: 0)
         await awaitCleanupFire()
@@ -353,6 +357,7 @@ final class FilterStatusRegionTests: XCTestCase {
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
         inventory.addItem(nd1000, to: set.id)
         let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: FakeTimerManaging(), filterInventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -369,27 +374,30 @@ final class FilterStatusRegionTests: XCTestCase {
     func testViewModelMovingWheelStatusCarriesLabelAndContribution() async throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee holder", color: .red))
-        let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        inventory.addItem(gnd, to: set.id)
+        let nd8 = FilterItem(name: "Lee ND 0.9", behavior: .fixed(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
+        let nd2 = FilterItem(name: "Lee ND2", behavior: .fixed(FilterRegisteredValue(value: 1, unit: .stops)))
+        inventory.addItem(nd8, to: set.id)
+        inventory.addItem(nd2, to: set.id)
         let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: FakeTimerManaging(), filterInventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.ndWheelReshapeDuration = 0
-        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: gnd.id, choice: .gnd(.recordOnly))), at: 1)
+        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd2.id, choice: .fixed)), at: 1)
         // Let the set-commit RESHAPING window close before observing motion.
         try? await Task.sleep(nanoseconds: 100_000_000)
         XCTAssertNil(viewModel.movingWheelStatus)
 
-        // Live movement onto Apply full value on the settled wheel (the
-        // GND's registered 3 stops lead Standard 0 after the commit).
+        // Live movement onto the OD 0.9 item on the settled wheel (the
+        // set's registered 1 stop leads Standard 0 after the commit).
         let wheelID = viewModel.ndFilterWheelIDs[0]
         viewModel.filterWheelDidObserveRow(
-            .item(FilterRowSelection(itemID: gnd.id, choice: .gnd(.applyFullValue))),
+            .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)),
             wheelID: wheelID,
             generation: viewModel.ndWheelGeneration
         )
         let status = try XCTUnwrap(viewModel.movingWheelStatus)
-        XCTAssertEqual(status.expandedLabel, "Lee GND 0.9 · OD 0.9 · Apply full value · 3 stops")
+        XCTAssertEqual(status.expandedLabel, "Lee ND 0.9 · OD 0.9 · 3 stops")
         XCTAssertEqual(status.contributionStops, 3, accuracy: 1e-9)
     }
 }

@@ -53,11 +53,80 @@ extension ExposureCalculatorViewModel {
         reexamineNDWheelCleanup()
     }
 
+    // MARK: Mounted auxiliary filters (FILTER-AUX)
+
+    /// The active camera's mounted auxiliary filters, resolved, in
+    /// mount order; empty while the summary is hidden.
+    public var mountedAuxiliaryFilters: [ResolvedAuxiliaryFilter] {
+        calculatorModel.mountedAuxiliaryFilters
+    }
+
+    /// Page-aware mounted auxiliary filters: live for the active slot,
+    /// the stored snapshot resolved against the current inventory for
+    /// inactive pages (a mount that no longer resolves is omitted).
+    public func mountedAuxiliaryFilters(forPage pageState: CameraSlotPageState) -> [ResolvedAuxiliaryFilter] {
+        if pageState.isActive {
+            return mountedAuxiliaryFilters
+        }
+        let inventory = calculatorModel.filterInventory
+        return (cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.auxiliaryFilters ?? [])
+            .compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: inventory) }
+    }
+
+    // MARK: Camera candidate Filter Sets (FILTER-CAMERA)
+
+    /// The active camera's candidate Filter Sets in user-defined set
+    /// order. Standard is always available and is not listed.
+    public var candidateFilterSetIDs: [FilterSetID] {
+        calculatorModel.candidateFilterSetIDs
+    }
+
+    /// Sets the active camera's stack still references — through an
+    /// ND wheel (Empty included) or a mounted auxiliary filter. They
+    /// cannot leave the candidates until those selections are cleared.
+    public var filterSetIDsReferencedByActiveCamera: Set<FilterSetID> {
+        Set(calculatorModel.filterWheels.compactMap { $0.source.filterSetID })
+            .union(calculatorModel.filterStack.auxiliaryFilters.map(\.filterSetID))
+    }
+
+    /// Outcome of a candidate assignment.
+    public enum CandidateFilterSetAssignmentOutcome: Equatable, Sendable {
+        case assigned
+        /// The excluded sets the camera still references, by name;
+        /// nothing changed.
+        case blocked(referencedFilterSetNames: [String])
+    }
+
+    /// Replaces the active camera's candidate Filter Sets
+    /// (FILTER-CAMERA-001). Assignment saves immediately and mounts
+    /// nothing. Excluding a set this camera still references is
+    /// blocked with the set names, so a candidate change can never
+    /// alter the exposure calculation implicitly; a remembered ND
+    /// source that is no longer a candidate falls back to Standard.
+    @discardableResult
+    public func setCandidateFilterSetIDs(_ ids: [FilterSetID]) -> CandidateFilterSetAssignmentOutcome {
+        let excludedReferenced = filterSetIDsReferencedByActiveCamera.subtracting(ids)
+        guard excludedReferenced.isEmpty else {
+            let names = filterInventory.filterSets
+                .filter { excludedReferenced.contains($0.id) }
+                .map(\.name)
+            return .blocked(referencedFilterSetNames: names)
+        }
+        guard ids != calculatorModel.candidateFilterSetIDs else {
+            return .assigned
+        }
+        calculatorModel.setCandidateFilterSetIDs(ids)
+        objectWillChange.send()
+        persistCalculatorContext()
+        return .assigned
+    }
+
     // MARK: Plus wheel — Filter Source selection (FILTER-PLUS)
 
-    /// Standard first, then Filter Sets in user-defined order.
+    /// Standard first, then the active camera's candidate Filter Sets
+    /// that hold ND items, in user-defined order (FILTER-PLUS-001).
     public var filterSources: [FilterSource] {
-        filterInventory.sources
+        calculatorModel.filterSources
     }
 
     /// The active camera's settled Filter Source — what Plus adds.
@@ -73,7 +142,7 @@ extension ExposureCalculatorViewModel {
     /// stepping browses a transient candidate on the control itself.
     func selectFilterSource(_ source: FilterSource) {
         guard source != calculatorModel.lastFilterSource,
-              filterInventory.contains(source) else {
+              filterSources.contains(source) else {
             return
         }
         calculatorModel.selectFilterSource(source)
@@ -155,15 +224,17 @@ extension ExposureCalculatorViewModel {
     /// Cameras whose stack currently mounts `itemID` — shown before a
     /// delete is confirmed (FILTER-ITEM-006).
     public func cameraNames(affectedByDeletingItem itemID: FilterItemID) -> [String] {
-        cameraNames { wheels in
+        cameraNames { wheels, auxiliaryFilters in
             wheels.contains { $0.mountedItemID == itemID }
+                || auxiliaryFilters.contains { $0.itemID == itemID }
         }
     }
 
     /// Cameras whose stack holds a wheel of the Filter Set.
     public func cameraNames(affectedByDeletingFilterSet filterSetID: FilterSetID) -> [String] {
-        cameraNames { wheels in
+        cameraNames { wheels, auxiliaryFilters in
             wheels.contains { $0.source == .filterSet(filterSetID) }
+                || auxiliaryFilters.contains { $0.filterSetID == filterSetID }
         }
     }
 
@@ -198,15 +269,10 @@ extension ExposureCalculatorViewModel {
         }
         var conflicts: [FilterItemSaveConflict] = []
         for slotID in cameraSlotSessionModel.availableSlots {
-            let wheels: [FilterWheel]
-            if slotID == cameraSlotSessionModel.activeSlotID {
-                wheels = calculatorModel.filterWheels
-            } else if let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) {
-                wheels = snapshot.filterWheels
-            } else {
+            guard let stack = cameraStack(for: slotID) else {
                 continue
             }
-            if let reason = Self.stackConflict(wheels, itemID: item.id, candidate: candidate) {
+            if let reason = Self.stackConflict(stack.wheels, auxiliaryFilters: stack.auxiliaryFilters, itemID: item.id, candidate: candidate) {
                 conflicts.append(FilterItemSaveConflict(
                     cameraName: cameraSlotSessionModel.identity(for: slotID).displayName,
                     reason: reason
@@ -216,19 +282,29 @@ extension ExposureCalculatorViewModel {
         return conflicts
     }
 
-    /// A stack conflicts with the candidate inventory when a wheel
-    /// mounting `itemID` no longer resolves (its selected row is gone)
-    /// or when the re-resolved stack would exceed the cap.
-    private static func stackConflict(_ wheels: [FilterWheel], itemID: FilterItemID, candidate: FilterInventory) -> FilterItemSaveBlockReason? {
+    /// A camera's stack conflicts with the candidate inventory when a
+    /// wheel or auxiliary filter mounting `itemID` no longer resolves
+    /// (its selected row, CPL choice, or kind is gone) or when the
+    /// re-resolved stack would exceed the cap.
+    private static func stackConflict(
+        _ wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter],
+        itemID: FilterItemID,
+        candidate: FilterInventory
+    ) -> FilterItemSaveBlockReason? {
         let selectedRowVanishes = wheels.contains { wheel in
             wheel.mountedItemID == itemID
                 && FilterStack.resolvedRow(for: wheel, inventory: candidate) == nil
+        } || auxiliaryFilters.contains { mount in
+            mount.itemID == itemID
+                && FilterStack.resolvedAuxiliaryFilter(mount, inventory: candidate) == nil
         }
         if selectedRowVanishes {
             return .removesSelectedChoice
         }
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: candidate)
         guard let normalized = FilterStack.normalizedWheels(wheels, inventory: candidate),
-              FilterStack.validated(wheels: normalized, inventory: candidate) != nil else {
+              FilterStack.validated(wheels: normalized, auxiliaryFilters: auxiliary, inventory: candidate) != nil else {
             return .exceedsTotalLimit
         }
         return nil
@@ -255,19 +331,31 @@ extension ExposureCalculatorViewModel {
 
     // MARK: Helpers
 
-    private func cameraNames(where predicate: ([FilterWheel]) -> Bool) -> [String] {
+    /// One camera's stack as the inventory reconciliation sees it:
+    /// the live model for the active slot, the stored snapshot for
+    /// the others (`nil` for a never-visited slot).
+    private struct CameraStack {
+        let wheels: [FilterWheel]
+        let auxiliaryFilters: [MountedAuxiliaryFilter]
+    }
+
+    private func cameraStack(for slotID: CameraSlotID) -> CameraStack? {
+        if slotID == cameraSlotSessionModel.activeSlotID {
+            return CameraStack(wheels: calculatorModel.filterWheels, auxiliaryFilters: calculatorModel.filterStack.auxiliaryFilters)
+        }
+        guard let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) else {
+            return nil
+        }
+        return CameraStack(wheels: snapshot.filterWheels, auxiliaryFilters: snapshot.auxiliaryFilters)
+    }
+
+    private func cameraNames(where predicate: ([FilterWheel], [MountedAuxiliaryFilter]) -> Bool) -> [String] {
         var names: [String] = []
         for slotID in cameraSlotSessionModel.availableSlots {
-            let wheels: [FilterWheel]
-            if slotID == cameraSlotSessionModel.activeSlotID {
-                wheels = calculatorModel.filterWheels
-            } else {
-                guard let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) else {
-                    continue
-                }
-                wheels = snapshot.filterWheels
+            guard let stack = cameraStack(for: slotID) else {
+                continue
             }
-            if predicate(wheels) {
+            if predicate(stack.wheels, stack.auxiliaryFilters) {
                 names.append(cameraSlotSessionModel.identity(for: slotID).displayName)
             }
         }

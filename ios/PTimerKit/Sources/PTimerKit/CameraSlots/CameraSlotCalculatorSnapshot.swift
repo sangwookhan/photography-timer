@@ -26,14 +26,26 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// wheel, parallel to `ndFilterSteps`. A slot switch must restore
     /// the photographer's wheel layout, not just the collapsed sum.
     public var filterWheels: [FilterWheel]
+    /// The slot's mounted auxiliary filters (FILTER-AUX-001) in mount
+    /// order; empty when none is mounted.
+    public var auxiliaryFilters: [MountedAuxiliaryFilter]
+    /// Active contribution of each auxiliary filter, parallel to
+    /// `auxiliaryFilters`, so calculation-oriented readers never need
+    /// the inventory.
+    public var auxiliaryContributions: [Double]
+    /// The slot's candidate Filter Sets (FILTER-CAMERA-001), in
+    /// user-defined set order. Standard is always available and is
+    /// not listed.
+    public var candidateFilterSetIDs: [FilterSetID]
     /// The slot's last settled Filter Source for the Plus wheel.
     public var lastFilterSource: FilterSource
-    /// Effective ND value — the sum of every wheel's contribution in
-    /// canonical stops. Computed so the snapshot keeps a single source
-    /// of truth; calculation-oriented readers (inactive-page results,
-    /// basis summaries) consume this.
+    /// Effective ND value — the sum of every wheel's and every
+    /// auxiliary filter's contribution in canonical stops. Computed so
+    /// the snapshot keeps a single source of truth; calculation-
+    /// oriented readers (inactive-page results, basis summaries)
+    /// consume this.
     public var ndStep: NDStep {
-        NDStep(stops: ndFilterSteps.reduce(0) { $0 + $1.stops })
+        NDStep(stops: ndFilterSteps.reduce(0) { $0 + $1.stops } + auxiliaryContributions.reduce(0, +))
     }
     public var scaleMode: ExposureScaleMode
     public var selectedPresetFilm: FilmIdentity?
@@ -86,10 +98,13 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
         )
     }
 
-    public init(baseShutterSeconds: Double, filterWheels: [FilterWheel], ndFilterSteps: [NDStep], lastFilterSource: FilterSource, scaleMode: ExposureScaleMode, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, targetShutterSeconds: TimeInterval? = nil) {
+    public init(baseShutterSeconds: Double, filterWheels: [FilterWheel], ndFilterSteps: [NDStep], auxiliaryFilters: [MountedAuxiliaryFilter] = [], auxiliaryContributions: [Double] = [], candidateFilterSetIDs: [FilterSetID] = [], lastFilterSource: FilterSource, scaleMode: ExposureScaleMode, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, targetShutterSeconds: TimeInterval? = nil) {
         self.baseShutterSeconds = baseShutterSeconds
         self.filterWheels = filterWheels
         self.ndFilterSteps = ndFilterSteps
+        self.auxiliaryFilters = auxiliaryFilters
+        self.auxiliaryContributions = auxiliaryContributions
+        self.candidateFilterSetIDs = candidateFilterSetIDs
         self.lastFilterSource = lastFilterSource
         self.scaleMode = scaleMode
         self.selectedPresetFilm = selectedPresetFilm
@@ -97,12 +112,16 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
         self.targetShutterSeconds = targetShutterSeconds
     }
 
-    /// Mixed-stack convenience from a resolved `FilterStack`.
-    public init(baseShutterSeconds: Double, filterStack: FilterStack, lastFilterSource: FilterSource, scaleMode: ExposureScaleMode, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, targetShutterSeconds: TimeInterval? = nil) {
+    /// Convenience from a resolved `FilterStack` (wheels and mounted
+    /// auxiliary filters).
+    public init(baseShutterSeconds: Double, filterStack: FilterStack, candidateFilterSetIDs: [FilterSetID] = [], lastFilterSource: FilterSource, scaleMode: ExposureScaleMode, selectedPresetFilm: FilmIdentity?, selectedProfileOverride: ReciprocityProfile?, targetShutterSeconds: TimeInterval? = nil) {
         self.init(
             baseShutterSeconds: baseShutterSeconds,
             filterWheels: filterStack.wheels,
             ndFilterSteps: filterStack.contributions.map(NDStep.init(stops:)),
+            auxiliaryFilters: filterStack.auxiliaryFilters,
+            auxiliaryContributions: filterStack.auxiliaryContributions,
+            candidateFilterSetIDs: candidateFilterSetIDs,
             lastFilterSource: lastFilterSource,
             scaleMode: scaleMode,
             selectedPresetFilm: selectedPresetFilm,
@@ -111,43 +130,51 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
         )
     }
 
-    /// Re-resolves the stored wheels against `inventory` after an
-    /// inventory edit: stale references normalize (unknown set → wheel
-    /// dropped, unknown item → Empty), contributions refresh, and a
-    /// vanished last source falls back to Standard. Returns `nil` when
-    /// the normalized wheels no longer fit the cap — the caller
-    /// decides whether that blocks the edit.
+    /// Re-resolves the stored wheels and auxiliary filters against
+    /// `inventory` after an inventory edit: stale references normalize
+    /// (unknown set → wheel dropped, unknown item → Empty, an
+    /// unresolvable auxiliary filter → unmounted), contributions
+    /// refresh, candidates follow the inventory, and a vanished last
+    /// source falls back to Standard. Returns `nil` when the normalized
+    /// state no longer fits the cap — the caller decides whether that
+    /// blocks the edit.
     public func reresolvingFilterStack(against inventory: FilterInventory) -> CameraSlotCalculatorSnapshot? {
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: inventory)
         guard let wheels = FilterStack.normalizedWheels(filterWheels, inventory: inventory),
-              let stack = FilterStack.validated(wheels: wheels, inventory: inventory) else {
+              let stack = FilterStack.validated(wheels: wheels, auxiliaryFilters: auxiliary, inventory: inventory) else {
             return nil
         }
-        var copy = self
-        copy.filterWheels = stack.wheels
-        copy.ndFilterSteps = stack.contributions.map(NDStep.init(stops:))
-        if !inventory.contains(lastFilterSource) {
-            copy.lastFilterSource = .standard
-        }
-        return copy
+        return replacing(stack: stack, inventory: inventory)
     }
 
-    /// Last-resort re-resolution when the normalized wheels no longer
-    /// fit the cap (the facade blocks such edits up front): every
-    /// mounted item reads Empty so nothing is ever clamped. Standard
-    /// wheels are untouched.
+    /// Last-resort re-resolution when the normalized state no longer
+    /// fits the cap (the facade blocks such edits up front): every
+    /// mounted wheel item reads Empty and, if that still does not fit,
+    /// the auxiliary filters are unmounted, so nothing is ever
+    /// clamped. Standard wheels are untouched.
     public func emptyingMountedItems(against inventory: FilterInventory) -> CameraSlotCalculatorSnapshot {
         let emptied = (FilterStack.normalizedWheels(filterWheels, inventory: inventory) ?? [.standard(CalculatorDefaults.ndStep)])
             .map { wheel -> FilterWheel in
                 wheel.isStandard ? wheel : FilterWheel(source: wheel.source, selection: .empty)
             }
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: inventory)
+        let stack = FilterStack.validated(wheels: emptied, auxiliaryFilters: auxiliary, inventory: inventory)
+            ?? FilterStack.validated(wheels: emptied, inventory: inventory)
+            ?? FilterStack(single: CalculatorDefaults.ndStep)
+        return replacing(stack: stack, inventory: inventory)
+    }
+
+    private func replacing(stack: FilterStack, inventory: FilterInventory) -> CameraSlotCalculatorSnapshot {
         var copy = self
-        if let stack = FilterStack.validated(wheels: emptied, inventory: inventory) {
-            copy.filterWheels = stack.wheels
-            copy.ndFilterSteps = stack.contributions.map(NDStep.init(stops:))
-        } else {
-            copy.filterWheels = [.standard(CalculatorDefaults.ndStep)]
-            copy.ndFilterSteps = [CalculatorDefaults.ndStep]
-        }
+        copy.filterWheels = stack.wheels
+        copy.ndFilterSteps = stack.contributions.map(NDStep.init(stops:))
+        copy.auxiliaryFilters = stack.auxiliaryFilters
+        copy.auxiliaryContributions = stack.auxiliaryContributions
+        copy.candidateFilterSetIDs = inventory.normalizedCandidateFilterSetIDs(
+            candidateFilterSetIDs,
+            referencedBy: stack.wheels,
+            auxiliaryFilters: stack.auxiliaryFilters
+        )
         if !inventory.contains(lastFilterSource) {
             copy.lastFilterSource = .standard
         }

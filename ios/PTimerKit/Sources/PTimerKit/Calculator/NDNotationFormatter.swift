@@ -107,8 +107,18 @@ public enum NDNotationFormatter {
 
         let totalThirds = step.thirdStopCount
         let wholePart = totalThirds / 3
-        let fractionalThirds = totalThirds % 3
-        let fractionLabel = fractionalThirds == 1 ? "1/3" : "2/3"
+        // A value whose NEAREST third is a whole stop has no fractional
+        // part to name. Without this case it fell through to `2/3`, so
+        // 0.9 stops rendered as `1 2/3` and 29.9 as `30 2/3`.
+        let fractionLabel: String
+        switch totalThirds % 3 {
+        case 0:
+            return "\(wholePart)"
+        case 1:
+            fractionLabel = "1/3"
+        default:
+            fractionLabel = "2/3"
+        }
 
         if wholePart == 0 {
             return fractionLabel

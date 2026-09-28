@@ -31,9 +31,20 @@ object TimerBasisPresenter {
         formatShutter: (Double) -> String,
         baseNdFormat: String = "Base %1\$s · %2\$s",
         baseNdAdjustedFormat: String = "Base %1\$s · %2\$s · Adj %3\$s",
+        /**
+         * Renders the ND fragment in the user's language. The default is
+         * the locale-independent form this module can build on its own —
+         * correct for English, and the reason a caller that has resources
+         * must pass its own (FILTER-A11Y-003): the STOPS form's unit noun
+         * is a word, so leaving it to the default put an English `stops`
+         * inside an otherwise Korean line.
+         */
+        formatNotation: (Double, NDNotationMode) -> String = { stops, notation ->
+            NDNotationFormatter.display(stops, notation).inline
+        },
     ): String? {
         if (ndStops == null || baseShutterSeconds == null) return null
-        val nd = NDNotationFormatter.display(ndStops, mode).inline
+        val nd = formatNotation(ndStops, mode)
         val base = formatShutter(baseShutterSeconds)
         return if (includesAdjusted && adjustedShutterSeconds != null) {
             String.format(baseNdAdjustedFormat, base, nd, formatShutter(adjustedShutterSeconds))

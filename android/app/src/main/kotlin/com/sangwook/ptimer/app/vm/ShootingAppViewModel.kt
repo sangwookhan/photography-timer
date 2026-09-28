@@ -10,6 +10,9 @@ import com.sangwook.ptimer.app.persistence.AppPersistenceWriter
 import com.sangwook.ptimer.app.persistence.OrderedPersistenceWriter
 import com.sangwook.ptimer.app.timer.AndroidTimerCoordinator
 import com.sangwook.ptimer.core.customfilm.CustomFilmLibrary
+import com.sangwook.ptimer.core.exposure.FilterInventory
+import com.sangwook.ptimer.core.persistence.FilterInventoryStoring
+import com.sangwook.ptimer.core.persistence.NoOpFilterInventoryStore
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.persistence.SlotSessionStoring
 import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
@@ -77,7 +80,17 @@ class ShootingAppViewModel(
     alarmPlayer: TimerAlarmPlayer,
     private val slotStore: SlotSessionStoring,
     private val completionNotifier: TimerCompletionNotifier,
+    /** Durable store for the user's Filter Sets and physical items. */
+    inventoryStore: FilterInventoryStoring = NoOpFilterInventoryStore(),
+    /** Bootstrap-loaded inventory; `null` lets the model read the store. */
+    initialInventory: FilterInventory? = null,
     clock: () -> Instant = { Instant.now() },
+    /** Words the timer's start-time filter reference is written in
+     *  (FILTER-PERSIST-003); the composition root reads them from
+     *  resources so the capture lands in the user's language. */
+    referenceVocabulary: () -> FilterReferenceVocabulary = {
+        FilterReferenceVocabulary.canonicalEnglish
+    },
     private val persistence: OrderedPersistenceWriter = AppPersistenceWriter,
 ) : ViewModel() {
 
@@ -89,6 +102,17 @@ class ShootingAppViewModel(
         persistenceWriter = persistence,
     )
 
+    /**
+     * The user's Filter Sets and physical items (PTIMER-221). Retained here
+     * so every UI generation shares one owner; the calculator is the facade
+     * that mutates it and reconciles every camera stack afterwards.
+     */
+    val filterInventory = FilterInventoryModel(
+        store = inventoryStore,
+        initial = initialInventory,
+        persistenceWriter = persistence,
+    )
+
     /** Calculator state holder across camera slots (unchanged pure Kotlin type). */
     val calculator = CalculatorController(
         films = films,
@@ -96,11 +120,13 @@ class ShootingAppViewModel(
             timers.onEvent(ShootingIntent.StartTimer(duration, identity))
         },
         initialSession = initialSession,
+        inventoryModel = filterInventory,
         // The ND cleanup timer lives with the state it judges
         // (PTIMER-199 M3 follow-up, PTIMER-223's remaining scope):
         // owned here, it keeps running across configuration changes
         // and dies with the owner, not with a UI generation.
         ndCleanupScope = viewModelScope,
+        referenceVocabulary = referenceVocabulary,
     )
 
     private val coordinator = AndroidTimerCoordinator(viewModelScope, timers, clock)

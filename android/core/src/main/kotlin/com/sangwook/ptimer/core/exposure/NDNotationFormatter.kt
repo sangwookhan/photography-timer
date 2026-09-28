@@ -65,8 +65,20 @@ object NDNotationFormatter {
         }
         val totalThirds = step.thirdStopCount
         val whole = totalThirds / 3
-        val frac = if (totalThirds % 3 == 1) "1/3" else "2/3"
-        return if (whole == 0) frac else "$whole $frac"
+        // A value whose NEAREST third is a whole stop has no fractional
+        // part to name. Without this case it fell through to the `2/3`
+        // branch, so 0.9 stops rendered as `1 2/3` and 29.9 as `30 2/3`
+        // — the rounding policy's own answer, overstated by two thirds.
+        val frac = when (totalThirds % 3) {
+            0 -> null
+            1 -> "1/3"
+            else -> "2/3"
+        }
+        return when {
+            frac == null -> whole.toString()
+            whole == 0 -> frac
+            else -> "$whole $frac"
+        }
     }
 
     private fun stopsInline(stops: Double, value: String): String {
@@ -84,10 +96,18 @@ object NDNotationFormatter {
         // whole stop keeps the compact power-of-two policy below.
         commercialFactorLabel(stops)?.let { return it }
 
-        val factor = 2.0.pow(stops)
+        // Ladder values take their numeric factor from the shared mapping, so
+        // the formatter and Filter Item registration (FILTER-ITEM-004) can
+        // never drift: whatever ND label this renders is exactly what a
+        // registered ND factor converts back to. Off-ladder values (the
+        // reserved third-stop path) keep the 2^stops policy below.
+        val ladderFactor = NDCommercialFactorMapping.commercialFactor(stops)
         // 0–9 stops: exact factor (1, 2, 4, … 512).
-        if (factor < 1000) return factor.roundToInt().toString()
         // 10–13 stops: commercial-familiar thousands (1000/2000/4000/8000).
+        if (ladderFactor != null && ladderFactor < 10_000) return ladderFactor.roundToLong().toString()
+
+        val factor = ladderFactor ?: 2.0.pow(stops)
+        if (factor < 1000) return factor.roundToInt().toString()
         if (factor < 10_000) return ((factor / 1000).roundToLong() * 1000).toString()
         // 14 stops and up: nearest power-of-two unit, uppercase suffix, so
         // exact stops land on clean labels (2^14 = 16K, 2^16 = 64K, 2^20 = 1M)
@@ -106,15 +126,18 @@ object NDNotationFormatter {
     /**
      * Marketed filter-factor label for a commercial fractional ND preset
      * (PTIMER-209), or `null` for any other stop value. Matched on the
-     * canonical stop value within the shared stability epsilon.
+     * canonical stop value within the shared stability epsilon; the numeric
+     * factor comes from [NDCommercialFactorMapping], which is also what a
+     * registered ND factor is matched against (FILTER-ITEM-004). Only
+     * ND100k's marketing `k` is a rendering choice of this formatter.
      */
-    private fun commercialFactorLabel(stops: Double): String? = when {
-        matches(stops, 6.6) -> "100"
-        matches(stops, 7.6) -> "200"
-        matches(stops, 16.6) -> "100k"
-        else -> null
+    private fun commercialFactorLabel(stops: Double): String? {
+        if (ExposureScale.commercialNDPresetStop(stops) == null) return null
+        val factor = NDCommercialFactorMapping.commercialFactor(stops) ?: return null
+        return if (factor >= 1000) {
+            "${(factor / 1000).roundToLong()}k"
+        } else {
+            factor.roundToLong().toString()
+        }
     }
-
-    private fun matches(stops: Double, preset: Double): Boolean =
-        kotlin.math.abs(stops - preset) <= ExposureCalculator.STABILITY_EPSILON
 }

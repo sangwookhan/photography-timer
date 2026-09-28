@@ -24,6 +24,16 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(content?.secondaryText, "Total 18 stops", "The trailing text is the localized total alone; the contribution lives in the leading detail.")
         XCTAssertEqual(content?.isHeld, true)
         XCTAssertEqual(content?.isWarning, false)
+        // The numeric value travels separately so the view can render
+        // it prominently while the spoken total stays complete.
+        XCTAssertEqual(content?.totalValueText, "18")
+        XCTAssertEqual(content?.isTotalAtMaximum, false)
+        XCTAssertEqual(FilterStatusRegionPresenter.totalLeadingWord(), "Total")
+        XCTAssertEqual(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: false), "stops")
+        XCTAssertEqual(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: true), "stops · Maximum")
+        let capped = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: NDStackTotalDisplayState(effectiveStep: NDStep(stops: 30), wheelCount: 2))
+        XCTAssertEqual(capped?.totalValueText, "30")
+        XCTAssertEqual(capped?.isTotalAtMaximum, true)
     }
 
     // MARK: One row in every state (FILTER-STACK-007/008)

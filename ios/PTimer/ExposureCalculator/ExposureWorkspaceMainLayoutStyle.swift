@@ -585,6 +585,49 @@ enum ExposureWorkspaceMainLayoutStyle {
         }
     }
 
+    /// The Total's numeric value in the status row (FILTER-STACK-008):
+    /// semibold, rounded, primary — the largest glyph that still fits
+    /// the region's single caption row, so its emphasis rises without
+    /// the region growing. (Matching the ND numeric size exactly does
+    /// not fit the current vertical budget; see the PR discussion.)
+    var filterStatusTotalValueFont: Font {
+        .system(size: filterStatusTotalValuePointSize, weight: .semibold, design: .rounded)
+    }
+
+    var filterStatusTotalValuePointSize: CGFloat {
+        switch self {
+        case .regular, .compact:
+            return 15
+        case .dense:
+            return 12
+        }
+    }
+
+    /// Fonts of the auxiliary summary column (FILTER-AUX-002): the
+    /// title link, each item's name, its contribution in stops, and
+    /// the detail line under the name. Sized so three items with a
+    /// detail line each fit the label-row-plus-viewport height of the
+    /// tier.
+    var auxiliarySummaryTitleFont: Font {
+        .system(size: self == .dense ? 9 : 10, weight: .semibold)
+    }
+
+    var auxiliarySummaryNameFont: Font {
+        .system(size: self == .dense ? 10 : 11, weight: .medium)
+    }
+
+    var auxiliarySummaryValueFont: Font {
+        .system(size: self == .dense ? 12 : 14, weight: .semibold, design: .rounded)
+    }
+
+    var auxiliarySummaryDetailFont: Font {
+        .system(size: self == .dense ? 8 : 9)
+    }
+
+    var auxiliarySummaryRowSpacing: CGFloat {
+        self == .dense ? 1 : 3
+    }
+
     /// THE wheel-row value font (user rule, 2026-07-15): every wheel
     /// on the main screen — Base Shutter AND all ND wheels — always
     /// renders its values at the SAME size for a given wheel count.
@@ -743,13 +786,23 @@ struct VariableSectionView: View {
     let isFilterInteractionQuiet: Bool
     /// Adds one wheel for the given source (FILTER-PLUS-003).
     let onAddFilterWheel: (FilterSource) -> Void
-    /// Plus wheel inputs (FILTER-PLUS): sources in order, the settled
-    /// source, and the reason a given source cannot add (`nil` when it
-    /// can) — asked for the source the Plus displays.
-    let filterSources: [FilterSource]
+    /// Plus wheel inputs (FILTER-PLUS): the settled source, and the
+    /// reason a given source cannot add (`nil` when it can) — asked for
+    /// the source the Plus displays.
     let selectedFilterSource: FilterSource
     let addUnavailabilityText: (FilterSource) -> String?
     let onManageFilterSets: () -> Void
+    /// Opens the shooting popup on the auxiliary tab (FILTER-FLOW-002):
+    /// from the ND header, the Plus auxiliary action, or the summary.
+    let onOpenShootingFilters: () -> Void
+    /// The mounted auxiliary filters' summary; `nil` hides the space
+    /// (FILTER-AUX-001).
+    let auxiliarySummary: AuxiliaryFilterSummaryDisplayState?
+    /// ND wheels plus one for a visible summary (FILTER-STACK-007):
+    /// drives the shared numeric size and the Base column width.
+    let occupiedSpaceCount: Int
+    /// The Plus wheel's vertical choices (FILTER-PLUS-001).
+    let filterPlusChoices: [FilterPlusChoice]
     /// The wheel currently in motion (expanded label + live
     /// contribution) for the status region.
     let movingWheelStatus: MovingWheelStatus?
@@ -761,10 +814,21 @@ struct VariableSectionView: View {
     let ndStackTotalDisplayState: NDStackTotalDisplayState
     let style: ExposureWorkspaceMainLayoutStyle
 
-    /// Candidate source while the Plus wheel is being browsed
+    /// Candidate choice while the Plus wheel is being browsed
     /// (FILTER-PLUS-002); rendered in the status region below the
     /// row, never over a picker.
-    @State private var browsingSource: FilterSource?
+    @State private var browsingChoice: FilterPlusChoice?
+
+    private var browsingName: String? {
+        switch browsingChoice {
+        case .source(let source):
+            return filterSourceName(source)
+        case .auxiliaryFilters:
+            return AuxiliaryFilterSummaryPresenter.title
+        case nil:
+            return nil
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
@@ -775,16 +839,17 @@ struct VariableSectionView: View {
                     formatShutter: formatShutter,
                     onContinuousSelectionChange: onContinuousBaseShutterChange,
                     onInteractionEnd: onBaseShutterInteractionEnd,
-                    ndWheelCount: ndFilterSteps.count,
+                    ndWheelCount: occupiedSpaceCount,
                     labelRowHeight: style.filterWheelLabelRowHeight,
                     pickerHeight: style.pickerHeight,
                     style: style
                 )
-                // 3+ ND wheels: cap the Base column so the narrower
-                // ND columns get the released width (PTIMER-199).
+                // 3+ occupied filter spaces: cap the Base column so the
+                // narrower filter columns get the released width
+                // (PTIMER-199, FILTER-STACK-007).
                 .frame(
                     maxWidth: style.baseShutterColumnMaxWidth(
-                        forNDWheelCount: ndFilterSteps.count
+                        forNDWheelCount: occupiedSpaceCount
                     ) ?? .infinity
                 )
 
@@ -811,11 +876,14 @@ struct VariableSectionView: View {
                     showsAddFilterWheelControl: showsAddFilterWheelControl,
                     isFilterInteractionQuiet: isFilterInteractionQuiet,
                     onAddFilterWheel: onAddFilterWheel,
-                    filterSources: filterSources,
                     selectedFilterSource: selectedFilterSource,
                     addUnavailabilityText: addUnavailabilityText,
                     onManageFilterSets: onManageFilterSets,
-                    onBrowsingSourceChanged: { browsingSource = $0 },
+                    onOpenShootingFilters: onOpenShootingFilters,
+                    auxiliarySummary: auxiliarySummary,
+                    occupiedSpaceCount: occupiedSpaceCount,
+                    filterPlusChoices: filterPlusChoices,
+                    onBrowsingChoiceChanged: { browsingChoice = $0 },
                     totalDisplayState: ndStackTotalDisplayState,
                     pickerHeight: style.pickerHeight,
                     style: style
@@ -830,7 +898,7 @@ struct VariableSectionView: View {
             FilterStatusRegionView(
                 content: FilterStatusRegionPresenter.content(
                     moving: movingWheelStatus,
-                    browsingSourceName: browsingSource.map(filterSourceName),
+                    browsingSourceName: browsingName,
                     rejection: filterRejectionNotice,
                     total: ndStackTotalDisplayState,
                     idleSourceSummary: idleSourceSummary
@@ -909,10 +977,7 @@ struct FilterStatusRegionView: View {
                         Spacer(minLength: 0)
                     }
                     if let trailing = visible.secondaryText {
-                        Text(trailing)
-                            .font(style.filterStatusRegionFont)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                        totalText(visible, spoken: trailing)
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                             .layoutPriority(1)
@@ -935,6 +1000,33 @@ struct FilterStatusRegionView: View {
             controller.apply(newValue)
         }
         .accessibilityIdentifier("filter-status-region")
+    }
+
+    /// The trailing Total (FILTER-STACK-008): the caption word, the
+    /// numeric value at its prominent size and primary emphasis, and
+    /// the unit words, on one baseline. The spoken text stays the
+    /// complete localized total.
+    @ViewBuilder
+    private func totalText(_ content: FilterStatusRegionContent, spoken: String) -> some View {
+        if let value = content.totalValueText {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(FilterStatusRegionPresenter.totalLeadingWord())
+                    .font(style.filterStatusRegionFont)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(style.filterStatusTotalValueFont)
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                Text(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: content.isTotalAtMaximum))
+                    .font(style.filterStatusRegionFont)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text(spoken)
+                .font(style.filterStatusRegionFont)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
     }
 
     /// The leading text of the row: the idle source summary with its
@@ -1019,13 +1111,24 @@ private struct NDFilterGroupView: View {
     let isFilterInteractionQuiet: Bool
     /// Adds one wheel for the given source (FILTER-PLUS-003).
     let onAddFilterWheel: (FilterSource) -> Void
-    let filterSources: [FilterSource]
     let selectedFilterSource: FilterSource
     let addUnavailabilityText: (FilterSource) -> String?
     let onManageFilterSets: () -> Void
-    /// Candidate source while Plus is browsed, reported to the parent
+    /// Opens the shooting popup (FILTER-FLOW-002): the header entry,
+    /// the Plus auxiliary action, and the mounted summary all lead
+    /// here.
+    let onOpenShootingFilters: () -> Void
+    /// The mounted auxiliary filters' summary column, shown
+    /// immediately after Base Shutter only while something is mounted
+    /// (FILTER-AUX-001).
+    let auxiliarySummary: AuxiliaryFilterSummaryDisplayState?
+    /// Occupied filter spaces (wheels plus a visible summary), the
+    /// input of the shared numeric size (FILTER-STACK-007).
+    let occupiedSpaceCount: Int
+    let filterPlusChoices: [FilterPlusChoice]
+    /// Candidate choice while Plus is browsed, reported to the parent
     /// which renders it in the status region (FILTER-PLUS-002).
-    let onBrowsingSourceChanged: (FilterSource?) -> Void
+    let onBrowsingChoiceChanged: (FilterPlusChoice?) -> Void
     let totalDisplayState: NDStackTotalDisplayState
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
@@ -1065,11 +1168,13 @@ private struct NDFilterGroupView: View {
                     .font(.footnote.weight(.semibold))
                     .fixedSize()
 
-                // Persistent Filter Set management entry
-                // (FILTER-SET-001): stays reachable when four wheels
-                // hide the Plus wheel. Compact glyph, 44 pt hit area.
-                Button(action: onManageFilterSets) {
-                    Image(systemName: "square.stack.3d.up")
+                // Persistent shooting-filter entry (FILTER-SET-001,
+                // FILTER-FLOW-002): opens the shooting popup, from which
+                // candidate sets and management are reachable, so it
+                // stays available when the wheel limit hides Plus.
+                // Compact glyph, 44 pt hit area.
+                Button(action: onOpenShootingFilters) {
+                    Image(systemName: "camera.filters")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.accentColor)
                         .frame(width: 18, height: 22)
@@ -1077,9 +1182,9 @@ private struct NDFilterGroupView: View {
                         .contentShape(Rectangle().inset(by: -13))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Filter Sets"))
-                .accessibilityHint(Text("Create, edit, and reorder your Filter Sets"))
-                .accessibilityIdentifier("filter-sets-manage-button")
+                .accessibilityLabel(Text("Shooting filters"))
+                .accessibilityHint(Text("Choose the auxiliary filters and ND sources for this camera"))
+                .accessibilityIdentifier("shooting-filters-button")
 
                 Spacer(minLength: 4)
 
@@ -1089,6 +1194,21 @@ private struct NDFilterGroupView: View {
             .frame(height: pickerHeaderHeight)
 
             HStack(spacing: style.filterWheelSpacing) {
+                // The mounted auxiliary filters occupy one space right
+                // after Base Shutter (FILTER-AUX-001), spanning the
+                // label row and the viewport; it is absent, not blank,
+                // while nothing is mounted.
+                if let auxiliarySummary {
+                    AuxiliaryFilterSummaryView(
+                        summary: auxiliarySummary,
+                        height: style.filterWheelLabelRowHeight + pickerHeight,
+                        isInteractive: areWheelsInteractive,
+                        style: style,
+                        onOpen: onOpenShootingFilters
+                    )
+                    .transition(.ndWheelCollapse)
+                }
+
                 ForEach(wheelSlots) { slot in
                     let index = slot.index
                     NDWheelView(
@@ -1108,6 +1228,7 @@ private struct NDFilterGroupView: View {
                         position: index + 1,
                         ndNotationMode: ndNotationMode,
                         wheelCount: ndFilterSteps.count,
+                        occupiedSpaceCount: occupiedSpaceCount,
                         isResolved: isWheelResolved(slot.id),
                         isInputEnabled: areWheelsInteractive,
                         generation: ndWheelGeneration,
@@ -1130,7 +1251,7 @@ private struct NDFilterGroupView: View {
                     // Plus has no type label; keep its body aligned with
                     // the wheel viewports below the label row.
                     FilterSourcePlusControl(
-                        sources: filterSources,
+                        choices: filterPlusChoices,
                         selectedSource: selectedFilterSource,
                         sourceName: filterSourceName,
                         sourceColor: filterSetColor,
@@ -1138,8 +1259,9 @@ private struct NDFilterGroupView: View {
                         isInteractionQuiet: isFilterInteractionQuiet,
                         addUnavailabilityText: addUnavailabilityText,
                         onAdd: onAddFilterWheel,
+                        onOpenAuxiliaryFilters: onOpenShootingFilters,
                         onManage: onManageFilterSets,
-                        onBrowsingChanged: onBrowsingSourceChanged
+                        onBrowsingChanged: onBrowsingChoiceChanged
                     )
                     .padding(.top, style.filterWheelLabelRowHeight)
                 }
@@ -1148,10 +1270,11 @@ private struct NDFilterGroupView: View {
             // browsed source, a rejection reason, and the live total all
             // render in the single status region below the row
             // (FILTER-STACK-007/008).
-            // Drives the wheel add/remove transitions (incl. the
-            // delayed auto-removal fired from the view model, which
-            // mutates state outside any withAnimation scope).
-            .animation(.easeInOut(duration: 0.35), value: ndFilterSteps.count)
+            // Drives the wheel add/remove and summary show/hide
+            // transitions (incl. the delayed auto-removal fired from the
+            // view model, which mutates state outside any withAnimation
+            // scope).
+            .animation(.easeInOut(duration: 0.35), value: occupiedSpaceCount)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         // A plain container: every assistive command lives on the
@@ -1224,12 +1347,16 @@ private struct NDWheelView: View {
     /// 1-based position in the stack for assistive technology.
     let position: Int
     let ndNotationMode: NDNotationMode
-    /// Wheels sharing the ND row (1–4). Above one wheel the values
-    /// center, the per-wheel unit band text drops (the single-column
-    /// band metrics push the value out of a narrow stacked column —
+    /// ND wheels sharing the row (1–4): the wheel's position context
+    /// for assistive technology.
+    let wheelCount: Int
+    /// Occupied filter spaces — ND wheels plus a visible auxiliary
+    /// summary (FILTER-STACK-007). Above one space the values center,
+    /// the per-wheel unit band text drops (the single-column band
+    /// metrics push the value out of a narrow stacked column —
     /// PTIMER-199 R2 evidence), and fonts/paddings step down with the
     /// count so values stay legible in the narrower columns.
-    let wheelCount: Int
+    let occupiedSpaceCount: Int
     /// v2 state inputs: display enforcement only while resolved;
     /// input blocked during RESHAPING; generation stamps events.
     let isResolved: Bool
@@ -1248,7 +1375,7 @@ private struct NDWheelView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     private var isCompact: Bool {
-        wheelCount > 1
+        occupiedSpaceCount > 1
     }
 
     private var layout: PickerColumnLayout {
@@ -1359,7 +1486,7 @@ private struct NDWheelView: View {
             generation: generation,
             rowConfiguration: AnyHashable(NDWheelRowConfiguration(
                 notationMode: ndNotationMode,
-                wheelCount: wheelCount,
+                wheelCount: occupiedSpaceCount,
                 displays: rowDisplays
             )),
             rowHeight: 32,
@@ -1375,7 +1502,7 @@ private struct NDWheelView: View {
                     isDimmed: !display.isAvailable,
                     style: style,
                     layout: layout,
-                    stackedWheelCount: isCompact ? wheelCount : nil
+                    stackedWheelCount: isCompact ? occupiedSpaceCount : nil
                 )
                 .accessibilityLabel(Text(rowAccessibilityText(display)))
             },

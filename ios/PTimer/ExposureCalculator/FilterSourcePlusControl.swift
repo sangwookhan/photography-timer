@@ -6,19 +6,21 @@ import PTimerKit
 import SwiftUI
 
 /// The Plus wheel (Filter Set contract, FILTER-PLUS): the trailing-edge
-/// control of the wheel row while fewer than four actual wheels exist.
-/// It is NOT an actual filter wheel — it selects the Filter Source the
-/// next wheel is created from:
+/// control of the wheel row while the applicable ND-wheel limit permits
+/// another wheel. It is NOT an actual filter wheel — it selects the ND
+/// Filter Source the next wheel is created from, or the Auxiliary
+/// filters action that opens the shooting popup:
 ///
 /// - tap adds a Standard 0 or Filter Set Empty wheel for the displayed
-///   source, exactly once (FILTER-PLUS-003);
-/// - vertical drag or fling browses Standard / Filter Sets in inventory
-///   order, reporting the candidate name so the parent can show it in
-///   the status row; releasing on a different source adds exactly one
-///   wheel from that final source, while a return to the starting
-///   source adds nothing (FR-1.13). The camera's remembered source
-///   changes only when the add succeeds; a refused add shows its
-///   reason in the status row and changes nothing;
+///   ND source, exactly once (FILTER-PLUS-003);
+/// - vertical drag or fling browses Standard, the camera's candidate
+///   ND sources, and the Auxiliary filters action, reporting the
+///   candidate name so the parent can show it in the status row;
+///   releasing on a different ND source adds exactly one wheel from
+///   it, releasing on the auxiliary action opens the popup without
+///   adding, and a return to the starting source does nothing
+///   (FR-1.13). The camera's remembered source changes only when an
+///   add succeeds; a refused add shows its reason in the status row;
 /// - a stationary long press opens Filter Set management; movement
 ///   past the stationary tolerance cancels it, and once the drag
 ///   threshold is crossed browsing has won for the rest of the touch
@@ -27,14 +29,16 @@ import SwiftUI
 /// At rest the compact control shows the candidate source's color as a
 /// secondary cue. VoiceOver exposes ONE focusable element: its
 /// adjustable value steps a transient displayed candidate through the
-/// sources without adding or touching the camera's remembered source,
-/// Manage Filter Sets is always a named action, and Add — activation
-/// and the named action — exists only while the DISPLAYED source can
-/// add right now; otherwise the hint carries the reason and the
-/// element stays focusable and adjustable so the user can browse away
-/// (FILTER-A11Y-001, FILTER-PLUS-004, ND-A11Y-002).
+/// choices without adding or touching the camera's remembered source,
+/// Manage Filter Sets and Open auxiliary filters are always named
+/// actions, and Add — activation and the named action — exists only
+/// while the DISPLAYED source can add right now; otherwise the hint
+/// carries the reason and the element stays focusable and adjustable
+/// so the user can browse away (FILTER-A11Y-001, FILTER-PLUS-004,
+/// ND-A11Y-002).
 struct FilterSourcePlusControl: View {
-    let sources: [FilterSource]
+    /// The vertical choices in browse order (FILTER-PLUS-001).
+    let choices: [FilterPlusChoice]
     let selectedSource: FilterSource
     let sourceName: (FilterSource) -> String
     let sourceColor: (FilterSource) -> FilterSetColor?
@@ -49,57 +53,89 @@ struct FilterSourcePlusControl: View {
     /// Adds one wheel for the given source; the view model refuses and
     /// reports when the source cannot add.
     let onAdd: (FilterSource) -> Void
+    /// Opens the shooting popup on the auxiliary tab; adds nothing and
+    /// leaves the remembered source alone (FILTER-PLUS-003).
+    let onOpenAuxiliaryFilters: () -> Void
     let onManage: () -> Void
-    /// Candidate source while browsing, `nil` when idle. The parent
+    /// Candidate choice while browsing, `nil` when idle. The parent
     /// renders the expanded, non-blocking label.
-    let onBrowsingChanged: (FilterSource?) -> Void
+    let onBrowsingChanged: (FilterPlusChoice?) -> Void
 
     /// Classifies the current touch (tap / long press / browse); `nil`
     /// between touches.
     @State private var gesture: FilterSourcePlusGestureArbiter?
     @State private var longPressTask: Task<Void, Never>?
     @State private var browsingHaptic = UISelectionFeedbackGenerator()
-    /// The source an assistive increment / decrement is browsing —
+    /// The choice an assistive increment / decrement is browsing —
     /// displayed and announced, never persisted. Cleared when the
-    /// camera's settled source changes (a successful add) so the
-    /// element follows the remembered source again.
-    @State private var assistiveCandidate: FilterSource?
+    /// camera's settled source changes (a successful add) or when the
+    /// auxiliary popup opens, so the element follows the remembered
+    /// source again.
+    @State private var assistiveCandidate: FilterPlusChoice?
 
     private var browsingIndex: Int? {
         gesture?.phase == .browsing ? gesture?.candidateIndex : nil
     }
 
     private var settledIndex: Int {
-        sources.firstIndex(of: selectedSource) ?? 0
+        choices.firstIndex(of: .source(selectedSource)) ?? 0
     }
 
-    private var candidateSource: FilterSource {
-        if let browsingIndex, sources.indices.contains(browsingIndex) {
-            return sources[browsingIndex]
+    private var candidateChoice: FilterPlusChoice {
+        if let browsingIndex, choices.indices.contains(browsingIndex) {
+            return choices[browsingIndex]
         }
-        return displayedSource
+        return displayedChoice
     }
 
-    /// What a tap or an assistive activation adds: the assistive
+    /// What a tap or an assistive activation acts on: the assistive
     /// candidate while one is being browsed, else the settled source.
-    private var displayedSource: FilterSource {
-        if let assistiveCandidate, sources.contains(assistiveCandidate) {
+    private var displayedChoice: FilterPlusChoice {
+        if let assistiveCandidate, choices.contains(assistiveCandidate) {
             return assistiveCandidate
         }
-        return selectedSource
+        return .source(selectedSource)
+    }
+
+    private func name(of choice: FilterPlusChoice) -> String {
+        switch choice {
+        case .source(let source):
+            return sourceName(source)
+        case .auxiliaryFilters:
+            return AuxiliaryFilterSummaryPresenter.title
+        }
     }
 
     private var tint: Color {
-        sourceColor(candidateSource).map(Color.filterSet) ?? Color.secondary
+        switch candidateChoice {
+        case .source(let source):
+            return sourceColor(source).map(Color.filterSet) ?? Color.secondary
+        case .auxiliaryFilters:
+            return Color.accentColor
+        }
     }
 
-    /// The displayed source's reason, or `nil` when it can add.
+    /// The displayed source's reason, or `nil` when it can add. The
+    /// auxiliary action is always available.
     private var displayedUnavailabilityText: String? {
-        addUnavailabilityText(displayedSource)
+        displayedChoice.source.flatMap(addUnavailabilityText)
     }
 
     private var isAddEnabled: Bool {
         isInteractionQuiet && displayedUnavailabilityText == nil
+    }
+
+    /// Performs the displayed choice: add the ND source, or open the
+    /// auxiliary popup.
+    private func activate(_ choice: FilterPlusChoice) {
+        switch choice {
+        case .source(let source):
+            onAdd(source)
+        case .auxiliaryFilters:
+            // Closing the popup returns Plus to its preceding ND source.
+            assistiveCandidate = nil
+            onOpenAuxiliaryFilters()
+        }
     }
 
     var body: some View {
@@ -114,7 +150,7 @@ struct FilterSourcePlusControl: View {
                     Image(systemName: "chevron.up")
                         .font(.system(size: 7, weight: .bold))
                         .foregroundStyle(tint.opacity(0.7))
-                    Image(systemName: "plus")
+                    Image(systemName: candidateChoice == .auxiliaryFilters ? "camera.filters" : "plus")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(isAddEnabled ? tint : tint.opacity(0.35))
                     Image(systemName: "chevron.down")
@@ -138,18 +174,18 @@ struct FilterSourcePlusControl: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Add filter"))
-            .accessibilityValue(Text(sourceName(displayedSource)))
-            .accessibilityHint(Text(displayedUnavailabilityText ?? FilterWheelPresenter.plusAccessibilityHint(sourceName: sourceName(displayedSource))))
+            .accessibilityValue(Text(name(of: displayedChoice)))
+            .accessibilityHint(Text(accessibilityHintText))
             // Add is assistive-visible only while the displayed source
             // can add (ND-A11Y-002): the button trait, the activation,
             // and the named action all follow `isAddEnabled`. The
             // element itself keeps one identity across that change so
             // VoiceOver focus survives stepping onto an unavailable
             // source; activation is therefore guarded rather than
-            // removed.
+            // removed. The auxiliary action is always activatable.
             .accessibilityAction {
                 guard isAddEnabled else { return }
-                onAdd(displayedSource)
+                activate(displayedChoice)
             }
             // The activation handler implies the button trait; take it
             // back while Add is unavailable so the element is not
@@ -159,29 +195,44 @@ struct FilterSourcePlusControl: View {
             // (FILTER-PLUS-004): nothing is added and the camera's
             // remembered source does not change until an add succeeds.
             .accessibilityAdjustableAction { direction in
-                let current = sources.firstIndex(of: displayedSource) ?? settledIndex
+                let current = choices.firstIndex(of: displayedChoice) ?? settledIndex
                 let next: Int
                 switch direction {
                 case .increment: next = current + 1
                 case .decrement: next = current - 1
                 @unknown default: return
                 }
-                guard sources.indices.contains(next) else { return }
-                assistiveCandidate = sources[next]
+                guard choices.indices.contains(next) else { return }
+                assistiveCandidate = choices[next]
             }
             .accessibilityActions {
-                if isAddEnabled {
-                    Button("Add filter") { onAdd(displayedSource) }
+                if isAddEnabled, let source = displayedChoice.source {
+                    Button("Add filter") { onAdd(source) }
                 }
+                Button("Open auxiliary filters") { activate(.auxiliaryFilters) }
                 Button("Manage Filter Sets", action: onManage)
             }
+    }
+
+    /// The reason the displayed source cannot add, else the usage hint
+    /// for the displayed choice.
+    private var accessibilityHintText: String {
+        if let displayedUnavailabilityText {
+            return displayedUnavailabilityText
+        }
+        switch displayedChoice {
+        case .source(let source):
+            return FilterWheelPresenter.plusAccessibilityHint(sourceName: sourceName(source))
+        case .auxiliaryFilters:
+            return String(localized: "Double-tap to open the auxiliary filter selection.")
+        }
     }
 
     private var pressGesture: some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in
                 if gesture == nil {
-                    gesture = FilterSourcePlusGestureArbiter(settledIndex: settledIndex, sourceCount: sources.count)
+                    gesture = FilterSourcePlusGestureArbiter(settledIndex: settledIndex, sourceCount: choices.count)
                     browsingHaptic.prepare()
                     longPressTask?.cancel()
                     longPressTask = Task { @MainActor in
@@ -204,7 +255,7 @@ struct FilterSourcePlusControl: View {
                     browsingHaptic.selectionChanged()
                 }
                 let candidate = gesture?.candidateIndex
-                onBrowsingChanged(candidate.flatMap { sources.indices.contains($0) ? sources[$0] : nil })
+                onBrowsingChanged(candidate.flatMap { choices.indices.contains($0) ? choices[$0] : nil })
             }
             .onEnded { _ in
                 longPressTask?.cancel()
@@ -214,16 +265,17 @@ struct FilterSourcePlusControl: View {
                 onBrowsingChanged(nil)
                 switch outcome {
                 case .addBrowsed(let index):
-                    // The browse settled on a different source: add
-                    // exactly one wheel from it. The view model refuses
-                    // and reports when it cannot add.
-                    if sources.indices.contains(index) {
-                        onAdd(sources[index])
+                    // The browse settled on a different choice: add
+                    // exactly one wheel from that source, or open the
+                    // auxiliary popup. The view model refuses and
+                    // reports when a source cannot add.
+                    if choices.indices.contains(index) {
+                        activate(choices[index])
                     }
                 case .add:
-                    // A tap adds the displayed source; when adding is
+                    // A tap acts on the displayed choice; when adding is
                     // unavailable the view model shows the reason.
-                    onAdd(displayedSource)
+                    activate(displayedChoice)
                 case .managed, .none:
                     break
                 }

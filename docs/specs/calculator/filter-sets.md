@@ -282,7 +282,9 @@ could be confused.
   localized total aligned to the trailing side. Total is a primary reading,
   not secondary caption text: its numeric stops value shall be at least the
   size of the selected ND numeric values in the same layout, with sufficient
-  emphasis to read directly in the field. The total shall remain visible
+  emphasis to read directly in the field. The layout shall provide that space
+  without reducing the established ND numeric size, forcing a denser tier, or
+  clipping the existing results and controls. The total shall remain visible
   and untruncated. When both cannot fit, the leading source summary shall yield
   space first and truncate at its trailing edge; it shall not wrap or move the
   total to a second line. The complete source summary shall remain available to

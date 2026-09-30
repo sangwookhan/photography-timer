@@ -287,8 +287,6 @@ struct FilterItemEditorView: View {
                     Text("This value would push the filter stack past 30 stops on \(blocked.cameras.joined(separator: ", ")). Change the mounted filters there first, or use a smaller value.")
                 case .removesSelectedChoice:
                     Text("A choice of this filter is currently selected on \(blocked.cameras.joined(separator: ", ")). Keep that choice, or change the wheel selection on those cameras first.")
-                case .tooManyAuxiliaryFilters:
-                    Text("This filter is mounted on \(blocked.cameras.joined(separator: ", ")), where \(FilterStack.maximumAuxiliaryFilterCount) auxiliary filters are already mounted. Remove an auxiliary filter there first, or keep this filter's kind.")
                 case .tooManyNDWheels:
                     Text("This filter is mounted on \(blocked.cameras.joined(separator: ", ")), where the ND wheels are already full. Remove an ND wheel there first, or keep this filter's kind.")
                 }

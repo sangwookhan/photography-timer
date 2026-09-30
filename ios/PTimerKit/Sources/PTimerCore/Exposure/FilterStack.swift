@@ -219,9 +219,6 @@ public enum FilterStackRejection: Hashable, Sendable, Error {
     /// wheels are never removed or merged automatically
     /// (FILTER-STACK-001, FILTER-AUX-003).
     case tooManyNDWheels
-    /// More auxiliary items than one summary presents
-    /// (`FilterStack.maximumAuxiliaryFilterCount`).
-    case tooManyAuxiliaryFilters
 }
 
 /// Why the selected source cannot currently add a usable wheel.
@@ -276,15 +273,13 @@ public struct FilterStack: Equatable, Sendable {
     /// ND-wheel maximum while any auxiliary filter is mounted: the
     /// summary occupies one of the four spaces.
     public static let maximumWheelCountWithAuxiliaryFilters = 3
-    /// How many physical auxiliary items one summary presents with
-    /// every identity and contribution readable (FILTER-AUX-002).
-    public static let maximumAuxiliaryFilterCount = 3
     static let totalLimit = Double(ExposureScale.maximumWholeNDStops)
 
     public private(set) var wheels: [FilterWheel]
     public private(set) var rows: [ResolvedFilterRow]
-    /// Mounted auxiliary filters in mount order; empty when the
-    /// summary is hidden.
+    /// Mounted auxiliary filters in display order (Color, Effect, CPL,
+    /// GND; then set order, then item order), never mount order; empty
+    /// when the summary is hidden.
     public private(set) var auxiliaryFilters: [MountedAuxiliaryFilter]
     /// Resolved auxiliary filters parallel to `auxiliaryFilters`.
     public private(set) var auxiliaryRows: [ResolvedAuxiliaryFilter]
@@ -332,12 +327,11 @@ public struct FilterStack: Equatable, Sendable {
 
     /// Validating construction: `nil` when any wheel or auxiliary
     /// filter fails to resolve, the wheel count is outside the
-    /// applicable limit, more auxiliary items are mounted than one
-    /// summary presents, a physical item appears twice, or the
-    /// combined contributions exceed the cap.
+    /// applicable limit, a physical item appears twice, or the combined
+    /// contributions exceed the cap. Any number of auxiliary filters
+    /// may be mounted; they are kept in display order.
     public static func validated(wheels: [FilterWheel], auxiliaryFilters: [MountedAuxiliaryFilter], inventory: FilterInventory) -> FilterStack? {
-        guard (1...wheelLimit(hasAuxiliaryFilters: !auxiliaryFilters.isEmpty)).contains(wheels.count),
-              auxiliaryFilters.count <= maximumAuxiliaryFilterCount else {
+        guard (1...wheelLimit(hasAuxiliaryFilters: !auxiliaryFilters.isEmpty)).contains(wheels.count) else {
             return nil
         }
         var rows: [ResolvedFilterRow] = []
@@ -364,7 +358,8 @@ public struct FilterStack: Equatable, Sendable {
         guard isWithinTotalLimit(rows.map(\.contributionStops) + auxiliaryRows.map(\.contributionStops)) else {
             return nil
         }
-        return FilterStack(wheels: wheels, rows: rows, auxiliaryFilters: auxiliaryFilters, auxiliaryRows: auxiliaryRows)
+        let ordered = displayOrdered(auxiliaryRows, inventory: inventory)
+        return FilterStack(wheels: wheels, rows: rows, auxiliaryFilters: ordered.map(\.mount), auxiliaryRows: ordered)
     }
 
     public static func isWithinTotalLimit(_ contributions: [Double]) -> Bool {
@@ -463,19 +458,43 @@ public struct FilterStack: Equatable, Sendable {
     /// filters (FILTER-PERSIST-002): an unresolvable mount — unknown
     /// set or item, a CPL choice that no longer exists, a kind change
     /// — is unmounted rather than substituted, a later duplicate of a
-    /// physical item is dropped, and the list is cut to the summary's
-    /// maximum.
+    /// physical item is dropped, and the rest are put in display order.
     public static func normalizedAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter], inventory: FilterInventory) -> [MountedAuxiliaryFilter] {
         var seen: Set<FilterItemID> = []
-        var normalized: [MountedAuxiliaryFilter] = []
+        var normalized: [ResolvedAuxiliaryFilter] = []
         for mount in mounts {
             guard let resolved = resolvedAuxiliaryFilter(mount, inventory: inventory),
                   seen.insert(mount.itemID).inserted else {
                 continue
             }
-            normalized.append(resolved.mount)
+            normalized.append(resolved)
         }
-        return Array(normalized.prefix(maximumAuxiliaryFilterCount))
+        return displayOrdered(normalized, inventory: inventory).map(\.mount)
+    }
+
+    /// The stable display order of mounted auxiliary filters
+    /// (FILTER-AUX-002): Color, Effect, CPL, GND; within one kind the
+    /// Filter Set order (the camera's candidate sets follow it), then
+    /// the item order inside the set. Mount order never matters.
+    public static func displayOrdered(_ rows: [ResolvedAuxiliaryFilter], inventory: FilterInventory) -> [ResolvedAuxiliaryFilter] {
+        func kindRank(_ kind: FilterItemKind) -> Int {
+            switch kind {
+            case .color: return 0
+            case .effect: return 1
+            case .cpl: return 2
+            case .gnd: return 3
+            case .fixed: return 4
+            }
+        }
+        // Kind rank, set index, item index — compared in that order.
+        func key(_ row: ResolvedAuxiliaryFilter) -> [Int] {
+            let setIndex = inventory.filterSets.firstIndex { $0.id == row.mount.filterSetID } ?? Int.max
+            let itemIndex = inventory.filterSets.indices.contains(setIndex)
+                ? inventory.filterSets[setIndex].items.firstIndex { $0.id == row.mount.itemID } ?? Int.max
+                : Int.max
+            return [kindRank(row.item.behavior.kind), setIndex, itemIndex]
+        }
+        return rows.sorted { key($0).lexicographicallyPrecedes(key($1)) }
     }
 
     /// Splits a legacy mixed stack into its two halves
@@ -802,18 +821,16 @@ public struct FilterStack: Equatable, Sendable {
             }
             resolved.append(row)
         }
-        guard mounts.count <= Self.maximumAuxiliaryFilterCount else {
-            return .failure(.tooManyAuxiliaryFilters)
-        }
         guard wheels.count <= Self.wheelLimit(hasAuxiliaryFilters: !mounts.isEmpty) else {
             return .failure(.tooManyNDWheels)
         }
         guard Self.isWithinTotalLimit(contributions + resolved.map(\.contributionStops)) else {
             return .failure(.exceedsTotalLimit)
         }
+        let ordered = Self.displayOrdered(resolved, inventory: inventory)
         var copy = self
-        copy.auxiliaryFilters = resolved.map(\.mount)
-        copy.auxiliaryRows = resolved
+        copy.auxiliaryFilters = ordered.map(\.mount)
+        copy.auxiliaryRows = ordered
         return .success(copy)
     }
 

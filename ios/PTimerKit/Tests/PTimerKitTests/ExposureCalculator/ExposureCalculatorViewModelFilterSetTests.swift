@@ -770,14 +770,15 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         viewModel.startTimer()
 
         let timer = try XCTUnwrap(viewModel.timers.first)
-        // Main-row order: the auxiliary filters first, then Haida's ND
-        // wheel (log2(400) leads Standard 2); one set group either way.
-        let expected = "Haida 100mm: GND 2 2 stops (Record only) + Red 25A 3 stops + ND400 ND400 · Standard 2 stops"
+        // Main-row order: the auxiliary filters first in display order
+        // (Color before GND), then Haida's ND wheel (log2(400) leads
+        // Standard 2); one set group either way.
+        let expected = "Haida 100mm: Red 25A 3 stops + GND 2 2 stops (Record only) + ND400 ND400 · Standard 2 stops"
         XCTAssertEqual(timer.filterReferenceText, expected)
         XCTAssertEqual(try XCTUnwrap(timer.ndStops), 2 + 3 + log2(400), accuracy: 1e-9, "The primary value is the canonical total, Color loss included.")
-        XCTAssertEqual(timer.filterSummary?[0].contributedStops, 0, "Record only contributes 0 yet appears in the reference.")
-        XCTAssertEqual(timer.filterSummary?[1].itemKind, .color)
-        XCTAssertEqual(timer.filterSummary?[1].contributedStops, 3)
+        XCTAssertEqual(timer.filterSummary?[1].contributedStops, 0, "Record only contributes 0 yet appears in the reference.")
+        XCTAssertEqual(timer.filterSummary?[0].itemKind, .color)
+        XCTAssertEqual(timer.filterSummary?[0].contributedStops, 3)
 
         // Rename, edit, reorder, delete — the captured record never moves.
         viewModel.renameFilterSet(id: haida.id, name: "Renamed")

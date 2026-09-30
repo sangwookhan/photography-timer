@@ -292,17 +292,69 @@ final class FilterStackTests: XCTestCase {
         XCTAssertTrue(cleared.canAddWheel)
     }
 
-    func testAtMostThreeAuxiliaryFiltersMountAtOnce() throws {
-        let items = (0..<4).map { FilterItem(name: "GND \($0)", behavior: .gnd(stops(1))) }
+    /// Any number of auxiliary filters may be mounted; a physical item
+    /// still mounts once, and the 30-stop limit still refuses the whole
+    /// change without touching the committed selection.
+    func testAnyNumberOfAuxiliaryFiltersMountWithinTheCap() throws {
+        let items = (0..<5).map { FilterItem(name: "GND \($0)", behavior: .gnd(stops(1))) }
         let set = FilterSet(name: "GND", color: .purple, items: items)
         let inventory = FilterInventory(filterSets: [set])
         let stack = FilterStack(single: NDStep(stops: 0))
-        let three = try stack.replacingAuxiliaryFilters(with: items.prefix(3).map { mount($0, in: set) }, inventory: inventory).get()
-        XCTAssertEqual(three.auxiliaryFilters.count, 3)
+        let five = try stack.replacingAuxiliaryFilters(with: items.map { mount($0, in: set, .gnd(.applyFullValue)) }, inventory: inventory).get()
+        XCTAssertEqual(five.auxiliaryFilters.count, 5)
+        XCTAssertEqual(five.effectiveStep.stops, 5, accuracy: 1e-9)
         XCTAssertEqual(
-            stack.replacingAuxiliaryFilters(with: items.map { mount($0, in: set) }, inventory: inventory),
-            .failure(.tooManyAuxiliaryFilters)
+            stack.replacingAuxiliaryFilters(with: [mount(items[0], in: set), mount(items[0], in: set)], inventory: inventory),
+            .failure(.itemAlreadyMounted)
         )
+    }
+
+    /// Both selection orders hit the same 30-stop limit: auxiliary
+    /// filters after ND, and ND after auxiliary filters.
+    func testTheCapRefusesAuxiliaryAfterNDAndNDAfterAuxiliary() throws {
+        let color = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 6), .red))
+        let effect = FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 5)))
+        let set = FilterSet(name: "Kit", color: .blue, items: [color, effect])
+        let inventory = FilterInventory(filterSets: [set])
+
+        let ndFirst = FilterStack(single: NDStep(stops: 20))
+        XCTAssertEqual(
+            ndFirst.replacingAuxiliaryFilters(with: [mount(color, in: set), mount(effect, in: set)], inventory: inventory),
+            .failure(.exceedsTotalLimit),
+            "20 + 6 + 5 exceeds 30; the committed stack is unchanged."
+        )
+
+        let auxFirst = try FilterStack(single: NDStep(stops: 0))
+            .replacingAuxiliaryFilters(with: [mount(color, in: set), mount(effect, in: set)], inventory: inventory).get()
+        XCTAssertEqual(auxFirst.remainingBudget(excludingWheelAt: 0), 19, accuracy: 1e-9, "ND can take only what the auxiliary filters leave.")
+        XCTAssertEqual(
+            auxFirst.replacingWheel(at: 0, with: .standard(NDStep(stops: 20)), inventory: inventory),
+            .failure(.exceedsTotalLimit),
+            "Raising the ND wheel past the remaining budget is refused; the auxiliary filters stay."
+        )
+        XCTAssertNoThrow(try auxFirst.replacingWheel(at: 0, with: .standard(NDStep(stops: 19)), inventory: inventory).get())
+    }
+
+    /// Display order is Color, Effect, CPL, GND, then set order, then
+    /// item order — independent of the order items were mounted.
+    func testAuxiliaryFiltersKeepTheirDisplayOrderWhateverTheMountOrder() throws {
+        let gndA = FilterItem(name: "GND A", behavior: .gnd(stops(1)))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, nil])))
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 1), .red))
+        let night = FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 0)))
+        let gndB = FilterItem(name: "GND B", behavior: .gnd(stops(1)))
+        let yellow = FilterItem(name: "Yellow", behavior: .color(FilterExposureLoss(stops: 1), .yellow))
+        let first = FilterSet(name: "First", color: .blue, items: [gndA, cpl, red])
+        let second = FilterSet(name: "Second", color: .green, items: [night, gndB, yellow])
+        let inventory = FilterInventory(filterSets: [first, second])
+        let mounts = [mount(gndB, in: second), mount(yellow, in: second), mount(cpl, in: first), mount(night, in: second), mount(red, in: first), mount(gndA, in: first)]
+
+        let expected = [red.id, yellow.id, night.id, cpl.id, gndA.id, gndB.id]
+        let stack = try FilterStack(single: NDStep(stops: 0)).replacingAuxiliaryFilters(with: mounts, inventory: inventory).get()
+        XCTAssertEqual(stack.auxiliaryFilters.map(\.itemID), expected)
+        let reversed = try FilterStack(single: NDStep(stops: 0)).replacingAuxiliaryFilters(with: mounts.reversed(), inventory: inventory).get()
+        XCTAssertEqual(reversed.auxiliaryFilters.map(\.itemID), expected)
+        XCTAssertEqual(FilterStack.normalizedAuxiliaryFilters(mounts, inventory: inventory).map(\.itemID), expected)
     }
 
     // MARK: FILTER-STACK-005 — auxiliary filters do not take part in ND ordering
@@ -440,16 +492,16 @@ final class FilterStackTests: XCTestCase {
             inventory: inventory
         ).replacingAuxiliaryFilters(with: [mount(gnd, in: set), mount(red, in: set)], inventory: inventory).get()
         let summary = FilterSummaryEntry.summary(for: stack, inventory: inventory)
-        XCTAssertEqual(summary.count, 3, "Auxiliary filters first, then wheels; Empty wheels are omitted.")
+        XCTAssertEqual(summary.count, 3, "Auxiliary filters first (Color before GND), then wheels; Empty wheels are omitted.")
         XCTAssertEqual(summary[2].sourceKind, .standard)
         XCTAssertEqual(summary[2].contributedStops, 6.6)
-        let color = summary[1]
+        let color = summary[0]
         XCTAssertEqual(color.itemKind, .color)
         XCTAssertEqual(color.calculationMode, .fixed, "A Color filter contributes its registered loss.")
         XCTAssertEqual(color.canonicalStops, 3)
         XCTAssertEqual(color.contributedStops, 3)
         XCTAssertNil(color.originalUnit)
-        let entry = summary[0]
+        let entry = summary[1]
         XCTAssertEqual(entry.sourceKind, .filterSet)
         XCTAssertEqual(entry.filterSetID, set.id.rawValue)
         XCTAssertEqual(entry.filterSetName, "Lee holder")

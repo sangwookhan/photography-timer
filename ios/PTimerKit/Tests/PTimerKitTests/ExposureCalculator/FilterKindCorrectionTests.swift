@@ -63,10 +63,11 @@ final class FilterKindCorrectionTests: XCTestCase {
         XCTAssertEqual(viewModel.ndStep.stops, 3, accuracy: 1e-9)
     }
 
-    /// A kind change never deletes selections to make room: when the
-    /// mounted item's new role is full on a camera, Save is blocked
-    /// with the specific limit and nothing changes.
-    func testAKindChangeIntoAFullRoleIsBlockedWithItsLimit() throws {
+    /// A kind change never deletes selections to make room. The
+    /// auxiliary role has no count limit, so a fourth auxiliary item is
+    /// fine; the ND wheel limit and the 30-stop cap still block Save
+    /// with their specific reason, and nothing changes.
+    func testAKindChangeIsBlockedOnlyByTheWheelLimitOrTheCap() throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
         let nd = fixed("ND8", 3)
@@ -82,24 +83,33 @@ final class FilterKindCorrectionTests: XCTestCase {
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd), at: 1)
         XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set), .mount(gnd, in: set), .mount(red, in: set)]))
-        let wheelsBefore = viewModel.filterWheels
-        let mountsBefore = viewModel.mountedAuxiliaryFilters.map(\.mount)
 
+        // Three auxiliary filters already mounted: the corrected ND item
+        // becomes the fourth, in display order (Color first, set order).
         var ndAsColor = nd
         ndAsColor.behavior = .color(FilterExposureLoss(stops: 3), .blue)
-        XCTAssertEqual(viewModel.saveFilterItem(ndAsColor, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .tooManyAuxiliaryFilters))
-        XCTAssertEqual(viewModel.filterWheels, wheelsBefore)
-        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), mountsBefore)
+        XCTAssertEqual(viewModel.saveFilterItem(ndAsColor, in: set.id), .saved)
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.item.id), [nd.id, red.id, cpl.id, gnd.id])
+        XCTAssertFalse(viewModel.filterWheels.contains { $0.mountedItemID == nd.id })
 
         // Summary + three ND wheels: an auxiliary item turned ND has no
         // wheel left to take.
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set), .mount(gnd, in: set)]))
         viewModel.selectFilterSource(.standard)
         viewModel.addFilterWheel()
+        viewModel.addFilterWheel()
         XCTAssertEqual(viewModel.filterWheels.count, 3)
+        let mountsBefore = viewModel.mountedAuxiliaryFilters.map(\.mount)
         var gndAsND = gnd
         gndAsND.behavior = .fixed(FilterRegisteredValue(value: 2, unit: .stops))
         XCTAssertEqual(viewModel.saveFilterItem(gndAsND, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .tooManyNDWheels))
-        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(cpl, in: set), .mount(gnd, in: set)])
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), mountsBefore)
+
+        // A kind change that would push the stack past 30 stops is
+        // blocked by the cap.
+        viewModel.setNDFilterStep(NDStep(stops: 16), at: 0)
+        var heavierRed = red
+        heavierRed.behavior = .color(FilterExposureLoss(stops: 12), .red)
+        XCTAssertEqual(viewModel.saveFilterItem(heavierRed, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .exceedsTotalLimit))
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), mountsBefore)
     }
 }

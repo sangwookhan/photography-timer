@@ -8,8 +8,8 @@ import PTimerCore
 extension ExposureCalculatorViewModel {
     /// Test seam: makes every inventory Filter Set a candidate of the
     /// active camera (FILTER-CAMERA-001), so a test can select a set
-    /// as the Plus source without walking the camera Filter Sets
-    /// screen. Assignment mounts nothing.
+    /// as the Plus source without the Shooting Filters list.
+    /// Assignment mounts nothing.
     func assignAllFilterSetsAsCandidates() {
         setCandidateFilterSetIDs(filterInventory.filterSets.map(\.id))
     }

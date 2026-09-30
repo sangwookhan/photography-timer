@@ -249,7 +249,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             cameraSlotSessionModel: cameraSlotSessionModel,
             targetShutterModel: TargetShutterModel(),
             customFilmLibrary: dependencies.customFilmLibrary,
-            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore),
+            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory),
             isFilterStackOrderingSuspended: isFilterStackOrderingSuspended
         )
     }
@@ -273,7 +273,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         let resolvedCustomLibrary = customFilmLibrary ?? dependencies.customFilmLibrary
         let resolvedInventory = filterInventoryModel
-            ?? FilterInventoryModel(store: dependencies.filterInventoryStore)
+            ?? FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
@@ -284,7 +284,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
             presetFilms: dependencies.presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
-            currentFilterInventory: { resolvedInventory.inventory }
+            // The calculator's mirror, not the inventory model: an
+            // inventory change reaches the facade before the model stores
+            // it, and the session it saves must read the new kinds.
+            currentFilterInventory: { calculatorModel.filterInventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
         self.filterInventoryModel = resolvedInventory
@@ -363,7 +366,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             sessionStore: cameraSlotSessionPersistenceStore,
             presetFilms: presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
-            currentFilterInventory: { resolvedInventory.inventory }
+            // The calculator's mirror, not the inventory model: an
+            // inventory change reaches the facade before the model stores
+            // it, and the session it saves must read the new kinds.
+            currentFilterInventory: { calculatorModel.filterInventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
         self.filterInventoryModel = resolvedInventory
@@ -1887,6 +1893,49 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             return rejection
         }
         guard calculatorModel.filterStack.auxiliaryFilters != before else {
+            return nil
+        }
+        clearFilterRejectionNotice()
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+        reexamineNDWheelCleanup()
+        return nil
+    }
+
+    /// Commits a Shooting Filters session at once (FILTER-AUX-003,
+    /// FILTER-CAMERA-003): the working Filter Set selection and the
+    /// working mounts of the selected sets. Sets left unselected lose
+    /// this camera's auxiliary mounts and ND wheels; one Standard 0-stop
+    /// wheel remains when no ND wheel is left. The sets stay in the
+    /// inventory. Returns the rejection — committing nothing — when the
+    /// result would be invalid.
+    @discardableResult
+    public func applyShootingFilters(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter]
+    ) -> FilterStackRejection? {
+        exitNDWheelReshapingForCommand()
+        defer { attemptFilterStackOrderReconciliation() }
+        let stackBefore = calculatorModel.filterStack
+        let candidatesBefore = calculatorModel.candidateFilterSetIDs
+        // The same ordering rule as the set commit: positions stay while
+        // the screen reader orders the wheels or a reorder is queued.
+        let orderingPolicy: FilterStackCommitOrderingPolicy =
+            isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
+            ? .preserveCurrentOrder
+            : .automatic
+        if let rejection = calculatorModel.applyShootingFilters(
+            selectedFilterSetIDs: selected,
+            mounts: mounts.filter { selected.contains($0.filterSetID) },
+            orderingPolicy: orderingPolicy
+        ) {
+            return rejection
+        }
+        guard calculatorModel.filterStack != stackBefore || calculatorModel.candidateFilterSetIDs != candidatesBefore else {
             return nil
         }
         clearFilterRejectionNotice()

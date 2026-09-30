@@ -16,10 +16,6 @@ public struct FilterSetID: Hashable, Sendable {
     public static func generate() -> FilterSetID {
         FilterSetID(rawValue: UUID().uuidString)
     }
-
-    /// The built-in Default Filter Set (FILTER-SET-002). Generated ids
-    /// are UUIDs, so they never collide with it.
-    public static let defaultSet = FilterSetID(rawValue: "default")
 }
 
 /// Stable identity of one physical filter. Two items with equal
@@ -401,20 +397,6 @@ public struct FilterInventory: Hashable, Sendable {
 
     public static let empty = FilterInventory()
 
-    /// The built-in Default Filter Set as first provided
-    /// (FILTER-SET-002): empty and named Default. Its name, color, and
-    /// items may change later; its id never does.
-    public static let defaultFilterSet = FilterSet(id: .defaultSet, name: "Default", color: .blue)
-
-    /// This inventory with the Default Filter Set present and first
-    /// (FILTER-SET-002/004). A stored Default keeps its name, color, and
-    /// items; the user-created sets keep their order after it.
-    public func ensuringDefaultFilterSet() -> FilterInventory {
-        var sets = filterSets.filter { $0.id != .defaultSet }
-        sets.insert(filterSet(withID: .defaultSet) ?? Self.defaultFilterSet, at: 0)
-        return FilterInventory(filterSets: sets)
-    }
-
     public func filterSet(withID id: FilterSetID) -> FilterSet? {
         filterSets.first { $0.id == id }
     }
@@ -451,19 +433,22 @@ public struct FilterInventory: Hashable, Sendable {
     }
 
     /// A camera's candidate Filter Sets made consistent with this
-    /// inventory and its stack (FILTER-CAMERA-001, FILTER-PERSIST-002):
-    /// unknown sets are dropped, every set a wheel or a mounted
-    /// auxiliary filter still references is included so the restored
-    /// selections stay reachable, and the result follows the
-    /// user-defined set order.
+    /// inventory and its stack (FILTER-CAMERA-001, FILTER-SET-004,
+    /// FILTER-PERSIST-002): unknown and repeated sets are dropped, the
+    /// candidates keep their selection order, and every other set a
+    /// wheel or a mounted auxiliary filter still references is
+    /// appended, in inventory order, so the restored selections stay
+    /// reachable.
     public func normalizedCandidateFilterSetIDs(
         _ candidates: [FilterSetID],
         referencedBy wheels: [FilterWheel],
         auxiliaryFilters: [MountedAuxiliaryFilter]
     ) -> [FilterSetID] {
-        let referenced = Set(candidates)
-            .union(wheels.compactMap { $0.source.filterSetID })
+        let existing = Set(filterSets.map(\.id))
+        var seen: Set<FilterSetID> = []
+        let kept = candidates.filter { existing.contains($0) && seen.insert($0).inserted }
+        let referenced = Set(wheels.compactMap { $0.source.filterSetID })
             .union(auxiliaryFilters.map(\.filterSetID))
-        return filterSets.map(\.id).filter(referenced.contains)
+        return kept + filterSets.map(\.id).filter { referenced.contains($0) && !seen.contains($0) }
     }
 }

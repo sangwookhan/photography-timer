@@ -116,8 +116,9 @@ extension ExposureCalculatorViewModel {
 
     // MARK: Camera candidate Filter Sets (FILTER-CAMERA)
 
-    /// The active camera's candidate Filter Sets in user-defined set
-    /// order. Standard is always available and is not listed.
+    /// The active camera's candidate Filter Sets in their selection
+    /// order (FILTER-SET-004). Standard is always available and is not
+    /// listed.
     public var candidateFilterSetIDs: [FilterSetID] {
         calculatorModel.candidateFilterSetIDs
     }
@@ -162,10 +163,75 @@ extension ExposureCalculatorViewModel {
         return .assigned
     }
 
+    // MARK: Shooting Filters session (FILTER-AUX-003, FILTER-CAMERA-003)
+
+    /// The Selected filters panel of a Shooting Filters session
+    /// (FILTER-FLOW-003): every selected filter in Main's order.
+    public func selectedFilterRows(_ mounts: [MountedAuxiliaryFilter]) -> [SelectedFilterRowDisplayState] {
+        let rows = mounts.compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: filterInventory) }
+        return AuxiliaryFilterSummaryPresenter.selectedFilterRows(for: FilterStack.displayOrdered(rows, inventory: filterInventory))
+    }
+
+    /// The working Selected Sets that still exist, in their selection
+    /// order (FILTER-SET-001/004).
+    public func selectedFilterSets(_ selected: [FilterSetID]) -> [FilterSet] {
+        selected.compactMap(filterInventory.filterSet(withID:))
+    }
+
+    /// The working Selected Sets as Shooting Filters shows them
+    /// (FILTER-SET-004): grouped ND-only, ND and auxiliary,
+    /// auxiliary-only, empty, by their current items, each group in
+    /// selection order.
+    public func displayedSelectedFilterSets(_ selected: [FilterSetID]) -> [FilterSet] {
+        SelectedFilterSetGroup.ordered(selectedFilterSets(selected))
+    }
+
+    /// Every other Filter Set, sorted by name (FILTER-SET-004).
+    public func availableFilterSets(excluding selected: [FilterSetID]) -> [FilterSet] {
+        FilterSetItemOrder.sortedByName(filterInventory.filterSets.filter { !selected.contains($0.id) })
+    }
+
+    /// What applying a Shooting Filters session would yield
+    /// (FILTER-AUX-003/004): the resulting Total, or the reason Apply
+    /// would be refused. Only the working mounts of selected sets count,
+    /// and the ND wheels of unselected sets are left out. Nothing is
+    /// committed.
+    public func shootingFiltersPreview(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter]
+    ) -> Result<NDStep, FilterStackRejection> {
+        calculatorModel.shootingFiltersStack(
+            selectedFilterSetIDs: Set(selected),
+            mounts: mounts.filter { selected.contains($0.filterSetID) }
+        ).result.map(\.effectiveStep)
+    }
+
+    /// One mount change in a Shooting Filters session (FILTER-AUX-007):
+    /// mounting an item or changing its CPL choice or GND mode is refused
+    /// at once when the working state would be invalid — over 30 stops,
+    /// or an auxiliary filter beside four ND wheels that the working Set
+    /// selection keeps — and the session stays as it was. Unmounting is
+    /// always accepted. No ND wheel is ever removed to make room.
+    public func shootingFiltersSession(
+        _ session: ShootingFiltersSession,
+        settingMount mount: MountedAuxiliaryFilter?,
+        for itemID: FilterItemID
+    ) -> Result<ShootingFiltersSession, FilterStackRejection> {
+        var next = session
+        next.setMount(mount, for: itemID)
+        guard mount != nil else {
+            return .success(next)
+        }
+        if case .failure(let rejection) = shootingFiltersPreview(selectedFilterSetIDs: next.selectedFilterSetIDs, mounts: next.mounts) {
+            return .failure(rejection)
+        }
+        return .success(next)
+    }
+
     // MARK: Plus wheel — Filter Source selection (FILTER-PLUS)
 
     /// Standard first, then the active camera's candidate Filter Sets
-    /// that hold ND items, in user-defined order (FILTER-PLUS-001).
+    /// that hold ND items, in their selection order (FILTER-PLUS-001).
     public var filterSources: [FilterSource] {
         calculatorModel.filterSources
     }
@@ -231,16 +297,20 @@ extension ExposureCalculatorViewModel {
         filterInventoryModel.createFilterSet(name: name, color: color)
     }
 
+    /// Saves a new filter into a proposed New Filter Set: the Set and
+    /// the filter are created together, or nothing is (FILTER-ITEM-009).
+    /// A new filter in a new Set is on no camera, so no stack can block it.
+    @discardableResult
+    public func createFilterSet(name: String, color: FilterSetColor, holding item: FilterItem) -> FilterSet? {
+        filterInventoryModel.createFilterSet(name: name, color: color, holding: item)
+    }
+
     public func renameFilterSet(id: FilterSetID, name: String) {
         filterInventoryModel.renameFilterSet(id: id, name: name)
     }
 
     public func recolorFilterSet(id: FilterSetID, color: FilterSetColor) {
         filterInventoryModel.recolorFilterSet(id: id, color: color)
-    }
-
-    public func moveFilterSets(fromOffsets source: IndexSet, toOffset destination: Int) {
-        filterInventoryModel.moveFilterSets(fromOffsets: source, toOffset: destination)
     }
 
     /// Deletes a Filter Set. Wheels referencing it disappear from every
@@ -251,10 +321,6 @@ extension ExposureCalculatorViewModel {
     }
 
     // MARK: Physical item management (FILTER-ITEM)
-
-    public func moveFilterItems(in filterSetID: FilterSetID, fromOffsets source: IndexSet, toOffset destination: Int) {
-        filterInventoryModel.moveItems(in: filterSetID, fromOffsets: source, toOffset: destination)
-    }
 
     /// Deletes a physical item. Every wheel that referenced it becomes
     /// Empty on every camera (FILTER-ITEM-006).
@@ -306,6 +372,11 @@ extension ExposureCalculatorViewModel {
         if let itemIndex = candidate.filterSets[setIndex].items.firstIndex(where: { $0.id == item.id }) {
             candidate.filterSets[setIndex].items[itemIndex] = item
         } else {
+            // A new item, or an existing one moving here from another
+            // set (FILTER-ITEM-009).
+            for index in candidate.filterSets.indices {
+                candidate.filterSets[index].items.removeAll { $0.id == item.id }
+            }
             candidate.filterSets[setIndex].items.append(item)
         }
         var conflicts: [FilterItemSaveConflict] = []
@@ -360,8 +431,12 @@ extension ExposureCalculatorViewModel {
         return nil
     }
 
-    /// Saves a new or edited item into `filterSetID`. Blocked — and
-    /// nothing changes — when any camera stack would exceed the cap.
+    /// Saves a new or edited item into `filterSetID`. An existing item
+    /// saved into another set moves there with its id; every camera that
+    /// references it keeps the reference under that set and gains the
+    /// set as a candidate, without losing the old one (FILTER-ITEM-009).
+    /// Blocked — and nothing changes — when any camera stack would
+    /// exceed the cap.
     @discardableResult
     public func saveFilterItem(_ item: FilterItem, in filterSetID: FilterSetID) -> FilterItemSaveOutcome {
         let conflicts = filterItemSaveConflictDetails(for: item, in: filterSetID)
@@ -372,8 +447,12 @@ extension ExposureCalculatorViewModel {
             let reason = priority.first { candidate in conflicts.contains { $0.reason == candidate } } ?? .exceedsTotalLimit
             return .blocked(affectedCameras: conflicts.map(\.cameraName), reason: reason)
         }
-        if filterInventory.item(withID: item.id) != nil {
-            filterInventoryModel.updateItem(item)
+        if let owner = filterInventory.item(withID: item.id)?.filterSet {
+            if owner.id == filterSetID {
+                filterInventoryModel.updateItem(item)
+            } else {
+                filterInventoryModel.moveItem(item, to: filterSetID)
+            }
         } else {
             filterInventoryModel.addItem(item, to: filterSetID)
         }

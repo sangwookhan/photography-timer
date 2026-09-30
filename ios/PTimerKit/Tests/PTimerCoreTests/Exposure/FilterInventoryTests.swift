@@ -198,19 +198,4 @@ final class FilterInventoryTests: XCTestCase {
         XCTAssertEqual(FilterSetColor.redOrange.rawValue, "redOrange")
         XCTAssertEqual(FilterSetColor.yellowOrange.rawValue, "yellowOrange")
     }
-
-    /// FILTER-SET-002/004: ensuring the Default Filter Set adds it once,
-    /// first, and moves a stored Default back to the front with its
-    /// name, color, and items intact.
-    func testEnsuringTheDefaultFilterSetPlacesItFirstExactlyOnce() {
-        let lee = FilterSet(name: "Lee", color: .red)
-        let ensured = FilterInventory(filterSets: [lee]).ensuringDefaultFilterSet()
-        XCTAssertEqual(ensured.filterSets, [FilterInventory.defaultFilterSet, lee])
-        XCTAssertEqual(ensured.ensuringDefaultFilterSet(), ensured)
-
-        let nd = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
-        let renamed = FilterSet(id: .defaultSet, name: "Bag", color: .green, items: [nd])
-        let moved = FilterInventory(filterSets: [lee, renamed]).ensuringDefaultFilterSet()
-        XCTAssertEqual(moved.filterSets, [renamed, lee])
-    }
 }

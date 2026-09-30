@@ -21,6 +21,10 @@ public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
     /// (`Record only · 3 stops`), a Color filter's optical color name,
     /// or `nil` when the contribution alone describes the item.
     public let detailText: String?
+    /// The same detail as separate parts (`Record only`, `3 stops`), so
+    /// a narrow column can break between parts instead of inside one.
+    /// Empty when there is no detail.
+    public let detailSegments: [String]
     /// Swatch for a Color filter's optical color; `nil` otherwise.
     public let opticalColor: FilterOpticalColor?
     /// The owning set's user-selected color, shown as the source cue.
@@ -28,12 +32,13 @@ public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
     /// Complete spoken description: name, type or mode, contribution.
     public let accessibilityText: String
 
-    public init(itemID: FilterItemID, name: String, kindLabel: String, contributionText: String, detailText: String?, opticalColor: FilterOpticalColor?, sourceColor: FilterSetColor, accessibilityText: String) {
+    public init(itemID: FilterItemID, name: String, kindLabel: String, contributionText: String, detailSegments: [String], opticalColor: FilterOpticalColor?, sourceColor: FilterSetColor, accessibilityText: String) {
         self.itemID = itemID
         self.name = name
         self.kindLabel = kindLabel
         self.contributionText = contributionText
-        self.detailText = detailText
+        self.detailSegments = detailSegments
+        self.detailText = detailSegments.isEmpty ? nil : detailSegments.joined(separator: " · ")
         self.opticalColor = opticalColor
         self.sourceColor = sourceColor
         self.accessibilityText = accessibilityText
@@ -78,11 +83,11 @@ public enum AuxiliaryFilterSummaryPresenter {
         let contribution = FilterWheelPresenter.decimalStopsValue(row.contributionStops)
         let contributionSpoken = FilterWheelPresenter.stopsText(row.contributionStops)
         let kind = row.item.behavior.kind
-        let detail: String?
+        let detail: [String]
         let semanticType: String
         switch row.mount.choice {
         case .cplLoss:
-            detail = nil
+            detail = []
             semanticType = FilterWheelPresenter.kindName(.cpl)
         case .gnd(let mode):
             // Record only: the registered density stays visible beside
@@ -93,17 +98,17 @@ public enum AuxiliaryFilterSummaryPresenter {
             case .recordOnly:
                 let registered = row.item.behavior.registeredValue.map(FilterWheelPresenter.registeredValueText)
                     ?? FilterWheelPresenter.stopsText(row.registeredStops)
-                detail = "\(FilterWheelPresenter.gndModeName(mode)) · \(registered)"
+                detail = [FilterWheelPresenter.gndModeName(mode), registered]
             case .applyFullValue:
-                detail = FilterWheelPresenter.gndModeName(mode)
+                detail = [FilterWheelPresenter.gndModeName(mode)]
             }
             semanticType = "\(FilterWheelPresenter.kindName(.gnd)) \(FilterWheelPresenter.gndModeName(mode))"
         case .registeredLoss:
             if let color = row.item.behavior.opticalColor {
-                detail = FilterWheelPresenter.opticalColorName(color)
+                detail = [FilterWheelPresenter.opticalColorName(color)]
                 semanticType = "\(FilterWheelPresenter.kindName(.color)) \(FilterWheelPresenter.opticalColorName(color))"
             } else {
-                detail = nil
+                detail = []
                 semanticType = FilterWheelPresenter.kindName(kind)
             }
         }
@@ -112,7 +117,7 @@ public enum AuxiliaryFilterSummaryPresenter {
             name: row.item.name,
             kindLabel: FilterWheelPresenter.kindName(kind),
             contributionText: contribution,
-            detailText: detail,
+            detailSegments: detail,
             opticalColor: row.item.behavior.opticalColor,
             sourceColor: row.filterSetColor,
             accessibilityText: "\(row.item.name), \(semanticType), \(contributionSpoken)"

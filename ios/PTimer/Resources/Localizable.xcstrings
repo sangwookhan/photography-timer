@@ -137,6 +137,28 @@
         }
       }
     },
+    "Add auxiliary filter" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보조 필터 추가"
+          }
+        }
+      }
+    },
+    "Add ND filter" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ND 필터 추가"
+          }
+        }
+      }
+    },
     "Add ND wheel" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -232,6 +254,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "최소 한 개의 선택지가 필요합니다."
+          }
+        }
+      }
+    },
+    "Auxiliary filter" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보조 필터"
           }
         }
       }
@@ -753,17 +786,6 @@
         }
       }
     },
-    "Fixed" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "고정"
-          }
-        }
-      }
-    },
     "Four filters already mounted" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -914,6 +936,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ND"
+          }
+        }
+      }
+    },
+    "ND filter" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ND 필터"
           }
         }
       }
@@ -1310,6 +1343,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "광학 색상은 필터를 식별하기 위한 정보이며, 감광량을 정하지 않습니다."
+          }
+        }
+      }
+    },
+    "This filter is mounted on %@, where %lld auxiliary filters are already mounted. Remove an auxiliary filter there first, or keep this filter's kind." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 필터는 %@에 장착되어 있고, 그곳에는 이미 보조 필터가 %lld개 장착되어 있습니다. 먼저 그곳의 보조 필터를 하나 빼거나 이 필터의 종류를 그대로 두세요."
+          }
+        }
+      }
+    },
+    "This filter is mounted on %@, where the ND wheels are already full. Remove an ND wheel there first, or keep this filter's kind." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 필터는 %@에 장착되어 있고, 그곳의 ND 휠은 이미 가득 찼습니다. 먼저 그곳의 ND 휠을 하나 빼거나 이 필터의 종류를 그대로 두세요."
           }
         }
       }

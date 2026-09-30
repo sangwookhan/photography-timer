@@ -217,14 +217,25 @@ public final class CalculatorModel {
     /// filters are unmounted, instead of clamping any value.
     public func applyFilterInventory(_ inventory: FilterInventory) {
         filterInventory = inventory
+        // A kind change moves the selection into the item's new role
+        // first (FILTER-ITEM-005); surviving wheels keep their ids.
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: filterStack.wheels,
+            auxiliaryFilters: filterStack.auxiliaryFilters,
+            inventory: inventory
+        )
         var wheels: [FilterWheel] = []
         var ids: [Int] = []
-        for (index, wheel) in filterStack.wheels.enumerated() {
+        for (wheel, origin) in zip(reassigned.wheels, reassigned.wheelOrigins) {
             guard let normalized = FilterStack.normalizedWheel(wheel, inventory: inventory) else {
                 continue
             }
             wheels.append(normalized)
-            ids.append(ndFilterWheelIDs.indices.contains(index) ? ndFilterWheelIDs[index] : makeNDFilterWheelID())
+            if let origin, ndFilterWheelIDs.indices.contains(origin) {
+                ids.append(ndFilterWheelIDs[origin])
+            } else {
+                ids.append(makeNDFilterWheelID())
+            }
         }
         if wheels.isEmpty {
             wheels = [.standard(NDStep(stops: 0))]
@@ -235,7 +246,7 @@ public final class CalculatorModel {
             guard let itemID = wheel.mountedItemID, !mounted.insert(itemID).inserted else { return wheel }
             return FilterWheel(source: wheel.source, selection: .empty)
         }
-        let auxiliary = FilterStack.normalizedAuxiliaryFilters(filterStack.auxiliaryFilters, inventory: inventory)
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, inventory: inventory)
             .filter { !mounted.contains($0.itemID) }
         if let stack = FilterStack.validated(wheels: wheels, auxiliaryFilters: auxiliary, inventory: inventory) {
             filterStack = stack

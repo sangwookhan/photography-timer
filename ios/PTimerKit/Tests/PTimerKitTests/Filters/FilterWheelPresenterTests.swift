@@ -40,7 +40,7 @@ final class FilterWheelPresenterTests: XCTestCase {
             sourceName: "Lee"
         )
         XCTAssertEqual(label, "Filter 2 of 3, Lee")
-        XCTAssertEqual(fixedDisplay.accessibilityValueText, "Big Stopper, Fixed, 10 stops")
+        XCTAssertEqual(fixedDisplay.accessibilityValueText, "Big Stopper, ND, 10 stops")
 
         let nd8 = FilterItem(name: "Lee ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
         let changedValue = try display(nd8, .fixed, .stops).accessibilityValueText
@@ -58,7 +58,7 @@ final class FilterWheelPresenterTests: XCTestCase {
 
     func testWheelAccessibilityValuesCoverEveryRowKindAndUnavailableState() throws {
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
-        XCTAssertEqual(try display(nd1000, .fixed, .opticalDensity).accessibilityValueText, "Big Stopper, Fixed, 10 stops")
+        XCTAssertEqual(try display(nd1000, .fixed, .opticalDensity).accessibilityValueText, "Big Stopper, ND, 10 stops")
 
         let emptyDisplay = FilterWheelPresenter.rowDisplay(
             for: ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil),
@@ -83,7 +83,7 @@ final class FilterWheelPresenterTests: XCTestCase {
         )
         XCTAssertEqual(
             unavailable.accessibilityValueText,
-            "Big Stopper, Fixed, 10 stops, Exceeds 30 stops"
+            "Big Stopper, ND, 10 stops, Exceeds 30 stops"
         )
 
         // Auxiliary kinds never resolve as wheel rows (FILTER-STACK-003).
@@ -102,7 +102,7 @@ final class FilterWheelPresenterTests: XCTestCase {
             committed: try display(nd8, .fixed, .stops),
             total: total
         )
-        XCTAssertEqual(spoken, "Lee ND8, Fixed, 3 stops, Total 21.6 stops")
+        XCTAssertEqual(spoken, "Lee ND8, ND, 3 stops, Total 21.6 stops")
         XCTAssertEqual(spoken.components(separatedBy: "Total").count - 1, 1, "The Total is spoken exactly once.")
 
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
@@ -111,7 +111,7 @@ final class FilterWheelPresenterTests: XCTestCase {
                 committed: try display(nd1000, .fixed, .opticalDensity),
                 total: NDStackTotalDisplayState(totalStopsText: "13", isAtMaximum: false, wheelCount: 2)
             ),
-            "Big Stopper, Fixed, 10 stops, Total 13 stops",
+            "Big Stopper, ND, 10 stops, Total 13 stops",
             "The value stays canonical stops in every notation; the Total follows it."
         )
 

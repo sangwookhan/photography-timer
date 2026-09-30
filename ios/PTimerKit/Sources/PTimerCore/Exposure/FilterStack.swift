@@ -886,3 +886,104 @@ public struct FilterStack: Equatable, Sendable {
         )
     }
 }
+
+/// The stack after `FilterStack.reassigningRoles`: wheels and mounted
+/// auxiliary filters with every selection in its item's current role,
+/// plus, per returned wheel, the index of the input wheel it came from
+/// (`nil` for a wheel created from an auxiliary mount).
+public struct RoleReassignment: Equatable, Sendable {
+    public let wheels: [FilterWheel]
+    public let auxiliaryFilters: [MountedAuxiliaryFilter]
+    public let wheelOrigins: [Int?]
+}
+
+extension FilterStack {
+    /// Role correction after an item's kind changes (FILTER-ITEM-003,
+    /// FILTER-ITEM-005): a selection follows its physical item into the
+    /// item's new role instead of being dropped. A wheel mounting an
+    /// item that is now auxiliary leaves the ND row and the item is
+    /// mounted as an auxiliary filter with its default choice (a legacy
+    /// CPL / GND wheel row keeps its choice); an auxiliary mount whose
+    /// item is now ND becomes a Filter Set ND wheel at the end of the
+    /// row; an auxiliary mount whose item changed to another auxiliary
+    /// kind takes that kind's default choice. Mounts of unknown sets or
+    /// items are left for normal re-resolution. A result with no wheel
+    /// gets one Standard 0 wheel. `wheelOrigins` gives, per returned
+    /// wheel, the index of the input wheel it came from (`nil` for a
+    /// new wheel). Limits are not checked here; callers validate.
+    public static func reassigningRoles(
+        wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter],
+        inventory: FilterInventory
+    ) -> RoleReassignment {
+        func item(_ itemID: FilterItemID, in filterSetID: FilterSetID) -> FilterItem? {
+            inventory.filterSet(withID: filterSetID)?.item(withID: itemID)
+        }
+        var keptWheels: [FilterWheel] = []
+        var origins: [Int?] = []
+        var mounts = auxiliaryFilters
+        for (index, wheel) in wheels.enumerated() {
+            if case .item(let selection) = wheel.selection,
+               let filterSetID = wheel.source.filterSetID,
+               let mountedItem = item(selection.itemID, in: filterSetID),
+               mountedItem.behavior.kind.isAuxiliary {
+                if !mounts.contains(where: { $0.itemID == selection.itemID }),
+                   let choice = carriedChoice(selection.choice, for: mountedItem) ?? MountedAuxiliaryFilter.initialChoice(for: mountedItem) {
+                    mounts.append(MountedAuxiliaryFilter(filterSetID: filterSetID, itemID: selection.itemID, choice: choice))
+                }
+                continue
+            }
+            keptWheels.append(wheel)
+            origins.append(index)
+        }
+        var keptMounts: [MountedAuxiliaryFilter] = []
+        for mount in mounts {
+            guard let mountedItem = item(mount.itemID, in: mount.filterSetID) else {
+                keptMounts.append(mount)
+                continue
+            }
+            if !mountedItem.behavior.kind.isAuxiliary {
+                keptWheels.append(FilterWheel(
+                    source: .filterSet(mount.filterSetID),
+                    selection: .item(FilterRowSelection(itemID: mount.itemID, choice: .fixed))
+                ))
+                origins.append(nil)
+            } else if !choice(mount.choice, fitsKindOf: mountedItem),
+                      let choice = MountedAuxiliaryFilter.initialChoice(for: mountedItem) {
+                keptMounts.append(MountedAuxiliaryFilter(filterSetID: mount.filterSetID, itemID: mount.itemID, choice: choice))
+            } else {
+                keptMounts.append(mount)
+            }
+        }
+        if keptWheels.isEmpty {
+            keptWheels = [.standard(NDStep(stops: 0))]
+            origins = [nil]
+        }
+        return RoleReassignment(wheels: keptWheels, auxiliaryFilters: keptMounts, wheelOrigins: origins)
+    }
+
+    /// A legacy wheel row's CPL or GND choice, when it matches the
+    /// item's current kind.
+    private static func carriedChoice(_ choice: FilterRowChoice, for item: FilterItem) -> AuxiliaryFilterChoice? {
+        switch (choice, item.behavior) {
+        case (.cplLoss(let loss), .cpl):
+            return .cplLoss(loss)
+        case (.gnd(let mode), .gnd):
+            return .gnd(mode)
+        default:
+            return nil
+        }
+    }
+
+    /// Whether an auxiliary choice belongs to the item's kind; a CPL
+    /// value that is no longer configured still counts as the CPL kind,
+    /// so it is reported by re-resolution instead of being replaced.
+    private static func choice(_ choice: AuxiliaryFilterChoice, fitsKindOf item: FilterItem) -> Bool {
+        switch (choice, item.behavior) {
+        case (.cplLoss, .cpl), (.gnd, .gnd), (.registeredLoss, .color), (.registeredLoss, .effect):
+            return true
+        default:
+            return false
+        }
+    }
+}

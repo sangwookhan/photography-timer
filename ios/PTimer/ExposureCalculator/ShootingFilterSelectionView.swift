@@ -111,6 +111,14 @@ struct ShootingFilterSelectionView: View {
                 }
             }
         }
+        // The committed mounts can change underneath the popup, for
+        // example when an item's kind is corrected in Filter Set
+        // management opened from here (FILTER-ITEM-005). The working
+        // selection restarts from the new committed state, so Apply can
+        // never undo that change with a stale selection.
+        .onChange(of: committed) { _, newValue in
+            draft = newValue
+        }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }

@@ -40,8 +40,10 @@ struct ShootingFilterSelectionView: View {
         viewModel.mountedAuxiliaryFilters.map(\.mount)
     }
 
+    /// Mount order never matters (display order is fixed), so the
+    /// working selection is compared as a set.
     private var hasChanges: Bool {
-        draft != committed
+        Set(draft) != Set(committed)
     }
 
     private var preview: Result<NDStep, FilterStackRejection> {
@@ -133,19 +135,22 @@ struct ShootingFilterSelectionView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            ForEach(auxiliarySets) { filterSet in
-                Section {
-                    ForEach(filterSet.auxiliaryItems) { item in
-                        AuxiliaryItemSelectionRow(
-                            item: item,
-                            filterSetID: filterSet.id,
-                            mount: binding(for: item, in: filterSet)
-                        )
-                    }
-                } header: {
-                    HStack(spacing: 6) {
-                        FilterSetColorSwatch(color: filterSet.color, size: 10)
-                        Text(filterSet.name)
+            // The stable auxiliary order (FILTER-AUX-002): Color, Effect,
+            // CPL, GND; within a kind the candidate set order, then the
+            // item order. The whole list scrolls however many there are.
+            ForEach(Self.auxiliaryKindOrder, id: \.self) { kind in
+                let entries = auxiliaryEntries(of: kind)
+                if !entries.isEmpty {
+                    Section {
+                        ForEach(entries, id: \.item.id) { entry in
+                            AuxiliaryItemSelectionRow(
+                                item: entry.item,
+                                filterSet: entry.filterSet,
+                                mount: binding(for: entry.item, in: entry.filterSet)
+                            )
+                        }
+                    } header: {
+                        Text(FilterWheelPresenter.kindName(kind))
                     }
                 }
             }
@@ -161,21 +166,37 @@ struct ShootingFilterSelectionView: View {
         .listStyle(.insetGrouped)
     }
 
+    static let auxiliaryKindOrder: [FilterItemKind] = [.color, .effect, .cpl, .gnd]
+
+    /// Candidate auxiliary items of one kind, in set order then item
+    /// order.
+    private func auxiliaryEntries(of kind: FilterItemKind) -> [(filterSet: FilterSet, item: FilterItem)] {
+        auxiliarySets.flatMap { filterSet in
+            filterSet.auxiliaryItems
+                .filter { $0.behavior.kind == kind }
+                .map { (filterSet: filterSet, item: $0) }
+        }
+    }
+
+    /// The auxiliary-only subtotal of the working selection. The whole
+    /// Total is not shown here: it includes ND wheels this tab does not
+    /// show, and it stays on Main. The 30-stop guard still checks the
+    /// complete stack, so an over-limit selection shows its reason.
     @ViewBuilder
     private var previewRow: some View {
         switch preview {
-        case .success(let total):
-            let state = NDStackTotalDisplayState(effectiveStep: total, wheelCount: 1)
+        case .success:
+            let subtotal = FilterWheelPresenter.decimalStopsValue(viewModel.auxiliaryFiltersSubtotal(draft))
             HStack {
-                Text(FilterStatusRegionPresenter.totalLeadingWord())
+                Text("Auxiliary subtotal")
                 Spacer()
-                Text("\(state.totalStopsText) \(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: state.isAtMaximum))")
+                Text("\(subtotal) \(String(localized: "stops"))")
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(FilterStatusRegionPresenter.totalText(state)))
-            .accessibilityIdentifier("shooting-filters-total")
+            .accessibilityLabel(Text("Auxiliary subtotal \(subtotal) \(String(localized: "stops"))"))
+            .accessibilityIdentifier("shooting-filters-auxiliary-subtotal")
         case .failure(let rejection):
             Label(FilterWheelPresenter.rejectionText(for: rejection), systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
@@ -254,9 +275,14 @@ struct ShootingFilterSelectionView: View {
 /// show their registered loss; nothing is inferred.
 private struct AuxiliaryItemSelectionRow: View {
     let item: FilterItem
-    /// The set the item belongs to; a fresh mount names it.
-    let filterSetID: FilterSetID
+    /// The set the item belongs to: a fresh mount names it, and its
+    /// color and name identify the source in the kind-ordered list.
+    let filterSet: FilterSet
     @Binding var mount: MountedAuxiliaryFilter?
+
+    private var filterSetID: FilterSetID {
+        filterSet.id
+    }
 
     private var isMounted: Binding<Bool> {
         Binding(
@@ -291,6 +317,12 @@ private struct AuxiliaryItemSelectionRow: View {
                     Text(registeredDetail)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        FilterSetColorSwatch(color: filterSet.color, size: 8)
+                        Text(filterSet.name)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
             }
             .accessibilityIdentifier("auxiliary-item-toggle-\(item.id.rawValue)")

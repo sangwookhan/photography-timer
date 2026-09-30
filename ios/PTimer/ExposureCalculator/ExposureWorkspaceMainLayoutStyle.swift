@@ -553,18 +553,49 @@ enum ExposureWorkspaceMainLayoutStyle {
 
     /// Height reserved for the single status region under the wheel
     /// row (FILTER-STACK-008) at the default text size: exactly one
-    /// caption row plus its ordinary vertical padding (the view scales
-    /// it with Dynamic Type). The removed second line reserves no
-    /// capacity; its height returns to the wheel row and to the
-    /// density budget. Content changes stay inside this one row, so no
-    /// picker or touch center moves.
+    /// visual row (the view scales it with Dynamic Type). The row holds
+    /// the Total's numerals at the ND numeral size of the current
+    /// layout, so it reserves the tallest of them, the one-space size,
+    /// for every layout: the numerals' cap height plus the caption
+    /// text's descent below the shared baseline, or one caption line
+    /// plus its padding when that is taller. Only visible glyph extent
+    /// is reserved, not the numeral font's full line height, so the
+    /// region stays one row and the tier fit keeps its budget. Content
+    /// and wheel-count changes stay inside this fixed row, so no picker
+    /// or touch center moves.
     var filterStatusRegionHeight: CGFloat {
-        Self.lineHeight(filterStatusRegionTextStyle) + 2 * filterStatusRegionVerticalPadding
+        max(
+            Self.lineHeight(filterStatusRegionTextStyle) + 2 * filterStatusRegionVerticalPadding,
+            filterStatusTotalReservedAscent + filterStatusRegionBaselineDescent
+        )
     }
 
-    /// Vertical padding above and below the one status row.
+    /// Vertical padding above and below a caption-only status row.
     var filterStatusRegionVerticalPadding: CGFloat {
         1
+    }
+
+    /// Space between the wheel row and the status region. The region's
+    /// top already starts at the numerals' cap height (plus a small
+    /// allowance), so this gap is the visible separation from the
+    /// wheels above.
+    var filterStatusRegionTopSpacing: CGFloat {
+        2
+    }
+
+    /// Distance from the region's bottom edge up to the row's shared
+    /// baseline: the caption font's descent, so descenders of the
+    /// source summary and the unit words stay inside the region.
+    var filterStatusRegionBaselineDescent: CGFloat {
+        Self.descent(filterStatusRegionTextStyle)
+    }
+
+    /// Height above the baseline reserved for the Total's numerals: the
+    /// cap height of the value font at the largest ND numeral size of
+    /// this tier (one occupied space), plus a half-point allowance for
+    /// the round digits' overshoot.
+    var filterStatusTotalReservedAscent: CGFloat {
+        Self.roundedSemiboldCapHeight(ofSize: wheelRowValuePointSize(forNDWheelCount: 1)) + 0.5
     }
 
     var filterStatusRegionTextStyle: UIFont.TextStyle {
@@ -586,21 +617,15 @@ enum ExposureWorkspaceMainLayoutStyle {
     }
 
     /// The Total's numeric value in the status row (FILTER-STACK-008):
-    /// semibold, rounded, primary — the largest glyph that still fits
-    /// the region's single caption row, so its emphasis rises without
-    /// the region growing. (Matching the ND numeric size exactly does
-    /// not fit the current vertical budget; see the PR discussion.)
-    var filterStatusTotalValueFont: Font {
-        .system(size: filterStatusTotalValuePointSize, weight: .semibold, design: .rounded)
+    /// semibold, rounded, primary, at the ND numeral size of the same
+    /// layout (Base Shutter and every ND wheel share that size), so
+    /// Total is never smaller than the ND values beside it.
+    func filterStatusTotalValueFont(forOccupiedSpaceCount count: Int) -> Font {
+        .system(size: filterStatusTotalValuePointSize(forOccupiedSpaceCount: count), weight: .semibold, design: .rounded)
     }
 
-    var filterStatusTotalValuePointSize: CGFloat {
-        switch self {
-        case .regular, .compact:
-            return 15
-        case .dense:
-            return 12
-        }
+    func filterStatusTotalValuePointSize(forOccupiedSpaceCount count: Int) -> CGFloat {
+        wheelRowValuePointSize(forNDWheelCount: count)
     }
 
     /// Fonts of the auxiliary summary column (FILTER-AUX-002): the
@@ -832,7 +857,7 @@ struct VariableSectionView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: style.bodySpacing) {
+        VStack(alignment: .leading, spacing: style.filterStatusRegionTopSpacing) {
             HStack(alignment: .top, spacing: style.inputColumnSpacing) {
                 ShutterSelectionRow(
                     baseShutter: $baseShutter,
@@ -905,6 +930,7 @@ struct VariableSectionView: View {
                     total: ndStackTotalDisplayState,
                     idleSourceSummary: idleSourceSummary
                 ),
+                occupiedSpaceCount: occupiedSpaceCount,
                 style: style
             )
         }
@@ -925,6 +951,9 @@ struct VariableSectionView: View {
 /// listening through the source summary or item detail.
 struct FilterStatusRegionView: View {
     let content: FilterStatusRegionContent?
+    /// ND wheels plus the auxiliary summary: selects the ND numeral
+    /// size the Total's value matches (FILTER-STACK-008).
+    let occupiedSpaceCount: Int
     let style: ExposureWorkspaceMainLayoutStyle
 
     @StateObject private var controller = FilterStatusRegionViewModel()
@@ -993,8 +1022,14 @@ struct FilterStatusRegionView: View {
                 .accessibilityElement(children: .contain)
             }
         }
+        // The shared baseline sits one caption descent above the bottom
+        // edge, so the Total's numerals rise into the reserved cap
+        // height and every descender stays inside the region.
+        .alignmentGuide(.bottom) { dimensions in
+            dimensions[.firstTextBaseline] + style.filterStatusRegionBaselineDescent * max(1, textScale)
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: style.filterStatusRegionHeight * max(1, textScale), alignment: .top)
+        .frame(height: style.filterStatusRegionHeight * max(1, textScale), alignment: .bottom)
         .clipped()
         .animation(isShowingHeldDetail ? nil : .easeInOut(duration: 0.15), value: displayedContent)
         .onAppear { controller.apply(content) }
@@ -1016,7 +1051,7 @@ struct FilterStatusRegionView: View {
                     .font(style.filterStatusRegionFont)
                     .foregroundStyle(.secondary)
                 Text(value)
-                    .font(style.filterStatusTotalValueFont)
+                    .font(style.filterStatusTotalValueFont(forOccupiedSpaceCount: occupiedSpaceCount))
                     .monospacedDigit()
                     .foregroundStyle(.primary)
                 Text(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: content.isTotalAtMaximum))
@@ -1650,10 +1685,28 @@ extension ExposureWorkspaceMainLayoutStyle {
     /// (SHELL-011), so the budget deliberately ignores the live
     /// Dynamic Type setting.
     private static func lineHeight(_ textStyle: UIFont.TextStyle) -> CGFloat {
+        defaultSizeFont(textStyle).lineHeight
+    }
+
+    /// Descent below the baseline of a text style at the default size.
+    private static func descent(_ textStyle: UIFont.TextStyle) -> CGFloat {
+        -defaultSizeFont(textStyle).descender
+    }
+
+    private static func defaultSizeFont(_ textStyle: UIFont.TextStyle) -> UIFont {
         UIFont.preferredFont(
             forTextStyle: textStyle,
             compatibleWith: UITraitCollection(preferredContentSizeCategory: .large)
-        ).lineHeight
+        )
+    }
+
+    /// Cap height of the rounded semibold system font the numerals use.
+    private static func roundedSemiboldCapHeight(ofSize size: CGFloat) -> CGFloat {
+        let base = UIFont.systemFont(ofSize: size, weight: .semibold)
+        guard let rounded = base.fontDescriptor.withDesign(.rounded) else {
+            return base.capHeight
+        }
+        return UIFont(descriptor: rounded, size: size).capHeight
     }
 
     /// This tier's complete worst-case visible content (SHELL-012),
@@ -1710,7 +1763,7 @@ extension ExposureWorkspaceMainLayoutStyle {
             pickerLabelSpacing: pickerLabelSpacing,
             wheelLabelRow: filterWheelLabelRowHeight,
             picker: pickerHeight,
-            wheelBodySpacing: bodySpacing,
+            wheelBodySpacing: filterStatusRegionTopSpacing,
             statusRegion: filterStatusRegionHeight,
             filmResultBlock: filmResultCardMinHeight
         )

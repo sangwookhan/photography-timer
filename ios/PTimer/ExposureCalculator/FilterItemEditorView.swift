@@ -231,8 +231,8 @@ struct FilterItemEditorView: View {
 
                 if kind == .gnd {
                     Section {
-                        Text("While shooting, a GND wheel offers Record only (0 stops) and Apply full value (its full registered density). Record only is the default.")
-                        Text("Apply full value suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation.")
+                        Text("While shooting, a GND offers Record only (0 stops) and Apply to exposure (its full registered density). Record only is the default.")
+                        Text("Apply to exposure suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation.")
                             .foregroundStyle(.secondary)
                     } header: {
                         Text("Calculation modes")

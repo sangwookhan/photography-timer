@@ -52,13 +52,9 @@ struct ExposureCalculatorScreen: View {
     /// sheet's `onDismiss`.
     @State private var pendingFormulaSeedFilmID: String?
     @State private var isAboutPresented = false
-    /// Visibility of the Filter Set management sheet (Filter Set
-    /// contract): reached from the ND header entry and by
-    /// long-pressing the Plus wheel.
-    @State private var isFilterSetManagementPresented = false
-    /// Visibility of the shooting popup (FILTER-FLOW-002): the ND
-    /// header entry, the Plus auxiliary action, and the mounted
-    /// summary open it on the auxiliary tab.
+    /// Visibility of Shooting Filters (FILTER-FLOW-002): the ND header
+    /// entry, the Plus auxiliary action, and the mounted summary all
+    /// open the same auxiliary-selection surface.
     @State private var isShootingFilterSelectionPresented = false
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
@@ -204,9 +200,6 @@ struct ExposureCalculatorScreen: View {
                     },
                     onRequestRename: { slotID in
                         slotIDPendingRename = slotID
-                    },
-                    onManageFilterSets: {
-                        isFilterSetManagementPresented = true
                     },
                     onOpenShootingFilters: {
                         isShootingFilterSelectionPresented = true
@@ -389,11 +382,6 @@ struct ExposureCalculatorScreen: View {
                             presentedFilmDetails = viewModel.filmModeDetailsDisplayState
                         }
                     )
-                }
-            }
-            .sheet(isPresented: $isFilterSetManagementPresented) {
-                FilterSetManagementView(viewModel: viewModel) {
-                    isFilterSetManagementPresented = false
                 }
             }
             .sheet(isPresented: $isShootingFilterSelectionPresented) {
@@ -626,7 +614,6 @@ private struct ExposureWorkspaceMainContent: View {
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
-    let onManageFilterSets: () -> Void
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
 
@@ -643,7 +630,6 @@ private struct ExposureWorkspaceMainContent: View {
                         onRequestRename: {
                             onRequestRename(slotID)
                         },
-                        onManageFilterSets: onManageFilterSets,
                         onOpenShootingFilters: onOpenShootingFilters,
                         onShowAbout: onShowAbout
                     )
@@ -714,7 +700,6 @@ private struct CameraSlotCalculatorPage: View {
     /// through only on the active page; inactive pages pass `nil`
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
-    let onManageFilterSets: () -> Void
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
 
@@ -863,10 +848,6 @@ private struct CameraSlotCalculatorPage: View {
                     : .standard,
                 addUnavailabilityText: { source in
                     pageState.isActive ? viewModel.filterAddUnavailabilityText(for: source) : nil
-                },
-                onManageFilterSets: {
-                    guard pageState.isActive else { return }
-                    onManageFilterSets()
                 },
                 onOpenShootingFilters: {
                     guard pageState.isActive else { return }

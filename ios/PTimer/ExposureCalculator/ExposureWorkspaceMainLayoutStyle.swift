@@ -844,8 +844,7 @@ struct VariableSectionView: View {
     let filterSources: [FilterSource]
     let selectedFilterSource: FilterSource
     let addUnavailabilityText: (FilterSource) -> String?
-    let onManageFilterSets: () -> Void
-    /// Opens the shooting popup on the auxiliary tab (FILTER-FLOW-002):
+    /// Opens Shooting Filters (FILTER-FLOW-002):
     /// from the ND header, the Plus auxiliary action, or the summary.
     let onOpenShootingFilters: () -> Void
     /// The mounted auxiliary filters' summary; `nil` hides the space
@@ -877,7 +876,7 @@ struct VariableSectionView: View {
         case .source(let source):
             return filterSourceName(source)
         case .auxiliaryFilters:
-            return AuxiliaryFilterSummaryPresenter.title
+            return String(localized: "Shooting filters")
         case nil:
             return nil
         }
@@ -932,7 +931,6 @@ struct VariableSectionView: View {
                     filterSources: filterSources,
                     selectedFilterSource: selectedFilterSource,
                     addUnavailabilityText: addUnavailabilityText,
-                    onManageFilterSets: onManageFilterSets,
                     onOpenShootingFilters: onOpenShootingFilters,
                     auxiliarySummary: auxiliarySummary,
                     occupiedSpaceCount: occupiedSpaceCount,
@@ -1178,7 +1176,6 @@ private struct NDFilterGroupView: View {
     let filterSources: [FilterSource]
     let selectedFilterSource: FilterSource
     let addUnavailabilityText: (FilterSource) -> String?
-    let onManageFilterSets: () -> Void
     /// Opens the shooting popup (FILTER-FLOW-002): the header entry,
     /// the Plus auxiliary action, and the mounted summary all lead
     /// here.
@@ -1248,7 +1245,7 @@ private struct NDFilterGroupView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Shooting filters"))
-                .accessibilityHint(Text("Choose the auxiliary filters and ND sources for this camera"))
+                .accessibilityHint(Text("Manages Filter Sets and auxiliary filters. ND values are selected on Main."))
                 .accessibilityIdentifier("shooting-filters-button")
 
                 Spacer(minLength: 4)
@@ -1326,7 +1323,6 @@ private struct NDFilterGroupView: View {
                         addUnavailabilityText: addUnavailabilityText,
                         onAdd: onAddFilterWheel,
                         onOpenAuxiliaryFilters: onOpenShootingFilters,
-                        onManage: onManageFilterSets,
                         onBrowsingChanged: onBrowsingChoiceChanged
                     )
                     .padding(.top, style.filterWheelLabelRowHeight)

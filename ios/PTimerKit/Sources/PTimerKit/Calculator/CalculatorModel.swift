@@ -894,7 +894,7 @@ public final class CalculatorModel {
 // MARK: - Candidate Filter Sets and auxiliary filters (FILTER-CAMERA, FILTER-AUX)
 
 extension CalculatorModel {
-    /// The Filter Sources the Plus wheel and the popup's ND tab offer
+    /// The Filter Sources the Plus wheel offers
     /// (FILTER-PLUS-001): Standard, then this camera's candidate sets
     /// that hold at least one ND item.
     public var filterSources: [FilterSource] {

@@ -21,17 +21,15 @@ import SwiftUI
 ///   adding, and a return to the starting source does nothing
 ///   (FR-1.13). The camera's remembered source changes only when an
 ///   add succeeds; a refused add shows its reason in the status row;
-/// - a stationary long press opens Filter Set management; movement
-///   past the stationary tolerance cancels it, and once the drag
-///   threshold is crossed browsing has won for the rest of the touch
-///   (FILTER-PLUS-001).
+/// - once the drag threshold is crossed browsing has won for the rest
+///   of the touch; Filter Sets are managed from Shooting Filters, not
+///   from a long press (FILTER-FLOW-005).
 ///
 /// At rest the compact control shows the candidate source's color as a
 /// secondary cue. VoiceOver exposes ONE focusable element: its
 /// adjustable value steps a transient displayed candidate through the
 /// choices without adding or touching the camera's remembered source,
-/// Manage Filter Sets and Open auxiliary filters are always named
-/// actions, and Add — activation and the named action — exists only
+/// Open shooting filters is always a named action, and Add — activation and the named action — exists only
 /// while the DISPLAYED source can add right now; otherwise the hint
 /// carries the reason and the element stays focusable and adjustable
 /// so the user can browse away (FILTER-A11Y-001, FILTER-PLUS-004,
@@ -53,18 +51,16 @@ struct FilterSourcePlusControl: View {
     /// Adds one wheel for the given source; the view model refuses and
     /// reports when the source cannot add.
     let onAdd: (FilterSource) -> Void
-    /// Opens the shooting popup on the auxiliary tab; adds nothing and
+    /// Opens Shooting Filters; adds nothing and
     /// leaves the remembered source alone (FILTER-PLUS-003).
     let onOpenAuxiliaryFilters: () -> Void
-    let onManage: () -> Void
     /// Candidate choice while browsing, `nil` when idle. The parent
     /// renders the expanded, non-blocking label.
     let onBrowsingChanged: (FilterPlusChoice?) -> Void
 
-    /// Classifies the current touch (tap / long press / browse); `nil`
-    /// between touches.
+    /// Classifies the current touch (tap / browse); `nil` between
+    /// touches.
     @State private var gesture: FilterSourcePlusGestureArbiter?
-    @State private var longPressTask: Task<Void, Never>?
     @State private var browsingHaptic = UISelectionFeedbackGenerator()
     /// The choice an assistive increment / decrement is browsing —
     /// displayed and announced, never persisted. Cleared when the
@@ -102,7 +98,7 @@ struct FilterSourcePlusControl: View {
         case .source(let source):
             return sourceName(source)
         case .auxiliaryFilters:
-            return AuxiliaryFilterSummaryPresenter.title
+            return String(localized: "Shooting filters")
         }
     }
 
@@ -209,8 +205,7 @@ struct FilterSourcePlusControl: View {
                 if isAddEnabled, let source = displayedChoice.source {
                     Button("Add filter") { onAdd(source) }
                 }
-                Button("Open auxiliary filters") { activate(.auxiliaryFilters) }
-                Button("Manage Filter Sets", action: onManage)
+                Button("Open shooting filters") { activate(.auxiliaryFilters) }
             }
     }
 
@@ -224,7 +219,7 @@ struct FilterSourcePlusControl: View {
         case .source(let source):
             return FilterWheelPresenter.plusAccessibilityHint(sourceName: sourceName(source))
         case .auxiliaryFilters:
-            return String(localized: "Double-tap to open the auxiliary filter selection.")
+            return String(localized: "Double-tap to open Shooting filters.")
         }
     }
 
@@ -234,23 +229,11 @@ struct FilterSourcePlusControl: View {
                 if gesture == nil {
                     gesture = FilterSourcePlusGestureArbiter(settledIndex: settledIndex, sourceCount: choices.count)
                     browsingHaptic.prepare()
-                    longPressTask?.cancel()
-                    longPressTask = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: UInt64(FilterSourcePlusGestureArbiter.longPressDuration * 1_000_000_000))
-                        guard !Task.isCancelled, gesture?.deadlineElapsed() == true else { return }
-                        onManage()
-                    }
                 }
                 let wasBrowsing = gesture?.phase == .browsing
                 guard gesture?.moved(translation: value.translation) == true else {
-                    if gesture?.phase != .pressing {
-                        // Past the stationary tolerance: the long press
-                        // can no longer complete.
-                        longPressTask?.cancel()
-                    }
                     return
                 }
-                longPressTask?.cancel()
                 if wasBrowsing {
                     browsingHaptic.selectionChanged()
                 }
@@ -258,8 +241,6 @@ struct FilterSourcePlusControl: View {
                 onBrowsingChanged(candidate.flatMap { choices.indices.contains($0) ? choices[$0] : nil })
             }
             .onEnded { _ in
-                longPressTask?.cancel()
-                longPressTask = nil
                 let outcome = gesture?.released() ?? .none
                 gesture = nil
                 onBrowsingChanged(nil)

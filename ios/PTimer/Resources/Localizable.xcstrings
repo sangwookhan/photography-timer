@@ -60,13 +60,13 @@
         }
       }
     },
-    "%lld auxiliary · %lld ND" : {
+    "%lld auxiliary filters" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보조 %lld · ND %lld"
+            "value" : "선택된 보조 필터 %lld개"
           }
         }
       }
@@ -82,17 +82,6 @@
         }
       }
     },
-    "%lld filters" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "필터 %lld개"
-          }
-        }
-      }
-    },
     "+ %lld more" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -104,13 +93,13 @@
         }
       }
     },
-    "1 filter" : {
+    "1 auxiliary filter" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "필터 1개"
+            "value" : "선택된 보조 필터 1개"
           }
         }
       }
@@ -148,6 +137,28 @@
         }
       }
     },
+    "A selected Filter Set offers its auxiliary filters here and its ND filters to Plus on Main. Apply commits the Selected Sets and selected filters together; a removed set's filters and ND wheels come off this camera, and the set stays in your inventory. Cancel keeps the current shot unchanged." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택한 Filter Set의 보조 필터는 여기에, ND 필터는 Main의 +에 제공됩니다. 적용하면 선택한 Filter Set과 필터가 함께 반영되며, 뺀 세트의 필터와 ND 휠은 이 카메라에서 빠지고 세트는 인벤토리에 남습니다. 취소하면 현재 촬영 상태가 그대로 유지됩니다."
+          }
+        }
+      }
+    },
+    "Add %@ to Selected Filter Sets" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@을(를) 선택한 Filter Set에 추가"
+          }
+        }
+      }
+    },
     "Add Filter Set" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -159,24 +170,13 @@
         }
       }
     },
-    "Add ND wheel" : {
+    "Add filter to %@" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ND 휠 추가"
-          }
-        }
-      }
-    },
-    "Adding an ND wheel takes effect immediately and becomes the source Plus adds next. Only a candidate Filter Set with ND filters is listed." : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ND 휠 추가는 즉시 적용되며 다음에 +가 추가할 소스로 기억됩니다. ND 필터가 있는 후보 Filter Set만 표시됩니다."
+            "value" : "%@에 필터 추가"
           }
         }
       }
@@ -203,46 +203,24 @@
         }
       }
     },
-    "Apply full value" : {
+    "Apply to exposure" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "전체 값 적용"
+            "value" : "노출에 적용"
           }
         }
       }
     },
-    "Apply full value suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation." : {
+    "Apply to exposure suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "전체 값 적용은 GND의 어두운 영역이 측광 화면 거의 전체를 덮는 구도에 적합합니다. 장착된 GND를 통해 측광한 기준 셔터에는 이미 감광량이 포함되어 있을 수 있습니다."
-          }
-        }
-      }
-    },
-    "Apply mounts the selected filters together for this camera's current shot. Cancel keeps the current shot unchanged." : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "적용을 누르면 선택한 필터가 이 카메라의 현재 촬영에 함께 장착됩니다. 취소하면 현재 촬영 상태가 그대로 유지됩니다."
-          }
-        }
-      }
-    },
-    "Assigned Filter Sets are available on this camera for auxiliary filters and ND wheels. Assigning mounts nothing and does not check size or holder compatibility. Standard is always available." : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지정한 Filter Set은 이 카메라의 보조 필터와 ND 휠에서 사용할 수 있습니다. 지정만으로 필터가 장착되지는 않으며 구경이나 홀더 호환성은 확인하지 않습니다. Standard는 항상 사용할 수 있습니다."
+            "value" : "노출에 적용은 GND의 어두운 영역이 측광 화면 거의 전체를 덮는 구도에 적합합니다. 장착된 GND를 통해 측광한 기준 셔터에는 이미 감광량이 포함되어 있을 수 있습니다."
           }
         }
       }
@@ -269,24 +247,13 @@
         }
       }
     },
-    "Auxiliary subtotal" : {
+    "Available Filter Sets" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보조 필터 소계"
-          }
-        }
-      }
-    },
-    "Auxiliary subtotal %@ %@" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "보조 필터 소계 %1$@ %2$@"
+            "value" : "사용 가능한 Filter Set"
           }
         }
       }
@@ -313,6 +280,17 @@
         }
       }
     },
+    "Calculation mode, %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계산 모드, %@"
+          }
+        }
+      }
+    },
     "Calculation modes" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -320,17 +298,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "계산 모드"
-          }
-        }
-      }
-    },
-    "Camera Filter Sets" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카메라 Filter Set"
           }
         }
       }
@@ -364,28 +331,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "선택지 %lld"
-          }
-        }
-      }
-    },
-    "Choose the auxiliary filters and ND sources for this camera" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 카메라의 보조 필터와 ND 소스를 선택합니다"
-          }
-        }
-      }
-    },
-    "Clear the filters and ND wheels mounted from %@ on this camera before excluding it." : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "제외하기 전에 이 카메라에서 %@의 장착 필터와 ND 휠을 먼저 해제하세요."
           }
         }
       }
@@ -434,13 +379,24 @@
         }
       }
     },
-    "Delete Filter Set?" : {
+    "Delete %@?" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Filter Set을 삭제할까요?"
+            "value" : "%@ 삭제할까요?"
+          }
+        }
+      }
+    },
+    "Delete Filter Set" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter Set 삭제"
           }
         }
       }
@@ -467,13 +423,24 @@
         }
       }
     },
-    "Double-tap to open the auxiliary filter selection." : {
+    "Double-tap to open Shooting filters." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "두 번 탭하면 보조 필터 선택을 엽니다."
+            "value" : "두 번 탭하면 촬영 필터를 엽니다."
+          }
+        }
+      }
+    },
+    "Edit %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 편집"
           }
         }
       }
@@ -643,6 +610,28 @@
         }
       }
     },
+    "Exposure loss, %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "감광량, %@"
+          }
+        }
+      }
+    },
+    "Exposure reduction" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "노출 감소량"
+          }
+        }
+      }
+    },
     "Filter" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -698,17 +687,6 @@
         }
       }
     },
-    "Filter Set in use" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "사용 중인 Filter Set"
-          }
-        }
-      }
-    },
     "Filter Set name" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -731,28 +709,6 @@
         }
       }
     },
-    "Filter Sets" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Filter Set"
-          }
-        }
-      }
-    },
-    "Filter wheels from this set are removed on %@. Timers already started keep their captured summary." : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@에서 이 세트의 필터 휠이 제거됩니다. 이미 시작한 타이머는 캡처된 요약을 유지합니다."
-          }
-        }
-      }
-    },
     "Filters" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -764,17 +720,6 @@
         }
       }
     },
-    "Finish Editing" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "편집 완료"
-          }
-        }
-      }
-    },
     "Four filters already mounted" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -782,17 +727,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "필터 네 개가 이미 장착됨"
-          }
-        }
-      }
-    },
-    "Full" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "전체"
           }
         }
       }
@@ -841,24 +775,13 @@
         }
       }
     },
-    "In use on this camera" : {
+    "In use" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 카메라에서 사용 중"
-          }
-        }
-      }
-    },
-    "Its filters are removed from the inventory. Timers already started keep their captured summary." : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "세트의 필터가 인벤토리에서 제거됩니다. 이미 시작한 타이머는 캡처된 요약을 유지합니다."
+            "value" : "장착 중"
           }
         }
       }
@@ -874,13 +797,13 @@
         }
       }
     },
-    "Manage Filter Sets" : {
+    "Manages Filter Sets and auxiliary filters. ND values are selected on Main." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Filter Set 관리"
+            "value" : "Filter Set과 보조 필터를 관리합니다. ND 값은 메인에서 선택합니다."
           }
         }
       }
@@ -907,13 +830,24 @@
         }
       }
     },
-    "ND sources" : {
+    "ND values are selected on Main" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ND 소스"
+            "value" : "ND 값은 메인에서 선택합니다"
+          }
+        }
+      }
+    },
+    "ND → Main" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ND 선택 → 메인"
           }
         }
       }
@@ -940,13 +874,13 @@
         }
       }
     },
-    "No auxiliary filters are available on this camera. Choose the camera's Filter Sets, or register CPL, GND, Color, or Effect filters first." : {
+    "No auxiliary filters selected" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 카메라에서 사용할 수 있는 보조 필터가 없습니다. 카메라의 Filter Set을 선택하거나 CPL, GND, 색상, 효과 필터를 먼저 등록하세요."
+            "value" : "선택된 보조 필터 없음"
           }
         }
       }
@@ -962,13 +896,13 @@
         }
       }
     },
-    "No Filter Sets yet. Register the physical filters you carry in Manage Filter Sets first." : {
+    "No Filter Set selected · Standard ND on Main" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아직 Filter Set이 없습니다. Filter Set 관리에서 보유한 필터를 먼저 등록하세요."
+            "value" : "선택한 Filter Set 없음 · Standard ND는 메인에서 사용"
           }
         }
       }
@@ -1017,13 +951,13 @@
         }
       }
     },
-    "Open auxiliary filters" : {
+    "Open shooting filters" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보조 필터 열기"
+            "value" : "촬영 필터 열기"
           }
         }
       }
@@ -1160,6 +1094,17 @@
         }
       }
     },
+    "Remove %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 빼기"
+          }
+        }
+      }
+    },
     "Renaming or recoloring never changes the set's identity or any camera's stack." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -1167,6 +1112,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이름이나 색상을 바꿔도 세트의 identity와 카메라 스택은 변하지 않습니다."
+          }
+        }
+      }
+    },
+    "Selected Filter Sets" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택한 Filter Set"
           }
         }
       }
@@ -1237,17 +1193,6 @@
         }
       }
     },
-    "Tab" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "탭"
-          }
-        }
-      }
-    },
     "Teal" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -1310,6 +1255,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 Filter Set은 더 이상 존재하지 않습니다."
+          }
+        }
+      }
+    },
+    "This removes %@ and its filters from your inventory, and removes its filters and ND wheels on %@. Timers already started keep their captured summary." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 세트와 그 안의 필터가 인벤토리에서 삭제되고, %2$@에서 이 세트의 필터와 ND 휠이 해제됩니다. 이미 시작한 타이머는 기록된 요약을 유지합니다."
+          }
+        }
+      }
+    },
+    "This removes %@ and its filters from your inventory. No camera currently mounts from it. Timers already started keep their captured summary." : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 세트와 그 안의 필터가 인벤토리에서 삭제됩니다. 지금 이 세트로 장착한 카메라는 없습니다. 이미 시작한 타이머는 기록된 요약을 유지합니다."
           }
         }
       }
@@ -1380,13 +1347,13 @@
         }
       }
     },
-    "While shooting, a GND wheel offers Record only (0 stops) and Apply full value (its full registered density). Record only is the default." : {
+    "While shooting, a GND offers Record only (0 stops) and Apply to exposure (its full registered density). Record only is the default." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "촬영 중 GND 휠은 기록만(0스톱)과 전체 값 적용(등록한 전체 농도)을 제공합니다. 기본값은 기록만입니다."
+            "value" : "촬영 중 GND는 기록만(0스톱)과 노출에 적용(등록한 전체 농도)을 제공합니다. 기본값은 기록만입니다."
           }
         }
       }

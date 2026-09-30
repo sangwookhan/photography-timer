@@ -1,0 +1,42 @@
+warning: 'ptimerkit': found 12 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Snapshots/README.md
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-trusted-no-correction.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-unsupported-beyond-source-range.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/formula-beyond-source-range-unsupported-1500s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-formula-100s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-threshold-0p5s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/launch-preset-films.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/portra-limited-guidance-4s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/digital-workflow-default.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-portra-limited-guidance.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-formula-1s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-nd-6-stops.txt
+Building for debugging...
+[1 / 18] PTimerCoreTests-product
+[2 / 12] PTimerKit
+[4 / 14] PTimerKit
+[11 / 12] PTimerKitTests-product
+Build complete! (1.50초)
+Test Suite 'Selected tests' started at 2026-10-06 04:40:04.861.
+Test Suite 'PTimerKitTests.xctest' started at 2026-10-06 04:40:04.862.
+Test Suite 'AuxiliaryFilterSelectionTests' started at 2026-10-06 04:40:04.862.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testAScaleChangeKeepsTheMountedAuxiliaryFilters]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testAScaleChangeKeepsTheMountedAuxiliaryFilters]' passed (0.005 seconds).
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testMoreThanThreeAuxiliaryFiltersMountAndTheSubtotalExcludesND]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testMoreThanThreeAuxiliaryFiltersMountAndTheSubtotalExcludesND]' passed (0.001 seconds).
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesAuxiliaryAfterNDWithoutChangingTheSelection]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesAuxiliaryAfterNDWithoutChangingTheSelection]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesNDAfterAuxiliaryWithoutChangingTheSelection]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesNDAfterAuxiliaryWithoutChangingTheSelection]' passed (0.000 seconds).
+Test Suite 'AuxiliaryFilterSelectionTests' passed at 2026-10-06 04:40:04.868.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'PTimerKitTests.xctest' passed at 2026-10-06 04:40:04.868.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'Selected tests' passed at 2026-10-06 04:40:04.868.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-06 04:40:04.923.
+Test Suite 'PTimerCoreTests.xctest' started at 2026-10-06 04:40:04.923.
+Test Suite 'PTimerCoreTests.xctest' passed at 2026-10-06 04:40:04.923.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-06 04:40:04.924.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds

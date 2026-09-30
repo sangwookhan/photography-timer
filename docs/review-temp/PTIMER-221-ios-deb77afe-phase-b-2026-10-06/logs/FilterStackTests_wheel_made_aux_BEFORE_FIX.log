@@ -1,0 +1,39 @@
+warning: 'ptimerkit': found 12 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Snapshots/README.md
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-trusted-no-correction.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-unsupported-beyond-source-range.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/formula-beyond-source-range-unsupported-1500s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-formula-100s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-threshold-0p5s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/launch-preset-films.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/portra-limited-guidance-4s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/digital-workflow-default.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-portra-limited-guidance.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-formula-1s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-nd-6-stops.txt
+Building for debugging...
+[2 / 19] PTimerCore
+[4 / 21] PTimerCore
+[13 / 15] PTimerCoreTests-product
+[16 / 19] PTimerKitTests-product
+Build complete! (1.09초)
+Test Suite 'Selected tests' started at 2026-10-06 04:40:54.625.
+Test Suite 'PTimerKitTests.xctest' started at 2026-10-06 04:40:54.626.
+Test Suite 'PTimerKitTests.xctest' passed at 2026-10-06 04:40:54.626.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-06 04:40:54.626.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'Selected tests' started at 2026-10-06 04:40:54.666.
+Test Suite 'PTimerCoreTests.xctest' started at 2026-10-06 04:40:54.666.
+Test Suite 'FilterStackTests' started at 2026-10-06 04:40:54.666.
+Test Case '-[PTimerCoreTests.FilterStackTests testAWheelItemMadeAuxiliaryAndMovedToAnUnselectedSetIsUnchecked]' started.
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerCoreTests/Exposure/FilterStackTests.swift:570: error: -[PTimerCoreTests.FilterStackTests testAWheelItemMadeAuxiliaryAndMovedToAnUnselectedSetIsUnchecked] : XCTAssertTrue failed - Not mounted under Bag, which the camera does not select.
+Test Case '-[PTimerCoreTests.FilterStackTests testAWheelItemMadeAuxiliaryAndMovedToAnUnselectedSetIsUnchecked]' failed (0.067 seconds).
+Test Suite 'FilterStackTests' failed at 2026-10-06 04:40:54.733.
+	 Executed 1 test, with 1 failure (0 unexpected) in 0.067 (0.067) seconds
+Test Suite 'PTimerCoreTests.xctest' failed at 2026-10-06 04:40:54.733.
+	 Executed 1 test, with 1 failure (0 unexpected) in 0.067 (0.067) seconds
+Test Suite 'Selected tests' failed at 2026-10-06 04:40:54.733.
+	 Executed 1 test, with 1 failure (0 unexpected) in 0.067 (0.068) seconds
+Note: Some test targets reported failures:
+  - PTimerCoreTests (XCTest)

@@ -1,0 +1,346 @@
+warning: 'ptimerkit': found 12 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Snapshots/README.md
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-trusted-no-correction.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-unsupported-beyond-source-range.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/formula-beyond-source-range-unsupported-1500s.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-formula-100s.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-threshold-0p5s.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/launch-preset-films.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/portra-limited-guidance-4s.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/digital-workflow-default.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-portra-limited-guidance.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-formula-1s.txt
+    /private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-nd-6-stops.txt
+Building for debugging...
+[1 / 47]
+[7 / 35] PTimerCoreTests-product
+[26 / 68] PTimerKit
+[33 / 68] PTimerCoreTests-product
+[42 / 68] PTimerKit
+[44 / 70] PTimerKit
+[48 / 72] PTimerKit
+[50 / 73] PTimerKit
+[53 / 77] PTimerKit
+[56 / 77] PTimerKit
+[68 / 94] PTimerKit
+[72 / 94] PTimerKit
+[77 / 95] PTimerCoreTests-product
+[78 / 95] PTimerKit
+[85 / 96] PTimerKitTests-product
+[104 / 115] PTimerKitTests-product
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmDeleteFlowTests.swift:154:42: [1;33mwarning: [1;39mconformance of 'SharedInMemoryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m152 |[0;0m 
+[0;36m153 |[0;0m @MainActor
+[0;36m154 |[0;0m private final class SharedInMemoryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                          |- [1;33mwarning: [1;39mconformance of 'SharedInMemoryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                          |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                          `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m155 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m156 |[0;0m 
+[0;36m157 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m158 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m159 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m160 |[0;0m }
+[0;36m161 |[0;0m 
+
+[#ConformanceIsolation]: <https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation>
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLibraryReloadTests.swift:107:53: [1;33mwarning: [1;39mconformance of 'InMemoryCustomFilmLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m105 |[0;0m /// without touching the real UserDefaults domain.
+[0;36m106 |[0;0m @MainActor
+[0;36m107 |[0;0m private final class InMemoryCustomFilmLibraryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCustomFilmLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m108 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m109 |[0;0m 
+[0;36m110 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m111 |[0;0m         snapshot
+[0;36m112 |[0;0m     }
+[0;36m113 |[0;0m 
+[0;36m114 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m115 |[0;0m         self.snapshot = snapshot
+[0;36m116 |[0;0m     }
+[0;36m117 |[0;0m 
+[0;36m118 |[0;0m     func clearSnapshot() {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m119 |[0;0m         snapshot = nil
+[0;36m120 |[0;0m     }
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:264:49: [1;33mwarning: [1;39mconformance of 'InMemoryCustomLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m262 |[0;0m 
+[0;36m263 |[0;0m @MainActor
+[0;36m264 |[0;0m private final class InMemoryCustomLibraryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                                 |- [1;33mwarning: [1;39mconformance of 'InMemoryCustomLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                 |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                 `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m265 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m266 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m267 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m268 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m269 |[0;0m }
+[0;36m270 |[0;0m 
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:272:53: [1;33mwarning: [1;39mconformance of 'InMemoryCalculatorContextStore' to protocol 'ExposureCalculatorContextStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m270 |[0;0m 
+[0;36m271 |[0;0m @MainActor
+[0;36m272 |[0;0m private final class InMemoryCalculatorContextStore: ExposureCalculatorContextStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCalculatorContextStore' to protocol 'ExposureCalculatorContextStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m273 |[0;0m     private var snapshot: PersistentCalculatorContextSnapshot?
+[0;36m274 |[0;0m     func loadSnapshot() -> PersistentCalculatorContextSnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m275 |[0;0m     func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m276 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m277 |[0;0m }
+[0;36m278 |[0;0m 
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:280:53: [1;33mwarning: [1;39mconformance of 'InMemoryCameraSlotSessionStore' to protocol 'CameraSlotSessionPersistenceStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m278 |[0;0m 
+[0;36m279 |[0;0m @MainActor
+[0;36m280 |[0;0m private final class InMemoryCameraSlotSessionStore: CameraSlotSessionPersistenceStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCameraSlotSessionStore' to protocol 'CameraSlotSessionPersistenceStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m281 |[0;0m     private var snapshot: PersistentCameraSlotSessionSnapshot?
+[0;36m282 |[0;0m     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m283 |[0;0m     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m284 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m285 |[0;0m }
+[0;36m286 |[0;0m 
+
+[#ConformanceIsolation]: <https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation>
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmDeleteFlowTests.swift:154:42: [1;33mwarning: [1;39mconformance of 'SharedInMemoryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m152 |[0;0m 
+[0;36m153 |[0;0m @MainActor
+[0;36m154 |[0;0m private final class SharedInMemoryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                          |- [1;33mwarning: [1;39mconformance of 'SharedInMemoryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                          |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                          `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m155 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m156 |[0;0m 
+[0;36m157 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m158 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m159 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m160 |[0;0m }
+[0;36m161 |[0;0m 
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLibraryReloadTests.swift:107:53: [1;33mwarning: [1;39mconformance of 'InMemoryCustomFilmLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m105 |[0;0m /// without touching the real UserDefaults domain.
+[0;36m106 |[0;0m @MainActor
+[0;36m107 |[0;0m private final class InMemoryCustomFilmLibraryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCustomFilmLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m108 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m109 |[0;0m 
+[0;36m110 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m111 |[0;0m         snapshot
+[0;36m112 |[0;0m     }
+[0;36m113 |[0;0m 
+[0;36m114 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m115 |[0;0m         self.snapshot = snapshot
+[0;36m116 |[0;0m     }
+[0;36m117 |[0;0m 
+[0;36m118 |[0;0m     func clearSnapshot() {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m119 |[0;0m         snapshot = nil
+[0;36m120 |[0;0m     }
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:264:49: [1;33mwarning: [1;39mconformance of 'InMemoryCustomLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m262 |[0;0m 
+[0;36m263 |[0;0m @MainActor
+[0;36m264 |[0;0m private final class InMemoryCustomLibraryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                                 |- [1;33mwarning: [1;39mconformance of 'InMemoryCustomLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                 |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                 `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m265 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m266 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m267 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m268 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m269 |[0;0m }
+[0;36m270 |[0;0m 
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:272:53: [1;33mwarning: [1;39mconformance of 'InMemoryCalculatorContextStore' to protocol 'ExposureCalculatorContextStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m270 |[0;0m 
+[0;36m271 |[0;0m @MainActor
+[0;36m272 |[0;0m private final class InMemoryCalculatorContextStore: ExposureCalculatorContextStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCalculatorContextStore' to protocol 'ExposureCalculatorContextStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m273 |[0;0m     private var snapshot: PersistentCalculatorContextSnapshot?
+[0;36m274 |[0;0m     func loadSnapshot() -> PersistentCalculatorContextSnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m275 |[0;0m     func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m276 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m277 |[0;0m }
+[0;36m278 |[0;0m 
+
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:280:53: [1;33mwarning: [1;39mconformance of 'InMemoryCameraSlotSessionStore' to protocol 'CameraSlotSessionPersistenceStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m278 |[0;0m 
+[0;36m279 |[0;0m @MainActor
+[0;36m280 |[0;0m private final class InMemoryCameraSlotSessionStore: CameraSlotSessionPersistenceStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCameraSlotSessionStore' to protocol 'CameraSlotSessionPersistenceStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m281 |[0;0m     private var snapshot: PersistentCameraSlotSessionSnapshot?
+[0;36m282 |[0;0m     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m283 |[0;0m     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m284 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m285 |[0;0m }
+[0;36m286 |[0;0m 
+
+[#ConformanceIsolation]: <https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation>
+[109 / 115] PTimerKitTests-product
+[111 / 115] PTimerKitTests-product
+Build complete! (5.78초)
+Test Suite 'Selected tests' started at 2026-10-06 03:46:39.241.
+Test Suite 'PTimerKitTests.xctest' started at 2026-10-06 03:46:39.242.
+Test Suite 'FilterInventoryModelTests' started at 2026-10-06 03:46:39.242.
+Test Case '-[PTimerKitTests.FilterInventoryModelTests testSamplesAreSeededOnlyWhenNoInventoryWasEverSaved]' started.
+Test Case '-[PTimerKitTests.FilterInventoryModelTests testSamplesAreSeededOnlyWhenNoInventoryWasEverSaved]' passed (0.001 seconds).
+Test Suite 'FilterInventoryModelTests' passed at 2026-10-06 03:46:39.243.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'FilterResetTests' started at 2026-10-06 03:46:39.243.
+Test Case '-[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterResetTests.swift:54: error: -[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay] : XCTAssertTrue failed - A zero-contribution auxiliary filter shows Reset.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterResetTests.swift:59: error: -[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay] : XCTAssertEqual failed: ("[PTimerCore.FilterWheel(source: PTimerCore.FilterSource.filterSet(PTimerCore.FilterSetID(rawValue: "CBCE5DC2-7549-4D17-AABF-8A6B90FB8935")), selection: PTimerCore.FilterWheelSelection.empty)]") is not equal to ("[PTimerCore.FilterWheel(source: PTimerCore.FilterSource.standard, selection: PTimerCore.FilterWheelSelection.standard(PTimerCore.NDStep(stops: 0.0)))]")
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterResetTests.swift:60: error: -[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay] : XCTAssertTrue failed
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterResetTests.swift:73: error: -[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay] : XCTAssertEqual failed: ("[PTimerCore.FilterWheel(source: PTimerCore.FilterSource.filterSet(PTimerCore.FilterSetID(rawValue: "CBCE5DC2-7549-4D17-AABF-8A6B90FB8935")), selection: PTimerCore.FilterWheelSelection.empty)]") is not equal to ("[PTimerCore.FilterWheel(source: PTimerCore.FilterSource.standard, selection: PTimerCore.FilterWheelSelection.standard(PTimerCore.NDStep(stops: 0.0)))]") - The reset is saved.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterResetTests.swift:74: error: -[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay] : XCTAssertTrue failed
+Test Case '-[PTimerKitTests.FilterResetTests testAZeroTotalRecordOnlyGNDAndAnEmptySetWheelAreResetAndSelectedSetsStay]' failed (0.213 seconds).
+Test Case '-[PTimerKitTests.FilterResetTests testResetSettingsAndNameClearsEveryAuxiliaryKindAndLeavesOtherCamerasAlone]' started.
+Test Case '-[PTimerKitTests.FilterResetTests testResetSettingsAndNameClearsEveryAuxiliaryKindAndLeavesOtherCamerasAlone]' passed (0.001 seconds).
+Test Suite 'FilterResetTests' failed at 2026-10-06 03:46:39.457.
+	 Executed 2 tests, with 5 failures (0 unexpected) in 0.214 (0.214) seconds
+Test Suite 'FilterRestoreReconciliationTests' started at 2026-10-06 03:46:39.457.
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testADeletedItemKeepsTheDeletionRules]' started.
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testADeletedItemKeepsTheDeletionRules]' passed (0.001 seconds).
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testAKindChangeMovesTheSelectionIntoTheItemsNewRole]' started.
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testAKindChangeMovesTheSelectionIntoTheItemsNewRole]' passed (0.001 seconds).
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testAKindCorrectionMadeLiveSurvivesARelaunch]' started.
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testAKindCorrectionMadeLiveSurvivesARelaunch]' passed (0.001 seconds).
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testAMovedAuxiliaryItemRestoresOnlyUnderASelectedSet]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterRestoreReconciliationTests.swift:104: error: -[PTimerKitTests.FilterRestoreReconciliationTests testAMovedAuxiliaryItemRestoresOnlyUnderASelectedSet] : XCTAssertEqual failed: ("[PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "F16135FD-22D5-4298-9940-E5EE4628C257"), itemID: PTimerCore.FilterItemID(rawValue: "9B8BDEF7-CBE0-4912-BAD9-4368E9B751DF"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss), PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "4313B7D8-B496-49A3-8F26-BBF12C64AF69"), itemID: PTimerCore.FilterItemID(rawValue: "1E9C4A35-D124-49D6-A168-E6F22DB94D50"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(1.5))]") is not equal to ("[PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "F16135FD-22D5-4298-9940-E5EE4628C257"), itemID: PTimerCore.FilterItemID(rawValue: "9B8BDEF7-CBE0-4912-BAD9-4368E9B751DF"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss)]")
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/FilterRestoreReconciliationTests.swift:105: error: -[PTimerKitTests.FilterRestoreReconciliationTests testAMovedAuxiliaryItemRestoresOnlyUnderASelectedSet] : XCTAssertEqual failed: ("[PTimerCore.FilterSetID(rawValue: "F16135FD-22D5-4298-9940-E5EE4628C257"), PTimerCore.FilterSetID(rawValue: "4313B7D8-B496-49A3-8F26-BBF12C64AF69")]") is not equal to ("[PTimerCore.FilterSetID(rawValue: "F16135FD-22D5-4298-9940-E5EE4628C257")]") - The destination is not selected.
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testAMovedAuxiliaryItemRestoresOnlyUnderASelectedSet]' failed (0.002 seconds).
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testMovedItemsKeepTheirReferencesUnderTheirNewSet]' started.
+Test Case '-[PTimerKitTests.FilterRestoreReconciliationTests testMovedItemsKeepTheirReferencesUnderTheirNewSet]' passed (0.001 seconds).
+Test Suite 'FilterRestoreReconciliationTests' failed at 2026-10-06 03:46:39.462.
+	 Executed 5 tests, with 2 failures (0 unexpected) in 0.005 (0.005) seconds
+Test Suite 'ShootingFilterSetSelectionTests' started at 2026-10-06 03:46:39.462.
+Test Case '-[PTimerKitTests.ShootingFilterSetSelectionTests testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFilterSetSelectionTests.swift:784: error: -[PTimerKitTests.ShootingFilterSetSelectionTests testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection] : XCTAssertTrue failed
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFilterSetSelectionTests.swift:787: error: -[PTimerKitTests.ShootingFilterSetSelectionTests testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection] : XCTAssertEqualWithAccuracy failed: ("6.0") is not equal to ("3.0") +/- ("1e-09") - Only the ND8 contributes now.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFilterSetSelectionTests.swift:791: error: -[PTimerKitTests.ShootingFilterSetSelectionTests testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection] : XCTAssertTrue failed
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFilterSetSelectionTests.swift:792: error: -[PTimerKitTests.ShootingFilterSetSelectionTests testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection] : XCTAssertEqualWithAccuracy failed: ("6.0") is not equal to ("3.0") +/- ("1e-09")
+Test Case '-[PTimerKitTests.ShootingFilterSetSelectionTests testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection]' failed (0.002 seconds).
+Test Suite 'ShootingFilterSetSelectionTests' failed at 2026-10-06 03:46:39.464.
+	 Executed 1 test, with 4 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'ShootingFiltersSessionReconciliationTests' started at 2026-10-06 03:46:39.464.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedChangeKeepsThePicksOfASetRemovedInTheSession]' started.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedChangeKeepsThePicksOfASetRemovedInTheSession]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedMoveBetweenSelectedSetsKeepsTheDraftChoice]' started.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedMoveBetweenSelectedSetsKeepsTheDraftChoice]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedMoveBetweenSelectedSetsKeepsUnrelatedDraftPicksAndUnmounts]' started.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedMoveBetweenSelectedSetsKeepsUnrelatedDraftPicksAndUnmounts]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:188: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession] : XCTAssertEqual failed: ("[PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132"), itemID: PTimerCore.FilterItemID(rawValue: "359BBDA3-973A-44E7-BC4D-7F8A527832F5"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss), PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "46761E81-2A8D-43D6-A354-786F039997F1"), itemID: PTimerCore.FilterItemID(rawValue: "C5D73E84-803F-49D6-9928-3190D3FE294B"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(1.5))]") is not equal to ("[PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132"), itemID: PTimerCore.FilterItemID(rawValue: "359BBDA3-973A-44E7-BC4D-7F8A527832F5"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss)]") - The camera unmounts it.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:189: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession] : XCTAssertEqual failed: ("[PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132"), PTimerCore.FilterSetID(rawValue: "46761E81-2A8D-43D6-A354-786F039997F1")]") is not equal to ("[PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132")]") - The camera does not select the destination.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:190: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession] : XCTAssertNil failed: "MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "46761E81-2A8D-43D6-A354-786F039997F1"), itemID: PTimerCore.FilterItemID(rawValue: "C5D73E84-803F-49D6-9928-3190D3FE294B"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(1.5))"
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:192: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession] : XCTAssertEqual failed: ("[PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132"), PTimerCore.FilterSetID(rawValue: "46761E81-2A8D-43D6-A354-786F039997F1")]") is not equal to ("[PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132")]")
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:194: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession] : XCTAssertNil failed: "MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "46761E81-2A8D-43D6-A354-786F039997F1"), itemID: PTimerCore.FilterItemID(rawValue: "C5D73E84-803F-49D6-9928-3190D3FE294B"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(1.5))" - Selecting the destination later does not bring it back.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:198: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession] : XCTAssertEqual failed: ("[PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132"), itemID: PTimerCore.FilterItemID(rawValue: "359BBDA3-973A-44E7-BC4D-7F8A527832F5"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss), PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "46761E81-2A8D-43D6-A354-786F039997F1"), itemID: PTimerCore.FilterItemID(rawValue: "C5D73E84-803F-49D6-9928-3190D3FE294B"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(1.5))]") is not equal to ("[PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "91A94E91-6EE7-468A-AFD1-159D2E006132"), itemID: PTimerCore.FilterItemID(rawValue: "359BBDA3-973A-44E7-BC4D-7F8A527832F5"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss)]")
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToAnAvailableSetIsUncheckedOnTheCameraAndInTheSession]' failed (0.001 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToASetOnlyTheSessionSelectsStaysPickedThere]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:209: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToASetOnlyTheSessionSelectsStaysPickedThere] : XCTAssertTrue failed - The camera does not select Pouch, so it unmounts the CPL.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testACommittedPickMovedToASetOnlyTheSessionSelectsStaysPickedThere]' failed (0.001 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToAnAvailableSetIsClearedForGood]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:157: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToAnAvailableSetIsClearedForGood] : XCTAssertNil failed: "MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "C57823BB-1AB8-42DB-9F88-383656C882F5"), itemID: PTimerCore.FilterItemID(rawValue: "074B7BEA-FCED-428A-A7D1-27729BA83260"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss)" - Moved to an unselected Set: unchecked.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:160: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToAnAvailableSetIsClearedForGood] : XCTAssertTrue failed - No stale reference blocks Apply.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:162: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToAnAvailableSetIsClearedForGood] : XCTAssertNil failed: "MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "C57823BB-1AB8-42DB-9F88-383656C882F5"), itemID: PTimerCore.FilterItemID(rawValue: "074B7BEA-FCED-428A-A7D1-27729BA83260"), choice: PTimerCore.AuxiliaryFilterChoice.registeredLoss)" - Selecting the destination later does not bring it back.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToAnAvailableSetIsClearedForGood]' failed (0.001 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToASelectedSetKeepsItsChoiceThere]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:173: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToASelectedSetKeepsItsChoiceThere] : XCTAssertEqual failed: ("Optional(PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "D27F927B-F2BB-4888-A3CC-6A03A85FB9C7"), itemID: PTimerCore.FilterItemID(rawValue: "7AF73FF0-DDF5-47C5-8866-035799EC0759"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(2.0)))") is not equal to ("Optional(PTimerCore.MountedAuxiliaryFilter(filterSetID: PTimerCore.FilterSetID(rawValue: "5DE2840B-C94B-45E8-BE6E-F4934EB4D33A"), itemID: PTimerCore.FilterItemID(rawValue: "7AF73FF0-DDF5-47C5-8866-035799EC0759"), choice: PTimerCore.AuxiliaryFilterChoice.cplLoss(2.0)))") - Selected only in the session: it follows.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:174: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToASelectedSetKeepsItsChoiceThere] : XCTAssertTrue failed
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testAWorkingOnlyPickMovedToASelectedSetKeepsItsChoiceThere]' failed (0.001 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testDeletingAWorkingOnlyPickDropsItAndKeepsTheOtherPicks]' started.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testDeletingAWorkingOnlyPickDropsItAndKeepsTheOtherPicks]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testDeletingAWorkingOnlySetDropsItsSelectionAndPicks]' started.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testDeletingAWorkingOnlySetDropsItsSelectionAndPicks]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testEveryCameraJudgesAMoveAgainstItsOwnSelectedSets]' started.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:272: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testEveryCameraJudgesAMoveAgainstItsOwnSelectedSets] : XCTAssertTrue failed - Camera 2 does not.
+/private/tmp/claude-501/-Users-al03230922-work-playground-ptimerv1/b6d2fc20-33fa-44be-9e0d-14b722a009f8/scratchpad/r9/ios_before_wt/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFiltersSessionReconciliationTests.swift:273: error: -[PTimerKitTests.ShootingFiltersSessionReconciliationTests testEveryCameraJudgesAMoveAgainstItsOwnSelectedSets] : XCTAssertEqual failed: ("[PTimerCore.FilterSetID(rawValue: "4476B345-D887-4FFB-A058-018154FC996B"), PTimerCore.FilterSetID(rawValue: "9215E249-9D56-471C-8CAD-5EF863C3EB9A")]") is not equal to ("[PTimerCore.FilterSetID(rawValue: "4476B345-D887-4FFB-A058-018154FC996B")]")
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testEveryCameraJudgesAMoveAgainstItsOwnSelectedSets]' failed (0.001 seconds).
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testRemovingTheWorkingChoiceOfACPLDropsThePickWithoutAReplacement]' started.
+Test Case '-[PTimerKitTests.ShootingFiltersSessionReconciliationTests testRemovingTheWorkingChoiceOfACPLDropsThePickWithoutAReplacement]' passed (0.000 seconds).
+Test Suite 'ShootingFiltersSessionReconciliationTests' failed at 2026-10-06 03:46:39.470.
+	 Executed 11 tests, with 14 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'PTimerKitTests.xctest' failed at 2026-10-06 03:46:39.470.
+	 Executed 20 tests, with 25 failures (0 unexpected) in 0.227 (0.229) seconds
+Test Suite 'Selected tests' failed at 2026-10-06 03:46:39.470.
+	 Executed 20 tests, with 25 failures (0 unexpected) in 0.227 (0.230) seconds
+Test Suite 'Selected tests' started at 2026-10-06 03:46:39.531.
+Test Suite 'PTimerCoreTests.xctest' started at 2026-10-06 03:46:39.532.
+Test Suite 'PTimerCoreTests.xctest' passed at 2026-10-06 03:46:39.533.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-06 03:46:39.533.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Note: Some test targets reported failures:
+  - PTimerKitTests (XCTest)

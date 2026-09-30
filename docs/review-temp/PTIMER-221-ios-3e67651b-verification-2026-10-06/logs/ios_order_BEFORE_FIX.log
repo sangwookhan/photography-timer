@@ -1,0 +1,39 @@
+warning: 'ptimerkit': found 12 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Snapshots/README.md
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-trusted-no-correction.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-unsupported-beyond-source-range.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/formula-beyond-source-range-unsupported-1500s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-formula-100s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-threshold-0p5s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/launch-preset-films.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/portra-limited-guidance-4s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/digital-workflow-default.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-portra-limited-guidance.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-formula-1s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-nd-6-stops.txt
+Building for debugging...
+[1 / 16] PTimerCore
+Build complete! (0.23초)
+Test Suite 'Selected tests' started at 2026-10-06 02:54:04.148.
+Test Suite 'PTimerKitTests.xctest' started at 2026-10-06 02:54:04.148.
+Test Suite 'ShootingFilterSetSelectionTests' started at 2026-10-06 02:54:04.148.
+Test Case '-[PTimerKitTests.ShootingFilterSetSelectionTests testTheConversionKeepsPositionsWhileTheScreenReaderOrdersThenReconcilesOnce]' started.
+Test Case '-[PTimerKitTests.ShootingFilterSetSelectionTests testTheConversionKeepsPositionsWhileTheScreenReaderOrdersThenReconcilesOnce]' passed (0.108 seconds).
+Test Case '-[PTimerKitTests.ShootingFilterSetSelectionTests testTheConvertedEmptyWheelTakesTheSettledOrderWithItsIdentity]' started.
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFilterSetSelectionTests.swift:396: error: -[PTimerKitTests.ShootingFilterSetSelectionTests testTheConvertedEmptyWheelTakesTheSettledOrderWithItsIdentity] : XCTAssertEqual failed: ("[PTimerCore.FilterWheel(source: PTimerCore.FilterSource.standard, selection: PTimerCore.FilterWheelSelection.standard(PTimerCore.NDStep(stops: 2.0))), PTimerCore.FilterWheel(source: PTimerCore.FilterSource.filterSet(PTimerCore.FilterSetID(rawValue: "D1BAA1CE-2317-4E30-B205-1DD6E9C5B1C5")), selection: PTimerCore.FilterWheelSelection.empty), PTimerCore.FilterWheel(source: PTimerCore.FilterSource.filterSet(PTimerCore.FilterSetID(rawValue: "D1BAA1CE-2317-4E30-B205-1DD6E9C5B1C5")), selection: PTimerCore.FilterWheelSelection.item(PTimerCore.FilterRowSelection(itemID: PTimerCore.FilterItemID(rawValue: "405A69D8-A443-4800-BB51-8A9CBD245194"), choice: PTimerCore.FilterRowChoice.fixed)))]") is not equal to ("[PTimerCore.FilterWheel(source: PTimerCore.FilterSource.standard, selection: PTimerCore.FilterWheelSelection.standard(PTimerCore.NDStep(stops: 2.0))), PTimerCore.FilterWheel(source: PTimerCore.FilterSource.filterSet(PTimerCore.FilterSetID(rawValue: "D1BAA1CE-2317-4E30-B205-1DD6E9C5B1C5")), selection: PTimerCore.FilterWheelSelection.item(PTimerCore.FilterRowSelection(itemID: PTimerCore.FilterItemID(rawValue: "405A69D8-A443-4800-BB51-8A9CBD245194"), choice: PTimerCore.FilterRowChoice.fixed))), PTimerCore.FilterWheel(source: PTimerCore.FilterSource.filterSet(PTimerCore.FilterSetID(rawValue: "D1BAA1CE-2317-4E30-B205-1DD6E9C5B1C5")), selection: PTimerCore.FilterWheelSelection.empty)]")
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Filters/ShootingFilterSetSelectionTests.swift:397: error: -[PTimerKitTests.ShootingFilterSetSelectionTests testTheConvertedEmptyWheelTakesTheSettledOrderWithItsIdentity] : XCTAssertEqual failed: ("[101, 103, 102]") is not equal to ("[101, 102, 103]") - Identity follows each wheel.
+Test Case '-[PTimerKitTests.ShootingFilterSetSelectionTests testTheConvertedEmptyWheelTakesTheSettledOrderWithItsIdentity]' failed (0.047 seconds).
+Test Suite 'ShootingFilterSetSelectionTests' failed at 2026-10-06 02:54:04.304.
+	 Executed 2 tests, with 2 failures (0 unexpected) in 0.156 (0.156) seconds
+Test Suite 'PTimerKitTests.xctest' failed at 2026-10-06 02:54:04.304.
+	 Executed 2 tests, with 2 failures (0 unexpected) in 0.156 (0.156) seconds
+Test Suite 'Selected tests' failed at 2026-10-06 02:54:04.304.
+	 Executed 2 tests, with 2 failures (0 unexpected) in 0.156 (0.157) seconds
+Test Suite 'Selected tests' started at 2026-10-06 02:54:04.361.
+Test Suite 'PTimerCoreTests.xctest' started at 2026-10-06 02:54:04.362.
+Test Suite 'PTimerCoreTests.xctest' passed at 2026-10-06 02:54:04.362.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-06 02:54:04.362.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Note: Some test targets reported failures:
+  - PTimerKitTests (XCTest)

@@ -1,0 +1,17 @@
+iPhone 17 simulator, default text size (large), light, build of the tree at the pushed head.
+Drawn bounds in points from the 3x captures (button: its border; notation: the track; Base Shutter: its ink).
+
+Korean (Z01 / T07):
+  Base Shutter ink        26.7 .. 74.0
+  central gap             120.3
+  Select Filters button   194.3 .. 270.0   (hit shape extends 9 pt around the drawn button)
+  button-to-notation gap  8.3
+  notation track          278.3 .. 375.0
+English (E01 / T14):
+  Base Shutter ink        27.3 .. 107.7   (full size; before this change the caption was scaled to 28.0 .. 95.7)
+  central gap             41.6
+  Select Filters button   149.3 .. 259.3
+  button-to-notation gap  8.4
+  notation track          267.7 .. 375.0
+Taps (y 266 pt): KO 197 / 232 / 266 and EN 151 / 203 / 253 opened Shooting filters;
+OD 337, ND 369, Stops 305 / 297 changed only the notation; Base Shutter 50 / 68 opened nothing.

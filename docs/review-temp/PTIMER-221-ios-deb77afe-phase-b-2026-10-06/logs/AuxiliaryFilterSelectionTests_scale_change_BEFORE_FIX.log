@@ -1,0 +1,166 @@
+warning: 'ptimerkit': found 12 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Snapshots/README.md
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-trusted-no-correction.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/confidence-unsupported-beyond-source-range.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/formula-beyond-source-range-unsupported-1500s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-formula-100s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/hp5-threshold-0p5s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/launch-preset-films.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/DisplayStateSnapshotTests/portra-limited-guidance-4s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/digital-workflow-default.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-portra-limited-guidance.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-formula-1s.txt
+    /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/__Snapshots__/ViewModelDisplayStateBaselineTests/film-mode-trix-nd-6-stops.txt
+Building for debugging...
+[1 / 1]
+[2 / 12] PTimerKit
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Sources/PTimerKit/Calculator/CalculatorModel.swift:466:13: [1;33mwarning: [1;39minitialization of immutable value 'auxiliary' was never used; consider replacing with assignment to '_' or removing it[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/no-usage\NoUsage]8;;\]
+ [0;36m464 |[0;0m     ) {
+ [0;36m465 |[0;0m         clearLiveNDStopPreview()
+ [0;36m466 |[0;0m         let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: filterInventory)
+     [0;36m|[0;0m             `- [1;33mwarning: [1;39minitialization of immutable value 'auxiliary' was never used; consider replacing with assignment to '_' or removing it[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/no-usage\NoUsage]8;;\]
+ [0;36m467 |[0;0m         if let normalized = FilterStack.normalizedWheels(wheels, inventory: filterInventory),
+ [0;36m468 |[0;0m            let stack = FilterStack.validated(wheels: normalized, inventory: filterInventory) {
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[4 / 14] PTimerKit
+[11 / 16] PTimerKitTests-product
+[13 / 18] PTimerKitTests-product
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmDeleteFlowTests.swift:154:42: [1;33mwarning: [1;39mconformance of 'SharedInMemoryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m152 |[0;0m 
+[0;36m153 |[0;0m @MainActor
+[0;36m154 |[0;0m private final class SharedInMemoryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                          |- [1;33mwarning: [1;39mconformance of 'SharedInMemoryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                          |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                          `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m155 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m156 |[0;0m 
+[0;36m157 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m158 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m159 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m160 |[0;0m }
+[0;36m161 |[0;0m 
+
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLibraryReloadTests.swift:107:53: [1;33mwarning: [1;39mconformance of 'InMemoryCustomFilmLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m105 |[0;0m /// without touching the real UserDefaults domain.
+[0;36m106 |[0;0m @MainActor
+[0;36m107 |[0;0m private final class InMemoryCustomFilmLibraryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCustomFilmLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m108 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m109 |[0;0m 
+[0;36m110 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m111 |[0;0m         snapshot
+[0;36m112 |[0;0m     }
+[0;36m113 |[0;0m 
+[0;36m114 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m115 |[0;0m         self.snapshot = snapshot
+[0;36m116 |[0;0m     }
+[0;36m117 |[0;0m 
+[0;36m118 |[0;0m     func clearSnapshot() {
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m119 |[0;0m         snapshot = nil
+[0;36m120 |[0;0m     }
+
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:264:49: [1;33mwarning: [1;39mconformance of 'InMemoryCustomLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m262 |[0;0m 
+[0;36m263 |[0;0m @MainActor
+[0;36m264 |[0;0m private final class InMemoryCustomLibraryStore: CustomFilmLibraryStoring {
+    [0;36m|[0;0m                                                 |- [1;33mwarning: [1;39mconformance of 'InMemoryCustomLibraryStore' to protocol 'CustomFilmLibraryStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                 |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                 `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m265 |[0;0m     private var snapshot: PersistentCustomFilmLibrarySnapshot?
+[0;36m266 |[0;0m     func loadSnapshot() -> PersistentCustomFilmLibrarySnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m267 |[0;0m     func saveSnapshot(_ snapshot: PersistentCustomFilmLibrarySnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m268 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m269 |[0;0m }
+[0;36m270 |[0;0m 
+
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:272:53: [1;33mwarning: [1;39mconformance of 'InMemoryCalculatorContextStore' to protocol 'ExposureCalculatorContextStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m270 |[0;0m 
+[0;36m271 |[0;0m @MainActor
+[0;36m272 |[0;0m private final class InMemoryCalculatorContextStore: ExposureCalculatorContextStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCalculatorContextStore' to protocol 'ExposureCalculatorContextStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m273 |[0;0m     private var snapshot: PersistentCalculatorContextSnapshot?
+[0;36m274 |[0;0m     func loadSnapshot() -> PersistentCalculatorContextSnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m275 |[0;0m     func saveSnapshot(_ snapshot: PersistentCalculatorContextSnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m276 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m277 |[0;0m }
+[0;36m278 |[0;0m 
+
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/ExposureCalculator/CustomFilmLifecycleCorrectnessTests.swift:280:53: [1;33mwarning: [1;39mconformance of 'InMemoryCameraSlotSessionStore' to protocol 'CameraSlotSessionPersistenceStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+[0;36m278 |[0;0m 
+[0;36m279 |[0;0m @MainActor
+[0;36m280 |[0;0m private final class InMemoryCameraSlotSessionStore: CameraSlotSessionPersistenceStoring {
+    [0;36m|[0;0m                                                     |- [1;33mwarning: [1;39mconformance of 'InMemoryCameraSlotSessionStore' to protocol 'CameraSlotSessionPersistenceStoring' crosses into main actor-isolated code and can cause data races; this is an error in the Swift 6 language mode[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation\ConformanceIsolation]8;;\]
+    [0;36m|[0;0m                                                     |- [1;39mnote: [1;39misolate this conformance to the main actor with '@MainActor'[0;0m
+    [0;36m|[0;0m                                                     `- [1;39mnote: [1;39mturn data races into runtime errors with '@preconcurrency'[0;0m
+[0;36m281 |[0;0m     private var snapshot: PersistentCameraSlotSessionSnapshot?
+[0;36m282 |[0;0m     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'loadSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'loadSnapshot()' 'nonisolated'[0;0m
+[0;36m283 |[0;0m     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) { self.snapshot = snapshot }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'saveSnapshot' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'saveSnapshot' 'nonisolated'[0;0m
+[0;36m284 |[0;0m     func clearSnapshot() { snapshot = nil }
+    [0;36m|[0;0m          |- [1;39mnote: [1;39mmain actor-isolated instance method 'clearSnapshot()' cannot satisfy nonisolated requirement[0;0m
+    [0;36m|[0;0m          `- [1;39mnote: [1;39mmark instance method 'clearSnapshot()' 'nonisolated'[0;0m
+[0;36m285 |[0;0m }
+[0;36m286 |[0;0m 
+
+[#ConformanceIsolation]: <https://docs.swift.org/compiler/documentation/diagnostics/conformance-isolation>
+[19 / 23] PTimerKitTests-product
+Build complete! (3.15초)
+Test Suite 'Selected tests' started at 2026-10-06 04:40:01.930.
+Test Suite 'PTimerKitTests.xctest' started at 2026-10-06 04:40:01.931.
+Test Suite 'AuxiliaryFilterSelectionTests' started at 2026-10-06 04:40:01.931.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testAScaleChangeKeepsTheMountedAuxiliaryFilters]' started.
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Filters/AuxiliaryFilterSelectionTests.swift:92: error: -[PTimerKitTests.AuxiliaryFilterSelectionTests testAScaleChangeKeepsTheMountedAuxiliaryFilters] : XCTAssertEqual failed: ("[]") is not equal to ("[PTimerCore.FilterItemID(rawValue: "A062CCF6-F141-49D0-B128-178E2103F8F0")]") - The Standard wheels re-snap; the auxiliary filters stay mounted.
+/Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit/Tests/PTimerKitTests/Filters/AuxiliaryFilterSelectionTests.swift:93: error: -[PTimerKitTests.AuxiliaryFilterSelectionTests testAScaleChangeKeepsTheMountedAuxiliaryFilters] : XCTAssertEqualWithAccuracy failed: ("10.0") is not equal to ("11.5") +/- ("1e-09")
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testAScaleChangeKeepsTheMountedAuxiliaryFilters]' failed (0.230 seconds).
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testMoreThanThreeAuxiliaryFiltersMountAndTheSubtotalExcludesND]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testMoreThanThreeAuxiliaryFiltersMountAndTheSubtotalExcludesND]' passed (0.001 seconds).
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesAuxiliaryAfterNDWithoutChangingTheSelection]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesAuxiliaryAfterNDWithoutChangingTheSelection]' passed (0.000 seconds).
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesNDAfterAuxiliaryWithoutChangingTheSelection]' started.
+Test Case '-[PTimerKitTests.AuxiliaryFilterSelectionTests testTheCapRefusesNDAfterAuxiliaryWithoutChangingTheSelection]' passed (0.000 seconds).
+Test Suite 'AuxiliaryFilterSelectionTests' failed at 2026-10-06 04:40:02.163.
+	 Executed 4 tests, with 2 failures (0 unexpected) in 0.231 (0.232) seconds
+Test Suite 'PTimerKitTests.xctest' failed at 2026-10-06 04:40:02.163.
+	 Executed 4 tests, with 2 failures (0 unexpected) in 0.231 (0.232) seconds
+Test Suite 'Selected tests' failed at 2026-10-06 04:40:02.163.
+	 Executed 4 tests, with 2 failures (0 unexpected) in 0.231 (0.232) seconds
+Test Suite 'Selected tests' started at 2026-10-06 04:40:02.218.
+Test Suite 'PTimerCoreTests.xctest' started at 2026-10-06 04:40:02.219.
+Test Suite 'PTimerCoreTests.xctest' passed at 2026-10-06 04:40:02.219.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-06 04:40:02.219.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Note: Some test targets reported failures:
+  - PTimerKitTests (XCTest)

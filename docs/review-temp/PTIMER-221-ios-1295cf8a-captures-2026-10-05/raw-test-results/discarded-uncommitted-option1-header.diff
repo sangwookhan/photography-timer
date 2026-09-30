@@ -1,0 +1,50 @@
+diff --git a/ios/PTimer/ExposureCalculator/ExposureWorkspaceMainLayoutStyle.swift b/ios/PTimer/ExposureCalculator/ExposureWorkspaceMainLayoutStyle.swift
+index 06f21ba6..4363f6fa 100644
+--- a/ios/PTimer/ExposureCalculator/ExposureWorkspaceMainLayoutStyle.swift
++++ b/ios/PTimer/ExposureCalculator/ExposureWorkspaceMainLayoutStyle.swift
+@@ -887,14 +887,20 @@ struct VariableSectionView: View {
+             VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
+             // One title row across the card (FILTER-FLOW-002): the passive
+             // Base Shutter caption, a flexible gap of at least 12 points,
+-            // then the Aux Filter button beside the passive ND Filter title,
+-            // which its Stops / OD / ND control follows.
++            // the Stops / OD / ND control, then the Aux Filter button and
++            // the passive ND Filter title at the trailing edge.
+             HStack(spacing: 0) {
+                 Text("Base Shutter")
+                     .font(.footnote.weight(.semibold))
+                     .lineLimit(1)
+                     .minimumScaleFactor(0.7)
+                 Spacer(minLength: headerCaptionGroupGap)
++                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
++                    .layoutPriority(1)
++                    .accessibilityIdentifier("nd-notation-mode-control")
++                Color.clear
++                    .frame(width: headerButtonTitleGap, height: 1)
++                    .accessibilityHidden(true)
+                 ShootingFiltersHeaderButton(onOpen: onOpenShootingFilters)
+                     .layoutPriority(1)
+                 Color.clear
+@@ -904,12 +910,6 @@ struct VariableSectionView: View {
+                     .font(.footnote.weight(.semibold))
+                     .lineLimit(1)
+                     .fixedSize()
+-                Color.clear
+-                    .frame(width: 6, height: 1)
+-                    .accessibilityHidden(true)
+-                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
+-                    .layoutPriority(1)
+-                    .accessibilityIdentifier("nd-notation-mode-control")
+             }
+             .frame(height: pickerHeaderHeight)
+ 
+@@ -1679,7 +1679,8 @@ private let pickerHeaderHeight: CGFloat = 30
+ /// group (FILTER-FLOW-002).
+ private let headerCaptionGroupGap: CGFloat = 12
+ 
+-/// The gap between the Aux Filter button and the ND Filter title.
++/// The gap on each side of the Aux Filter button: from the Stops / OD /
++/// ND control and to the ND Filter title.
+ private let headerButtonTitleGap: CGFloat = 8
+ 
+ /// One wheel column's vertical geometry (FILTER-STACK-007), in points

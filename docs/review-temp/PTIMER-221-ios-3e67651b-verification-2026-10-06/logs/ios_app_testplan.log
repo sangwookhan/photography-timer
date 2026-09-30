@@ -1,0 +1,609 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PTimer.xcodeproj -scheme PTimer -testPlan PTimer -destination "platform=iOS Simulator,id=9144ED16-488D-41F0-B736-3E0564BC6874" -parallel-testing-enabled NO -derivedDataPath /tmp/ptimer-dd-ios221 test
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  PTimerKit: /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerKit @ local
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (8 targets)
+    Target 'PTimerTests' in project 'PTimer'
+        ➜ Explicit dependency on target 'PTimer' in project 'PTimer'
+        ➜ Explicit dependency on target 'PTimerCore-product' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerKit-product' in project 'PTimerKit'
+    Target 'PTimer' in project 'PTimer'
+        ➜ Explicit dependency on target 'PTimerWidgets' in project 'PTimer'
+        ➜ Explicit dependency on target 'PTimerCore-product' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerKit-product' in project 'PTimerKit'
+    Target 'PTimerKit-product' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerKit' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerCore' in project 'PTimerKit'
+    Target 'PTimerKit' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerCore' in project 'PTimerKit'
+    Target 'PTimerWidgets' in project 'PTimer'
+        ➜ Explicit dependency on target 'PTimerCore-product' in project 'PTimerKit'
+    Target 'PTimerCore-product' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerCore' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerKit_PTimerCore' in project 'PTimerKit'
+    Target 'PTimerCore' in project 'PTimerKit'
+        ➜ Explicit dependency on target 'PTimerKit_PTimerCore' in project 'PTimerKit'
+    Target 'PTimerKit_PTimerCore' in project 'PTimerKit' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk /tmp/ptimer-dd-ios221/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimer.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -o /tmp/ptimer-dd-ios221/SDKStatCaches.noindex/iphonesimulator27.0-24A430-8dc58220667be655e1bcc261a7455254.sdkstatcache
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex/PTimerKit_PTimerCore.bundle /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerKit_PTimerCore.bundle (in target 'PTimerWidgets' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerKit_PTimerCore.bundle /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex
+
+ProcessInfoPlistFile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex/Info.plist /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerWidgets/Info.plist (in target 'PTimerWidgets' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-infoPlistUtility /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios/PTimerWidgets/Info.plist -producttype com.apple.product-type.app-extension -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex/PTimerKit_PTimerCore.bundle -o /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex/Info.plist
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerWidgets.appex /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks -remove-static-executable /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerWidgets.appex /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerCore.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerCore.framework (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -remove-static-executable /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerCore.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PTimerKit_PTimerCore.bundle /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerKit_PTimerCore.bundle (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerKit_PTimerCore.bundle /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -remove-static-executable /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks
+
+ProcessInfoPlistFile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Info.plist /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimer.build/empty-PTimer.plist (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-infoPlistUtility /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimer.build/empty-PTimer.plist -producttype com.apple.product-type.application -genpkginfo /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimer.build/LaunchScreen-SBPartialInfo.plist -additionalcontentfile /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimer.build/assetcatalog_generated_info.plist -scanforprivacyfile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerCore.framework -scanforprivacyfile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework -scanforprivacyfile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PTimerKit_PTimerCore.bundle -scanforprivacyfile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerWidgets.appex -o /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Info.plist
+
+CopySwiftLibs /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PTimer.debug.dylib --scan-folder /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks --scan-folder /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns --scan-folder /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/SystemExtensions --scan-folder /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Extensions --scan-folder /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimer.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerCore.framework (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerCore.framework
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerCore.framework: replacing existing signature
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework: replacing existing signature
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/PTimerKit_PTimerCore.bundle /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerKit_PTimerCore.bundle (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimerKit_PTimerCore.bundle /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -remove-static-executable /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks
+
+Copy /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerCore.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerCore.framework (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -remove-static-executable /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PackageFrameworks/PTimerCore.framework /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks
+
+ProcessInfoPlistFile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Info.plist /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimerTests.build/empty-PTimerTests.plist (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-infoPlistUtility /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/PTimer.build/Debug-iphonesimulator/PTimerTests.build/empty-PTimerTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/PTimerKit_PTimerCore.bundle -o /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Info.plist
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerKit_-D59BFCFB9615B7E_PackageProduct.framework: replacing existing signature
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerCore.framework (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerCore.framework
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest/Frameworks/PTimerCore.framework: replacing existing signature
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest (in target 'PTimerTests' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerTests.xctest: replacing existing signature
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PTimer.debug.dylib (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PTimer.debug.dylib
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PTimer.debug.dylib: replacing existing signature
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/__preview.dylib (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/__preview.dylib
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/__preview.dylib: replacing existing signature
+
+CodeSign /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app
+/tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app: replacing existing signature
+
+Validate /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    builtin-validationUtility /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app -shallow-bundle -infoplist-subpath Info.plist
+
+ValidateEmbeddedBinary /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerWidgets.appex (in target 'PTimer' from project 'PTimer')
+    cd /Users/al03230922/work/playground/ptimerv1/.claude/worktrees/PTIMER-221-field-workflow-ios/ios
+    /Applications/Xcode.app/Contents/Developer/usr/bin/embeddedBinaryValidationUtility /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/PlugIns/PTimerWidgets.appex -signing-cert - -info-plist-path /tmp/ptimer-dd-ios221/Build/Products/Debug-iphonesimulator/PTimer.app/Info.plist
+
+PruneExplicitPrecompiledModules /tmp/ptimer-dd-ios221/SDKExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /tmp/ptimer-dd-ios221/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+Test Suite 'All tests' started at 2026-10-06 03:18:25.664.
+Test Suite 'PTimerTests.xctest' started at 2026-10-06 03:18:25.665.
+Test Suite 'AuxiliaryFilterSummaryStabilityTests' started at 2026-10-06 03:18:25.665.
+Test Case '-[PTimerTests.AuxiliaryFilterSummaryStabilityTests testTheSummaryLooksTheSameWhileTheWheelsReshape]' started.
+IOSurfaceClientSetSurfaceNotify failed e00002c7
+Test Case '-[PTimerTests.AuxiliaryFilterSummaryStabilityTests testTheSummaryLooksTheSameWhileTheWheelsReshape]' passed (0.036 seconds).
+Test Suite 'AuxiliaryFilterSummaryStabilityTests' passed at 2026-10-06 03:18:25.701.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.036 (0.036) seconds
+Test Suite 'B4TimerLifecycleBaselineTests' started at 2026-10-06 03:18:25.701.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testCompletedClearThenRestartBaseline]' started.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testCompletedClearThenRestartBaseline]' passed (0.003 seconds).
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testMultiTimerStaggeredCompletionBaseline]' started.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testMultiTimerStaggeredCompletionBaseline]' passed (0.001 seconds).
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testPauseResumeCompleteBaseline]' started.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testPauseResumeCompleteBaseline]' passed (0.001 seconds).
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testPauseThenRemoveBaseline]' started.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testPauseThenRemoveBaseline]' passed (0.001 seconds).
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testPauseWhileNotRunningNoOpBaseline]' started.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testPauseWhileNotRunningNoOpBaseline]' passed (0.001 seconds).
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testReactivationReconciliationBaseline]' started.
+Test Case '-[PTimerTests.B4TimerLifecycleBaselineTests testReactivationReconciliationBaseline]' passed (0.001 seconds).
+Test Suite 'B4TimerLifecycleBaselineTests' passed at 2026-10-06 03:18:25.710.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'BottomSheetWorkspaceLayoutMetricsTests' started at 2026-10-06 03:18:25.710.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testContributingValuesMoveTheDerivedRequirement]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testContributingValuesMoveTheDerivedRequirement]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDerivedBudgetsMatchTheApprovedReferenceValues]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDerivedBudgetsMatchTheApprovedReferenceValues]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDerivedTotalsAreReported]' started.
+BUDGET_TOTALS regular total=795.0234375 statusRegion=25.94140625 picker=164.0 labelRow=16.0
+BUDGET_TOTALS compact total=637.6357421875 statusRegion=21.7138671875 picker=108.0 labelRow=14.0
+BUDGET_TOTALS dense total=579.30224609375 statusRegion=16.54052734375 picker=92.0 labelRow=14.0
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDerivedTotalsAreReported]' passed (0.003 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testIPhone17AndIPhone17ProAndIPhone17ProMaxUseCompact]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testIPhone17AndIPhone17ProAndIPhone17ProMaxUseCompact]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testShortPhoneBudgetUsesDenseAndDenseFits]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testShortPhoneBudgetUsesDenseAndDenseFits]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testStatusRegionIsCountedOnceAsOneRow]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testStatusRegionIsCountedOnceAsOneRow]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTierSelectionAndThresholdsUseTheProductionBudget]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTierSelectionAndThresholdsUseTheProductionBudget]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTotalNumeralsMatchTheNDNumeralsAndFitTheRegion]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTotalNumeralsMatchTheNDNumeralsAndFitTheRegion]' passed (0.001 seconds).
+Test Suite 'BottomSheetWorkspaceLayoutMetricsTests' passed at 2026-10-06 03:18:25.718.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'BottomSheetWorkspaceShellTests' started at 2026-10-06 03:18:25.718.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testActiveSectionIdentityIsStableAcrossCompletedSectionAppearance]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testActiveSectionIdentityIsStableAcrossCompletedSectionAppearance]' passed (0.011 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testAppDelegateAdvertisesPortraitOnlyOrientation]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testAppDelegateAdvertisesPortraitOnlyOrientation]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testCompactCardTapRoutesByStatusIncludingCompletedSectionFix]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testCompactCardTapRoutesByStatusIncludingCompletedSectionFix]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testCompletedSectionAbsentWhenNoCompletedTimersExist]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testCompletedSectionAbsentWhenNoCompletedTimersExist]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testExpandOpenFocusRoutesBySectionWithAndWithoutHighlight]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testExpandOpenFocusRoutesBySectionWithAndWithoutHighlight]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testExposureScreenLoadsAtIPhone17Viewport]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testExposureScreenLoadsAtIPhone17Viewport]' passed (0.004 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testFullScreenTimersWindowLoadsWithCloseButton]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testFullScreenTimersWindowLoadsWithCloseButton]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testHasTimerPresentationReflectsTimerExistence]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testHasTimerPresentationReflectsTimerExistence]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testIsCompletedSectionFlagsCompletedSectionOnly]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testIsCompletedSectionFlagsCompletedSectionOnly]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testOverflowTapRoutesToActiveSectionOtherwiseCompleted]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testOverflowTapRoutesToActiveSectionOtherwiseCompleted]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testSectionScrollIDsAreExposed]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testSectionScrollIDsAreExposed]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testStateStoreLifecycleDrivesDetentFocusAndOpenFocusClearing]' started.
+Test Case '-[PTimerTests.BottomSheetWorkspaceShellTests testStateStoreLifecycleDrivesDetentFocusAndOpenFocusClearing]' passed (0.000 seconds).
+Test Suite 'BottomSheetWorkspaceShellTests' passed at 2026-10-06 03:18:25.740.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.019 (0.021) seconds
+Test Suite 'ContextPersistenceUserDefaultsTests' started at 2026-10-06 03:18:25.740.
+Test Case '-[PTimerTests.ContextPersistenceUserDefaultsTests testRelaunchWithCorruptedMetadataSnapshotKeepsTimerRestoreIndependent]' started.
+2026-10-06 03:18:25.742363+0900 PTimer[24867:9329603] [persistence] Timer metadata decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.ContextPersistenceUserDefaultsTests testRelaunchWithCorruptedMetadataSnapshotKeepsTimerRestoreIndependent]' passed (0.003 seconds).
+Test Suite 'ContextPersistenceUserDefaultsTests' passed at 2026-10-06 03:18:25.743.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'CustomFilmEditorPolishTests' started at 2026-10-06 03:18:25.743.
+Test Case '-[PTimerTests.CustomFilmEditorPolishTests test_commonISOs_includes320_atStablePosition]' started.
+Test Case '-[PTimerTests.CustomFilmEditorPolishTests test_commonISOs_includes320_atStablePosition]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CustomFilmEditorPolishTests test_rowDurationDisplayValue_rendersExpectedTextPerInput]' started.
+Test Case '-[PTimerTests.CustomFilmEditorPolishTests test_rowDurationDisplayValue_rendersExpectedTextPerInput]' passed (0.000 seconds).
+Test Suite 'CustomFilmEditorPolishTests' passed at 2026-10-06 03:18:25.745.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CustomFilmLibraryQuarantineTests' started at 2026-10-06 03:18:25.745.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_clearSnapshot_removesLiveKeyButKeepsQuarantine]' started.
+2026-10-06 03:18:25.747135+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_clearSnapshot_removesLiveKeyButKeepsQuarantine]' passed (0.004 seconds).
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_malformedLoad_quarantinesRawPayload]' started.
+2026-10-06 03:18:25.751605+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_malformedLoad_quarantinesRawPayload]' passed (0.003 seconds).
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_normalSaveDoesNotTouchQuarantine]' started.
+2026-10-06 03:18:25.754978+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_normalSaveDoesNotTouchQuarantine]' passed (0.008 seconds).
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_partialDecode_recoversValidFilmsAndQuarantinesOriginal]' started.
+2026-10-06 03:18:25.762960+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=degraded dropped=1; raw payload quarantined.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_partialDecode_recoversValidFilmsAndQuarantinesOriginal]' passed (0.003 seconds).
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_secondFailureReplacesQuarantine]' started.
+2026-10-06 03:18:25.766117+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+2026-10-06 03:18:25.767089+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_secondFailureReplacesQuarantine]' passed (0.004 seconds).
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_validLoadAfterFailure_keepsExistingQuarantine]' started.
+2026-10-06 03:18:25.770390+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.CustomFilmLibraryQuarantineTests test_validLoadAfterFailure_keepsExistingQuarantine]' passed (0.004 seconds).
+Test Suite 'CustomFilmLibraryQuarantineTests' passed at 2026-10-06 03:18:25.772.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.026 (0.027) seconds
+Test Suite 'ExposureWorkspaceMainLayoutStyleTests' started at 2026-10-06 03:18:25.772.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testBaseShutterAndFilterColumnsShareOneVerticalAxis]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testBaseShutterAndFilterColumnsShareOneVerticalAxis]' passed (0.000 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testBaseShutterAndFilterWheelsShareOneNumericSizePerCount]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testBaseShutterAndFilterWheelsShareOneNumericSizePerCount]' passed (0.000 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testFourSpaceSummaryWidensWithoutNarrowingTheNDColumns]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testFourSpaceSummaryWidensWithoutNarrowingTheNDColumns]' passed (0.000 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testGNDRailIsGreenLeaningAndDistinctFromNDBlueInLightAndDark]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testGNDRailIsGreenLeaningAndDistinctFromNDBlueInLightAndDark]' passed (0.001 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testSingleWheelKeepsTheFullWidthPickerSize]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testSingleWheelKeepsTheFullWidthPickerSize]' passed (0.000 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testStackedNumericHierarchyMatchesTheReferenceTable]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testStackedNumericHierarchyMatchesTheReferenceTable]' passed (0.001 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testTypeRailFitsInsideTheRowGeometry]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testTypeRailFitsInsideTheRowGeometry]' passed (0.000 seconds).
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testTypeRailPaletteIsFixedAndIndependentOfTheFilterSetColor]' started.
+Test Case '-[PTimerTests.ExposureWorkspaceMainLayoutStyleTests testTypeRailPaletteIsFixedAndIndependentOfTheFilterSetColor]' passed (0.000 seconds).
+Test Suite 'ExposureWorkspaceMainLayoutStyleTests' passed at 2026-10-06 03:18:25.778.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'FilterSetLocalizationTests' started at 2026-10-06 03:18:25.778.
+Test Case '-[PTimerTests.FilterSetLocalizationTests testFilterSetStringsHaveEnglishAndKoreanValues]' started.
+Test Case '-[PTimerTests.FilterSetLocalizationTests testFilterSetStringsHaveEnglishAndKoreanValues]' passed (0.001 seconds).
+Test Case '-[PTimerTests.FilterSetLocalizationTests testRemovedRemoveActionStringIsGone]' started.
+Test Case '-[PTimerTests.FilterSetLocalizationTests testRemovedRemoveActionStringIsGone]' passed (0.000 seconds).
+Test Suite 'FilterSetLocalizationTests' passed at 2026-10-06 03:18:25.780.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'FilterSourcePlusAccessibilityTests' started at 2026-10-06 03:18:25.780.
+Test Case '-[PTimerTests.FilterSourcePlusAccessibilityTests testPlusElementExposesAddAdjustableValueAndNoManageAction]' started.
+Test Case '-[PTimerTests.FilterSourcePlusAccessibilityTests testPlusElementExposesAddAdjustableValueAndNoManageAction]' passed (0.228 seconds).
+Test Case '-[PTimerTests.FilterSourcePlusAccessibilityTests testUnavailableRememberedSourceStartsWithoutAddAndAnAvailableCandidateRestoresIt]' started.
+objc[24867]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x11464c310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x113348398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+Test Case '-[PTimerTests.FilterSourcePlusAccessibilityTests testUnavailableRememberedSourceStartsWithoutAddAndAnAvailableCandidateRestoresIt]' passed (0.713 seconds).
+Test Case '-[PTimerTests.FilterSourcePlusAccessibilityTests testUnavailableTransientCandidateWithdrawsAddUntilTheUserStepsBack]' started.
+Test Case '-[PTimerTests.FilterSourcePlusAccessibilityTests testUnavailableTransientCandidateWithdrawsAddUntilTheUserStepsBack]' passed (1.023 seconds).
+Test Suite 'FilterSourcePlusAccessibilityTests' passed at 2026-10-06 03:18:27.745.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 1.964 (1.965) seconds
+Test Suite 'FilterStatusRegionAccessibilityTests' started at 2026-10-06 03:18:27.745.
+Test Case '-[PTimerTests.FilterStatusRegionAccessibilityTests testMixedSourceIdleSummaryAndTotalAreSeparateElements]' started.
+Test Case '-[PTimerTests.FilterStatusRegionAccessibilityTests testMixedSourceIdleSummaryAndTotalAreSeparateElements]' passed (0.220 seconds).
+Test Case '-[PTimerTests.FilterStatusRegionAccessibilityTests testMovingDetailAndTotalAreSeparateElements]' started.
+Test Case '-[PTimerTests.FilterStatusRegionAccessibilityTests testMovingDetailAndTotalAreSeparateElements]' passed (0.211 seconds).
+Test Suite 'FilterStatusRegionAccessibilityTests' passed at 2026-10-06 03:18:28.176.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.430 (0.431) seconds
+Test Suite 'LockScreenLiveActivityContentStateTests' started at 2026-10-06 03:18:28.176.
+Test Case '-[PTimerTests.LockScreenLiveActivityContentStateTests testLockScreenScheduledTargetsCanHandOffToNextTimerWithoutAppStateRefresh]' started.
+Test Case '-[PTimerTests.LockScreenLiveActivityContentStateTests testLockScreenScheduledTargetsCanHandOffToNextTimerWithoutAppStateRefresh]' passed (0.001 seconds).
+Test Suite 'LockScreenLiveActivityContentStateTests' passed at 2026-10-06 03:18:28.178.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'NDWheelPickerCenterRowTests' started at 2026-10-06 03:18:28.178.
+Test Case '-[PTimerTests.NDWheelPickerCenterRowTests testBoundaryTieResolvesToTheLowerRowExactlyOnce]' started.
+Test Case '-[PTimerTests.NDWheelPickerCenterRowTests testBoundaryTieResolvesToTheLowerRowExactlyOnce]' passed (0.001 seconds).
+Test Case '-[PTimerTests.NDWheelPickerCenterRowTests testNearestMidpointWins]' started.
+Test Case '-[PTimerTests.NDWheelPickerCenterRowTests testNearestMidpointWins]' passed (0.001 seconds).
+Test Case '-[PTimerTests.NDWheelPickerCenterRowTests testNoHostedRowsFallsBack]' started.
+Test Case '-[PTimerTests.NDWheelPickerCenterRowTests testNoHostedRowsFallsBack]' passed (0.001 seconds).
+Test Suite 'NDWheelPickerCenterRowTests' passed at 2026-10-06 03:18:28.181.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'NDWheelPickerPollingTests' started at 2026-10-06 03:18:28.182.
+Test Case '-[PTimerTests.NDWheelPickerPollingTests testPollIsPausedAtRestAndRunsFromTouchUntilTheSettledRow]' started.
+Test Case '-[PTimerTests.NDWheelPickerPollingTests testPollIsPausedAtRestAndRunsFromTouchUntilTheSettledRow]' passed (0.009 seconds).
+Test Case '-[PTimerTests.NDWheelPickerPollingTests testSettledRowDuringATouchKeepsPollingUntilRelease]' started.
+Test Case '-[PTimerTests.NDWheelPickerPollingTests testSettledRowDuringATouchKeepsPollingUntilRelease]' passed (0.004 seconds).
+Test Case '-[PTimerTests.NDWheelPickerPollingTests testWheelRestingOnItsSelectedRowAfterReleasePausesWithoutADidSelect]' started.
+Test Case '-[PTimerTests.NDWheelPickerPollingTests testWheelRestingOnItsSelectedRowAfterReleasePausesWithoutADidSelect]' passed (0.004 seconds).
+Test Suite 'NDWheelPickerPollingTests' passed at 2026-10-06 03:18:28.200.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.017 (0.018) seconds
+Test Suite 'PersistentCustomFilmLibraryTests' started at 2026-10-06 03:18:28.200.
+Test Case '-[PTimerTests.PersistentCustomFilmLibraryTests test_malformedPayload_failsSafeToEmptyLibrary]' started.
+2026-10-06 03:18:28.204194+0900 PTimer[24867:9329603] [persistence] Custom film library decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.PersistentCustomFilmLibraryTests test_malformedPayload_failsSafeToEmptyLibrary]' passed (0.007 seconds).
+Test Case '-[PTimerTests.PersistentCustomFilmLibraryTests test_presetCatalogStoreKey_isDistinctFromCustomLibraryKey]' started.
+Test Case '-[PTimerTests.PersistentCustomFilmLibraryTests test_presetCatalogStoreKey_isDistinctFromCustomLibraryKey]' passed (0.004 seconds).
+Test Case '-[PTimerTests.PersistentCustomFilmLibraryTests test_userDefaultsStore_persistsAcrossDistinctInstances]' started.
+Test Case '-[PTimerTests.PersistentCustomFilmLibraryTests test_userDefaultsStore_persistsAcrossDistinctInstances]' passed (0.003 seconds).
+Test Suite 'PersistentCustomFilmLibraryTests' passed at 2026-10-06 03:18:28.216.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.014 (0.016) seconds
+Test Suite 'RecordReplayBaselineSmokeTests' started at 2026-10-06 03:18:28.216.
+Test Case '-[PTimerTests.RecordReplayBaselineSmokeTests testSingleTimerStartCompletePublishesExposerCallSequence]' started.
+Test Case '-[PTimerTests.RecordReplayBaselineSmokeTests testSingleTimerStartCompletePublishesExposerCallSequence]' passed (0.006 seconds).
+Test Suite 'RecordReplayBaselineSmokeTests' passed at 2026-10-06 03:18:28.222.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'SilentModeAdvisoryTests' started at 2026-10-06 03:18:28.222.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testAlarmSoundingSuppressesProbe]' started.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testAlarmSoundingSuppressesProbe]' passed (0.001 seconds).
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testAllowedActiveEntryShowsAdvisoryWhenMutedLikely]' started.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testAllowedActiveEntryShowsAdvisoryWhenMutedLikely]' passed (0.000 seconds).
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testNotificationEntrySuppressesAdvisoryWithoutBurningSession]' started.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testNotificationEntrySuppressesAdvisoryWithoutBurningSession]' passed (0.000 seconds).
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testNotificationTapDuringAsyncProbeStillSuppresses]' started.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testNotificationTapDuringAsyncProbeStillSuppresses]' passed (0.000 seconds).
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testNotMutedLikelyDoesNotShowAdvisory]' started.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testNotMutedLikelyDoesNotShowAdvisory]' passed (0.000 seconds).
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testProbesAtMostOncePerSession]' started.
+Test Case '-[PTimerTests.SilentModeAdvisoryTests testProbesAtMostOncePerSession]' passed (0.000 seconds).
+Test Suite 'SilentModeAdvisoryTests' passed at 2026-10-06 03:18:28.227.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Suite 'StagedNotificationSchedulerTests' started at 2026-10-06 03:18:28.227.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelDuringCompletionOnlyInFlightAddLeavesNoPendingRequests]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelDuringCompletionOnlyInFlightAddLeavesNoPendingRequests]' passed (0.002 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelDuringFinalCompletionAddLeavesNoPendingRequests]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelDuringFinalCompletionAddLeavesNoPendingRequests]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelDuringInFlightAddLeavesNoPendingRequests]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelDuringInFlightAddLeavesNoPendingRequests]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelRemovesEveryStageIdentifier]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testCancelRemovesEveryStageIdentifier]' passed (0.000 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testLongTimerSchedulesEarlyAndLatePreAlertsAndCompletion]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testLongTimerSchedulesEarlyAndLatePreAlertsAndCompletion]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testMediumTimerSchedulesLatePreAlertAndCompletionOnly]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testMediumTimerSchedulesLatePreAlertAndCompletionOnly]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testRescheduleDoesNotLetObsoleteTaskDeleteNewerSchedule]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testRescheduleDoesNotLetObsoleteTaskDeleteNewerSchedule]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testReschedulingCancelsPreviousStagesFirst]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testReschedulingCancelsPreviousStagesFirst]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testResumeNearEndSkipsAllPastPreAlertsButKeepsCompletion]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testResumeNearEndSkipsAllPastPreAlertsButKeepsCompletion]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testResumeSkipsOnlyThePastPreAlertStage]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testResumeSkipsOnlyThePastPreAlertStage]' passed (0.001 seconds).
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testShortTimerSchedulesCompletionOnly]' started.
+Test Case '-[PTimerTests.StagedNotificationSchedulerTests testShortTimerSchedulesCompletionOnly]' passed (0.001 seconds).
+Test Suite 'StagedNotificationSchedulerTests' passed at 2026-10-06 03:18:28.239.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.010 (0.012) seconds
+Test Suite 'TimerManagerCompletionAlertTests' started at 2026-10-06 03:18:28.239.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testBackgroundCompletionPlaysNothingAndForegroundPlaysFullFeedback]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testBackgroundCompletionPlaysNothingAndForegroundPlaysFullFeedback]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testCompletedTimerDoesNotTriggerDuplicateAlertOnRepeatedTickOrReevaluation]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testCompletedTimerDoesNotTriggerDuplicateAlertOnRepeatedTickOrReevaluation]' passed (0.001 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testCompletionAlertFiresExactlyOnceWhenRunningTimerCompletes]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testCompletionAlertFiresExactlyOnceWhenRunningTimerCompletes]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testCompletionFeedbackPlaysAppOwnedAudibleAlarmForThatTimer]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testCompletionFeedbackPlaysAppOwnedAudibleAlarmForThatTimer]' passed (0.003 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testForegroundAlertServiceOnlyPlaysFeedbackWhileAppIsActive]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testForegroundAlertServiceOnlyPlaysFeedbackWhileAppIsActive]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testForegroundCompletionDrivesAudibleAlarmOnlyWhileActiveAndNotOnCancel]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testForegroundCompletionDrivesAudibleAlarmOnlyWhileActiveAndNotOnCancel]' passed (0.001 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testLateCompletionAfterBackgroundDoesNotPlayAlarmEvenWhenActive]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testLateCompletionAfterBackgroundDoesNotPlayAlarmEvenWhenActive]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testMultipleTimersTriggerSeparateCompletionAlertsAtTheirOwnCompletionTimes]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testMultipleTimersTriggerSeparateCompletionAlertsAtTheirOwnCompletionTimes]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testPausedTimerDoesNotTriggerCompletionAlertAfterTimePasses]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testPausedTimerDoesNotTriggerCompletionAlertAfterTimePasses]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testPausedTimerDoesNotTriggerCompletionAlert]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testPausedTimerDoesNotTriggerCompletionAlert]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testPreAlertFeedbackDoesNotPlayTheAudibleAlarm]' started.
+Test Case '-[PTimerTests.TimerManagerCompletionAlertTests testPreAlertFeedbackDoesNotPlayTheAudibleAlarm]' passed (0.000 seconds).
+Test Suite 'TimerManagerCompletionAlertTests' passed at 2026-10-06 03:18:28.248.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+Test Suite 'TimerManagerNotificationSchedulingTests' started at 2026-10-06 03:18:28.248.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testForegroundCompletionCleansUpStalePendingNotification]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testForegroundCompletionCleansUpStalePendingNotification]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testMultipleTimersScheduleAndCancelUsingDeterministicPerTimerLifecycle]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testMultipleTimersScheduleAndCancelUsingDeterministicPerTimerLifecycle]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testPauseCancelsPendingCompletionNotification]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testPauseCancelsPendingCompletionNotification]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testPausedAndCompletedTimersDoNotLeaveScheduledNotifications]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testPausedAndCompletedTimersDoNotLeaveScheduledNotifications]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testRemoveCancelsRelatedCompletionNotification]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testRemoveCancelsRelatedCompletionNotification]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testRemoveCompletedTimersCancelsStalePendingNotificationsForCompletedTimers]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testRemoveCompletedTimersCancelsStalePendingNotificationsForCompletedTimers]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testResumeReschedulesCompletionNotificationUsingNewEndDate]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testResumeReschedulesCompletionNotificationUsingNewEndDate]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testStartSchedulesCompletionNotificationForRunningTimer]' started.
+Test Case '-[PTimerTests.TimerManagerNotificationSchedulingTests testStartSchedulesCompletionNotificationForRunningTimer]' passed (0.000 seconds).
+Test Suite 'TimerManagerNotificationSchedulingTests' passed at 2026-10-06 03:18:28.253.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+Test Suite 'TimerManagerPauseResumeTests' started at 2026-10-06 03:18:28.253.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testCompletedTimerPreservesOriginalDurationMetadata]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testCompletedTimerPreservesOriginalDurationMetadata]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testCompletionDateMatchesRegardlessOfCompletionPath]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testCompletionDateMatchesRegardlessOfCompletionPath]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testLongPausedResumeStaysRunningWithoutAlertAndAlertsOnlyAfterRunningCompletion]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testLongPausedResumeStaysRunningWithoutAlertAndAlertsOnlyAfterRunningCompletion]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testPausedTimerEndDateIsDerivedFromFreezeMetadata]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testPausedTimerEndDateIsDerivedFromFreezeMetadata]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testPausedTimerPreservesFrozenStatePauseMetadata]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testPausedTimerPreservesFrozenStatePauseMetadata]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testPauseFreezesRemainingTimeInResumablePausedState]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testPauseFreezesRemainingTimeInResumablePausedState]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testRemoveCompletedTimersKeepsPausedTimersResumable]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testRemoveCompletedTimersKeepsPausedTimersResumable]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeAfterLogicalCompletionKeepsTimerRunningFromRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeAfterLogicalCompletionKeepsTimerRunningFromRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeAfterLongPauseUsesCorrectRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeAfterLongPauseUsesCorrectRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeContinuesFromFrozenPausedRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeContinuesFromFrozenPausedRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeMultipleTimesMaintainsCorrectRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeMultipleTimesMaintainsCorrectRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeRecalculatesEndDateFromFrozenPausedRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testResumeRecalculatesEndDateFromFrozenPausedRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testTickDoesNotAdvanceFrozenPausedTimerRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPauseResumeTests testTickDoesNotAdvanceFrozenPausedTimerRemainingTime]' passed (0.000 seconds).
+Test Suite 'TimerManagerPauseResumeTests' passed at 2026-10-06 03:18:28.260.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.005 (0.007) seconds
+Test Suite 'TimerManagerPersistenceRestoreTests' started at 2026-10-06 03:18:28.260.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testPersistedPausedSnapshotOmitsExpectedCompletionAt]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testPersistedPausedSnapshotOmitsExpectedCompletionAt]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRemovingLastTimerClearsPersistedSnapshot]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRemovingLastTimerClearsPersistedSnapshot]' passed (0.009 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRepeatedRelaunchRestoreDoesNotDuplicatePersistedTimers]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRepeatedRelaunchRestoreDoesNotDuplicatePersistedTimers]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreCompletedTimerAfterTerminationKeepsCompletedState]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreCompletedTimerAfterTerminationKeepsCompletedState]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreDecodesLegacyStoppedSnapshotValueAsPaused]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreDecodesLegacyStoppedSnapshotValueAsPaused]' passed (0.004 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreEntryPointLoadsSnapshotOnlyDuringInitialization]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreEntryPointLoadsSnapshotOnlyDuringInitialization]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreLegacyPausedSnapshotIgnoresExpectedCompletionAt]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreLegacyPausedSnapshotIgnoresExpectedCompletionAt]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreMultipleTimersAfterTerminationPreservesIDsAndStatuses]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreMultipleTimersAfterTerminationPreservesIDsAndStatuses]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestorePausedTimerAfterTerminationPreservesFrozenRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestorePausedTimerAfterTerminationPreservesFrozenRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreRunningTimerAfterTerminationCompletesIfExpectedCompletionAlreadyPassed]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreRunningTimerAfterTerminationCompletesIfExpectedCompletionAlreadyPassed]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreRunningTimerAfterTerminationKeepsItRunningWithWallClockRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreRunningTimerAfterTerminationKeepsItRunningWithWallClockRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreWithCorruptedPersistedSnapshotSafelyFallsBackToEmptyState]' started.
+2026-10-06 03:18:28.280246+0900 PTimer[24867:9329603] [persistence] Timer state decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testRestoreWithCorruptedPersistedSnapshotSafelyFallsBackToEmptyState]' passed (0.003 seconds).
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testResumeThenRelaunchRestoresRunningTimerWithReconciledRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerPersistenceRestoreTests testResumeThenRelaunchRestoresRunningTimerWithReconciledRemainingTime]' passed (0.000 seconds).
+Test Suite 'TimerManagerPersistenceRestoreTests' passed at 2026-10-06 03:18:28.282.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.020 (0.022) seconds
+Test Suite 'TimerManagerReconcileTests' started at 2026-10-06 03:18:28.282.
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveCompletesExpiredRunningTimerWithoutReplayingCompletionAlert]' started.
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveCompletesExpiredRunningTimerWithoutReplayingCompletionAlert]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveKeepsMultipleTimersConsistentAcrossStatuses]' started.
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveKeepsMultipleTimersConsistentAcrossStatuses]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveKeepsPausedTimerUnchanged]' started.
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveKeepsPausedTimerUnchanged]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveKeepsStillRunningTimerRunningWithRefreshedRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerReconcileTests testReconcileAfterAppBecomesActiveKeepsStillRunningTimerRunningWithRefreshedRemainingTime]' passed (0.000 seconds).
+Test Suite 'TimerManagerReconcileTests' passed at 2026-10-06 03:18:28.284.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'TimerManagerTests' started at 2026-10-06 03:18:28.284.
+Test Case '-[PTimerTests.TimerManagerTests testBoundaryCompletionWithEpsilon]' started.
+Test Case '-[PTimerTests.TimerManagerTests testBoundaryCompletionWithEpsilon]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testCompletedStateHasNoPausedMetadata]' started.
+Test Case '-[PTimerTests.TimerManagerTests testCompletedStateHasNoPausedMetadata]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testCompletedTimerHasDeterministicCompletionTimestamp]' started.
+Test Case '-[PTimerTests.TimerManagerTests testCompletedTimerHasDeterministicCompletionTimestamp]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testCompletedTimerKeepsZeroRemainingTime]' started.
+Test Case '-[PTimerTests.TimerManagerTests testCompletedTimerKeepsZeroRemainingTime]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testDelayedTickUsesAbsoluteTimeWithoutDrift]' started.
+Test Case '-[PTimerTests.TimerManagerTests testDelayedTickUsesAbsoluteTimeWithoutDrift]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testNonFiniteDurationIsIgnored]' started.
+Test Case '-[PTimerTests.TimerManagerTests testNonFiniteDurationIsIgnored]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testNonPositiveDurationIsIgnored]' started.
+Test Case '-[PTimerTests.TimerManagerTests testNonPositiveDurationIsIgnored]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testNotificationIdentifierIsDeterministicFromTimerUUID]' started.
+Test Case '-[PTimerTests.TimerManagerTests testNotificationIdentifierIsDeterministicFromTimerUUID]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testPauseLoopUsesResolvedState]' started.
+Test Case '-[PTimerTests.TimerManagerTests testPauseLoopUsesResolvedState]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testRemainingTimeCalculationTracksEndDateAndClampsAtZero]' started.
+Test Case '-[PTimerTests.TimerManagerTests testRemainingTimeCalculationTracksEndDateAndClampsAtZero]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testRemainingTimeEpsilonClampBoundary]' started.
+Test Case '-[PTimerTests.TimerManagerTests testRemainingTimeEpsilonClampBoundary]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testRemoveCompletedTimersRemovesOnlyCompletedEntries]' started.
+Test Case '-[PTimerTests.TimerManagerTests testRemoveCompletedTimersRemovesOnlyCompletedEntries]' passed (0.005 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testRunningTimerAutoCompletesViaUpdatingStatus]' started.
+Test Case '-[PTimerTests.TimerManagerTests testRunningTimerAutoCompletesViaUpdatingStatus]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testStartAddsMultipleRunningTimers]' started.
+Test Case '-[PTimerTests.TimerManagerTests testStartAddsMultipleRunningTimers]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testStatusAtDoesNotChangeOriginalState]' started.
+Test Case '-[PTimerTests.TimerManagerTests testStatusAtDoesNotChangeOriginalState]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testStatusTransitionsAtEpsilonBoundary]' started.
+Test Case '-[PTimerTests.TimerManagerTests testStatusTransitionsAtEpsilonBoundary]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testTickCompletesExpiredTimerWithoutAffectingOthers]' started.
+Test Case '-[PTimerTests.TimerManagerTests testTickCompletesExpiredTimerWithoutAffectingOthers]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testTickUpdatesEachTimerIndependently]' started.
+Test Case '-[PTimerTests.TimerManagerTests testTickUpdatesEachTimerIndependently]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testTimerManagerStopsLoopWhenNoRunningTimers]' started.
+Test Case '-[PTimerTests.TimerManagerTests testTimerManagerStopsLoopWhenNoRunningTimers]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerManagerTests testTimerWithVeryLargeDurationDoesNotOverflow]' started.
+Test Case '-[PTimerTests.TimerManagerTests testTimerWithVeryLargeDurationDoesNotOverflow]' passed (0.000 seconds).
+Test Suite 'TimerManagerTests' passed at 2026-10-06 03:18:28.298.
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.011 (0.014) seconds
+Test Suite 'TimerPersistenceQuarantineTests' started at 2026-10-06 03:18:28.298.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerMetadata_clearRemovesLiveKeyButKeepsQuarantine]' started.
+2026-10-06 03:18:28.300330+0900 PTimer[24867:9329603] [persistence] Timer metadata decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerMetadata_clearRemovesLiveKeyButKeepsQuarantine]' passed (0.004 seconds).
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerMetadata_partialDecodeRecoversAndQuarantines]' started.
+2026-10-06 03:18:28.306079+0900 PTimer[24867:9329603] [persistence] Timer metadata decode degraded: outcome=degraded dropped=1; raw payload quarantined.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerMetadata_partialDecodeRecoversAndQuarantines]' passed (0.004 seconds).
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerRuntimeRestore_allRecordsDropped_keepsQuarantine]' started.
+2026-10-06 03:18:28.309208+0900 PTimer[24867:9329603] [persistence] Timer state decode degraded: outcome=degraded dropped=1; raw payload quarantined.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerRuntimeRestore_allRecordsDropped_keepsQuarantine]' passed (0.003 seconds).
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerState_clearRemovesLiveKeyButKeepsQuarantine]' started.
+2026-10-06 03:18:28.312370+0900 PTimer[24867:9329603] [persistence] Timer state decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerState_clearRemovesLiveKeyButKeepsQuarantine]' passed (0.003 seconds).
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerState_normalSaveKeepsQuarantine]' started.
+2026-10-06 03:18:28.315916+0900 PTimer[24867:9329603] [persistence] Timer state decode degraded: outcome=malformed dropped=0; raw payload quarantined.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerState_normalSaveKeepsQuarantine]' passed (0.004 seconds).
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerState_partialDecodeRecoversAndQuarantines]' started.
+2026-10-06 03:18:28.320209+0900 PTimer[24867:9329603] [persistence] Timer state decode degraded: outcome=degraded dropped=1; raw payload quarantined.
+Test Case '-[PTimerTests.TimerPersistenceQuarantineTests test_timerState_partialDecodeRecoversAndQuarantines]' passed (0.003 seconds).
+Test Suite 'TimerPersistenceQuarantineTests' passed at 2026-10-06 03:18:28.321.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.022 (0.023) seconds
+Test Suite 'TimerWorkspaceCloneIntegrationTests' started at 2026-10-06 03:18:28.321.
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCancelOnPausedKeepsRecordAndStartsNoNewTimer]' started.
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCancelOnPausedKeepsRecordAndStartsNoNewTimer]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCloneFromPausedAddsSeparateRunningTimerAndKeepsSourcePaused]' started.
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCloneFromPausedAddsSeparateRunningTimerAndKeepsSourcePaused]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCloneFromRunningAddsSeparateTimerAndKeepsSource]' started.
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCloneFromRunningAddsSeparateTimerAndKeepsSource]' passed (0.000 seconds).
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCloneOnCanceledAddsSeparateTimerAndKeepsSource]' started.
+Test Case '-[PTimerTests.TimerWorkspaceCloneIntegrationTests testCloneOnCanceledAddsSeparateTimerAndKeepsSource]' passed (0.000 seconds).
+Test Suite 'TimerWorkspaceCloneIntegrationTests' passed at 2026-10-06 03:18:28.323.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'PTimerTests.xctest' passed at 2026-10-06 03:18:28.323.
+	 Executed 158 tests, with 0 failures (0 unexpected) in 2.622 (2.659) seconds
+Test Suite 'All tests' passed at 2026-10-06 03:18:28.324.
+	 Executed 158 tests, with 0 failures (0 unexpected) in 2.622 (2.660) seconds
+2026-10-06 03:18:28.620 xcodebuild[24847:9328984] [MT] IDETestOperationsObserverDebug: 7.457 elapsed -- Testing started completed.
+2026-10-06 03:18:28.620 xcodebuild[24847:9328984] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-06 03:18:28.620 xcodebuild[24847:9328984] [MT] IDETestOperationsObserverDebug: 7.457 sec, +7.457 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/ptimer-dd-ios221/Logs/Test/Test-PTimer-2026.10.06_03-18-19-+0900.xcresult
+
+** TEST SUCCEEDED ** [9.050 sec]
+
+Testing started

@@ -1,0 +1,20 @@
+iOS focused regressions for reviews 5998854108 / 5998872498 (developer runs on this Mac, swift test --filter).
+
+ShootingFiltersSessionReconciliationTests (7)
+  with the previous rebase (workingMounts = committed mounts) and no reconcile: 6 failed, 1 passed
+    failed: testACommittedChangeKeepsThePicksOfASetRemovedInTheSession, testACommittedMoveKeepsTheDraftChoiceUnderTheNewSet,
+            testACommittedMoveKeepsUnrelatedDraftPicksAndUnmounts, testAWorkingOnlyPickWhoseItemMovedIsLeftAsItIs,
+            testDeletingAWorkingOnlyPickDropsItAndKeepsTheOtherPicks, testRemovingTheWorkingChoiceOfACPLDropsThePickWithoutAReplacement
+    passed: testDeletingAWorkingOnlySetDropsItsSelectionAndPicks
+  with the fix: 7 passed
+
+FilterRestoreReconciliationTests (4)
+  before the restore change: testMovedItemsKeepTheirReferencesUnderTheirNewSet failed (wheel not under the new Set,
+    CPL unmounted, new Set not selected, total 7.5 -> 3.0 stops); testAKindChangeMovesTheSelectionIntoTheItemsNewRole failed;
+    testADeletedItemKeepsTheDeletionRules passed
+  before the save fix: testAKindCorrectionMadeLiveSurvivesARelaunch failed (saved kinds ["cpl","color"] after two
+    corrections to Color; after relaunch no mount and total 4.0 -> 0.0 stops)
+  with the fixes: 4 passed
+
+Full runs at the pushed head: PTimerKit 1567 / PTimerCore 144, 0 failures (swift_test_PTimerKit.log);
+app plan 158, 0 failures (xcodebuild_test_PTimer_plan.log, run before the save fix, which is Kit-only).

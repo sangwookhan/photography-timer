@@ -629,10 +629,9 @@ enum ExposureWorkspaceMainLayoutStyle {
     }
 
     /// Fonts of the auxiliary summary column (FILTER-AUX-002): the
-    /// title link, each item's name, its contribution in stops, and
-    /// the detail line under the name. Sized so three items with a
-    /// detail line each fit the label-row-plus-viewport height of the
-    /// tier.
+    /// title link, each compact row's identifier, and its contribution
+    /// in stops. Three one-line rows fit the label-row-plus-viewport
+    /// height of every tier.
     var auxiliarySummaryTitleFont: Font {
         .system(size: self == .dense ? 9 : 10, weight: .semibold)
     }
@@ -641,15 +640,9 @@ enum ExposureWorkspaceMainLayoutStyle {
         .system(size: self == .dense ? 10 : 11, weight: .medium)
     }
 
-    /// One point smaller name font, used only when the whole names of
-    /// every mounted item do not fit at the regular size.
-    var auxiliarySummaryTightNameFont: Font {
-        .system(size: self == .dense ? 9 : 10, weight: .medium)
-    }
-
     /// Width of the summary column in the four-space layout (summary
-    /// plus three ND wheels), where whole registered names need more
-    /// than an equal share. The extra width comes from the narrower
+    /// plus three ND wheels), where a compact identifier and its
+    /// contribution need more than an equal share. The extra width comes from the narrower
     /// column gaps below, so the ND columns keep their previous width
     /// (within a tenth of a point on a 402 pt phone). `nil` keeps the
     /// equal split.
@@ -681,10 +674,6 @@ enum ExposureWorkspaceMainLayoutStyle {
 
     var auxiliarySummaryValueFont: Font {
         .system(size: self == .dense ? 12 : 14, weight: .semibold, design: .rounded)
-    }
-
-    var auxiliarySummaryDetailFont: Font {
-        .system(size: self == .dense ? 8 : 9)
     }
 
     var auxiliarySummaryRowSpacing: CGFloat {

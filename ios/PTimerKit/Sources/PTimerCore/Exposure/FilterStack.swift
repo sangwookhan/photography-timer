@@ -804,11 +804,12 @@ public struct FilterStack: Equatable, Sendable {
     /// Writes the complete mounted auxiliary selection at once
     /// (FILTER-AUX-003 Apply). Rejected — leaving the stack unchanged —
     /// when a mount does not resolve, a physical item would be mounted
-    /// twice (across auxiliary filters and wheels), more items are
-    /// mounted than one summary presents, the current ND wheels exceed
-    /// the limit that applies with auxiliary filters, or the combined
-    /// contributions would exceed 30 stops. Existing ND wheels are
-    /// never removed or merged to make room.
+    /// twice (across auxiliary filters and wheels), the current ND
+    /// wheels exceed the limit that applies with auxiliary filters, or
+    /// the combined contributions would exceed 30 stops. Any number of
+    /// auxiliary filters may be mounted; they are kept in display
+    /// order. Existing ND wheels are never removed or merged to make
+    /// room.
     public func replacingAuxiliaryFilters(with mounts: [MountedAuxiliaryFilter], inventory: FilterInventory) -> Result<FilterStack, FilterStackRejection> {
         var resolved: [ResolvedAuxiliaryFilter] = []
         var mounted = Set(wheels.compactMap(\.mountedItemID))

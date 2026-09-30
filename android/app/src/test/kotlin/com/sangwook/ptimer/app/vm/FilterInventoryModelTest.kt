@@ -96,16 +96,16 @@ class FilterInventoryModelTest {
         store.saved.clear()
 
         sut.renameFilterSet(set.id, "  NiSi kit  ")
-        sut.recolorFilterSet(set.id, FilterSetColor.mint)
+        sut.recolorFilterSet(set.id, FilterSetColor.teal)
         assertEquals("NiSi kit", sut.inventory.value.filterSet(set.id)?.name)
-        assertEquals(FilterSetColor.mint, sut.inventory.value.filterSet(set.id)?.color)
+        assertEquals(FilterSetColor.teal, sut.inventory.value.filterSet(set.id)?.color)
         assertEquals(set.id, sut.filterSets.single().id)
         assertEquals(2, store.saved.size)
 
         // Unchanged values and a blank rename write nothing.
         sut.renameFilterSet(set.id, "NiSi kit")
         sut.renameFilterSet(set.id, "  ")
-        sut.recolorFilterSet(set.id, FilterSetColor.mint)
+        sut.recolorFilterSet(set.id, FilterSetColor.teal)
         assertEquals(2, store.saved.size)
     }
 
@@ -239,7 +239,7 @@ class FilterInventoryModelTest {
     fun everyMutationRoundTripsThroughThePersistedSnapshot() {
         val store = RecordingStore()
         val sut = model(store)
-        val set = sut.createFilterSet("Lee holder", FilterSetColor.indigo)!!
+        val set = sut.createFilterSet("Lee holder", FilterSetColor.blue)!!
         sut.addItem(
             FilterItem("Big Stopper", FilterItemBehavior.Fixed(FilterRegisteredValue(1000.0, FilterValueUnit.filterFactor))),
             set.id,
@@ -251,7 +251,7 @@ class FilterInventoryModelTest {
 
         val restored = store.saved.last().restoredInventory
         assertEquals(sut.inventory.value, restored)
-        assertEquals(FilterSetColor.indigo, restored.filterSets.single().color)
+        assertEquals(FilterSetColor.blue, restored.filterSets.single().color)
         assertEquals(10.0, restored.item(sut.inventory.value.filterSet(set.id)!!.items[0].id)!!.second.behavior.registeredValue!!.canonicalStops!!, 1e-9)
     }
 }

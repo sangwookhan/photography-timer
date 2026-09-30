@@ -236,10 +236,6 @@ fun SlotCalculatorSnapshot.storedFilterReferences(): Pair<List<FilterWheel>, Lis
     return wheels to (mounts.filterNotNull() + legacy)
 }
 
-/** The wheels of [restoredFilterStack]. */
-fun SlotCalculatorSnapshot.restoredFilterWheels(inventory: FilterInventory): List<FilterWheel> =
-    restoredFilterStack(inventory).wheels
-
 /**
  * The slot's candidate Filter Sets (FILTER-CAMERA-001), in user-defined
  * set order: the stored assignment, without sets that no longer exist,

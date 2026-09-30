@@ -27,7 +27,6 @@ import com.sangwook.ptimer.core.slots.PersistentFilterWheel
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.slots.restoredCandidateFilterSetIds
 import com.sangwook.ptimer.core.slots.restoredFilterStack
-import com.sangwook.ptimer.core.slots.restoredFilterWheels
 import com.sangwook.ptimer.core.slots.restoredLastFilterSource
 import com.sangwook.ptimer.core.slots.writingFilterStack
 import org.junit.Assert.assertEquals
@@ -180,7 +179,7 @@ class FilterStackPersistenceTest {
 
         assertEquals(
             listOf(FilterWheel.standard(2.0), FilterWheel.empty(set.id)),
-            restored.restoredFilterWheels(inventory),
+            restored.restoredFilterStack(inventory).wheels,
         )
         assertEquals(
             "A vanished last source falls back to Standard.",
@@ -221,7 +220,7 @@ class FilterStackPersistenceTest {
         )
         assertEquals(
             listOf(FilterWheel.standard(4.0)),
-            roundTrip(tooMany).restoredFilterWheels(inventory),
+            roundTrip(tooMany).restoredFilterStack(inventory).wheels,
         )
 
         // An off-ladder Standard wheel is structurally corrupted too.
@@ -234,7 +233,7 @@ class FilterStackPersistenceTest {
         )
         assertEquals(
             listOf(FilterWheel.standard(4.0)),
-            roundTrip(offLadder).restoredFilterWheels(inventory),
+            roundTrip(offLadder).restoredFilterStack(inventory).wheels,
         )
     }
 
@@ -249,7 +248,7 @@ class FilterStackPersistenceTest {
         assertNull(snapshot.filterStack)
         assertEquals(
             listOf(FilterWheel.standard(10.0), FilterWheel.standard(6.6)),
-            snapshot.restoredFilterWheels(inventory),
+            snapshot.restoredFilterStack(inventory).wheels,
         )
         assertEquals(FilterSource.Standard, snapshot.restoredLastFilterSource(inventory))
     }
@@ -258,7 +257,7 @@ class FilterStackPersistenceTest {
         val snapshot = base.copy(ndIndex = 5)
         assertEquals(
             listOf(FilterWheel.standard(5.0)),
-            snapshot.restoredFilterWheels(FilterInventory.empty),
+            snapshot.restoredFilterStack(FilterInventory.empty).wheels,
         )
     }
 }

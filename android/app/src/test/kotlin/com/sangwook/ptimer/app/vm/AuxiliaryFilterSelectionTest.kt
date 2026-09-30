@@ -150,7 +150,7 @@ class AuxiliaryFilterSelectionTest {
         )
     }
 
-    @Test fun aSingleCplOrGndShowsItsTypeWhileTwoOfAKindShowTheirNames() {
+    @Test fun aSingleCplShowsItsTypeWhileAGndAlwaysShowsItsName() {
         val hard = FilterItem("Hard GND 3", FilterItemBehavior.Gnd(FilterRegisteredValue(3.0, FilterValueUnit.stops)))
         val c = CalculatorController(
             films = emptyList(),
@@ -161,7 +161,7 @@ class AuxiliaryFilterSelectionTest {
         ).also { it.setCandidateFilterSets(listOf(kit.id)) }
         assertNull(c.applyAuxiliaryFilters(listOf(mount(cpl), mount(gnd))))
         assertEquals(
-            listOf(listOf("CPL"), listOf("GND")),
+            listOf(listOf("CPL"), listOf("Soft GND 2", "Soft GND", "Soft")),
             c.state.value.auxiliarySummary!!.items.map { it.compactLabels },
         )
         assertNull(c.applyAuxiliaryFilters(listOf(mount(gnd), MountedAuxiliaryFilter(kit.id, hard.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly)))))

@@ -16,6 +16,10 @@ public struct FilterSetID: Hashable, Sendable {
     public static func generate() -> FilterSetID {
         FilterSetID(rawValue: UUID().uuidString)
     }
+
+    /// The built-in Default Filter Set (FILTER-SET-002). Generated ids
+    /// are UUIDs, so they never collide with it.
+    public static let defaultSet = FilterSetID(rawValue: "default")
 }
 
 /// Stable identity of one physical filter. Two items with equal
@@ -386,7 +390,8 @@ public struct FilterSet: Identifiable, Hashable, Sendable {
 
 /// The complete user inventory: Filter Sets in user-defined display
 /// order. Standard is a fixed built-in source that always precedes
-/// every Filter Set.
+/// every Filter Set; the built-in Default Filter Set, once ensured,
+/// precedes the user-created sets.
 public struct FilterInventory: Hashable, Sendable {
     public var filterSets: [FilterSet]
 
@@ -395,6 +400,20 @@ public struct FilterInventory: Hashable, Sendable {
     }
 
     public static let empty = FilterInventory()
+
+    /// The built-in Default Filter Set as first provided
+    /// (FILTER-SET-002): empty and named Default. Its name, color, and
+    /// items may change later; its id never does.
+    public static let defaultFilterSet = FilterSet(id: .defaultSet, name: "Default", color: .blue)
+
+    /// This inventory with the Default Filter Set present and first
+    /// (FILTER-SET-002/004). A stored Default keeps its name, color, and
+    /// items; the user-created sets keep their order after it.
+    public func ensuringDefaultFilterSet() -> FilterInventory {
+        var sets = filterSets.filter { $0.id != .defaultSet }
+        sets.insert(filterSet(withID: .defaultSet) ?? Self.defaultFilterSet, at: 0)
+        return FilterInventory(filterSets: sets)
+    }
 
     public func filterSet(withID id: FilterSetID) -> FilterSet? {
         filterSets.first { $0.id == id }

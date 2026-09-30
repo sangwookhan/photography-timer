@@ -45,7 +45,7 @@ final class FilterStackPersistenceTests: XCTestCase {
 
         let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
         XCTAssertEqual(slot.auxiliaryFilters, [PersistentAuxiliaryFilterSnapshot(filterSetID: set.id.rawValue, itemID: gnd.id.rawValue, kind: "gnd", gndMode: "recordOnly")])
-        XCTAssertEqual(slot.candidateFilterSetIDs, [set.id.rawValue])
+        XCTAssertEqual(slot.candidateFilterSetIDs, [FilterSetID.defaultSet.rawValue, set.id.rawValue])
 
         let restored = makeViewModel(
             sessionStore: sessionStore,
@@ -59,7 +59,7 @@ final class FilterStackPersistenceTests: XCTestCase {
             .standard(NDStep(stops: 6.6)),
         ])
         XCTAssertEqual(restored.mountedAuxiliaryFilters.map(\.mount), [.mount(gnd, in: set)])
-        XCTAssertEqual(restored.candidateFilterSetIDs, [set.id])
+        XCTAssertEqual(restored.candidateFilterSetIDs, [.defaultSet, set.id])
         XCTAssertEqual(restored.ndStep.stops, 16.6, accuracy: 1e-9)
         XCTAssertEqual(restored.ndFilterSteps[0].stops, 10, "ND1000 restores as exactly 10 stops.")
         XCTAssertEqual(restored.selectedFilterSource, .filterSet(set.id))

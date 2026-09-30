@@ -236,7 +236,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
 
             XCTAssertNil(viewModel.filterSet(withID: target.id), "\(target.name) is gone.")
             XCTAssertEqual(viewModel.filterSet(withID: other.id), otherBefore, "\(other.name) keeps its id, name, color, and items.")
-            XCTAssertEqual(viewModel.filterInventory.filterSets.map(\.id), [other.id])
+            XCTAssertEqual(viewModel.filterInventory.filterSets.map(\.id), [.defaultSet, other.id])
             // The other set's wheel is still mounted on its camera (the
             // settled order puts the set group first); the deleted set's
             // camera fell back to Standard.

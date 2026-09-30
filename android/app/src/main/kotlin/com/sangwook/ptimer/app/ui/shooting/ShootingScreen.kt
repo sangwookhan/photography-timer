@@ -113,6 +113,8 @@ fun ShootingScreen(
     onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
     onRemoveNdWheelOverscroll: (Int) -> Unit,
     onManageFilterSets: () -> Unit,
+    /** Opens the shooting popup (FILTER-FLOW-002). */
+    onOpenShootingFilters: () -> Unit,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
@@ -354,6 +356,7 @@ fun ShootingScreen(
                             },
                             onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
                             onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
+                            onOpenShootingFilters = if (writesActiveSlot) onOpenShootingFilters else fun() {},
                             // Narrower sides than the other cards so the
                             // one-row header gives each notation option
                             // a full 48dp at 360dp (owner decision on #67).
@@ -370,7 +373,7 @@ fun ShootingScreen(
                                     ndTitle = ndFilterTitle,
                                     baseShutterCaption = baseShutterCaption,
                                     shutterLabels = pageState.shutterLabels,
-                                    wheelCount = pageState.filterWheels.size,
+                                    wheelCount = pageState.occupiedFilterSpaces,
                                     plusVisible = pageState.plus.isVisible,
                                 )
                                 // Two bands: the one header row, then the
@@ -385,7 +388,7 @@ fun ShootingScreen(
                                         mode = pageState.ndNotationMode,
                                         enabled = writesActiveSlot,
                                         onSelectNotation = onSelectNotation,
-                                        onManageFilterSets = onManageFilterSets,
+                                        onOpenShootingFilters = onOpenShootingFilters,
                                     )
                                     Row(modifier = Modifier.fillMaxWidth()) {
                                         Column(
@@ -419,7 +422,7 @@ fun ShootingScreen(
                                                 // "the same numeric
                                                 // size" rules out.
                                                 dense = isDenseFilterWheelRow(
-                                                    pageState.filterWheels.size,
+                                                    pageState.occupiedFilterSpaces,
                                                 ),
                                             )
                                         }
@@ -773,7 +776,7 @@ private fun NdFilterHeaderRow(
     mode: NDNotationMode,
     enabled: Boolean,
     onSelectNotation: (NDNotationMode) -> Unit,
-    onManageFilterSets: () -> Unit,
+    onOpenShootingFilters: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().height(MinTouchTargetSize),
@@ -786,7 +789,7 @@ private fun NdFilterHeaderRow(
         )
         Spacer(Modifier.width(NdHeaderGutter))
         Text(ndFilterTitle, style = MaterialTheme.typography.labelMedium, maxLines = 1)
-        FilterSetsEntry(enabled = enabled, onClick = onManageFilterSets)
+        FilterSetsEntry(enabled = enabled, onClick = onOpenShootingFilters)
         NotationToggle(
             mode = mode,
             enabled = enabled,
@@ -797,8 +800,10 @@ private fun NdFilterHeaderRow(
 }
 
 /**
- * The persistent Filter Set management entry (FILTER-SET-001), beside
- * the title it manages: a layers mark, not a general settings gear.
+ * The persistent ND-header entry (FILTER-SET-001, FILTER-FLOW-002): opens
+ * the shooting popup, with Filter Set management reachable from there
+ * even at the maximum wheel count. A layers mark, not a general settings
+ * gear.
  *
  * A real [MinTouchTargetSize] target around a mark drawn smaller
  * (SHELL-030: interactive area independent of drawn size).
@@ -814,7 +819,7 @@ private fun FilterSetsEntry(enabled: Boolean, onClick: () -> Unit) {
     ) {
         Icon(
             FilterSetsMark,
-            contentDescription = stringResource(R.string.filter_manage_sets),
+            contentDescription = stringResource(R.string.filter_shooting_title),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp),
         )

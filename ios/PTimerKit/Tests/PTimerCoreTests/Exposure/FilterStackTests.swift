@@ -433,7 +433,7 @@ final class FilterStackTests: XCTestCase {
     func testSummaryCapturesSourceItemModeAndContribution() throws {
         let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
         let red = FilterItem(name: "Red 25A", behavior: .color(FilterExposureLoss(stops: 3), .red))
-        let set = FilterSet(name: "Lee holder", color: .indigo, items: [gnd, red])
+        let set = FilterSet(name: "Lee holder", color: .purple, items: [gnd, red])
         let inventory = FilterInventory(filterSets: [set])
         let stack = try FilterStack(
             wheels: [.standard(NDStep(stops: 6.6)), .empty(in: set.id)],

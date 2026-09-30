@@ -40,7 +40,7 @@ final class FilterStatusRegionTests: XCTestCase {
 
     func testEveryStateIsLeadingTextPlusCompleteTotalWithFullAccessibilityText() {
         let longName = "Formatt-Hitech Firecrest Ultra 100mm"
-        let summary = items([("Standard", nil), ("Lee holder", .mint), (longName, .blue)])
+        let summary = items([("Standard", nil), ("Lee holder", .green), (longName, .blue)])
         let totalText = FilterStatusRegionPresenter.totalText(total)
         let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: summary)
         let movingContent = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: summary)
@@ -166,7 +166,7 @@ final class FilterStatusRegionTests: XCTestCase {
     private func color(_ source: FilterSource) -> FilterSetColor? {
         switch source {
         case .standard: return nil
-        case .filterSet(let id): return id == nisi ? .indigo : .teal
+        case .filterSet(let id): return id == nisi ? .purple : .teal
         }
     }
 
@@ -185,7 +185,7 @@ final class FilterStatusRegionTests: XCTestCase {
         let summary = FilterStatusRegionPresenter.sourceSummary(wheels: wheels, sourceName: name, sourceColor: color)
         XCTAssertEqual(summary?.map(\.text), ["NiSi kit", "Lee holder ×2", "Standard"])
         XCTAssertEqual(summary?.map(\.count), [1, 2, 1])
-        XCTAssertEqual(summary?.map(\.color), [.indigo, .teal, nil], "Filter Sets carry their source color; Standard stays text only.")
+        XCTAssertEqual(summary?.map(\.color), [.purple, .teal, nil], "Filter Sets carry their source color; Standard stays text only.")
         XCTAssertEqual(summary?.map(\.source), [.filterSet(nisi), .filterSet(lee), .standard])
         XCTAssertEqual(summary.map(FilterStatusRegionPresenter.summaryText), "NiSi kit · Lee holder ×2 · Standard")
         XCTAssertEqual(
@@ -204,7 +204,7 @@ final class FilterStatusRegionTests: XCTestCase {
     }
 
     func testIdleSummaryIsPersistentAndSecondaryWhileStandardOnlyIdleIsUnchanged() {
-        let nisiStandard = items([("NiSi kit", .indigo), ("Standard", nil)])
+        let nisiStandard = items([("NiSi kit", .purple), ("Standard", nil)])
         let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: nisiStandard)
         XCTAssertEqual(idle?.primaryText, "NiSi kit · Standard")
         XCTAssertEqual(idle?.secondaryText, "Total 18 stops")
@@ -242,14 +242,14 @@ final class FilterStatusRegionTests: XCTestCase {
     func testSummaryReturnsAfterTheIntervalFollowingSettlementAndImmediatelyAfterRejection() async {
         let controller = FilterStatusRegionViewModel()
         controller.fadeDelay = 0.05
-        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(idle)
         XCTAssertEqual(controller.visibleContent, idle, "The persistent summary shows at once from an empty region.")
         try? await Task.sleep(nanoseconds: 150_000_000)
         XCTAssertEqual(controller.visibleContent, idle, "The persistent summary never fades.")
 
         // Movement replaces it immediately at normal emphasis.
-        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(held)
         XCTAssertEqual(controller.visibleContent, held)
 
@@ -260,7 +260,7 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(controller.visibleContent, idle, "The summary returns after the interval.")
 
         // Plus browsing settles the same way.
-        let browsing = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: "Lee holder", rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let browsing = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: "Lee holder", rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(browsing)
         controller.apply(idle)
         XCTAssertEqual(controller.visibleContent, browsing)
@@ -268,7 +268,7 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(controller.visibleContent, idle)
 
         // A rejection has its own notice interval: the summary returns as soon as it clears.
-        let rejection = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: FilterRejectionNotice(sequence: 1, rejection: .itemAlreadyMounted), total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let rejection = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: FilterRejectionNotice(sequence: 1, rejection: .itemAlreadyMounted), total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(rejection)
         XCTAssertEqual(controller.visibleContent, rejection)
         controller.apply(idle)
@@ -278,13 +278,13 @@ final class FilterStatusRegionTests: XCTestCase {
     func testNewMovementDuringTheLingerCancelsTheReturnToTheSummary() async {
         let controller = FilterStatusRegionViewModel()
         controller.fadeDelay = 0.05
-        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo)]))
-        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo)]))
+        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple)]))
+        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple)]))
         controller.apply(held)
         controller.apply(idle)
         let staleToken = controller.currentGeneration
         let secondMove = MovingWheelStatus(expandedLabel: "Big Stopper · ND1000 · 10 stops", contributionStops: 10)
-        let heldAgain = FilterStatusRegionPresenter.content(moving: secondMove, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo)]))
+        let heldAgain = FilterStatusRegionPresenter.content(moving: secondMove, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple)]))
         controller.apply(heldAgain)
         controller.fireFadeIfPending(token: staleToken)
         try? await Task.sleep(nanoseconds: 150_000_000)

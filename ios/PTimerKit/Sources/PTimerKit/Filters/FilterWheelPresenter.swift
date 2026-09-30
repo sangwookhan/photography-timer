@@ -413,17 +413,16 @@ public enum FilterWheelPresenter {
     public static func opticalColorName(_ color: FilterSetColor) -> String {
         switch color {
         case .red: return String(localized: "Red")
+        case .redOrange: return String(localized: "Red-orange")
         case .orange: return String(localized: "Orange")
+        case .yellowOrange: return String(localized: "Yellow-orange")
         case .yellow: return String(localized: "Yellow")
+        case .yellowGreen: return String(localized: "Yellow-green")
         case .green: return String(localized: "Green")
-        case .mint: return String(localized: "Mint")
         case .teal: return String(localized: "Teal")
-        case .cyan: return String(localized: "Cyan")
         case .blue: return String(localized: "Blue")
-        case .indigo: return String(localized: "Indigo")
         case .purple: return String(localized: "Purple")
         case .pink: return String(localized: "Pink")
-        case .brown: return String(localized: "Brown")
         }
     }
 

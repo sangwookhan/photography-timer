@@ -186,4 +186,16 @@ final class FilterInventoryTests: XCTestCase {
         let inventory = FilterInventory(filterSets: [FilterSet(name: "Holder", color: .red, items: [first, second])])
         XCTAssertEqual(inventory.item(withID: second.id)?.item, second)
     }
+
+    /// The shared palette reads in hue order and holds the required
+    /// Red, Yellow, Yellow-green, Green, and Blue, with Red-orange,
+    /// Orange, and Yellow-orange between Red and Yellow and no
+    /// near-duplicates (FILTER-COLOR-004). Existing tokens keep their
+    /// stored values.
+    func testPaletteIsInHueOrderWithTheRequiredColors() {
+        XCTAssertEqual(FilterSetColor.allCases, [.red, .redOrange, .orange, .yellowOrange, .yellow, .yellowGreen, .green, .teal, .blue, .purple, .pink])
+        XCTAssertEqual(FilterSetColor.yellowGreen.rawValue, "yellowGreen")
+        XCTAssertEqual(FilterSetColor.redOrange.rawValue, "redOrange")
+        XCTAssertEqual(FilterSetColor.yellowOrange.rawValue, "yellowOrange")
+    }
 }

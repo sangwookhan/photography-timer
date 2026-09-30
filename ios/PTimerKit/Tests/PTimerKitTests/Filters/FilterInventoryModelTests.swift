@@ -98,33 +98,40 @@ final class FilterInventoryModelTests: XCTestCase {
         XCTAssertEqual(restored.inventory, model.inventory)
     }
 
-    /// A Color item saved by an earlier Draft build with the retired
-    /// `yellowGreen` optical color keeps its id, name, and loss and
-    /// restores as the shared palette's Green; the next save writes
-    /// `green`. Nothing is dropped.
-    func testDraftYellowGreenColorItemRestoresAsGreen() throws {
+    /// Palette tokens survive the palette change: `yellowGreen` (from an
+    /// earlier Draft Color item) is a palette color again, and tokens
+    /// retired from the twelve-color palette map to their nearest
+    /// remaining hue for both Filter Sets and Color items. Nothing is
+    /// dropped, and the next save writes the current token.
+    func testRetiredAndDraftPaletteTokensRestoreWithoutLoss() throws {
         let json = """
         {
           "schemaVersion": 1,
           "filterSets": [
-            { "id": "s1", "name": "Kit", "color": "red",
+            { "id": "s1", "name": "Mint kit", "color": "mint",
               "items": [
                 { "id": "i1", "name": "X1 Yellow-green", "kind": "color", "value": 1.5, "opticalColor": "yellowGreen" },
-                { "id": "i2", "name": "Red 25A", "kind": "color", "value": 3, "opticalColor": "red" }
-              ] }
+                { "id": "i2", "name": "Brown", "kind": "color", "value": 1, "opticalColor": "brown" },
+                { "id": "i3", "name": "Red 25A", "kind": "color", "value": 3, "opticalColor": "red" }
+              ] },
+            { "id": "s2", "name": "Cyan kit", "color": "cyan", "items": [] },
+            { "id": "s3", "name": "Indigo kit", "color": "indigo", "items": [] },
+            { "id": "s4", "name": "Brown kit", "color": "brown", "items": [] }
           ]
         }
         """
         let result = PersistentFilterInventorySnapshot.decode(from: Data(json.utf8))
         XCTAssertEqual(result.outcome, .loaded)
-        let items = try XCTUnwrap(result.snapshot.restoredInventory.filterSets.first).items
-        XCTAssertEqual(items.map(\.id.rawValue), ["i1", "i2"])
+        let inventory = result.snapshot.restoredInventory
+        XCTAssertEqual(inventory.filterSets.map(\.color), [.teal, .teal, .blue, .orange])
+        let items = try XCTUnwrap(inventory.filterSets.first).items
+        XCTAssertEqual(items.map(\.id.rawValue), ["i1", "i2", "i3"])
+        XCTAssertEqual(items.map(\.behavior.opticalColor), [.yellowGreen, .orange, .red])
         XCTAssertEqual(items[0].name, "X1 Yellow-green")
-        XCTAssertEqual(items[0].behavior, .color(FilterExposureLoss(stops: 1.5), .green))
-        XCTAssertEqual(items[1].behavior, .color(FilterExposureLoss(stops: 3), .red))
 
-        let resaved = PersistentFilterInventorySnapshot(inventory: result.snapshot.restoredInventory)
-        XCTAssertEqual(resaved.filterSets.first?.items.first?.opticalColor, "green")
+        let resaved = PersistentFilterInventorySnapshot(inventory: inventory)
+        XCTAssertEqual(resaved.filterSets.map(\.color), ["teal", "teal", "blue", "orange"])
+        XCTAssertEqual(resaved.filterSets.first?.items.map(\.opticalColor), ["yellowGreen", "orange", "red"])
     }
 
     func testMalformedSetIsDroppedAndMalformedItemIsSkipped() throws {

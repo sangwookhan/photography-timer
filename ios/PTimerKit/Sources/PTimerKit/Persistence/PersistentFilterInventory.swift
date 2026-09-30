@@ -109,7 +109,7 @@ public struct PersistentFilterSetRecord: Codable, Equatable {
         return FilterSet(
             id: FilterSetID(rawValue: trimmedID),
             name: trimmedName,
-            color: FilterSetColor(rawValue: color) ?? .blue,
+            color: PersistentFilterItemRecord.restoredColor(color) ?? .blue,
             items: restoredItems
         )
     }
@@ -192,16 +192,22 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
         return item.isWellFormed ? item : nil
     }
 
-    /// A Color item's persisted color token. Earlier Draft builds had a
-    /// separate optical-color list with `yellowGreen`, which the shared
-    /// Filter Set palette does not contain; such an item keeps its
-    /// identity and restores as Green instead of being dropped, and is
-    /// written back with the palette token on the next save.
+    /// A persisted palette token — a Filter Set's color or a Color
+    /// item's color. Tokens retired from the earlier twelve-color
+    /// palette map to their nearest remaining hue (mint and cyan to
+    /// teal, indigo to blue, brown to orange) so no set or item loses
+    /// its color; the next save writes the current token. `nil` for an
+    /// unknown token.
     static func restoredColor(_ raw: String) -> FilterSetColor? {
         if let color = FilterSetColor(rawValue: raw) {
             return color
         }
-        return raw == "yellowGreen" ? .green : nil
+        switch raw {
+        case "mint", "cyan": return .teal
+        case "indigo": return .blue
+        case "brown": return .orange
+        default: return nil
+        }
     }
 }
 

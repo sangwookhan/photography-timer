@@ -32,26 +32,31 @@ public struct FilterItemID: Hashable, Sendable {
     }
 }
 
-/// Fixed, platform-neutral color palette for Filter Sets. Persisted
-/// by `rawValue` so both platforms map the same token to their own
-/// color system. Duplicate colors across Filter Sets are allowed.
+/// Fixed, platform-neutral color palette shared by Filter Sets and
+/// Color filters, in hue order: the required Red, Yellow, Yellow-green,
+/// Green, and Blue, with the photographic Red-orange, Orange, and
+/// Yellow-orange between Red and Yellow, one transition color between
+/// the other neighbors (teal, purple, pink), and no near-duplicates
+/// (FILTER-COLOR-004). Persisted by
+/// `rawValue` so both platforms map the same token to their own color
+/// system; tokens retired from earlier palettes map explicitly on
+/// restore. Duplicate colors across Filter Sets are allowed.
 public enum FilterSetColor: String, CaseIterable, Sendable {
     case red
+    case redOrange
     case orange
+    case yellowOrange
     case yellow
+    case yellowGreen
     case green
-    case mint
     case teal
-    case cyan
     case blue
-    case indigo
     case purple
     case pink
-    case brown
 
     /// Random suggestion for a new Filter Set that differs from the
     /// suggestion offered on the immediately preceding creation
-    /// opening. With one color excluded there are always eleven
+    /// opening. With one color excluded there are always ten
     /// candidates left, so the call never fails.
     public static func suggestion<G: RandomNumberGenerator>(
         excluding previous: FilterSetColor?,

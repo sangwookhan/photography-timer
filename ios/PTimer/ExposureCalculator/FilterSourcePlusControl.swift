@@ -289,17 +289,21 @@ extension Color {
     static func filterSet(_ token: FilterSetColor) -> Color {
         switch token {
         case .red: return .red
+        // Red-orange and Yellow-orange sit visibly between their
+        // neighbors; Yellow is a bright photographic yellow rather than
+        // the system yellow, which reads as mustard beside them.
+        case .redOrange: return Color(red: 0.98, green: 0.38, blue: 0.12)
         case .orange: return .orange
-        case .yellow: return .yellow
+        case .yellowOrange: return Color(red: 1.0, green: 0.71, blue: 0.0)
+        case .yellow: return Color(red: 1.0, green: 0.90, blue: 0.08)
+        // No system yellow-green; a mid yellow-green that stays distinct
+        // from both neighbors in light and dark appearance.
+        case .yellowGreen: return Color(red: 0.60, green: 0.80, blue: 0.18)
         case .green: return .green
-        case .mint: return .mint
         case .teal: return .teal
-        case .cyan: return .cyan
         case .blue: return .blue
-        case .indigo: return .indigo
         case .purple: return .purple
         case .pink: return .pink
-        case .brown: return .brown
         }
     }
 }

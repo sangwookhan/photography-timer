@@ -291,17 +291,6 @@
         }
       }
     },
-    "Brown" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "갈색"
-          }
-        }
-      }
-    },
     "Calculation mode" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -430,17 +419,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Filter Set을 만들고 편집하고 순서를 바꿉니다"
-          }
-        }
-      }
-    },
-    "Cyan" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "시안"
           }
         }
       }
@@ -863,17 +841,6 @@
         }
       }
     },
-    "Indigo" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "남색"
-          }
-        }
-      }
-    },
     "Its filters are removed from the inventory. Timers already started keep their captured summary." : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -903,17 +870,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Filter Set 관리"
-          }
-        }
-      }
-    },
-    "Mint" : {
-      "comment" : "Filter Sets (PTIMER-221).",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "민트"
           }
         }
       }
@@ -1204,6 +1160,17 @@
         }
       }
     },
+    "Red-orange" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주홍"
+          }
+        }
+      }
+    },
     "Reduce the ND wheels to three or fewer" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {
@@ -1486,6 +1453,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "노랑"
+          }
+        }
+      }
+    },
+    "Yellow-green" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "황록"
+          }
+        }
+      }
+    },
+    "Yellow-orange" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "귤색"
           }
         }
       }

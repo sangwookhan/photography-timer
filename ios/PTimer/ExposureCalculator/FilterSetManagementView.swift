@@ -237,6 +237,7 @@ struct FilterSetEditorSheet: View {
 struct FilterSetColorGrid: View {
     @Binding var selection: FilterSetColor
 
+    // Eleven palette colors read in hue order over two rows.
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 6)
 
     var body: some View {

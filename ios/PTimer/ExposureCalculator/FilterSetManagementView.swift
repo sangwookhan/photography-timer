@@ -5,147 +5,6 @@ import PTimerCore
 import PTimerKit
 import SwiftUI
 
-/// The single Filter Set management surface (FILTER-SET-001): create,
-/// rename, recolor, reorder, and delete Filter Sets, and manage each
-/// set's physical items. Reached by long-pressing the Plus wheel;
-/// Shooting Filters edits and adds sets from its own list.
-struct FilterSetManagementView: View {
-    @ObservedObject var viewModel: ExposureCalculatorViewModel
-    let onDone: () -> Void
-
-    @State private var creationDraft: FilterSetDraft?
-    @State private var pendingDeletion: FilterSet?
-    /// The list's reorder / delete mode. Owned here so its toggle can sit
-    /// in the visible toolbar with its own labels: `Edit` to enter and
-    /// `Finish Editing` to leave, never the `Done` that dismisses the
-    /// whole surface (FILTER-SET-001).
-    @State private var editMode: EditMode = .inactive
-
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach(viewModel.filterInventory.filterSets) { filterSet in
-                    NavigationLink {
-                        FilterSetDetailView(viewModel: viewModel, filterSetID: filterSet.id)
-                    } label: {
-                        FilterSetRow(filterSet: filterSet)
-                    }
-                    .accessibilityIdentifier("filter-set-row-\(filterSet.id.rawValue)")
-                    // The built-in Default stays first and is never
-                    // deleted (FILTER-SET-002/004).
-                    .moveDisabled(filterSet.id == .defaultSet)
-                    .deleteDisabled(filterSet.id == .defaultSet)
-                }
-                .onMove { source, destination in
-                    viewModel.moveFilterSets(fromOffsets: source, toOffset: destination)
-                }
-                .onDelete { offsets in
-                    // Swipe-to-delete and the edit-mode minus button
-                    // each deliver exactly one row; the confirmation
-                    // dialog below names that one set. There is no
-                    // multi-selection here, so a multi-row set would be
-                    // a contract change and is refused rather than
-                    // silently narrowed.
-                    guard offsets.count == 1, let index = offsets.first,
-                          viewModel.filterInventory.filterSets.indices.contains(index) else { return }
-                    pendingDeletion = viewModel.filterInventory.filterSets[index]
-                }
-            }
-            .environment(\.editMode, $editMode)
-            .navigationTitle("Filter Sets")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done", action: onDone)
-                        .accessibilityIdentifier("filter-sets-done-button")
-                }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    // Always visible — never behind the overflow menu —
-                    // and worded apart from the surface's `Done` so
-                    // leaving edit mode cannot be confused with closing
-                    // the screen.
-                    Button(editMode.isEditing ? "Finish Editing" : "Edit") {
-                        withAnimation {
-                            editMode = editMode.isEditing ? .inactive : .active
-                        }
-                    }
-                    .accessibilityIdentifier("filter-sets-edit-button")
-                    Button {
-                        creationDraft = FilterSetDraft(
-                            name: "",
-                            color: viewModel.suggestFilterSetCreationColor()
-                        )
-                    } label: {
-                        Label("New Filter Set", systemImage: "plus")
-                    }
-                    .accessibilityIdentifier("filter-sets-create-button")
-                }
-            }
-            .sheet(item: $creationDraft) { draft in
-                FilterSetEditorSheet(
-                    draft: draft,
-                    onSave: { saved in
-                        viewModel.createFilterSet(name: saved.name, color: saved.color)
-                        creationDraft = nil
-                    },
-                    onCancel: { creationDraft = nil }
-                )
-            }
-            .confirmationDialog(
-                Text("Delete Filter Set?"),
-                isPresented: Binding(
-                    get: { pendingDeletion != nil },
-                    set: { if !$0 { pendingDeletion = nil } }
-                ),
-                titleVisibility: .visible,
-                presenting: pendingDeletion
-            ) { filterSet in
-                Button(role: .destructive) {
-                    viewModel.deleteFilterSet(id: filterSet.id)
-                    pendingDeletion = nil
-                } label: {
-                    Text("Delete \(filterSet.name)")
-                }
-                Button("Cancel", role: .cancel) { pendingDeletion = nil }
-            } message: { filterSet in
-                Text(deletionMessage(for: filterSet))
-            }
-        }
-    }
-
-    private func deletionMessage(for filterSet: FilterSet) -> String {
-        let cameras = viewModel.cameraNames(affectedByDeletingFilterSet: filterSet.id)
-        if cameras.isEmpty {
-            return String(localized: "Its filters are removed from the inventory. Timers already started keep their captured summary.")
-        }
-        return String(localized: "Filter wheels from this set are removed on \(cameras.joined(separator: ", ")). Timers already started keep their captured summary.")
-    }
-}
-
-private struct FilterSetRow: View {
-    let filterSet: FilterSet
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FilterSetColorSwatch(color: filterSet.color, size: 16)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(filterSet.name)
-                Text(filterCountText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(filterSet.name), \(filterSet.color.localizedName), \(filterCountText)"))
-    }
-
-    private var filterCountText: String {
-        filterSet.items.count == 1
-            ? String(localized: "1 filter")
-            : String(localized: "\(filterSet.items.count) filters")
-    }
-}
-
 /// Color swatch always paired with a text name somewhere in the same
 /// element (color is never the only cue).
 struct FilterSetColorSwatch: View {
@@ -267,13 +126,169 @@ struct FilterSetColorGrid: View {
     }
 }
 
+/// Global Filter management (FILTER-FLOW-006), from the Settings menu:
+/// the read-only Standard row first, then every Filter Set by name with
+/// its contents, each opening its editor, then Add filter and Add Filter
+/// Set. It edits the shared inventory only — no camera selection,
+/// mounting, or Shooting Filters here; the existing camera checks still
+/// apply.
+struct FilterManagementView: View {
+    @ObservedObject var viewModel: ExposureCalculatorViewModel
+    let onDismiss: () -> Void
+
+    @State private var creationDraft: FilterSetDraft?
+    @State private var editingItem: FilterItemEditorContext?
+    /// This screen's New Filter session memory (FILTER-ITEM-007).
+    @State private var editorSession = FilterItemEditorSessionMemory()
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    NavigationLink {
+                        StandardNDListView()
+                    } label: {
+                        StandardFilterSourceLabel(showsSelectedCue: false)
+                    }
+                    .accessibilityIdentifier("filter-management-standard")
+                    ForEach(FilterSetItemOrder.sortedByName(viewModel.filterInventory.filterSets)) { filterSet in
+                        NavigationLink(value: filterSet.id) {
+                            HStack(spacing: 10) {
+                                FilterSetColorSwatch(color: filterSet.color, size: 11)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(filterSet.name)
+                                    Text(FilterSetContentsHint.text(of: filterSet))
+                                        .font(.caption)
+                                        .foregroundStyle(Color(.secondaryLabel))
+                                }
+                            }
+                        }
+                        .accessibilityIdentifier("filter-management-set-\(filterSet.id.rawValue)")
+                    }
+                }
+                Section {
+                    // Filter-first registration, never attached to Standard
+                    // (FILTER-FLOW-004, FILTER-ITEM-009).
+                    Button {
+                        editingItem = .general(
+                            initialUnit: editorSession.initialUnit,
+                            proposedFilterSetColor: viewModel.suggestFilterSetCreationColor()
+                        )
+                    } label: {
+                        Label("Add filter", systemImage: "plus.circle")
+                    }
+                    .accessibilityIdentifier("filter-management-add-filter")
+                    Button {
+                        creationDraft = FilterSetDraft(name: "", color: viewModel.suggestFilterSetCreationColor())
+                    } label: {
+                        Label("Add Filter Set", systemImage: "plus.circle")
+                    }
+                    .accessibilityIdentifier("filter-management-add-filter-set")
+                }
+            }
+            .navigationTitle("Filter management")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", action: onDismiss)
+                }
+            }
+            .navigationDestination(for: FilterSetID.self) { filterSetID in
+                FilterSetDetailView(viewModel: viewModel, filterSetID: filterSetID)
+            }
+            .sheet(item: $creationDraft) { draft in
+                FilterSetEditorSheet(
+                    draft: draft,
+                    onSave: { saved in
+                        viewModel.createFilterSet(name: saved.name, color: saved.color)
+                        creationDraft = nil
+                    },
+                    onCancel: { creationDraft = nil }
+                )
+            }
+            .sheet(item: $editingItem) { context in
+                FilterItemEditorView(
+                    viewModel: viewModel,
+                    context: context,
+                    onSaved: { item in
+                        editorSession.didSaveNewItem(item)
+                    },
+                    onDismiss: { editingItem = nil }
+                )
+            }
+        }
+    }
+}
+
+/// Standard as a Set-like row (FILTER-SET-007): a built-in ND source that
+/// is always available, never a user inventory Set. It has no edit or
+/// removal action; a lock marks it read-only and, in Shooting Filters, a
+/// check that cannot be removed marks it selected.
+struct StandardFilterSourceLabel: View {
+    let showsSelectedCue: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if showsSelectedCue {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.secondary)
+                    .frame(minWidth: 28, minHeight: 40)
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Standard")
+                    .foregroundStyle(.primary)
+                Text("Built-in · Always available")
+                    .font(.caption)
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "lock.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .frame(minHeight: 40)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(showsSelectedCue ? [.isSelected] : [])
+    }
+}
+
+/// Standard's ND values, read-only (FILTER-SET-007, ND-001): whole stops
+/// 1–30 with their OD and ND factor. Zero is no ND filter and is not
+/// listed.
+struct StandardNDListView: View {
+    var body: some View {
+        List {
+            ForEach(1...ExposureScale.maximumWholeNDStops, id: \.self) { stops in
+                HStack {
+                    Text("\(stops) stops")
+                    Spacer()
+                    Text(verbatim: [
+                        NDNotationFormatter.display(forStops: Double(stops), mode: .opticalDensity).inline,
+                        NDNotationFormatter.display(forStops: Double(stops), mode: .filterFactor).inline,
+                    ].joined(separator: " · "))
+                    .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .navigationTitle("Standard")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 /// One Filter Set: rename, recolor, and manage its physical items in
 /// one list, ND first, then Color, Effect, CPL, GND, each kind by name,
 /// with one Add Filter action and no manual reorder (FILTER-SET-001,
-/// FILTER-ITEM-001).
+/// FILTER-ITEM-001). Every set can be deleted here, after a
+/// confirmation that names it and its global effect (FILTER-SET-006).
 struct FilterSetDetailView: View {
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let filterSetID: FilterSetID
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var isDeletionPending = false
 
     @State private var nameDraft: String = ""
     @FocusState private var isNameFieldFocused: Bool
@@ -350,6 +365,15 @@ struct FilterSetDetailView: View {
                 } footer: {
                     Text("Register each physical filter separately, even two filters of the same strength, so both can be mounted together.")
                 }
+
+                Section {
+                    Button(role: .destructive) {
+                        isDeletionPending = true
+                    } label: {
+                        Label("Delete Filter Set", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("filter-set-delete-button")
+                }
             }
             .navigationTitle(filterSet.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -413,6 +437,21 @@ struct FilterSetDetailView: View {
             } message: { item in
                 Text(itemDeletionMessage(for: item))
             }
+            // Cancel, dragging the sheet down, or tapping outside it keeps
+            // the set and every camera as they are.
+            .sheet(isPresented: $isDeletionPending) {
+                DestructiveConfirmationSheet(
+                    title: String(localized: "Delete \(filterSet.name)?"),
+                    message: deletionMessage(for: filterSet),
+                    actionTitle: String(localized: "Delete"),
+                    onConfirm: {
+                        isDeletionPending = false
+                        viewModel.deleteFilterSet(id: filterSetID)
+                        dismiss()
+                    },
+                    onCancel: { isDeletionPending = false }
+                )
+            }
         } else {
             Text("This Filter Set no longer exists.")
                 .foregroundStyle(.secondary)
@@ -428,6 +467,17 @@ struct FilterSetDetailView: View {
         case .none:
             break
         }
+    }
+
+    /// The global effect of deleting the set (FILTER-SET-006,
+    /// FILTER-ITEM-006): the set and its filters leave the inventory,
+    /// and the cameras that mount from it lose those filters and wheels.
+    private func deletionMessage(for filterSet: FilterSet) -> String {
+        let cameras = viewModel.cameraNames(affectedByDeletingFilterSet: filterSet.id)
+        if cameras.isEmpty {
+            return String(localized: "This removes \(filterSet.name) and its filters from your inventory. No camera currently mounts from it. Timers already started keep their captured summary.")
+        }
+        return String(localized: "This removes \(filterSet.name) and its filters from your inventory, and removes its filters and ND wheels on \(cameras.joined(separator: ", ")). Timers already started keep their captured summary.")
     }
 
     private func itemDeletionMessage(for item: FilterItem) -> String {
@@ -496,5 +546,48 @@ private struct FilterItemRow: View {
             return original
         }
         return "\(original) · \(FilterWheelPresenter.stopsText(stops))"
+    }
+}
+
+/// A destructive confirmation that names exactly what it changes, with
+/// Cancel and the destructive action both visible. Dragging it down or
+/// tapping outside it dismisses it like Cancel.
+struct DestructiveConfirmationSheet: View {
+    let title: String
+    let message: String
+    let actionTitle: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(title)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 12) {
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("destructive-confirmation-cancel")
+                Button(role: .destructive, action: onConfirm) {
+                    Text(actionTitle)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+                .accessibilityIdentifier("destructive-confirmation-confirm")
+            }
+            .controlSize(.large)
+        }
+        .padding(24)
+        .presentationDetents([.height(300)])
+        .presentationDragIndicator(.visible)
     }
 }

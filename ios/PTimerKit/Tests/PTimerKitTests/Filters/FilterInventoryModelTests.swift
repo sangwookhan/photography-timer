@@ -69,6 +69,30 @@ final class FilterInventoryModelTests: XCTestCase {
         XCTAssertEqual(model.filterSets.map(\.id.rawValue), ["s1"], "A former Default can be deleted.")
     }
 
+    /// FILTER-SET-008: an upgrade that never saved an inventory gets the
+    /// Samples once, like a fresh installation; a saved empty inventory
+    /// and a payload that cannot be read count as saved and get none.
+    func testSamplesAreSeededOnlyWhenNoInventoryWasEverSaved() throws {
+        let neverSaved = InMemoryFilterInventoryStore()
+        XCTAssertEqual(
+            FilterInventoryModel(store: neverSaved, initial: FilterInventory.samples()).filterSets.map(\.name),
+            FilterInventory.samples().filterSets.map(\.name),
+            "Upgrade with nothing saved: Samples."
+        )
+
+        let savedEmpty = InMemoryFilterInventoryStore()
+        savedEmpty.stored = PersistentFilterInventorySnapshot(inventory: .empty)
+        XCTAssertTrue(FilterInventoryModel(store: savedEmpty, initial: FilterInventory.samples()).filterSets.isEmpty, "A saved empty inventory stays empty.")
+        XCTAssertEqual(savedEmpty.saveCount, 0)
+
+        for payload in ["not json", #"{ "schemaVersion": 99, "filterSets": [] }"#] {
+            let unreadable = InMemoryFilterInventoryStore()
+            unreadable.stored = PersistentFilterInventorySnapshot.decode(from: Data(payload.utf8)).snapshot
+            XCTAssertTrue(FilterInventoryModel(store: unreadable, initial: FilterInventory.samples()).filterSets.isEmpty, "An unreadable payload is not a fresh installation: \(payload)")
+            XCTAssertEqual(unreadable.saveCount, 0, "Nothing is written over it.")
+        }
+    }
+
     /// FILTER-SET-008: the Samples and their registered values; the
     /// Extended items convert through the shared ND-factor mapping
     /// (ND-011), ND400 by log2 without snapping.

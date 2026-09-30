@@ -499,6 +499,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             // whole stops and the three commercial presets, but this
             // guard must still cover the reserved third-stop path).
             || abs(ndStep.stops - Double(defaultFilmModeNDStop)) > ExposureCalculator.stabilityEpsilon
+            // Any mounted auxiliary filter, zero-contribution ones
+            // included. Selected Filter Sets alone do not count, nor do
+            // the Empty or Standard 0 wheels an Apply leaves (RESET-004).
+            || !calculatorModel.filterStack.auxiliaryFilters.isEmpty
             || scaleMode != .oneThirdStop
             || targetShutterModel.isActive
     }
@@ -870,13 +874,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // calc model and refreshes SwiftUI observers.
         scaleMode = .oneThirdStop
         baseShutter = defaultFilmModeBaseShutter
-        // Reset the canonical fractional `ndStep` directly. Routing
-        // through `ndStop = defaultFilmModeNDStop` would no-op when
-        // `ndStop` already equals `0` (e.g., after the user dragged
-        // ND to a fractional value, leaving the integer wrapper
-        // unchanged), so a fractional drift would survive the reset.
-        ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
+        // The whole Filter Stack returns to one Standard 0 wheel with
+        // no auxiliary filter (RESET-011), even when its total is
+        // already 0 — Empty Set wheels and a Record-only GND included.
+        // The camera's selected Filter Sets and its remembered Plus
+        // source stay (FILTER-PLUS-004). Writing the model directly also
+        // resets a fractional `ndStep` the integer wrapper would miss.
+        calculatorModel.ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
+        syncNDStepMirrorFromModel()
         ndStop = defaultFilmModeNDStop
+        objectWillChange.send()
+        persistCalculatorContext()
         // Target Shutter is part of the slot's shooting context, so
         // the workspace reset also drops it. Tap-to-reset returns the
         // entire slot to a clean shooting setup, not just the
@@ -1873,37 +1881,6 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             objectWillChange.send()
         }
         persistCalculatorContext()
-    }
-
-    /// Commits the shooting popup's complete auxiliary selection at
-    /// once (FILTER-AUX-003 Apply): mounting, CPL choices, and GND
-    /// modes validate together and either all take effect or nothing
-    /// changes. Returns the rejection to show — item mounted twice,
-    /// too many items, four ND wheels still present, or the combined
-    /// total over 30 stops. Existing ND wheels are never removed or
-    /// merged. A successful commit reshapes the wheel row (the summary
-    /// appears or disappears and the wheel limit changes), persists,
-    /// and re-examines cleanup because the shared budget moved.
-    @discardableResult
-    public func applyAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter]) -> FilterStackRejection? {
-        exitNDWheelReshapingForCommand()
-        defer { attemptFilterStackOrderReconciliation() }
-        let before = calculatorModel.filterStack.auxiliaryFilters
-        if let rejection = calculatorModel.setAuxiliaryFilters(mounts) {
-            return rejection
-        }
-        guard calculatorModel.filterStack.auxiliaryFilters != before else {
-            return nil
-        }
-        clearFilterRejectionNotice()
-        enterNDWheelReshaping()
-        withAnimation(.easeInOut(duration: 0.35)) {
-            syncNDStepMirrorFromModel()
-            objectWillChange.send()
-        }
-        persistCalculatorContext()
-        reexamineNDWheelCleanup()
-        return nil
     }
 
     /// Commits a Shooting Filters session at once (FILTER-AUX-003,

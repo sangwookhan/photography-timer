@@ -218,11 +218,13 @@ public final class CalculatorModel {
     /// filters are unmounted, instead of clamping any value.
     public func applyFilterInventory(_ inventory: FilterInventory) {
         filterInventory = inventory
-        // A kind change moves the selection into the item's new role
-        // first (FILTER-ITEM-005); surviving wheels keep their ids.
+        // A kind change moves the selection into the item's new role and
+        // a moved item follows it (FILTER-ITEM-005/009) first; surviving
+        // wheels keep their ids.
         let reassigned = FilterStack.reassigningRoles(
             wheels: filterStack.wheels,
             auxiliaryFilters: filterStack.auxiliaryFilters,
+            selectedFilterSetIDs: candidateFilterSetIDs,
             inventory: inventory
         )
         var wheels: [FilterWheel] = []
@@ -897,7 +899,7 @@ public final class CalculatorModel {
 // MARK: - Candidate Filter Sets and auxiliary filters (FILTER-CAMERA, FILTER-AUX)
 
 extension CalculatorModel {
-    /// The Filter Sources the Plus wheel and the popup's ND tab offer
+    /// The Filter Sources the Plus wheel offers
     /// (FILTER-PLUS-001): Standard, then this camera's candidate sets
     /// that hold at least one ND item.
     public var filterSources: [FilterSource] {
@@ -927,29 +929,16 @@ extension CalculatorModel {
         }
     }
 
-    /// Replaces this camera's candidate Filter Sets (FILTER-CAMERA-001).
-    /// Sets the stack still references stay candidates regardless —
-    /// the facade blocks such an exclusion up front — and a remembered
-    /// source that is no longer offered falls back to Standard.
-    public func setCandidateFilterSetIDs(_ ids: [FilterSetID]) {
+    /// Arranges this camera's candidate Filter Sets without a Shooting
+    /// Filters commit: no wheel is removed and Plus does not move. Sets
+    /// the stack references stay candidates, and a remembered source
+    /// that is no longer offered falls back to Standard. No production
+    /// caller: package tests arrange a camera with it, while the app
+    /// assigns candidates only through `applyShootingFilters` and
+    /// restore.
+    func arrangeCandidateFilterSetIDs(_ ids: [FilterSetID]) {
         candidateFilterSetIDs = ids
         normalizeCandidatesAndLastSource()
-    }
-
-    /// Commits the complete mounted auxiliary selection at once
-    /// (FILTER-AUX-003 Apply). Returns the rejection — leaving the
-    /// stack unchanged — when the domain refuses it; on success the
-    /// sets of the mounted items join the candidates.
-    @discardableResult
-    public func setAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter]) -> FilterStackRejection? {
-        switch filterStack.replacingAuxiliaryFilters(with: mounts, inventory: filterInventory) {
-        case .success(let replaced):
-            filterStack = replaced
-            normalizeCandidatesAndLastSource()
-            return nil
-        case .failure(let rejection):
-            return rejection
-        }
     }
 
     /// The stack a Shooting Filters session would commit

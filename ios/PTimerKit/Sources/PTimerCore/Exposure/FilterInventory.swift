@@ -386,8 +386,7 @@ public struct FilterSet: Identifiable, Hashable, Sendable {
 
 /// The complete user inventory: Filter Sets in user-defined display
 /// order. Standard is a fixed built-in source that always precedes
-/// every Filter Set; the built-in Default Filter Set, once ensured,
-/// precedes the user-created sets.
+/// every Filter Set.
 public struct FilterInventory: Hashable, Sendable {
     public var filterSets: [FilterSet]
 

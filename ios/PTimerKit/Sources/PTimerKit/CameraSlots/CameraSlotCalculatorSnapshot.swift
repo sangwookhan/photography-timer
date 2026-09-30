@@ -61,8 +61,8 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// state. Reads through `CalculatorDefaults` so a fresh slot is
     /// indistinguishable from a fresh app — one source of truth for
     /// shipping defaults across the ViewModel and slot snapshots. A
-    /// fresh camera starts with the Default Filter Set selected
-    /// (FILTER-CAMERA-001, FILTER-SET-002).
+    /// fresh camera starts with no Filter Set selected
+    /// (FILTER-CAMERA-001).
     public static let initial: CameraSlotCalculatorSnapshot = {
         var snapshot = CameraSlotCalculatorSnapshot(
             baseShutterSeconds: CalculatorDefaults.baseShutterSeconds,
@@ -145,7 +145,12 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// state no longer fits the cap — the caller decides whether that
     /// blocks the edit.
     public func reresolvingFilterStack(against inventory: FilterInventory) -> CameraSlotCalculatorSnapshot? {
-        let reassigned = FilterStack.reassigningRoles(wheels: filterWheels, auxiliaryFilters: auxiliaryFilters, inventory: inventory)
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: filterWheels,
+            auxiliaryFilters: auxiliaryFilters,
+            selectedFilterSetIDs: candidateFilterSetIDs,
+            inventory: inventory
+        )
         let auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, inventory: inventory)
         guard let wheels = FilterStack.normalizedWheels(reassigned.wheels, inventory: inventory),
               let stack = FilterStack.validated(wheels: wheels, auxiliaryFilters: auxiliary, inventory: inventory) else {
@@ -160,7 +165,12 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// the auxiliary filters are unmounted, so nothing is ever
     /// clamped. Standard wheels are untouched.
     public func emptyingMountedItems(against inventory: FilterInventory) -> CameraSlotCalculatorSnapshot {
-        let reassigned = FilterStack.reassigningRoles(wheels: filterWheels, auxiliaryFilters: auxiliaryFilters, inventory: inventory)
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: filterWheels,
+            auxiliaryFilters: auxiliaryFilters,
+            selectedFilterSetIDs: candidateFilterSetIDs,
+            inventory: inventory
+        )
         let emptied = (FilterStack.normalizedWheels(reassigned.wheels, inventory: inventory) ?? [.standard(CalculatorDefaults.ndStep)])
             .map { wheel -> FilterWheel in
                 wheel.isStandard ? wheel : FilterWheel(source: wheel.source, selection: .empty)

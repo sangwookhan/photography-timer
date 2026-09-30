@@ -59,7 +59,7 @@ extension ExposureCalculatorViewModel {
     // MARK: Mounted auxiliary filters (FILTER-AUX)
 
     /// The active camera's mounted auxiliary filters, resolved, in
-    /// mount order; empty while the summary is hidden.
+    /// display order; empty while the summary is hidden.
     public var mountedAuxiliaryFilters: [ResolvedAuxiliaryFilter] {
         calculatorModel.mountedAuxiliaryFilters
     }
@@ -76,28 +76,19 @@ extension ExposureCalculatorViewModel {
             .compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: inventory) }
     }
 
-    /// The shooting popup's live auxiliary subtotal in stops: only the
+    /// The Shooting Filters exposure reduction in stops: only the
     /// working selection's auxiliary contributions, never the ND
-    /// wheels, which that tab does not show (FILTER-AUX-003). The
-    /// 30-stop guard still uses the complete stack
-    /// (`auxiliaryFiltersPreview`).
+    /// wheels, which Shooting Filters does not show (FILTER-AUX-003).
+    /// The 30-stop guard still uses the complete stack
+    /// (`shootingFiltersPreview`).
     public func auxiliaryFiltersSubtotal(_ mounts: [MountedAuxiliaryFilter]) -> Double {
         mounts
             .compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: filterInventory) }
             .reduce(0) { $0 + $1.contributionStops }
     }
 
-    /// What the shooting popup's working selection would yield if
-    /// applied now (FILTER-AUX-003): the effective total in stops, or
-    /// the rejection Apply would report. Nothing is committed.
-    public func auxiliaryFiltersPreview(_ mounts: [MountedAuxiliaryFilter]) -> Result<NDStep, FilterStackRejection> {
-        calculatorModel.filterStack
-            .replacingAuxiliaryFilters(with: mounts, inventory: filterInventory)
-            .map(\.effectiveStep)
-    }
-
     /// The Plus wheel's vertical choices (FILTER-PLUS-001): Standard,
-    /// the candidate ND sources, then the Auxiliary filters action.
+    /// the candidate ND sources, then the Shooting filters action.
     public var filterPlusChoices: [FilterPlusChoice] {
         FilterPlusChoice.choices(for: filterSources)
     }
@@ -124,43 +115,12 @@ extension ExposureCalculatorViewModel {
     }
 
     /// Sets the active camera's stack still references — through an
-    /// ND wheel (Empty included) or a mounted auxiliary filter. They
-    /// cannot leave the candidates until those selections are cleared.
+    /// ND wheel (Empty included) or a mounted auxiliary filter. Shooting
+    /// Filters marks them in use; leaving one out on Apply takes its
+    /// filters and ND wheels off this camera (FILTER-CAMERA-003).
     public var filterSetIDsReferencedByActiveCamera: Set<FilterSetID> {
         Set(calculatorModel.filterWheels.compactMap { $0.source.filterSetID })
             .union(calculatorModel.filterStack.auxiliaryFilters.map(\.filterSetID))
-    }
-
-    /// Outcome of a candidate assignment.
-    public enum CandidateFilterSetAssignmentOutcome: Equatable, Sendable {
-        case assigned
-        /// The excluded sets the camera still references, by name;
-        /// nothing changed.
-        case blocked(referencedFilterSetNames: [String])
-    }
-
-    /// Replaces the active camera's candidate Filter Sets
-    /// (FILTER-CAMERA-001). Assignment saves immediately and mounts
-    /// nothing. Excluding a set this camera still references is
-    /// blocked with the set names, so a candidate change can never
-    /// alter the exposure calculation implicitly; a remembered ND
-    /// source that is no longer a candidate falls back to Standard.
-    @discardableResult
-    public func setCandidateFilterSetIDs(_ ids: [FilterSetID]) -> CandidateFilterSetAssignmentOutcome {
-        let excludedReferenced = filterSetIDsReferencedByActiveCamera.subtracting(ids)
-        guard excludedReferenced.isEmpty else {
-            let names = filterInventory.filterSets
-                .filter { excludedReferenced.contains($0.id) }
-                .map(\.name)
-            return .blocked(referencedFilterSetNames: names)
-        }
-        guard ids != calculatorModel.candidateFilterSetIDs else {
-            return .assigned
-        }
-        calculatorModel.setCandidateFilterSetIDs(ids)
-        objectWillChange.send()
-        persistCalculatorContext()
-        return .assigned
     }
 
     // MARK: Shooting Filters session (FILTER-AUX-003, FILTER-CAMERA-003)
@@ -313,9 +273,10 @@ extension ExposureCalculatorViewModel {
         filterInventoryModel.recolorFilterSet(id: id, color: color)
     }
 
-    /// Deletes a Filter Set. Wheels referencing it disappear from every
-    /// camera through the inventory-change reconciliation; a camera left
-    /// with no wheel receives one Standard 0 wheel (FILTER-ITEM-006).
+    /// Deletes a Filter Set. Its wheels and mounted auxiliary filters
+    /// leave every camera, and it leaves every camera's selected Sets,
+    /// through the inventory-change reconciliation; a camera left with no
+    /// wheel receives one Standard 0 wheel (FILTER-ITEM-006).
     public func deleteFilterSet(id: FilterSetID) {
         filterInventoryModel.deleteFilterSet(id: id)
     }
@@ -323,7 +284,8 @@ extension ExposureCalculatorViewModel {
     // MARK: Physical item management (FILTER-ITEM)
 
     /// Deletes a physical item. Every wheel that referenced it becomes
-    /// Empty on every camera (FILTER-ITEM-006).
+    /// Empty and every auxiliary mount of it is unmounted, on every
+    /// camera (FILTER-ITEM-006).
     public func deleteFilterItem(id: FilterItemID) {
         filterInventoryModel.deleteItem(id: id)
     }
@@ -384,7 +346,7 @@ extension ExposureCalculatorViewModel {
             guard let stack = cameraStack(for: slotID) else {
                 continue
             }
-            if let reason = Self.stackConflict(stack.wheels, auxiliaryFilters: stack.auxiliaryFilters, itemID: item.id, candidate: candidate) {
+            if let reason = Self.stackConflict(stack, itemID: item.id, candidate: candidate) {
                 conflicts.append(FilterItemSaveConflict(
                     cameraName: cameraSlotSessionModel.identity(for: slotID).displayName,
                     reason: reason
@@ -402,12 +364,16 @@ extension ExposureCalculatorViewModel {
     /// limits moves the selection into the new role and does not
     /// conflict (FILTER-ITEM-005).
     private static func stackConflict(
-        _ currentWheels: [FilterWheel],
-        auxiliaryFilters currentAuxiliaryFilters: [MountedAuxiliaryFilter],
+        _ current: CameraStack,
         itemID: FilterItemID,
         candidate: FilterInventory
     ) -> FilterItemSaveBlockReason? {
-        let reassigned = FilterStack.reassigningRoles(wheels: currentWheels, auxiliaryFilters: currentAuxiliaryFilters, inventory: candidate)
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: current.wheels,
+            auxiliaryFilters: current.auxiliaryFilters,
+            selectedFilterSetIDs: current.candidateFilterSetIDs,
+            inventory: candidate
+        )
         let wheels = reassigned.wheels
         let auxiliaryFilters = reassigned.auxiliaryFilters
         if wheels.count > FilterStack.wheelLimit(hasAuxiliaryFilters: !auxiliaryFilters.isEmpty) {
@@ -432,10 +398,12 @@ extension ExposureCalculatorViewModel {
     }
 
     /// Saves a new or edited item into `filterSetID`. An existing item
-    /// saved into another set moves there with its id; every camera that
-    /// references it keeps the reference under that set and gains the
-    /// set as a candidate, without losing the old one (FILTER-ITEM-009).
-    /// Blocked — and nothing changes — when any camera stack would
+    /// saved into another set moves there with its id at once: an ND
+    /// wheel mounting it follows it there, and an auxiliary filter stays
+    /// mounted only on a camera that selects that set and is unmounted
+    /// elsewhere, without selecting the set (FILTER-ITEM-009).
+    /// Blocked — and nothing changes — when any camera would lose a
+    /// selected choice, need more ND wheels than its stack allows, or
     /// exceed the cap.
     @discardableResult
     public func saveFilterItem(_ item: FilterItem, in filterSetID: FilterSetID) -> FilterItemSaveOutcome {
@@ -467,16 +435,25 @@ extension ExposureCalculatorViewModel {
     private struct CameraStack {
         let wheels: [FilterWheel]
         let auxiliaryFilters: [MountedAuxiliaryFilter]
+        let candidateFilterSetIDs: [FilterSetID]
     }
 
     private func cameraStack(for slotID: CameraSlotID) -> CameraStack? {
         if slotID == cameraSlotSessionModel.activeSlotID {
-            return CameraStack(wheels: calculatorModel.filterWheels, auxiliaryFilters: calculatorModel.filterStack.auxiliaryFilters)
+            return CameraStack(
+                wheels: calculatorModel.filterWheels,
+                auxiliaryFilters: calculatorModel.filterStack.auxiliaryFilters,
+                candidateFilterSetIDs: calculatorModel.candidateFilterSetIDs
+            )
         }
         guard let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) else {
             return nil
         }
-        return CameraStack(wheels: snapshot.filterWheels, auxiliaryFilters: snapshot.auxiliaryFilters)
+        return CameraStack(
+            wheels: snapshot.filterWheels,
+            auxiliaryFilters: snapshot.auxiliaryFilters,
+            candidateFilterSetIDs: snapshot.candidateFilterSetIDs
+        )
     }
 
     private func cameraNames(where predicate: ([FilterWheel], [MountedAuxiliaryFilter]) -> Bool) -> [String] {

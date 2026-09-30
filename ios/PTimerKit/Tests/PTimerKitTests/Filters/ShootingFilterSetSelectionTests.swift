@@ -115,10 +115,10 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         inventory.addItem(nd8, to: kit.id)
         inventory.addItem(cpl, to: other.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
-        viewModel.setCandidateFilterSetIDs([kit.id, other.id])
+        viewModel.arrangeFilterSets([kit.id, other.id])
         let kitSet = try XCTUnwrap(viewModel.filterSet(withID: kit.id))
         let otherSet = try XCTUnwrap(viewModel.filterSet(withID: other.id))
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(red, in: kitSet), .mount(cpl, in: otherSet, .cplLoss(1.5))]))
+        XCTAssertNil(viewModel.applyMounts([.mount(red, in: kitSet), .mount(cpl, in: otherSet, .cplLoss(1.5))]))
         viewModel.selectFilterSource(.filterSet(kit.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd8), at: 1)
@@ -203,10 +203,10 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
             cameraSlotSessionPersistenceStore: store,
             filterInventoryModel: inventory
         )
-        viewModel.setCandidateFilterSetIDs([kit.id, other.id])
+        viewModel.arrangeFilterSets([kit.id, other.id])
         let kitSet = try XCTUnwrap(viewModel.filterSet(withID: kit.id))
         let otherSet = try XCTUnwrap(viewModel.filterSet(withID: other.id))
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(red, in: kitSet), .mount(cpl, in: otherSet, .cplLoss(1.5))]))
+        XCTAssertNil(viewModel.applyMounts([.mount(red, in: kitSet), .mount(cpl, in: otherSet, .cplLoss(1.5))]))
         viewModel.selectFilterSource(.filterSet(kit.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd8), at: 1)
@@ -256,7 +256,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         working.rebase(
             committedFilterSetIDs: viewModel.candidateFilterSetIDs,
             committedMounts: viewModel.mountedAuxiliaryFilters.map(\.mount),
-            existingFilterSetIDs: Set(viewModel.filterInventory.filterSets.map(\.id))
+            inventory: viewModel.filterInventory
         )
 
         // Cancel drops the session; the inventory edits stay.
@@ -272,7 +272,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         let nd8 = nd("ND8", 3)
         inventory.addItem(nd8, to: kit.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
-        viewModel.setCandidateFilterSetIDs([kit.id])
+        viewModel.arrangeFilterSets([kit.id])
         viewModel.selectFilterSource(.filterSet(kit.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd8), at: 1)
@@ -348,7 +348,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         let old = try ndSet(inventory, "Old", nd: 1)
         let fresh = try ndSet(inventory, "Fresh", nd: 1)
         let viewModel = makeViewModel(sessionStore: store, inventoryModel: inventory)
-        viewModel.setCandidateFilterSetIDs([old.id])
+        viewModel.arrangeFilterSets([old.id])
         viewModel.selectFilterSource(.filterSet(old.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(old.items[0]), at: 1)
@@ -381,7 +381,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         let pouch = try ndSet(inventory, "Pouch", nd: 0, auxiliary: true)
         let viewModel = makeViewModel(inventoryModel: inventory)
         viewModel.setWheelSelection(.standard(NDStep(stops: 2)), at: 0)
-        viewModel.setCandidateFilterSetIDs([kit.id])
+        viewModel.arrangeFilterSets([kit.id])
         viewModel.selectFilterSource(.filterSet(kit.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(kit.items[0]), at: 1)
@@ -491,7 +491,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         let nd8 = nd("ND8", 3)
         inventory.addItem(nd8, to: kit.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
-        viewModel.setCandidateFilterSetIDs([kit.id])
+        viewModel.arrangeFilterSets([kit.id])
         viewModel.selectFilterSource(.filterSet(kit.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd8), at: 1)
@@ -704,7 +704,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         inventory.addItem(red, to: kit.id)
         inventory.addItem(nd8, to: holder.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
-        viewModel.setCandidateFilterSetIDs([kit.id, holder.id])
+        viewModel.arrangeFilterSets([kit.id, holder.id])
         viewModel.selectFilterSource(.filterSet(holder.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd8), at: 1)
@@ -739,7 +739,11 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(inventory.filterSet(withID: aux.id)).showsNDCue, "No ND filter, no cue.")
     }
 
-    func testMovingAnItemToAnotherSetKeepsItsIDAndEveryCameraReference() throws {
+    /// FILTER-ITEM-009: a moved item keeps its id; an auxiliary
+    /// selection follows it only into a Set the camera selects, an ND
+    /// wheel follows it as before (FILTER-ITEM-005), and no camera
+    /// selects the destination because of an auxiliary filter.
+    func testMovingAnItemKeepsItsIDAndEveryCameraJudgesItsOwnSelection() throws {
         let store = InMemoryMixedSessionStore()
         let inventory = FilterInventoryModel()
         let bag = try XCTUnwrap(inventory.createFilterSet(name: "Bag", color: .blue))
@@ -750,17 +754,17 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         let viewModel = makeViewModel(sessionStore: store, inventoryModel: inventory)
         let bagSet = try XCTUnwrap(viewModel.filterSet(withID: bag.id))
 
-        // Camera 1 mounts Red and an ND8 wheel from Bag; camera 2,
-        // active while the items move, mounts Red only.
-        viewModel.setCandidateFilterSetIDs([bag.id])
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(red, in: bagSet)]))
+        // Camera 1 selects Bag only, mounts Red, and has an ND8 wheel
+        // from Bag; camera 2, active while the items move, selects Bag
+        // and Kit and mounts Red.
+        viewModel.arrangeFilterSets([bag.id])
+        XCTAssertNil(viewModel.applyMounts([.mount(red, in: bagSet)]))
         viewModel.selectFilterSource(.filterSet(bag.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd8), at: 1)
-        let cameraOneTotal = viewModel.ndStep.stops
         viewModel.selectCameraSlot(.camera2)
-        viewModel.setCandidateFilterSetIDs([bag.id])
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(red, in: bagSet)]))
+        viewModel.arrangeFilterSets([bag.id, kit.id])
+        XCTAssertNil(viewModel.applyMounts([.mount(red, in: bagSet)]))
 
         var renamed = red
         renamed.name = "Red 25A Hoya"
@@ -769,18 +773,25 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         XCTAssertEqual(viewModel.filterSet(withID: kit.id)?.items.map(\.id), [red.id, nd8.id], "The same items, with their ids.")
         XCTAssertEqual(viewModel.filterSet(withID: bag.id)?.items, [])
 
-        // The active camera keeps Red under Kit; Kit joins its sets and
-        // Bag stays.
+        // Camera 2 selects Kit: Red follows it there.
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(renamed, in: try XCTUnwrap(viewModel.filterSet(withID: kit.id)))])
         XCTAssertEqual(viewModel.candidateFilterSetIDs, [bag.id, kit.id])
 
-        // The inactive camera kept both references the same way.
+        // Camera 1 did not select Kit when Red moved: Red is unmounted and
+        // Kit is not selected for it; the later ND8 move takes its wheel
+        // to Kit, which that wheel then references.
         viewModel.selectCameraSlot(.camera1)
-        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount.filterSetID), [kit.id])
-        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.item.id), [red.id])
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
         XCTAssertTrue(viewModel.filterWheels.contains(FilterWheel(source: .filterSet(kit.id), selection: select(nd8))), "The ND8 wheel follows its item.")
         XCTAssertEqual(viewModel.candidateFilterSetIDs, [bag.id, kit.id])
-        XCTAssertEqual(viewModel.ndStep.stops, cameraOneTotal, accuracy: 1e-9, "The total is unchanged.")
+        XCTAssertEqual(viewModel.ndStep.stops, 3, accuracy: 1e-9, "Only the ND8 contributes now.")
+
+        // A restart restores the same.
+        let restored = makeViewModel(sessionStore: store, inventoryModel: inventory)
+        XCTAssertTrue(restored.mountedAuxiliaryFilters.isEmpty)
+        XCTAssertEqual(restored.ndStep.stops, 3, accuracy: 1e-9)
+        restored.selectCameraSlot(.camera2)
+        XCTAssertEqual(restored.mountedAuxiliaryFilters.map(\.mount.filterSetID), [kit.id])
     }
 
     func testItemsReadNDFirstThenByKindAndNameWithoutManualOrder() {

@@ -40,7 +40,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(item), at: 1)
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(gnd, in: set)]))
+        XCTAssertNil(viewModel.applyMounts([.mount(gnd, in: set)]))
         XCTAssertEqual(viewModel.ndStep.stops, 16.6, accuracy: 1e-9)
 
         let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })

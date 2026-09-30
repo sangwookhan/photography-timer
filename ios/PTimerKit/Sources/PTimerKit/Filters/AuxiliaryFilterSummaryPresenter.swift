@@ -98,7 +98,7 @@ public struct AuxiliaryFilterSummaryDisplayState: Equatable, Sendable {
 /// the ND notation (ND-004): they are labeled contributions, not
 /// notation displays.
 public enum AuxiliaryFilterSummaryPresenter {
-    /// `Auxiliary filters` — the summary's title and the popup tab.
+    /// `Auxiliary filters` — the Main summary's title.
     public static var title: String {
         String(localized: "Auxiliary filters")
     }
@@ -214,8 +214,8 @@ public enum AuxiliaryFilterSummaryPresenter {
 }
 
 /// What the Plus wheel can settle on (FILTER-PLUS-001): an ND Filter
-/// Source that adds a wheel, or the Auxiliary filters action that opens
-/// the shooting popup without adding anything.
+/// Source that adds a wheel, or the Shooting filters action that opens
+/// Shooting Filters without adding anything.
 public enum FilterPlusChoice: Hashable, Sendable {
     case source(FilterSource)
     case auxiliaryFilters

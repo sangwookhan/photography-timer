@@ -42,10 +42,6 @@ public struct ShootingFiltersSession: Equatable, Sendable {
         selectedFilterSetIDs != committedFilterSetIDs || Set(mounts) != committedMounts
     }
 
-    public func isSelected(_ id: FilterSetID) -> Bool {
-        selectedFilterSetIDs.contains(id)
-    }
-
     /// Adds a set to the end of the working selection, or removes it,
     /// in the working state only.
     public mutating func setSelected(_ id: FilterSetID, _ isSelected: Bool) {
@@ -71,22 +67,43 @@ public struct ShootingFiltersSession: Equatable, Sendable {
         }
     }
 
+    /// Follows an inventory edit made from a set editor opened here,
+    /// which is immediate and not rolled back (FILTER-FLOW-003). Call it
+    /// whenever the camera's committed state or the inventory changes:
+    /// it rebases on a committed change and then reconciles against the
+    /// inventory, so the screen's change handlers may fire in any order,
+    /// or more than once, with the same result.
+    public mutating func follow(
+        committedFilterSetIDs ids: [FilterSetID],
+        committedMounts mounts: [MountedAuxiliaryFilter],
+        inventory: FilterInventory
+    ) {
+        if ids != committedFilterSetIDs || Set(mounts) != committedMounts {
+            rebase(committedFilterSetIDs: ids, committedMounts: mounts, inventory: inventory)
+        }
+        reconcile(with: inventory)
+    }
+
     /// The camera's committed state changed underneath the session —
     /// an inventory edit made from a set editor opened here, which is
     /// immediate and not rolled back (FILTER-FLOW-003). Each item follows
     /// the edit only where its committed mount changed: a pick the
-    /// session had not changed takes the new committed mount (or leaves
-    /// with it), a pick the session had changed keeps its choice under
-    /// the item's new Set, and every other working pick or unmount stays
-    /// as it is, so Apply never undoes the edit and never loses an
-    /// unrelated draft change. A set the camera gained joins the
-    /// selection, and sets that no longer exist leave it.
-    public mutating func rebase(
+    /// session had not changed takes the new committed mount, a pick the
+    /// session had changed keeps its choice, and every other working pick
+    /// or unmount stays as it is, so Apply never undoes the edit and never
+    /// loses an unrelated draft change. A committed mount whose item moved
+    /// stays picked only while the session selects the item's new Set
+    /// (FILTER-ITEM-009), and one the camera dropped otherwise leaves the
+    /// session too. A set the camera gained joins the selection, and sets
+    /// that no longer exist leave it. Together with `reconcile`, which
+    /// leaves these committed picks alone, the result does not depend on
+    /// which of the two runs first.
+    mutating func rebase(
         committedFilterSetIDs ids: [FilterSetID],
         committedMounts mounts: [MountedAuxiliaryFilter],
-        existingFilterSetIDs existing: Set<FilterSetID>
+        inventory: FilterInventory
     ) {
-        // A set the camera gained — a moved item's new set — joins the
+        // A set the camera gained — a moved ND wheel's new set — joins the
         // working selection, so Apply keeps that item's references.
         for id in ids where !committedFilterSetIDs.contains(id) && !selectedFilterSetIDs.contains(id) {
             selectedFilterSetIDs.append(id)
@@ -98,12 +115,25 @@ public struct ShootingFiltersSession: Equatable, Sendable {
             let old = before[working.itemID], new = after[working.itemID]
             if old == new {
                 rebased.append(working)
-            } else if working == old {
-                if let new { rebased.append(new) }
             } else if let new {
-                rebased.append(new.choice.sameRole(as: working.choice)
-                    ? MountedAuxiliaryFilter(filterSetID: new.filterSetID, itemID: working.itemID, choice: working.choice)
-                    : new)
+                if let old, old.filterSetID != new.filterSetID, !selectedFilterSetIDs.contains(new.filterSetID) {
+                    continue
+                }
+                rebased.append(working == old || !new.choice.sameRole(as: working.choice)
+                    ? new
+                    : MountedAuxiliaryFilter(filterSetID: new.filterSetID, itemID: working.itemID, choice: working.choice))
+            } else if working == old {
+                // The camera dropped a pick the session had not changed. An
+                // item that moved to a Set this session selects stays picked
+                // there; anything else leaves with the camera's mount.
+                if let owner = inventory.item(withID: working.itemID)?.filterSet.id,
+                   owner != working.filterSetID,
+                   selectedFilterSetIDs.contains(owner) {
+                    let moved = MountedAuxiliaryFilter(filterSetID: owner, itemID: working.itemID, choice: working.choice)
+                    if FilterStack.resolvedAuxiliaryFilter(moved, inventory: inventory) != nil {
+                        rebased.append(moved)
+                    }
+                }
             } else {
                 rebased.append(working)
             }
@@ -116,7 +146,7 @@ public struct ShootingFiltersSession: Equatable, Sendable {
         committedFilterSetIDs = ids
         committedMounts = Set(mounts)
         workingMounts = rebased
-        selectedFilterSetIDs.removeAll { !existing.contains($0) }
+        selectedFilterSetIDs.removeAll { inventory.filterSet(withID: $0) == nil }
     }
 
     /// An inventory edit made from a set editor opened here can leave the
@@ -125,14 +155,23 @@ public struct ShootingFiltersSession: Equatable, Sendable {
     /// of an item in a deleted Set, or with a choice no longer configured
     /// or no longer fitting the item's kind is dropped, never replaced
     /// (FILTER-ITEM-006, FILTER-PERSIST-002), and a deleted Set leaves the
-    /// selection. A pick whose item now lives in another Set is left as
-    /// it is. Every other working choice is kept.
-    public mutating func reconcile(with inventory: FilterInventory) {
+    /// selection. A pick whose item now lives in another Set follows it
+    /// there with its choice while the session selects that Set, and is
+    /// otherwise cleared for good, so selecting the Set later does not
+    /// bring it back (FILTER-ITEM-009). A pick that still equals the
+    /// camera's committed mount is left to `rebase`: the camera's own
+    /// reconciliation decides it. Every other working choice is kept.
+    mutating func reconcile(with inventory: FilterInventory) {
         selectedFilterSetIDs.removeAll { inventory.filterSet(withID: $0) == nil }
-        workingMounts.removeAll { mount in
-            guard FilterStack.resolvedAuxiliaryFilter(mount, inventory: inventory) == nil else { return false }
-            let owner = inventory.item(withID: mount.itemID)?.filterSet.id
-            return owner == nil || owner == mount.filterSetID
+        workingMounts = workingMounts.compactMap { mount in
+            if committedMounts.contains(mount) { return mount }
+            guard let owner = inventory.item(withID: mount.itemID)?.filterSet.id else { return nil }
+            var mount = mount
+            if owner != mount.filterSetID {
+                guard selectedFilterSetIDs.contains(owner) else { return nil }
+                mount = MountedAuxiliaryFilter(filterSetID: owner, itemID: mount.itemID, choice: mount.choice)
+            }
+            return FilterStack.resolvedAuxiliaryFilter(mount, inventory: inventory) == nil ? nil : mount
         }
     }
 }

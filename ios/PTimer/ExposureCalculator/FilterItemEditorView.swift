@@ -18,18 +18,30 @@ struct FilterItemEditorContext: Identifiable {
     /// corrected to any kind (FILTER-ITEM-003/008).
     let selectableKinds = FilterSetItemOrder.kinds
 
-    let filterSetID: FilterSetID
+    /// The Set the editor opened from; `nil` for a general Add filter
+    /// entry, which chooses its Set in the editor (FILTER-ITEM-009).
+    let filterSetID: FilterSetID?
     let item: FilterItem?
     var initialUnit: FilterValueUnit = .stops
+    /// The color a proposed New Filter Set gets when the inventory holds
+    /// no Set yet (FILTER-SET-003).
+    var proposedFilterSetColor: FilterSetColor = .blue
 
-    init(filterSetID: FilterSetID, item: FilterItem?, initialUnit: FilterValueUnit = .stops) {
+    init(filterSetID: FilterSetID?, item: FilterItem?, initialUnit: FilterValueUnit = .stops) {
         self.filterSetID = filterSetID
         self.item = item
         self.initialUnit = initialUnit
     }
 
+    /// A general Add filter entry: no Set chosen yet (FILTER-FLOW-004).
+    static func general(initialUnit: FilterValueUnit, proposedFilterSetColor: FilterSetColor) -> FilterItemEditorContext {
+        var context = FilterItemEditorContext(filterSetID: nil, item: nil, initialUnit: initialUnit)
+        context.proposedFilterSetColor = proposedFilterSetColor
+        return context
+    }
+
     var id: String {
-        "\(filterSetID.rawValue)-\(item?.id.rawValue ?? "new")"
+        "\(filterSetID?.rawValue ?? "general")-\(item?.id.rawValue ?? "new")"
     }
 }
 
@@ -53,8 +65,11 @@ struct FilterItemEditorView: View {
     var onSaved: (FilterItem) -> Void = { _ in }
 
     /// Where the filter is saved; an existing filter starts in the set
-    /// that holds it.
-    @State private var filterSetID: FilterSetID
+    /// that holds it, and a general entry starts with none.
+    @State private var filterSetID: FilterSetID?
+    /// The name of the New Filter Set proposed while the inventory holds
+    /// no Set; it is created with the filter on Save (FILTER-ITEM-009).
+    @State private var proposedFilterSetName = String(localized: "proposed-filter-set-name", defaultValue: "New Filter Set")
     /// Filter Set creation opened from the Filter Set field.
     @State private var creationDraft: FilterSetDraft?
     @State private var name: String
@@ -62,7 +77,7 @@ struct FilterItemEditorView: View {
     @State private var valueText: String
     @State private var unit: FilterValueUnit
     @State private var cplFields: [String]
-    /// Optical color of a Color filter (FILTER-COLOR-001); kept even
+    /// Display color of a Color filter (FILTER-COLOR-001); kept even
     /// while another kind is selected so switching back restores it.
     @State private var opticalColor: FilterSetColor
     @State private var blockedSave: BlockedSave?
@@ -190,16 +205,41 @@ struct FilterItemEditorView: View {
         }
     }
 
+    /// No Set exists yet, so the destination is a proposed New Filter
+    /// Set made on Save (FILTER-ITEM-009).
+    private var proposesNewFilterSet: Bool {
+        viewModel.filterInventory.filterSets.isEmpty
+    }
+
+    private var trimmedProposedFilterSetName: String {
+        proposedFilterSetName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasDestination: Bool {
+        if proposesNewFilterSet {
+            return !trimmedProposedFilterSetName.isEmpty
+        }
+        return filterSetID.flatMap(viewModel.filterSet(withID:)) != nil
+    }
+
     private var canSave: Bool {
-        !trimmedName.isEmpty && behavior != nil
+        !trimmedName.isEmpty && behavior != nil && hasDestination
     }
 
     var body: some View {
         NavigationStack {
+            // Compact and keyboard-aware (FILTER-ITEM-010): the destination,
+            // name, kind, and the active kind's value fit above the software
+            // keyboard on iPhone at the default text size; the guidance
+            // follows below them and stays reachable by scrolling.
             Form {
-                filterSetSection
-
                 Section {
+                    // Tight vertical insets on the controls that are
+                    // taller than a text row keep every input and its
+                    // explanation above the keyboard (FILTER-ITEM-010);
+                    // touch targets stay 44 points.
+                    filterSetRow
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 8))
                     TextField("Filter name", text: $name)
                         .textInputAutocapitalization(.words)
                         .focused($focusedField, equals: .name)
@@ -210,11 +250,8 @@ struct FilterItemEditorView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .accessibilityIdentifier("filter-item-kind-picker")
-                } header: {
-                    Text("Filter")
-                } footer: {
-                    Text("The kind is your choice; the app never guesses it from the name.")
                 }
 
                 switch kind {
@@ -223,23 +260,13 @@ struct FilterItemEditorView: View {
                 case .cpl:
                     cplSection
                 case .color:
-                    opticalColorSection
-                    lossSection
+                    displayColorSection
                 case .effect:
                     lossSection
                 }
-
-                if kind == .gnd {
-                    Section {
-                        Text("While shooting, a GND wheel offers Record only (0 stops) and Apply full value (its full registered density). Record only is the default.")
-                        Text("Apply full value suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation.")
-                            .foregroundStyle(.secondary)
-                    } header: {
-                        Text("Calculation modes")
-                    }
-                    .font(.footnote)
-                }
             }
+            .listSectionSpacing(.compact)
+            .contentMargins(.top, 8, for: .scrollContent)
             .navigationTitle(context.item == nil ? Text("New filter") : Text("Edit filter"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -296,24 +323,81 @@ struct FilterItemEditorView: View {
     }
 
     /// The Filter Set the filter is saved into, always visible and
-    /// enabled (FILTER-ITEM-009): Default and every user set, plus Add
-    /// Filter Set. Saving an existing filter into another set moves it
-    /// there with its identity.
-    private var filterSetSection: some View {
-        Section {
-            Picker("Filter Set", selection: $filterSetID) {
-                ForEach(viewModel.filterInventory.filterSets) { filterSet in
-                    Text(filterSet.name).tag(filterSet.id)
+    /// enabled (FILTER-ITEM-009): every inventory Set, never Standard,
+    /// with Add Filter Set at the trailing edge of the same row. Saving an
+    /// existing filter into another set moves it there with its identity.
+    /// With no Set yet, the row proposes a New Filter Set whose name can
+    /// be edited; it is created only when the filter saves.
+    private var filterSetRow: some View {
+        HStack(spacing: 12) {
+            if proposesNewFilterSet {
+                HStack(spacing: 6) {
+                    Text("Filter Set")
+                    Spacer(minLength: 8)
+                    FilterSetColorSwatch(color: context.proposedFilterSetColor, size: 11)
+                    // Sized to the name so the swatch stays beside it.
+                    TextField("Filter Set name", text: $proposedFilterSetName)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(Color.secondary)
+                        .textInputAutocapitalization(.words)
+                        .fixedSize()
+                        .accessibilityIdentifier("filter-item-proposed-filter-set-name")
                 }
+                .frame(minHeight: 44)
+            } else {
+                filterSetMenu
             }
-            .accessibilityIdentifier("filter-item-filter-set-picker")
             Button {
                 creationDraft = FilterSetDraft(name: "", color: viewModel.suggestFilterSetCreationColor())
             } label: {
-                Label("Add Filter Set", systemImage: "plus.circle")
+                Image(systemName: "plus.circle")
+                    .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(Text("Add Filter Set"))
             .accessibilityIdentifier("filter-item-add-filter-set-button")
         }
+    }
+
+    /// The choice among the inventory Sets. The selected Set's source
+    /// color sits beside its name, and the same cue on every choice;
+    /// never the item's display color.
+    private var filterSetMenu: some View {
+        Menu {
+            Picker("Filter Set", selection: $filterSetID) {
+                ForEach(viewModel.filterInventory.filterSets) { filterSet in
+                    Label {
+                        Text(filterSet.name)
+                    } icon: {
+                        Image(uiImage: FilterSetSwatchImage.image(for: filterSet.color))
+                    }
+                    .tag(Optional(filterSet.id))
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Filter Set")
+                    .foregroundStyle(Color.primary)
+                Spacer(minLength: 8)
+                if let selected = filterSetID.flatMap(viewModel.filterSet(withID:)) {
+                    FilterSetColorSwatch(color: selected.color, size: 11)
+                    Text(selected.name)
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                } else {
+                    Text("Choose")
+                        .foregroundStyle(Color.secondary)
+                }
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.secondary)
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .accessibilityIdentifier("filter-item-filter-set-picker")
     }
 
     private var valueSection: some View {
@@ -345,78 +429,98 @@ struct FilterItemEditorView: View {
         } header: {
             Text(kind == .gnd ? "Full density" : "Exposure loss")
         } footer: {
-            Text("Stops are kept as entered; OD divides by 0.3; an ND factor converts as log2. The value is never snapped to the Standard ladder.")
-        }
-    }
-
-    /// Color of a Color filter (FILTER-COLOR-001): chosen from the same
-    /// palette as Filter Sets, each choice drawn in its actual color,
-    /// with the selected color's name, separate from the loss.
-    private var opticalColorSection: some View {
-        Section {
-            FilterSetColorGrid(selection: $opticalColor)
-                .accessibilityIdentifier("filter-item-optical-color-picker")
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(Color.filterSet(opticalColor))
-                    .frame(width: 12, height: 12)
-                    .accessibilityHidden(true)
-                Text(FilterWheelPresenter.opticalColorName(opticalColor))
+            // ND has no explanation; a GND's modes say what it adds
+            // (FILTER-ITEM-010).
+            if kind == .gnd {
+                Text("While shooting, Record only uses 0 stops; Apply to exposure uses the registered value.")
             }
-            .accessibilityElement(children: .combine)
-        } header: {
-            Text("Optical color")
-        } footer: {
-            Text("The optical color identifies the filter. It never sets the exposure loss.")
         }
     }
 
-    /// Explicit loss of a Color or Effect filter in stops
-    /// (FILTER-COLOR-001/002): user-supplied, zero allowed, never
-    /// inferred from the color or the name.
+    /// Display color of a Color filter (FILTER-COLOR-001): a visual
+    /// reference chosen from the same palette as Filter Sets, each choice
+    /// drawn in its color with the selected one marked; the explicit loss
+    /// follows on its own labelled row. The palette's label sits in its
+    /// row rather than a section header, so the explanation below the
+    /// loss stays above the keyboard (FILTER-ITEM-010).
+    private var displayColorSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Display color")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                FilterSetColorGrid(selection: $opticalColor)
+                    .accessibilityIdentifier("filter-item-optical-color-picker")
+            }
+            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 2, trailing: 16))
+            lossRow
+        } footer: {
+            lossFooter
+        }
+    }
+
+    /// Explicit loss of an Effect filter in stops (FILTER-COLOR-002).
     private var lossSection: some View {
         Section {
-            HStack {
-                TextField("Value", text: $valueText)
-                    .keyboardType(.decimalPad)
-                    .focused($focusedField, equals: .value)
-                    .accessibilityIdentifier("filter-item-loss-field")
-                Text("stops")
-                    .foregroundStyle(.secondary)
-            }
-            if let valueErrorText {
-                Text(valueErrorText)
-                    .foregroundStyle(.red)
-                    .font(.footnote)
-            }
+            lossRow
         } header: {
             Text("Exposure loss")
         } footer: {
-            Text("Enter the loss in stops from the maker's data or your own metering. Zero is allowed for a filter with no measurable loss.")
+            lossFooter
         }
     }
 
+    /// What a Color or Effect filter adds (FILTER-ITEM-010).
+    private var lossFooter: some View {
+        Text("The entered exposure loss is added to the exposure calculation.")
+    }
+
+    /// Explicit loss of a Color or Effect filter in stops
+    /// (FILTER-COLOR-001/002): user-supplied, zero allowed, never inferred
+    /// from the color or the name. A Color filter's row is labelled, as
+    /// it follows the palette.
+    @ViewBuilder
+    private var lossRow: some View {
+        HStack {
+            if kind == .color {
+                Text("Exposure loss")
+            }
+            TextField("Value", text: $valueText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(kind == .color ? .trailing : .leading)
+                .focused($focusedField, equals: .value)
+                .accessibilityIdentifier("filter-item-loss-field")
+            Text("stops")
+                .foregroundStyle(.secondary)
+        }
+        if let valueErrorText {
+            Text(valueErrorText)
+                .foregroundStyle(.red)
+                .font(.footnote)
+        }
+    }
+
+    /// The three CPL exposure-loss fields on one row (FILTER-CPL-001).
     private var cplSection: some View {
         Section {
-            ForEach(0..<CPLExposureLossChoices.fieldCount, id: \.self) { index in
-                HStack {
-                    Text("Choice \(index + 1)")
-                    Spacer()
+            HStack(spacing: 8) {
+                ForEach(0..<CPLExposureLossChoices.fieldCount, id: \.self) { index in
                     TextField("Empty", text: $cplFields[index])
                         .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 120)
+                        .multilineTextAlignment(.center)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(.tertiarySystemFill)))
                         .focused($focusedField, equals: .cpl(index))
                         .accessibilityLabel(Text("Exposure loss choice \(index + 1)"))
                         .accessibilityIdentifier("filter-item-cpl-field-\(index)")
-                    Text("stops")
-                        .foregroundStyle(.secondary)
                 }
-                if cplParses[index] == .invalid {
-                    Text("Use 0.1 to 9.9 with at most one decimal digit.")
-                        .foregroundStyle(.red)
-                        .font(.footnote)
-                }
+                Text("stops")
+                    .foregroundStyle(.secondary)
+            }
+            if cplParses.contains(.invalid) {
+                Text("Use 0.1 to 9.9 with at most one decimal digit.")
+                    .foregroundStyle(.red)
+                    .font(.footnote)
             }
             if cplParses.allSatisfy({ $0 == .empty }) {
                 Text("At least one choice is required.")
@@ -426,17 +530,29 @@ struct FilterItemEditorView: View {
         } header: {
             Text("Exposure loss choices")
         } footer: {
-            Text("Exposure loss choices (stops) available from the wheel while shooting. Empty fields are skipped; duplicate values appear once.")
+            Text("Register up to three exposure-loss values to choose from while shooting.")
         }
     }
 
     private func save() {
-        guard let behavior, !trimmedName.isEmpty else { return }
+        guard let behavior, !trimmedName.isEmpty, hasDestination else { return }
         let item = FilterItem(
             id: context.item?.id ?? .generate(),
             name: trimmedName,
             behavior: behavior
         )
+        // The proposed New Filter Set is made only now, together with the
+        // valid filter in one save; Cancel or an invalid filter makes
+        // neither (FILTER-ITEM-009).
+        if proposesNewFilterSet {
+            guard viewModel.createFilterSet(name: trimmedProposedFilterSetName, color: context.proposedFilterSetColor, holding: item) != nil else {
+                return
+            }
+            onSaved(item)
+            onDismiss()
+            return
+        }
+        guard let filterSetID else { return }
         switch viewModel.saveFilterItem(item, in: filterSetID) {
         case .saved:
             onSaved(item)
@@ -444,5 +560,18 @@ struct FilterItemEditorView: View {
         case .blocked(let cameras, let reason):
             blockedSave = BlockedSave(cameras: cameras, reason: reason)
         }
+    }
+}
+
+/// A filled circle in a Filter Set's color, drawn as an original-color
+/// image so a menu shows the color (FILTER-ITEM-010).
+enum FilterSetSwatchImage {
+    static func image(for color: FilterSetColor) -> UIImage {
+        let size = CGSize(width: 14, height: 14)
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            UIColor(Color.filterSet(color)).setFill()
+            UIBezierPath(ovalIn: CGRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1)).fill()
+        }
+        .withRenderingMode(.alwaysOriginal)
     }
 }

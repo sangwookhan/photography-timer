@@ -36,7 +36,7 @@ final class AuxiliaryFilterSelectionTests: XCTestCase {
 
         let mounts = items.map { MountedAuxiliaryFilter.mount($0, in: set) }
         XCTAssertEqual(viewModel.auxiliaryFiltersSubtotal(mounts), 5, accuracy: 1e-9, "Only auxiliary contributions; the 10-stop ND wheel is not counted.")
-        XCTAssertNil(viewModel.applyAuxiliaryFilters(mounts))
+        XCTAssertNil(viewModel.applyMounts(mounts))
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.count, 5)
         XCTAssertEqual(viewModel.ndStep.stops, 15, accuracy: 1e-9, "The full Total on Main still includes ND.")
         XCTAssertEqual(viewModel.auxiliaryFilterSummary?.hiddenItemCount, 2)
@@ -52,11 +52,11 @@ final class AuxiliaryFilterSelectionTests: XCTestCase {
         let viewModel = makeViewModel(inventoryModel: inventory)
         viewModel.assignAllFilterSetsAsCandidates()
         viewModel.setNDFilterStep(NDStep(stops: 20), at: 0)
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(small, in: set)]))
+        XCTAssertNil(viewModel.applyMounts([.mount(small, in: set)]))
 
         let attempt = [MountedAuxiliaryFilter.mount(small, in: set), .mount(big, in: set)]
-        XCTAssertEqual(viewModel.auxiliaryFiltersPreview(attempt), .failure(.exceedsTotalLimit))
-        XCTAssertEqual(viewModel.applyAuxiliaryFilters(attempt), .exceedsTotalLimit)
+        XCTAssertEqual(viewModel.shootingFiltersPreview(selectedFilterSetIDs: viewModel.candidateFilterSetIDs, mounts: attempt), .failure(.exceedsTotalLimit))
+        XCTAssertEqual(viewModel.applyMounts(attempt), .exceedsTotalLimit)
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.item.id), [small.id], "The committed selection is untouched.")
         XCTAssertEqual(viewModel.ndStep.stops, 22, accuracy: 1e-9)
     }
@@ -68,12 +68,28 @@ final class AuxiliaryFilterSelectionTests: XCTestCase {
         inventory.addItem(big, to: set.id)
         let viewModel = makeViewModel(inventoryModel: inventory)
         viewModel.assignAllFilterSetsAsCandidates()
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(big, in: set)]))
+        XCTAssertNil(viewModel.applyMounts([.mount(big, in: set)]))
 
         viewModel.setNDFilterStep(NDStep(stops: 20), at: 0)
         XCTAssertEqual(viewModel.ndStep.stops, 12, accuracy: 1e-9, "20 + 12 would exceed 30; the ND change is refused.")
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.item.id), [big.id], "The auxiliary filter stays mounted.")
         viewModel.setNDFilterStep(NDStep(stops: 18), at: 0)
         XCTAssertEqual(viewModel.ndStep.stops, 30, accuracy: 1e-9, "Up to the remaining budget is accepted.")
+    }
+
+    func testAScaleChangeKeepsTheMountedAuxiliaryFilters() throws {
+        let inventory = FilterInventoryModel()
+        let set = try XCTUnwrap(inventory.createFilterSet(name: "Kit", color: .teal))
+        let night = effect("Night", 1.5)
+        inventory.addItem(night, to: set.id)
+        let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
+        viewModel.setNDFilterStep(NDStep(stops: 10), at: 0)
+        XCTAssertNil(viewModel.applyMounts([.mount(night, in: set)]))
+
+        viewModel.scaleMode = .fullStop
+
+        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.item.id), [night.id], "The Standard wheels re-snap; the auxiliary filters stay mounted.")
+        XCTAssertEqual(viewModel.ndStep.stops, 11.5, accuracy: 1e-9)
     }
 }

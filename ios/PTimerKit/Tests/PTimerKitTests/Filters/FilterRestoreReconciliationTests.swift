@@ -38,7 +38,7 @@ final class FilterRestoreReconciliationTests: XCTestCase {
         let total: Double
     }
 
-    private func savedCamera() throws -> SavedCamera {
+    private func savedCamera(pouchSelected: Bool = false) throws -> SavedCamera {
         let sessionStore = InMemoryMixedSessionStore()
         let inventoryStore = InMemoryFilterInventoryStore()
         let inventory = FilterInventoryModel(store: inventoryStore)
@@ -55,7 +55,7 @@ final class FilterRestoreReconciliationTests: XCTestCase {
             filterInventoryModel: inventory
         )
         XCTAssertNil(viewModel.applyShootingFilters(
-            selectedFilterSetIDs: [kit.id],
+            selectedFilterSetIDs: pouchSelected ? [kit.id, pouch.id] : [kit.id],
             mounts: [.mount(cpl, in: kit, .cplLoss(1.5)), .mount(red, in: kit)]
         ))
         viewModel.setNDFilterStep(NDStep(stops: 2), at: 0)
@@ -77,7 +77,12 @@ final class FilterRestoreReconciliationTests: XCTestCase {
         edit(FilterInventoryModel(store: store))
     }
 
-    func testMovedItemsKeepTheirReferencesUnderTheirNewSet() throws {
+    /// One saved inventory moved an ND item and an auxiliary item into
+    /// Pouch, which the camera does not select. The auxiliary rule is
+    /// judged against the stored selection, so the CPL is unmounted even
+    /// though the ND wheel follows its item into Pouch (today's ND-wheel
+    /// behavior, its policy still open on #70, 6001226087).
+    func testAMovedNDWheelFollowsAndAMovedAuxiliaryItemIsJudgedAgainstTheStoredSelection() throws {
         let saved = try savedCamera()
         let (sessionStore, inventoryStore, kit, pouch, total) = (saved.sessionStore, saved.inventoryStore, saved.kit, saved.pouch, saved.total)
         XCTAssertEqual(self.total(makeViewModel(sessionStore: sessionStore, inventoryStore: inventoryStore)), total, accuracy: 1e-9, "The unedited pair restores as saved.")
@@ -89,9 +94,25 @@ final class FilterRestoreReconciliationTests: XCTestCase {
         let restored = makeViewModel(sessionStore: sessionStore, inventoryStore: inventoryStore)
 
         XCTAssertTrue(restored.filterWheels.contains(FilterWheel(source: .filterSet(pouch.id), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))), "\(restored.filterWheels)")
-        XCTAssertEqual(Set(restored.mountedAuxiliaryFilters.map(\.mount)), [.mount(cpl, in: pouch, .cplLoss(1.5)), .mount(red, in: kit)])
-        XCTAssertEqual(restored.candidateFilterSetIDs, [kit.id, pouch.id], "The new Set joins the selection.")
-        XCTAssertEqual(self.total(restored), total, accuracy: 1e-9, "Contributions are unchanged.")
+        XCTAssertEqual(restored.mountedAuxiliaryFilters.map(\.mount), [.mount(red, in: kit)], "The ND wheel does not select Pouch for the CPL.")
+        XCTAssertEqual(restored.candidateFilterSetIDs, [kit.id, pouch.id], "Pouch is referenced by the ND wheel.")
+        XCTAssertEqual(self.total(restored), total - 1.5, accuracy: 1e-9, "Only the CPL's contribution is gone.")
+    }
+
+    /// FILTER-ITEM-009 at restore: an auxiliary item moved to a Set the
+    /// camera does not select restores unmounted, without selecting that
+    /// Set; moved to a selected Set, it restores under it.
+    func testAMovedAuxiliaryItemRestoresOnlyUnderASelectedSet() throws {
+        let unselected = try savedCamera()
+        editSavedInventory(unselected.inventoryStore) { $0.moveItem(self.cpl, to: unselected.pouch.id) }
+        let restored = makeViewModel(sessionStore: unselected.sessionStore, inventoryStore: unselected.inventoryStore)
+        XCTAssertEqual(restored.mountedAuxiliaryFilters.map(\.mount), [.mount(red, in: unselected.kit)])
+        XCTAssertEqual(restored.candidateFilterSetIDs, [unselected.kit.id], "The destination is not selected.")
+
+        let selected = try savedCamera(pouchSelected: true)
+        editSavedInventory(selected.inventoryStore) { $0.moveItem(self.cpl, to: selected.pouch.id) }
+        let restoredSelected = makeViewModel(sessionStore: selected.sessionStore, inventoryStore: selected.inventoryStore)
+        XCTAssertEqual(Set(restoredSelected.mountedAuxiliaryFilters.map(\.mount)), [.mount(cpl, in: selected.pouch, .cplLoss(1.5)), .mount(red, in: selected.kit)])
     }
 
     func testAKindChangeMovesTheSelectionIntoTheItemsNewRole() throws {

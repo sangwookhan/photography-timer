@@ -396,6 +396,16 @@ could be confused.
   newly created filters. One-time inventory setup and repeated shot adjustment
   shall remain separate tasks.
 
+- **FILTER-FLOW-004** — When the inventory contains no user Filter Set, the
+  Auxiliary tab shall make the first setup action explicit. The Camera Filter
+  Sets entry remains visible but disabled because there is nothing to assign.
+  In place of the ordinary Filter Set management entry, show one enabled
+  **Add Filter Set** action. It opens Filter Set creation; after saving, open
+  that new set's editor so the user can register the first physical filter.
+  Once at least one Filter Set exists, the ordinary Camera Filter Sets and
+  Filter Set management routes resume. This empty-inventory treatment shall
+  match on iOS and Android.
+
 ### Mounted auxiliary filters
 
 - **FILTER-AUX-001** — A non-scrolling summary shall appear immediately after

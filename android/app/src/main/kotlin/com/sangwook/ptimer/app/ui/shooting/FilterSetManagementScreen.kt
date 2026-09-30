@@ -43,6 +43,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,11 +72,13 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.vm.FilterItemCategory
 import com.sangwook.ptimer.app.vm.FilterItemEditorSessionMemory
 import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
 import com.sangwook.ptimer.app.vm.FilterSetRenameCommit
@@ -340,6 +345,10 @@ private fun FilterSetDetailLevel(
 ) {
     var nameDraft by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(filterSet.name) }
     var isEditing by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(false) }
+    // The items in two tabs — auxiliary (CPL, GND, Color, Effect) and ND
+    // — over the one physical list, never split or duplicated
+    // (FILTER-SET-001).
+    var itemTab by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(FilterItemCategory.auxiliary) }
     var editorTarget by remember { mutableStateOf<FilterItemEditorTarget?>(null) }
     var pendingDeletion by remember { mutableStateOf<FilterItem?>(null) }
     // Session memory for the notation of consecutive new items. Plain
@@ -429,33 +438,78 @@ private fun FilterSetDetailLevel(
 
             Spacer(Modifier.height(24.dp))
             SectionLabel(stringResource(R.string.filter_set_section_filters))
-            if (filterSet.items.isEmpty()) {
+            val tabs = listOf(FilterItemCategory.auxiliary, FilterItemCategory.nd)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                tabs.forEachIndexed { index, tab ->
+                    SegmentedButton(
+                        selected = itemTab == tab,
+                        onClick = { itemTab = tab },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
+                    ) {
+                        Text(
+                            stringResource(
+                                if (tab == FilterItemCategory.auxiliary) {
+                                    R.string.filter_auxiliary_title
+                                } else {
+                                    R.string.filter_set_tab_nd
+                                },
+                            ),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            val visibleItems = if (itemTab == FilterItemCategory.auxiliary) {
+                filterSet.auxiliaryItems
+            } else {
+                filterSet.ndItems
+            }
+            if (visibleItems.isEmpty()) {
                 Text(
-                    stringResource(R.string.filter_items_empty),
+                    stringResource(
+                        if (itemTab == FilterItemCategory.auxiliary) {
+                            R.string.filter_items_empty_auxiliary
+                        } else {
+                            R.string.filter_items_empty_nd
+                        },
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            filterSet.items.forEachIndexed { index, item ->
+            // The tab lists a filtered view of the one item list; a move
+            // swaps with the neighbor in that view, mapped back onto the
+            // full list so the physical set is never split.
+            fun fullIndex(item: FilterItem): Int = filterSet.items.indexOfFirst { it.id == item.id }
+            visibleItems.forEachIndexed { index, item ->
                 FilterItemRow(
                     item = item,
                     isEditing = isEditing,
                     canMoveUp = index > 0,
-                    canMoveDown = index < filterSet.items.lastIndex,
+                    canMoveDown = index < visibleItems.lastIndex,
                     onOpen = { editorTarget = FilterItemEditorTarget.Existing(item) },
-                    onMoveUp = { actions.moveFilterItem(filterSet.id, index, index - 1) },
-                    onMoveDown = { actions.moveFilterItem(filterSet.id, index, index + 1) },
+                    onMoveUp = {
+                        actions.moveFilterItem(filterSet.id, fullIndex(item), fullIndex(visibleItems[index - 1]))
+                    },
+                    onMoveDown = {
+                        actions.moveFilterItem(filterSet.id, fullIndex(item), fullIndex(visibleItems[index + 1]))
+                    },
                     onDelete = { pendingDeletion = item },
                 )
                 HorizontalDivider()
             }
             Spacer(Modifier.height(8.dp))
+            // Each tab adds only its own kinds.
             TextButton(
-                onClick = { editorTarget = FilterItemEditorTarget.New(editorSession.initialUnit) },
+                onClick = { editorTarget = FilterItemEditorTarget.New(editorSession.initialUnit, itemTab) },
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.nd_add_filter))
+                Text(
+                    stringResource(
+                        if (itemTab == FilterItemCategory.auxiliary) R.string.filter_add_auxiliary else R.string.filter_add_nd,
+                    ),
+                )
             }
             FooterText(stringResource(R.string.filter_items_footer))
             Spacer(Modifier.height(24.dp))
@@ -517,7 +571,12 @@ private fun FilterItemRow(
                 .weight(1f)
                 .clearAndSetSemantics { contentDescription = "${item.name}, $detail" },
         ) {
-            Text(item.name, style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // A Color filter shows its actual color beside its name
+                // (FILTER-COLOR-001); the name is spoken.
+                item.behavior.opticalColor?.let { FilterSetColorSwatch(it, size = 10.dp) }
+                Text(item.name, style = MaterialTheme.typography.bodyLarge)
+            }
             Text(
                 detail,
                 style = MaterialTheme.typography.bodySmall,
@@ -668,9 +727,10 @@ private fun ConfirmDeleteDialog(
     )
 }
 
-/** Twelve-token color grid; each swatch carries its color name. */
+/** Nine-token color grid in hue order; each swatch carries its color
+ *  name. Shared by Filter Sets and Color filters (FILTER-COLOR-001). */
 @Composable
-private fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetColor) -> Unit) {
+internal fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetColor) -> Unit) {
     val tokens = FilterSetColor.entries
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tokens.chunked(COLOR_GRID_COLUMNS).forEach { rowTokens ->
@@ -716,10 +776,10 @@ private fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetCo
 
 /** Source-color dot with a hairline outline; the name travels with it. */
 @Composable
-private fun FilterSetColorSwatch(token: FilterSetColor) {
+internal fun FilterSetColorSwatch(token: FilterSetColor, size: Dp = 16.dp) {
     Box(
         modifier = Modifier
-            .size(16.dp)
+            .size(size)
             .clip(CircleShape)
             .background(filterSetColor(token))
             .border(
@@ -738,4 +798,5 @@ private fun filterCountText(count: Int): String =
         stringResource(R.string.filter_set_filter_count, count)
     }
 
-private const val COLOR_GRID_COLUMNS = 6
+// Nine palette colors read in hue order over two rows.
+private const val COLOR_GRID_COLUMNS = 5

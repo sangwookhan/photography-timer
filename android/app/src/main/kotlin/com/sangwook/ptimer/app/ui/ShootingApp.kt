@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersActions
+import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersScreen
 import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -263,6 +265,8 @@ fun ShootingApp(
     // header entry and the Plus wheel's management long press. It reads the
     // inventory live so an edit inside it redraws the list it was made from.
     var manageFilterSets by remember { mutableStateOf(false) }
+    // The shooting popup (FILTER-FLOW-002); management may open above it.
+    var shootingFilters by remember { mutableStateOf(false) }
     val filterInventory by holder.filterInventory.inventory.collectAsStateWithLifecycle()
     var showExactAlarmInfo by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
@@ -408,6 +412,7 @@ fun ShootingApp(
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
                     onManageFilterSets = { manageFilterSets = true },
+                    onOpenShootingFilters = { shootingFilters = true },
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }
@@ -550,6 +555,27 @@ fun ShootingApp(
                     },
                 )
             }
+        }
+
+        if (shootingFilters) {
+            ShootingFiltersScreen(
+                inventory = filterInventory,
+                committed = calcState.mountedAuxiliaryFilters,
+                candidateFilterSetIds = calcState.candidateFilterSetIds,
+                ndSources = calcState.plus.sources,
+                isNdInteractionQuiet = calcState.plus.isQuiet,
+                actions = remember(controller) {
+                    ShootingFiltersActions(
+                        rejection = controller::auxiliaryFiltersRejection,
+                        subtotal = controller::auxiliaryFiltersSubtotal,
+                        apply = controller::applyAuxiliaryFilters,
+                        addWheel = { controller.addFilterWheel(it) },
+                        setCandidates = controller::setCandidateFilterSets,
+                        manageFilterSets = { manageFilterSets = true },
+                    )
+                },
+                onDismiss = { shootingFilters = false },
+            )
         }
 
         if (manageFilterSets) {

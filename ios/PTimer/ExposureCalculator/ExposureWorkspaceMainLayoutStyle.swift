@@ -641,6 +641,44 @@ enum ExposureWorkspaceMainLayoutStyle {
         .system(size: self == .dense ? 10 : 11, weight: .medium)
     }
 
+    /// One point smaller name font, used only when the whole names of
+    /// every mounted item do not fit at the regular size.
+    var auxiliarySummaryTightNameFont: Font {
+        .system(size: self == .dense ? 9 : 10, weight: .medium)
+    }
+
+    /// Width of the summary column in the four-space layout (summary
+    /// plus three ND wheels), where whole registered names need more
+    /// than an equal share. The extra width comes from the narrower
+    /// column gaps below, so the ND columns keep their previous width
+    /// (within a tenth of a point on a 402 pt phone). `nil` keeps the
+    /// equal split.
+    func auxiliarySummaryWidth(forOccupiedSpaceCount count: Int) -> CGFloat? {
+        guard count >= 4 else {
+            return nil
+        }
+        switch self {
+        case .regular:
+            return 80
+        case .compact:
+            return 74
+        case .dense:
+            return 70
+        }
+    }
+
+    /// Gap between Base Shutter and the filter group: in the four-space
+    /// layout with a summary it matches the narrowed filter-column gap,
+    /// which pays for the wider summary column.
+    func inputColumnSpacing(forOccupiedSpaceCount count: Int, hasAuxiliarySummary: Bool) -> CGFloat {
+        hasAuxiliarySummary && count >= 4 ? filterWheelSpacing(forOccupiedSpaceCount: count, hasAuxiliarySummary: true) : inputColumnSpacing
+    }
+
+    /// Gap between filter columns: one point narrower in the same case.
+    func filterWheelSpacing(forOccupiedSpaceCount count: Int, hasAuxiliarySummary: Bool) -> CGFloat {
+        hasAuxiliarySummary && count >= 4 ? filterWheelSpacing - 1 : filterWheelSpacing
+    }
+
     var auxiliarySummaryValueFont: Font {
         .system(size: self == .dense ? 12 : 14, weight: .semibold, design: .rounded)
     }
@@ -857,7 +895,7 @@ struct VariableSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.filterStatusRegionTopSpacing) {
-            HStack(alignment: .top, spacing: style.inputColumnSpacing) {
+            HStack(alignment: .top, spacing: style.inputColumnSpacing(forOccupiedSpaceCount: occupiedSpaceCount, hasAuxiliarySummary: auxiliarySummary != nil)) {
                 ShutterSelectionRow(
                     baseShutter: $baseShutter,
                     shutterSpeeds: shutterSpeeds,
@@ -1228,7 +1266,7 @@ private struct NDFilterGroupView: View {
             }
             .frame(height: pickerHeaderHeight)
 
-            HStack(spacing: style.filterWheelSpacing) {
+            HStack(spacing: style.filterWheelSpacing(forOccupiedSpaceCount: occupiedSpaceCount, hasAuxiliarySummary: auxiliarySummary != nil)) {
                 // The mounted auxiliary filters occupy one space right
                 // after Base Shutter (FILTER-AUX-001), spanning the
                 // label row and the viewport; it is absent, not blank,
@@ -1241,6 +1279,7 @@ private struct NDFilterGroupView: View {
                         style: style,
                         onOpen: onOpenShootingFilters
                     )
+                    .frame(width: style.auxiliarySummaryWidth(forOccupiedSpaceCount: occupiedSpaceCount))
                     .transition(.ndWheelCollapse)
                 }
 

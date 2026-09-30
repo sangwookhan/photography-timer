@@ -12,9 +12,6 @@ public enum FilterItemSaveBlockReason: Equatable, Sendable {
     /// removes — a selected CPL exposure-loss choice. The selection is
     /// never replaced silently.
     case removesSelectedChoice
-    /// A kind change would move a mounted item into the auxiliary
-    /// summary beyond its item limit (FILTER-AUX-004).
-    case tooManyAuxiliaryFilters
     /// A kind change would move a mounted item onto the ND wheels
     /// beyond the wheel limit (three beside the summary, four without).
     case tooManyNDWheels
@@ -331,9 +328,6 @@ extension ExposureCalculatorViewModel {
         let reassigned = FilterStack.reassigningRoles(wheels: currentWheels, auxiliaryFilters: currentAuxiliaryFilters, inventory: candidate)
         let wheels = reassigned.wheels
         let auxiliaryFilters = reassigned.auxiliaryFilters
-        if auxiliaryFilters.count > FilterStack.maximumAuxiliaryFilterCount {
-            return .tooManyAuxiliaryFilters
-        }
         if wheels.count > FilterStack.wheelLimit(hasAuxiliaryFilters: !auxiliaryFilters.isEmpty) {
             return .tooManyNDWheels
         }
@@ -363,7 +357,7 @@ extension ExposureCalculatorViewModel {
         guard conflicts.isEmpty else {
             // One reason is shown: a removed selection first, then a
             // full role, then the cap.
-            let priority: [FilterItemSaveBlockReason] = [.removesSelectedChoice, .tooManyAuxiliaryFilters, .tooManyNDWheels, .exceedsTotalLimit]
+            let priority: [FilterItemSaveBlockReason] = [.removesSelectedChoice, .tooManyNDWheels, .exceedsTotalLimit]
             let reason = priority.first { candidate in conflicts.contains { $0.reason == candidate } } ?? .exceedsTotalLimit
             return .blocked(affectedCameras: conflicts.map(\.cameraName), reason: reason)
         }

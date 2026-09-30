@@ -45,14 +45,34 @@ public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
 /// auxiliary item with its identity and contribution, readable without
 /// a tap. `nil` while nothing is mounted, so the space is hidden.
 public struct AuxiliaryFilterSummaryDisplayState: Equatable, Sendable {
+    /// How many rows Main shows individually; the rest are counted in
+    /// the `+ N more` line (FILTER-AUX-002).
+    public static let visibleItemLimit = 3
+
+    /// Every mounted item, in display order.
     public let items: [AuxiliaryFilterSummaryItemDisplay]
     /// Spoken label of the summary button: the title followed by every
-    /// item's description (FILTER-A11Y-001).
+    /// item's description, including the ones not shown (FILTER-A11Y-001).
     public let accessibilityLabel: String
 
     public init(items: [AuxiliaryFilterSummaryItemDisplay], accessibilityLabel: String) {
         self.items = items
         self.accessibilityLabel = accessibilityLabel
+    }
+
+    /// The first three items in display order, each shown as a row.
+    public var visibleItems: [AuxiliaryFilterSummaryItemDisplay] {
+        Array(items.prefix(Self.visibleItemLimit))
+    }
+
+    /// How many mounted items are not shown individually; 0 when all fit.
+    public var hiddenItemCount: Int {
+        max(0, items.count - Self.visibleItemLimit)
+    }
+
+    /// `+ 2 more` when items are hidden; `nil` otherwise.
+    public var moreText: String? {
+        hiddenItemCount > 0 ? String(localized: "+ \(hiddenItemCount) more") : nil
     }
 }
 

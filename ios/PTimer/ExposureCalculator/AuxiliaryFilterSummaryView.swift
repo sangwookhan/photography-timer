@@ -8,9 +8,8 @@ import SwiftUI
 /// The Main summary space for the mounted auxiliary filters
 /// (FILTER-AUX-001/002): one non-scrolling column immediately after
 /// Base Shutter, present only while at least one auxiliary item is
-/// mounted, listing every item's name and current contribution in
-/// stops with the detail that keeps a GND's registered density or a
-/// Color filter's optical color distinct from the contribution. It is
+/// mounted, showing up to three items as compact rows (identifier and
+/// current contribution in stops) and a `+ N more` line for the rest. It is
 /// a button: tapping it reopens the shooting popup on this camera's
 /// current selection (FILTER-FLOW-002). With a screen reader it is one
 /// element that speaks every mounted identity, mode, and contribution
@@ -38,13 +37,28 @@ struct AuxiliaryFilterSummaryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-                // One compact row per mounted item (FILTER-AUX-002):
+                // One compact row per visible item (FILTER-AUX-002):
                 // identifier and contribution only; modes and densities
-                // stay in the shooting popup.
-                ForEach(summary.items, id: \.itemID) { item in
-                    compactRow(item)
+                // stay in the shooting popup. The first three rows are
+                // spread evenly over the summary height, and any further
+                // items are counted in a `+ N more` line. The summary
+                // itself never scrolls; tapping it opens the full list.
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(summary.visibleItems, id: \.itemID) { item in
+                        Spacer(minLength: 2)
+                        compactRow(item)
+                    }
+                    if let moreText = summary.moreText {
+                        Spacer(minLength: 2)
+                        Text(moreText)
+                            .font(style.auxiliarySummaryTitleFont)
+                            .foregroundStyle(Color.accentColor)
+                            .lineLimit(1)
+                            .accessibilityIdentifier("auxiliary-filter-summary-more")
+                    }
+                    Spacer(minLength: 2)
                 }
-                Spacer(minLength: 0)
+                .frame(maxHeight: .infinity, alignment: .top)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 5)
@@ -56,7 +70,11 @@ struct AuxiliaryFilterSummaryView: View {
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
         .frame(height: height)
-        .disabled(!isInteractive)
+        // The wheels block input during the short reshaping window after
+        // an ND commit. The summary is blocked with them but must not be
+        // drawn disabled: its content has not changed, and dimming it for
+        // that window made it flicker while an ND wheel was adjusted.
+        .allowsHitTesting(isInteractive)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(summary.accessibilityLabel))
         .accessibilityHint(Text("Opens the shooting filter selection"))

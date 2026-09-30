@@ -93,6 +93,17 @@
         }
       }
     },
+    "+ %lld more" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+ %lld개 더"
+          }
+        }
+      }
+    },
     "1 filter" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {

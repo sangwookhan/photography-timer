@@ -40,6 +40,8 @@ final class AuxiliaryFilterSummaryPresenterTests: XCTestCase {
         XCTAssertEqual(state.items.map(\.kindLabel), ["CPL", "GND", "Color"])
         XCTAssertEqual(state.items[0].detailText, nil, "A CPL's choice is its contribution; nothing more to distinguish.")
         XCTAssertEqual(state.items[1].detailText, "Record only · OD 0.9", "Registered density stays beside the mode so 0 is not read as a 0-stop filter.")
+        XCTAssertEqual(state.items[1].detailSegments, ["Record only", "OD 0.9"], "A narrow column breaks between the mode and the density, not inside either.")
+        XCTAssertEqual(state.items[0].detailSegments, [])
         XCTAssertEqual(state.items[2].detailText, "Red", "The optical color is named as text (FILTER-COLOR-003).")
         XCTAssertEqual(state.items[2].opticalColor, .red)
         XCTAssertEqual(state.items.map(\.sourceColor), [.orange, .orange, .orange])

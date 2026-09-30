@@ -38,43 +38,13 @@ struct AuxiliaryFilterSummaryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-                ForEach(summary.items, id: \.itemID) { item in
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack(alignment: .firstTextBaseline, spacing: 3) {
-                            if let opticalColor = item.opticalColor {
-                                Circle()
-                                    .fill(Color.filterOptical(opticalColor))
-                                    .frame(width: 6, height: 6)
-                            }
-                            // The full name is the identity (FILTER-AUX-002):
-                            // it shrinks before it truncates in the narrow
-                            // column.
-                            Text(item.name)
-                                .font(style.auxiliarySummaryNameFont)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .allowsTightening(true)
-                                .truncationMode(.tail)
-                            Spacer(minLength: 2)
-                            Text(item.contributionText)
-                                .font(style.auxiliarySummaryValueFont)
-                                .monospacedDigit()
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                                .layoutPriority(1)
-                        }
-                        if let detail = item.detailText {
-                            Text(detail)
-                                .font(style.auxiliarySummaryDetailFont)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                                .allowsTightening(true)
-                                .truncationMode(.tail)
-                        }
-                    }
+                // Every mounted identity stays whole on Main
+                // (FILTER-AUX-002): the full-name layout is used whenever
+                // it fits the column; only when it cannot does the row
+                // fall back to the one-line form.
+                ViewThatFits(in: .vertical) {
+                    itemList(fullNames: true)
+                    itemList(fullNames: false)
                 }
                 Spacer(minLength: 0)
             }
@@ -94,5 +64,126 @@ struct AuxiliaryFilterSummaryView: View {
         .accessibilityHint(Text("Opens the shooting filter selection"))
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("auxiliary-filter-summary")
+    }
+
+    private func itemList(fullNames: Bool) -> some View {
+        VStack(alignment: .leading, spacing: style.auxiliarySummaryRowSpacing) {
+            ForEach(summary.items, id: \.itemID) { item in
+                if fullNames {
+                    fullNameItem(item)
+                } else {
+                    oneLineItem(item)
+                }
+            }
+        }
+    }
+
+    /// The whole registered name, wrapped over as many lines as it
+    /// needs and never shortened. The contribution stays beside the
+    /// name when both fit one line; otherwise it leads the detail line
+    /// under the name.
+    private func fullNameItem(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
+        ViewThatFits(in: .horizontal) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    nameText(item, wraps: false)
+                    Spacer(minLength: 2)
+                    contributionText(item)
+                }
+                detailText(item)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                nameText(item, wraps: true)
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    contributionText(item)
+                    detailText(item)
+                }
+            }
+        }
+    }
+
+    /// The previous one-line form, kept only for a combination whose
+    /// full names cannot fit the column.
+    private func oneLineItem(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                opticalDot(item)
+                Text(item.name)
+                    .font(style.auxiliarySummaryNameFont)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .allowsTightening(true)
+                    .truncationMode(.tail)
+                Spacer(minLength: 2)
+                contributionText(item)
+            }
+            if let detail = item.detailText {
+                Text(detail)
+                    .font(style.auxiliarySummaryDetailFont)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .allowsTightening(true)
+                    .truncationMode(.tail)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func opticalDot(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
+        if let opticalColor = item.opticalColor {
+            Circle()
+                .fill(Color.filterOptical(opticalColor))
+                .frame(width: 6, height: 6)
+        }
+    }
+
+    /// The name with its optical-color dot. One line without shrinking
+    /// when `wraps` is false (the fit test fails instead); otherwise as
+    /// many lines as the name needs.
+    private func nameText(_ item: AuxiliaryFilterSummaryItemDisplay, wraps: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
+            opticalDot(item)
+            Text(item.name)
+                .font(style.auxiliarySummaryNameFont)
+                .foregroundStyle(.primary)
+                .lineLimit(wraps ? nil : 1)
+                .fixedSize(horizontal: !wraps, vertical: true)
+        }
+    }
+
+    private func contributionText(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
+        Text(item.contributionText)
+            .font(style.auxiliarySummaryValueFont)
+            .monospacedDigit()
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
+    }
+
+    /// Mode, registered density, or optical color, never shortened in
+    /// the full-name layout: on one line when it fits, otherwise one
+    /// part per line (`Record only` / `2 stops`), each part wrapping if
+    /// it must.
+    @ViewBuilder
+    private func detailText(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
+        if let detail = item.detailText {
+            ViewThatFits(in: .horizontal) {
+                Text(detail)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(item.detailSegments.enumerated()), id: \.offset) { _, segment in
+                        Text(segment)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .font(style.auxiliarySummaryDetailFont)
+            .foregroundStyle(.secondary)
+        }
     }
 }

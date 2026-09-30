@@ -484,8 +484,18 @@ private struct FilterItemRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                    .foregroundStyle(.primary)
+                HStack(spacing: 5) {
+                    // A Color filter shows its actual color beside its
+                    // name (FILTER-COLOR-001); the name is spoken.
+                    if let color = item.behavior.opticalColor {
+                        Circle()
+                            .fill(Color.filterSet(color))
+                            .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
+                    }
+                    Text(item.name)
+                        .foregroundStyle(.primary)
+                }
                 Text(detailText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)

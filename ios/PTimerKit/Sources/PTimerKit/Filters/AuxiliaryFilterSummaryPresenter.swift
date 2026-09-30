@@ -26,13 +26,13 @@ public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
     /// Empty when there is no detail.
     public let detailSegments: [String]
     /// Swatch for a Color filter's optical color; `nil` otherwise.
-    public let opticalColor: FilterOpticalColor?
+    public let opticalColor: FilterSetColor?
     /// The owning set's user-selected color, shown as the source cue.
     public let sourceColor: FilterSetColor
     /// Complete spoken description: name, type or mode, contribution.
     public let accessibilityText: String
 
-    public init(itemID: FilterItemID, name: String, kindLabel: String, contributionText: String, detailSegments: [String], opticalColor: FilterOpticalColor?, sourceColor: FilterSetColor, accessibilityText: String) {
+    public init(itemID: FilterItemID, name: String, kindLabel: String, contributionText: String, detailSegments: [String], opticalColor: FilterSetColor?, sourceColor: FilterSetColor, accessibilityText: String) {
         self.itemID = itemID
         self.name = name
         self.kindLabel = kindLabel

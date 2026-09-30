@@ -43,7 +43,7 @@ struct FilterItemEditorView: View {
     @State private var cplFields: [String]
     /// Optical color of a Color filter (FILTER-COLOR-001); kept even
     /// while another kind is selected so switching back restores it.
-    @State private var opticalColor: FilterOpticalColor
+    @State private var opticalColor: FilterSetColor
     @State private var blockedSave: BlockedSave?
 
     private struct BlockedSave: Identifiable {
@@ -287,23 +287,23 @@ struct FilterItemEditorView: View {
         }
     }
 
-    /// Optical color of a Color filter (FILTER-COLOR-001): named, with
-    /// a swatch, separate from the source-set color and from the loss.
+    /// Color of a Color filter (FILTER-COLOR-001): chosen from the same
+    /// palette as Filter Sets, each choice drawn in its actual color,
+    /// with the selected color's name, separate from the loss.
     private var opticalColorSection: some View {
         Section {
-            Picker("Optical color", selection: $opticalColor) {
-                ForEach(FilterOpticalColor.allCases, id: \.self) { color in
-                    Label {
-                        Text(FilterWheelPresenter.opticalColorName(color))
-                    } icon: {
-                        Image(systemName: "circle.fill")
-                            .foregroundStyle(Color.filterOptical(color))
-                    }
-                    .tag(color)
-                }
+            FilterSetColorGrid(selection: $opticalColor)
+                .accessibilityIdentifier("filter-item-optical-color-picker")
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.filterSet(opticalColor))
+                    .frame(width: 12, height: 12)
+                    .accessibilityHidden(true)
+                Text(FilterWheelPresenter.opticalColorName(opticalColor))
             }
-            .pickerStyle(.menu)
-            .accessibilityIdentifier("filter-item-optical-color-picker")
+            .accessibilityElement(children: .combine)
+        } header: {
+            Text("Optical color")
         } footer: {
             Text("The optical color identifies the filter. It never sets the exposure loss.")
         }

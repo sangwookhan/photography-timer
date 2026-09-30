@@ -18,20 +18,82 @@ sealed class FilterSource {
     val filterSetId: FilterSetId? get() = (this as? FilterSet)?.id
 }
 
-/** Which shooting row of a physical item is selected. (iOS: `FilterRowChoice`.) */
+/**
+ * Which shooting row of a physical item is selected on an ND wheel. Only
+ * [Fixed] resolves on a wheel today (FILTER-STACK-003); the CPL and GND
+ * cases survive as legacy wheel selections so a persisted mixed stack can
+ * be migrated into auxiliary filters ([FilterStack.migratingLegacyWheels]).
+ * (iOS: `FilterRowChoice`.)
+ */
 sealed class FilterRowChoice {
-    /** The single row of a Fixed item. */
+    /** The single row of a Fixed (ND) item. */
     data object Fixed : FilterRowChoice()
 
-    /** One of a CPL item's configured exposure-loss choices, in stops. */
+    /** Legacy: one of a CPL item's exposure-loss choices, in stops. */
     data class CplLoss(val stops: Double) : FilterRowChoice()
 
-    /** A GND item's per-shot calculation mode. */
+    /** Legacy: a GND item's per-shot calculation mode. */
     data class Gnd(val mode: GndCalculationMode) : FilterRowChoice()
 }
 
 /** A mounted physical item plus the row chosen for it. (iOS: `FilterRowSelection`.) */
 data class FilterRowSelection(val itemId: FilterItemId, val choice: FilterRowChoice)
+
+/**
+ * Per-shot choice for a mounted auxiliary filter (FILTER-AUX-003): a
+ * CPL's selected exposure-loss choice, a GND's calculation mode, or — for
+ * Color and Effect items — their registered loss.
+ * (iOS: `AuxiliaryFilterChoice`.)
+ */
+sealed class AuxiliaryFilterChoice {
+    data class CplLoss(val stops: Double) : AuxiliaryFilterChoice()
+    data class Gnd(val mode: GndCalculationMode) : AuxiliaryFilterChoice()
+    data object RegisteredLoss : AuxiliaryFilterChoice()
+}
+
+/**
+ * One physical auxiliary filter mounted on the active camera, with the
+ * choice made for the current shot. Auxiliary filters share one summary
+ * space on Main; they are not wheels. (iOS: `MountedAuxiliaryFilter`.)
+ */
+data class MountedAuxiliaryFilter(
+    val filterSetId: FilterSetId,
+    val itemId: FilterItemId,
+    val choice: AuxiliaryFilterChoice,
+) {
+    companion object {
+        /**
+         * The default choice when an item is first mounted: a CPL's first
+         * configured choice, Record only for a GND (FILTER-GND-002), and
+         * the registered loss otherwise. `null` for an ND item, which is
+         * never an auxiliary filter.
+         */
+        fun initialChoice(item: FilterItem): AuxiliaryFilterChoice? = when (val behavior = item.behavior) {
+            is FilterItemBehavior.Fixed -> null
+            is FilterItemBehavior.Cpl ->
+                behavior.choices.shootingChoices.firstOrNull()?.let { AuxiliaryFilterChoice.CplLoss(it) }
+            is FilterItemBehavior.Gnd -> AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly)
+            is FilterItemBehavior.Color, is FilterItemBehavior.Effect -> AuxiliaryFilterChoice.RegisteredLoss
+        }
+    }
+}
+
+/**
+ * A mounted auxiliary filter resolved against the inventory: the item it
+ * names, its owning set's presentation metadata, what it contributes now,
+ * and its registered value (a GND's full density, a CPL's selected
+ * choice, a Color / Effect item's loss). (iOS: `ResolvedAuxiliaryFilter`.)
+ */
+data class ResolvedAuxiliaryFilter(
+    val mount: MountedAuxiliaryFilter,
+    val item: FilterItem,
+    val filterSetName: String,
+    val filterSetColor: FilterSetColor,
+    /** Active contribution in canonical stops (0 for Record only). */
+    val contributionStops: Double,
+    /** Registered value in canonical stops. */
+    val registeredStops: Double,
+)
 
 /**
  * The committed (or in-flight) value of one wheel. [Standard] is the
@@ -130,6 +192,11 @@ enum class FilterStackRejection {
     /** The selection does not resolve against the inventory or does not
      *  belong to the wheel's source. */
     unresolvedSelection,
+
+    /** Mounting an auxiliary filter while four ND wheels exist: the
+     *  wheels are never removed or merged automatically
+     *  (FILTER-STACK-001, FILTER-AUX-003). */
+    tooManyNDWheels,
 }
 
 /**
@@ -137,11 +204,16 @@ enum class FilterStackRejection {
  * (FILTER-PLUS-005). (iOS: `FilterAddUnavailability`.)
  */
 enum class FilterAddUnavailability {
+    /** The applicable ND-wheel limit is reached: four without auxiliary
+     *  filters, three with them (FILTER-STACK-001). */
     stackFull,
 
     /** Standard: the budget-truncated ladder holds no value above 0. */
     noSelectableValue,
     unknownFilterSet,
+
+    /** The Filter Set has no ND item; auxiliary items never make a wheel
+     *  (FILTER-STACK-003). */
     filterSetHasNoItems,
     allItemsMounted,
 
@@ -169,58 +241,79 @@ sealed class FilterStackChange {
 }
 
 /**
- * The active camera's mixed Filter Stack: one to four wheels drawn from
- * Standard and Filter Set sources, resolved against the inventory
- * (FILTER-STACK-001). The 30-stop cap on active contributions and the
- * one-item-per-camera rule are invariants of this type: construction
- * goes through [validated], which reports a violation as `null`, and
- * every mutation returns either a valid stack or a rejection.
- * (iOS: `FilterStack`.)
+ * The active camera's Filter Stack: its ND wheels — drawn from Standard
+ * and Filter Set sources — together with its mounted auxiliary filters,
+ * all resolved against the inventory (FILTER-STACK-001). One to four
+ * wheels are allowed without auxiliary filters, one to three with them.
+ * The 30-stop cap on the combined active contributions and the
+ * one-item-per-camera rule across wheels and auxiliary filters are
+ * invariants of this type: construction goes through [validated], which
+ * reports a violation as `null`, and every mutation returns either a
+ * valid stack or a rejection. (iOS: `FilterStack`.)
  *
- * Two stacks are equal when their wheels are equal; [rows] is a pure
- * resolution of those wheels against an inventory.
+ * Two stacks are equal when their wheels and auxiliary filters are equal;
+ * [rows] and [auxiliaryRows] are pure resolutions against an inventory.
  */
 class FilterStack private constructor(
     val wheels: List<FilterWheel>,
     val rows: List<ResolvedFilterRow>,
+    /** Mounted auxiliary filters in display order (Color, Effect, CPL,
+     *  GND; then set order, then item order), never mount order; empty
+     *  when the summary is hidden. */
+    val auxiliaryFilters: List<MountedAuxiliaryFilter> = emptyList(),
+    /** Resolved auxiliary filters parallel to [auxiliaryFilters]. */
+    val auxiliaryRows: List<ResolvedAuxiliaryFilter> = emptyList(),
 ) {
 
     // MARK: Derived values
 
+    /** Per-wheel active contributions in wheel order. */
     val contributions: List<Double> get() = rows.map { it.contributionStops }
 
-    /**
-     * The one effective value the calculation consumes: the sum of
-     * active contributions in canonical stops.
-     */
-    val effectiveStops: Double get() = contributions.sum()
+    /** Per-item active contributions of the mounted auxiliary filters. */
+    val auxiliaryContributions: List<Double> get() = auxiliaryRows.map { it.contributionStops }
+
+    val hasAuxiliaryFilters: Boolean get() = auxiliaryFilters.isNotEmpty()
+
+    /** The ND-wheel limit currently in force (FILTER-STACK-001). */
+    val wheelLimit: Int get() = wheelLimit(hasAuxiliaryFilters)
 
     /**
-     * Remaining budget for the wheel at [excludingWheelAt]: the cap
-     * minus every OTHER wheel's active contribution.
+     * The one effective value the calculation consumes: the sum of every
+     * wheel's and every auxiliary filter's active contribution in
+     * canonical stops (FILTER-STACK-004).
+     */
+    val effectiveStops: Double get() = contributions.sum() + auxiliaryContributions.sum()
+
+    /**
+     * Remaining budget for the wheel at [excludingWheelAt]: the cap minus
+     * every OTHER wheel's and every auxiliary filter's active
+     * contribution.
      */
     fun remainingBudget(excludingWheelAt: Int): Double {
         require(excludingWheelAt in wheels.indices) { "Wheel index out of range." }
         val others = rows.filterIndexed { index, _ -> index != excludingWheelAt }
             .sumOf { it.contributionStops }
-        return TOTAL_LIMIT - others
+        return TOTAL_LIMIT - others - auxiliaryContributions.sum()
     }
 
+    /** Every physical item mounted on this camera — on a wheel other than
+     *  [excludingWheelAt], or as an auxiliary filter (FILTER-AUX-004). */
     fun mountedItemIds(excludingWheelAt: Int?): Set<FilterItemId> =
         wheels.withIndex()
             .filter { (index, _) -> index != excludingWheelAt }
             .mapNotNull { (_, wheel) -> wheel.mountedItemId }
-            .toSet()
+            .toSet() + auxiliaryFilters.map { it.itemId }
 
     // MARK: Row options
 
     /**
      * Picker rows for the wheel at [wheelIndex]. Standard wheels get the
      * shipping ladder truncated from the top to the remaining budget
-     * (every row selectable); Filter Set wheels get Empty plus every row
-     * of the set's items, each marked unavailable when its item is
-     * mounted elsewhere on this camera or its contribution would exceed
-     * the cap. The wheel's own current row is always available
+     * (every row selectable); Filter Set wheels get Empty plus the set's
+     * ND items (FILTER-STACK-003), each marked unavailable when its item
+     * is mounted elsewhere on this camera — on another wheel or as an
+     * auxiliary filter — or its contribution would exceed the cap. The wheel's own current row is always available
      * (FILTER-CPL-005).
      */
     fun rowOptions(
@@ -243,7 +336,7 @@ class FilterStack private constructor(
                 val current = wheel.selection
                 val options = ArrayList<FilterWheelRowOption>()
                 options.add(FilterWheelRowOption(emptyRow, unavailability = null))
-                for (item in filterSet.items) {
+                for (item in filterSet.ndItems) {
                     for (row in rows(forItem = item)) {
                         val unavailability = when {
                             row.selection == current -> null
@@ -263,13 +356,14 @@ class FilterStack private constructor(
 
     // MARK: Adding wheels
 
-    val canAddWheel: Boolean get() = wheels.size < MAX_WHEEL_COUNT
+    /** Whether another ND wheel fits under the applicable limit
+     *  (FILTER-STACK-001). */
+    val canAddWheel: Boolean get() = wheels.size < wheelLimit
 
     /**
-     * Why [source] cannot add a usable wheel right now, or `null` when
-     * it can. A Record-only row keeps a Filter Set addable at a 30-stop
-     * total as long as a slot and an unmounted item remain
-     * (FILTER-PLUS-005).
+     * Why [source] cannot add a usable wheel right now, or `null` when it
+     * can: the applicable wheel limit, or no unmounted ND item of the set
+     * whose value fits the remaining budget (FILTER-PLUS-005).
      */
     fun addUnavailability(
         source: FilterSource,
@@ -287,9 +381,10 @@ class FilterStack private constructor(
             is FilterSource.FilterSet -> {
                 val filterSet = inventory.filterSet(source.id)
                     ?: return FilterAddUnavailability.unknownFilterSet
-                if (filterSet.items.isEmpty()) return FilterAddUnavailability.filterSetHasNoItems
+                val ndItems = filterSet.ndItems
+                if (ndItems.isEmpty()) return FilterAddUnavailability.filterSetHasNoItems
                 val mounted = mountedItemIds(excludingWheelAt = null)
-                val unmounted = filterSet.items.filter { it.id !in mounted }
+                val unmounted = ndItems.filter { it.id !in mounted }
                 if (unmounted.isEmpty()) return FilterAddUnavailability.allItemsMounted
                 val fits = unmounted.any { item ->
                     rows(forItem = item).any { it.contributionStops <= budget + STABILITY_EPSILON }
@@ -314,7 +409,7 @@ class FilterStack private constructor(
             is FilterSource.Standard -> standardRow(0.0)
             is FilterSource.FilterSet -> emptyRow
         }
-        return FilterStack(wheels + wheel, rows + row)
+        return FilterStack(wheels + wheel, rows + row, auxiliaryFilters, auxiliaryRows)
     }
 
     // MARK: Removing cleanable wheels
@@ -331,6 +426,8 @@ class FilterStack private constructor(
         return FilterStack(
             wheels.filterIndexed { index, _ -> index != at },
             rows.filterIndexed { index, _ -> index != at },
+            auxiliaryFilters,
+            auxiliaryRows,
         )
     }
 
@@ -362,7 +459,43 @@ class FilterStack private constructor(
         }
         val newWheels = wheels.toMutableList().also { it[at] = FilterWheel(wheel.source, row.selection) }
         val newRows = rows.toMutableList().also { it[at] = row }
-        return FilterStackChange.Accepted(FilterStack(newWheels, newRows))
+        return FilterStackChange.Accepted(FilterStack(newWheels, newRows, auxiliaryFilters, auxiliaryRows))
+    }
+
+    // MARK: Replacing the mounted auxiliary filters
+
+    /**
+     * Writes the complete mounted auxiliary selection at once
+     * (FILTER-AUX-003 Apply). Rejected — leaving the stack unchanged —
+     * when a mount does not resolve, a physical item would be mounted
+     * twice (across auxiliary filters and wheels), the current ND wheels
+     * exceed the limit that applies with auxiliary filters, or the
+     * combined contributions would exceed 30 stops. Any number of
+     * auxiliary filters may be mounted; they are kept in display order.
+     * Existing ND wheels are never removed or merged to make room.
+     */
+    fun replacingAuxiliaryFilters(
+        mounts: List<MountedAuxiliaryFilter>,
+        inventory: FilterInventory,
+    ): FilterStackChange {
+        val resolved = ArrayList<ResolvedAuxiliaryFilter>(mounts.size)
+        val mounted = wheels.mapNotNull { it.mountedItemId }.toMutableSet()
+        for (mount in mounts) {
+            val row = resolvedAuxiliaryFilter(mount, inventory)
+                ?: return FilterStackChange.Rejected(FilterStackRejection.unresolvedSelection)
+            if (!mounted.add(mount.itemId)) {
+                return FilterStackChange.Rejected(FilterStackRejection.itemAlreadyMounted)
+            }
+            resolved.add(row)
+        }
+        if (wheels.size > wheelLimit(mounts.isNotEmpty())) {
+            return FilterStackChange.Rejected(FilterStackRejection.tooManyNDWheels)
+        }
+        if (!isWithinTotalLimit(contributions + resolved.map { it.contributionStops })) {
+            return FilterStackChange.Rejected(FilterStackRejection.exceedsTotalLimit)
+        }
+        val ordered = displayOrdered(resolved, inventory)
+        return FilterStackChange.Accepted(FilterStack(wheels, rows, ordered.map { it.mount }, ordered))
     }
 
     // MARK: Post-commit ordering
@@ -420,21 +553,39 @@ class FilterStack private constructor(
         }
     }
 
+    /** Wheels in commit order; the auxiliary filters stay as they are
+     *  (FILTER-STACK-005: they never take part in ND ordering). */
     fun sortedForCommit(inventory: FilterInventory): FilterStack {
         val permutation = commitSortPermutation(inventory)
-        return FilterStack(permutation.map { wheels[it] }, permutation.map { rows[it] })
+        return FilterStack(
+            permutation.map { wheels[it] },
+            permutation.map { rows[it] },
+            auxiliaryFilters,
+            auxiliaryRows,
+        )
     }
 
     override fun equals(other: Any?): Boolean =
-        this === other || (other is FilterStack && other.wheels == wheels)
+        this === other ||
+            (other is FilterStack && other.wheels == wheels && other.auxiliaryFilters == auxiliaryFilters)
 
-    override fun hashCode(): Int = wheels.hashCode()
+    override fun hashCode(): Int = 31 * wheels.hashCode() + auxiliaryFilters.hashCode()
 
-    override fun toString(): String = "FilterStack(wheels=$wheels)"
+    override fun toString(): String = "FilterStack(wheels=$wheels, auxiliaryFilters=$auxiliaryFilters)"
 
     companion object {
+        /** Absolute ND-wheel maximum, reached only without auxiliary filters. */
         val MAX_WHEEL_COUNT: Int = NdFilterStack.MAX_WHEEL_COUNT
+
+        /** ND-wheel maximum while any auxiliary filter is mounted: the
+         *  summary occupies one of the four spaces. */
+        const val MAX_WHEEL_COUNT_WITH_AUXILIARY_FILTERS: Int = 3
         const val TOTAL_LIMIT: Double = 30.0
+
+        /** The ND-wheel limit that applies with or without auxiliary
+         *  filters (FILTER-STACK-001). */
+        fun wheelLimit(hasAuxiliaryFilters: Boolean): Int =
+            if (hasAuxiliaryFilters) MAX_WHEEL_COUNT_WITH_AUXILIARY_FILTERS else MAX_WHEEL_COUNT
 
         /** The shipping ND ladder as plain stop values (the default Standard rows). */
         val shippingLadderStops: List<Double> = ExposureScale.shippingNDLadder.map { it.stops }
@@ -457,13 +608,23 @@ class FilterStack private constructor(
         fun single(stops: Double): FilterStack =
             FilterStack(listOf(FilterWheel.standard(stops)), listOf(standardRow(stops)))
 
+        /** Validating construction without auxiliary filters. */
+        fun validated(wheels: List<FilterWheel>, inventory: FilterInventory): FilterStack? =
+            validated(wheels, emptyList(), inventory)
+
         /**
-         * Validating construction: `null` when any wheel fails to
-         * resolve, the count is outside 1–4, or the contributions exceed
-         * the cap.
+         * Validating construction: `null` when any wheel or auxiliary
+         * filter fails to resolve, the wheel count is outside the
+         * applicable limit, a physical item appears twice, or the
+         * combined contributions exceed the cap. Any number of auxiliary
+         * filters may be mounted; they are kept in display order.
          */
-        fun validated(wheels: List<FilterWheel>, inventory: FilterInventory): FilterStack? {
-            if (wheels.size !in 1..MAX_WHEEL_COUNT) return null
+        fun validated(
+            wheels: List<FilterWheel>,
+            auxiliaryFilters: List<MountedAuxiliaryFilter>,
+            inventory: FilterInventory,
+        ): FilterStack? {
+            if (wheels.size !in 1..wheelLimit(auxiliaryFilters.isNotEmpty())) return null
             val rows = ArrayList<ResolvedFilterRow>(wheels.size)
             val mounted = HashSet<FilterItemId>()
             for (wheel in wheels) {
@@ -472,8 +633,16 @@ class FilterStack private constructor(
                 if (itemId != null && !mounted.add(itemId)) return null
                 rows.add(row)
             }
-            if (!isWithinTotalLimit(rows.map { it.contributionStops })) return null
-            return FilterStack(wheels, rows)
+            val auxiliaryRows = ArrayList<ResolvedAuxiliaryFilter>(auxiliaryFilters.size)
+            for (mount in auxiliaryFilters) {
+                val resolved = resolvedAuxiliaryFilter(mount, inventory) ?: return null
+                if (!mounted.add(mount.itemId)) return null
+                auxiliaryRows.add(resolved)
+            }
+            val contributions = rows.map { it.contributionStops } + auxiliaryRows.map { it.contributionStops }
+            if (!isWithinTotalLimit(contributions)) return null
+            val ordered = displayOrdered(auxiliaryRows, inventory)
+            return FilterStack(wheels, rows, ordered.map { it.mount }, ordered)
         }
 
         fun isWithinTotalLimit(contributions: List<Double>): Boolean =
@@ -504,53 +673,246 @@ class FilterStack private constructor(
             }
         }
 
+        /** An ND wheel resolves ND items only (FILTER-STACK-003): a CPL,
+         *  GND, Color, or Effect selection on a wheel is unresolvable. */
         internal fun resolvedRow(item: FilterItem, choice: FilterRowChoice): ResolvedFilterRow? {
-            val behavior = item.behavior
-            return when {
-                behavior is FilterItemBehavior.Fixed && choice is FilterRowChoice.Fixed -> {
-                    val stops = behavior.value.canonicalStops ?: return null
-                    ResolvedFilterRow(itemSelection(item, choice), stops, stops, item)
-                }
+            val behavior = item.behavior as? FilterItemBehavior.Fixed ?: return null
+            if (choice !is FilterRowChoice.Fixed) return null
+            val stops = behavior.value.canonicalStops ?: return null
+            val selection = FilterWheelSelection.Item(FilterRowSelection(item.id, FilterRowChoice.Fixed))
+            return ResolvedFilterRow(selection, stops, stops, item)
+        }
 
-                behavior is FilterItemBehavior.Cpl && choice is FilterRowChoice.CplLoss -> {
+        /** The single wheel row an ND item offers; auxiliary items never
+         *  appear on a wheel (FILTER-ITEM-003, FILTER-STACK-003). */
+        fun rows(forItem: FilterItem): List<ResolvedFilterRow> =
+            listOfNotNull(resolvedRow(forItem, FilterRowChoice.Fixed))
+
+        /**
+         * Resolves one mounted auxiliary filter against the inventory:
+         * `null` when its set or item no longer exists, the item is not an
+         * auxiliary kind, or the choice does not fit the item — a CPL
+         * choice that is no longer configured is never replaced by another
+         * (FILTER-PERSIST-002). A CPL choice resolves to the configured
+         * value it matches.
+         */
+        fun resolvedAuxiliaryFilter(
+            mount: MountedAuxiliaryFilter,
+            inventory: FilterInventory,
+        ): ResolvedAuxiliaryFilter? {
+            val filterSet = inventory.filterSet(mount.filterSetId) ?: return null
+            val item = filterSet.item(mount.itemId) ?: return null
+            val behavior = item.behavior
+            val choice = mount.choice
+            val resolved: Triple<AuxiliaryFilterChoice, Double, Double> = when {
+                behavior is FilterItemBehavior.Cpl && choice is AuxiliaryFilterChoice.CplLoss -> {
                     val matched = behavior.choices.shootingChoices.firstOrNull {
                         abs(it - choice.stops) <= STABILITY_EPSILON
                     } ?: return null
-                    val normalized = itemSelection(item, FilterRowChoice.CplLoss(matched))
-                    ResolvedFilterRow(normalized, matched, matched, item)
+                    Triple(AuxiliaryFilterChoice.CplLoss(matched), matched, matched)
                 }
 
-                behavior is FilterItemBehavior.Gnd && choice is FilterRowChoice.Gnd -> {
+                behavior is FilterItemBehavior.Gnd && choice is AuxiliaryFilterChoice.Gnd -> {
                     val stops = behavior.value.canonicalStops ?: return null
-                    val contribution =
-                        if (choice.mode == GndCalculationMode.applyFullValue) stops else 0.0
-                    ResolvedFilterRow(itemSelection(item, choice), contribution, stops, item)
+                    val contribution = if (choice.mode == GndCalculationMode.applyFullValue) stops else 0.0
+                    Triple(choice, contribution, stops)
                 }
 
-                else -> null
+                choice is AuxiliaryFilterChoice.RegisteredLoss &&
+                    (behavior is FilterItemBehavior.Color || behavior is FilterItemBehavior.Effect) -> {
+                    val loss = behavior.exposureLoss ?: return null
+                    if (!loss.isValid) return null
+                    Triple(choice, loss.stops, loss.stops)
+                }
+
+                else -> return null
             }
+            return ResolvedAuxiliaryFilter(
+                mount = MountedAuxiliaryFilter(mount.filterSetId, mount.itemId, resolved.first),
+                item = item,
+                filterSetName = filterSet.name,
+                filterSetColor = filterSet.color,
+                contributionStops = resolved.second,
+                registeredStops = resolved.third,
+            )
         }
 
-        private fun itemSelection(item: FilterItem, choice: FilterRowChoice): FilterWheelSelection =
-            FilterWheelSelection.Item(FilterRowSelection(item.id, choice))
+        /**
+         * Safe re-resolution of persisted or previously valid auxiliary
+         * filters (FILTER-PERSIST-002): an unresolvable mount — unknown
+         * set or item, a CPL choice that no longer exists, a kind change —
+         * is unmounted rather than substituted, a later duplicate of a
+         * physical item is dropped, and the rest are put in display order.
+         */
+        fun normalizedAuxiliaryFilters(
+            mounts: List<MountedAuxiliaryFilter>,
+            inventory: FilterInventory,
+        ): List<MountedAuxiliaryFilter> {
+            val seen = HashSet<FilterItemId>()
+            val normalized = mounts.mapNotNull { mount ->
+                resolvedAuxiliaryFilter(mount, inventory)?.takeIf { seen.add(mount.itemId) }
+            }
+            return displayOrdered(normalized, inventory).map { it.mount }
+        }
 
         /**
-         * Every shooting row an item offers, in wheel order: Fixed → one
-         * row; CPL → one row per distinct configured choice; GND → Record
-         * only, then Apply full value.
+         * The stable display order of mounted auxiliary filters
+         * (FILTER-AUX-002): Color, Effect, CPL, GND; within one kind the
+         * Filter Set order (the camera's candidate sets follow it), then
+         * the item order inside the set. Mount order never matters.
          */
-        fun rows(forItem: FilterItem): List<ResolvedFilterRow> =
-            when (val behavior = forItem.behavior) {
-                is FilterItemBehavior.Fixed ->
-                    listOfNotNull(resolvedRow(forItem, FilterRowChoice.Fixed))
+        fun displayOrdered(
+            rows: List<ResolvedAuxiliaryFilter>,
+            inventory: FilterInventory,
+        ): List<ResolvedAuxiliaryFilter> {
+            fun kindRank(kind: FilterItemKind): Int = when (kind) {
+                FilterItemKind.color -> 0
+                FilterItemKind.effect -> 1
+                FilterItemKind.cpl -> 2
+                FilterItemKind.gnd -> 3
+                FilterItemKind.fixed -> 4
+            }
+            fun setIndex(row: ResolvedAuxiliaryFilter): Int =
+                inventory.filterSets.indexOfFirst { it.id == row.mount.filterSetId }.takeIf { it >= 0 } ?: Int.MAX_VALUE
+            fun itemIndex(row: ResolvedAuxiliaryFilter): Int =
+                inventory.filterSet(row.mount.filterSetId)?.items
+                    ?.indexOfFirst { it.id == row.mount.itemId }?.takeIf { it >= 0 } ?: Int.MAX_VALUE
+            return rows.sortedWith(
+                compareBy<ResolvedAuxiliaryFilter> { kindRank(it.item.behavior.kind) }
+                    .thenBy { setIndex(it) }
+                    .thenBy { itemIndex(it) },
+            )
+        }
 
-                is FilterItemBehavior.Cpl -> behavior.choices.shootingChoices.mapNotNull {
-                    resolvedRow(forItem, FilterRowChoice.CplLoss(it))
-                }
+        /**
+         * Splits a legacy mixed stack into its two halves
+         * (FILTER-PERSIST-002): a wheel mounting a CPL or GND row becomes
+         * an auxiliary filter with the same item, choice, and mode, and
+         * that wheel is dropped; every other wheel stays. A stack that
+         * held only auxiliary rows receives one Standard 0 wheel. The
+         * result is not yet validated against the inventory.
+         */
+        fun migratingLegacyWheels(wheels: List<FilterWheel>): Pair<List<FilterWheel>, List<MountedAuxiliaryFilter>> {
+            val remaining = ArrayList<FilterWheel>()
+            val auxiliary = ArrayList<MountedAuxiliaryFilter>()
+            for (wheel in wheels) {
+                val selection = (wheel.selection as? FilterWheelSelection.Item)?.selection
+                val filterSetId = wheel.source.filterSetId
+                if (selection != null && filterSetId != null) {
+                    when (val choice = selection.choice) {
+                        is FilterRowChoice.CplLoss -> {
+                            auxiliary.add(
+                                MountedAuxiliaryFilter(filterSetId, selection.itemId, AuxiliaryFilterChoice.CplLoss(choice.stops)),
+                            )
+                            continue
+                        }
 
-                is FilterItemBehavior.Gnd -> GndCalculationMode.entries.mapNotNull {
-                    resolvedRow(forItem, FilterRowChoice.Gnd(it))
+                        is FilterRowChoice.Gnd -> {
+                            auxiliary.add(
+                                MountedAuxiliaryFilter(filterSetId, selection.itemId, AuxiliaryFilterChoice.Gnd(choice.mode)),
+                            )
+                            continue
+                        }
+
+                        is FilterRowChoice.Fixed -> Unit
+                    }
                 }
+                remaining.add(wheel)
+            }
+            if (remaining.isEmpty()) remaining.add(FilterWheel.standard(0.0))
+            return remaining to auxiliary
+        }
+
+        /**
+         * Role correction after an item's kind changes (FILTER-ITEM-003,
+         * FILTER-ITEM-005): a selection follows its physical item into the
+         * item's new role instead of being dropped. A wheel mounting an
+         * item that is now auxiliary leaves the ND row and the item is
+         * mounted as an auxiliary filter with its default choice (a legacy
+         * CPL / GND wheel row keeps its choice); an auxiliary mount whose
+         * item is now ND becomes a Filter Set ND wheel at the end of the
+         * row; an auxiliary mount whose item changed to another auxiliary
+         * kind takes that kind's default choice. Mounts of unknown sets or
+         * items are left for normal re-resolution. A result with no wheel
+         * gets one Standard 0 wheel. Limits are not checked here; callers
+         * validate.
+         */
+        fun reassigningRoles(
+            wheels: List<FilterWheel>,
+            auxiliaryFilters: List<MountedAuxiliaryFilter>,
+            inventory: FilterInventory,
+        ): RoleReassignment {
+            fun item(itemId: FilterItemId, filterSetId: FilterSetId): FilterItem? =
+                inventory.filterSet(filterSetId)?.item(itemId)
+            val keptWheels = ArrayList<FilterWheel>()
+            val origins = ArrayList<Int?>()
+            val mounts = auxiliaryFilters.toMutableList()
+            wheels.forEachIndexed { index, wheel ->
+                val selection = (wheel.selection as? FilterWheelSelection.Item)?.selection
+                val filterSetId = wheel.source.filterSetId
+                val mountedItem = if (selection != null && filterSetId != null) item(selection.itemId, filterSetId) else null
+                if (selection != null && filterSetId != null && mountedItem != null && mountedItem.behavior.kind.isAuxiliary) {
+                    if (mounts.none { it.itemId == selection.itemId }) {
+                        val choice = carriedChoice(selection.choice, mountedItem)
+                            ?: MountedAuxiliaryFilter.initialChoice(mountedItem)
+                        if (choice != null) mounts.add(MountedAuxiliaryFilter(filterSetId, selection.itemId, choice))
+                    }
+                    return@forEachIndexed
+                }
+                keptWheels.add(wheel)
+                origins.add(index)
+            }
+            val keptMounts = ArrayList<MountedAuxiliaryFilter>()
+            for (mount in mounts) {
+                val mountedItem = item(mount.itemId, mount.filterSetId)
+                if (mountedItem == null) {
+                    keptMounts.add(mount)
+                    continue
+                }
+                if (!mountedItem.behavior.kind.isAuxiliary) {
+                    keptWheels.add(
+                        FilterWheel(
+                            FilterSource.FilterSet(mount.filterSetId),
+                            FilterWheelSelection.Item(FilterRowSelection(mount.itemId, FilterRowChoice.Fixed)),
+                        ),
+                    )
+                    origins.add(null)
+                } else if (!choiceFitsKind(mount.choice, mountedItem)) {
+                    MountedAuxiliaryFilter.initialChoice(mountedItem)?.let {
+                        keptMounts.add(MountedAuxiliaryFilter(mount.filterSetId, mount.itemId, it))
+                    }
+                } else {
+                    keptMounts.add(mount)
+                }
+            }
+            if (keptWheels.isEmpty()) {
+                keptWheels.add(FilterWheel.standard(0.0))
+                origins.clear()
+                origins.add(null)
+            }
+            return RoleReassignment(keptWheels, keptMounts, origins)
+        }
+
+        /** A legacy wheel row's CPL or GND choice, when it matches the
+         *  item's current kind. */
+        private fun carriedChoice(choice: FilterRowChoice, item: FilterItem): AuxiliaryFilterChoice? = when {
+            choice is FilterRowChoice.CplLoss && item.behavior is FilterItemBehavior.Cpl ->
+                AuxiliaryFilterChoice.CplLoss(choice.stops)
+            choice is FilterRowChoice.Gnd && item.behavior is FilterItemBehavior.Gnd ->
+                AuxiliaryFilterChoice.Gnd(choice.mode)
+            else -> null
+        }
+
+        /** Whether an auxiliary choice belongs to the item's kind; a CPL
+         *  value that is no longer configured still counts as the CPL
+         *  kind, so it is reported by re-resolution instead of being
+         *  replaced. */
+        private fun choiceFitsKind(choice: AuxiliaryFilterChoice, item: FilterItem): Boolean =
+            when (choice) {
+                is AuxiliaryFilterChoice.CplLoss -> item.behavior is FilterItemBehavior.Cpl
+                is AuxiliaryFilterChoice.Gnd -> item.behavior is FilterItemBehavior.Gnd
+                is AuxiliaryFilterChoice.RegisteredLoss ->
+                    item.behavior is FilterItemBehavior.Color || item.behavior is FilterItemBehavior.Effect
             }
 
         /**
@@ -613,3 +975,16 @@ class FilterStack private constructor(
         }
     }
 }
+
+/**
+ * The stack after [FilterStack.reassigningRoles]: wheels and mounted
+ * auxiliary filters with every selection in its item's current role,
+ * plus, per returned wheel, the index of the input wheel it came from
+ * (`null` for a wheel created from an auxiliary mount).
+ * (iOS: `RoleReassignment`.)
+ */
+data class RoleReassignment(
+    val wheels: List<FilterWheel>,
+    val auxiliaryFilters: List<MountedAuxiliaryFilter>,
+    val wheelOrigins: List<Int?>,
+)

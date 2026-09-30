@@ -82,6 +82,28 @@ final class AuxiliaryFilterSummaryPresenterTests: XCTestCase {
         XCTAssertEqual(item.accessibilityText, "Night, Effect, 0.5 stops")
     }
 
+    /// Main shows the first three rows and counts the rest; every item
+    /// is still spoken.
+    func testMoreThanThreeItemsShowTheFirstThreePlusACount() throws {
+        let items = (1...5).map { FilterItem(name: "Effect \($0)", behavior: .effect(FilterExposureLoss(stops: 0.5))) }
+        let inventory = FilterInventory(filterSets: [FilterSet(id: set.id, name: set.name, color: set.color, items: items)])
+        let rows = try items.map { item in
+            try XCTUnwrap(FilterStack.resolvedAuxiliaryFilter(
+                MountedAuxiliaryFilter(filterSetID: set.id, itemID: item.id, choice: .registeredLoss),
+                inventory: inventory
+            ))
+        }
+        let state = try XCTUnwrap(AuxiliaryFilterSummaryPresenter.displayState(for: rows))
+        XCTAssertEqual(state.visibleItems.map(\.name), ["Effect 1", "Effect 2", "Effect 3"])
+        XCTAssertEqual(state.hiddenItemCount, 2)
+        XCTAssertEqual(state.moreText, "+ 2 more")
+        XCTAssertTrue(state.accessibilityLabel.hasSuffix("Effect 5, Effect, 0.5 stops"), "Hidden items are still spoken.")
+
+        let three = try XCTUnwrap(AuxiliaryFilterSummaryPresenter.displayState(for: Array(rows.prefix(3))))
+        XCTAssertEqual(three.hiddenItemCount, 0)
+        XCTAssertNil(three.moreText)
+    }
+
     func testPlusChoicesEndWithTheAuxiliaryAction() {
         let lee = FilterSetID(rawValue: "lee")
         XCTAssertEqual(

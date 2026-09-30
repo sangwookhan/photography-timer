@@ -68,6 +68,7 @@
 		A00000000000000000000930 /* FilterSetLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000931 /* FilterSetLocalizationTests.swift */; };
 		A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */; };
 		A00000000000000000000942 /* FilterSetManagementAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000943 /* FilterSetManagementAccessibilityTests.swift */; };
+		A00000000000000000000970 /* AuxiliaryFilterSummaryStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */; };
 		A00000000000000000000940 /* FilterStatusRegionAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */; };
 		A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */; };
 		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
@@ -187,6 +188,7 @@
 		A00000000000000000000931 /* FilterSetLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetLocalizationTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControlAccessibilityTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000943 /* FilterSetManagementAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetManagementAccessibilityTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuxiliaryFilterSummaryStabilityTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterStatusRegionAccessibilityTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
@@ -400,6 +402,7 @@
 				A00000000000000000000931 /* FilterSetLocalizationTests.swift */,
 				A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */,
 				A00000000000000000000943 /* FilterSetManagementAccessibilityTests.swift */,
+				A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */,
 				A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */,
 			);
 			path = App;
@@ -718,6 +721,7 @@
 				A00000000000000000000930 /* FilterSetLocalizationTests.swift in Sources */,
 				A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */,
 				A00000000000000000000942 /* FilterSetManagementAccessibilityTests.swift in Sources */,
+				A00000000000000000000970 /* AuxiliaryFilterSummaryStabilityTests.swift in Sources */,
 				A00000000000000000000940 /* FilterStatusRegionAccessibilityTests.swift in Sources */,
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 				A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */,

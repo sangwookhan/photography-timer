@@ -28,8 +28,10 @@ applies only the exposure loss selected for the current shot.
 
 ## Terminology
 
-- A **Filter Set** is a user-owned, ordered group with a stable id, name, and
-  color. It is distinct from a Shooting Collection.
+- A **Filter Set** is a user-owned, ordered group of physically compatible
+  filters for one mounting arrangement, with a stable id, name, and color.
+  It is distinct from a Shooting Collection. A Filter Set can later be made
+  available to another camera explicitly; the app does not infer compatibility.
 - A **Filter Stack** is the active camera's ND wheels together with its
   mounted auxiliary filters. Wheel count is not physical filter count.
 - **Auxiliary filters** are mounted CPL, GND, Color, or Effect items. They
@@ -53,11 +55,12 @@ could be confused.
   and delete Filter Sets in one management surface. The persistent ND-header
   entry shall open the shooting popup, with management reachable from there
   even at the maximum wheel count. Long-pressing visible Plus shall open
-  management directly. The Filter Set editor shall separate auxiliary and ND
-  items into tabs without splitting the physical set or duplicating items.
-  The list's reorder/delete edit-mode exit shall remain directly visible and
-  distinct from closing management. A delete confirmation shall name the
-  targeted set and remain bound to its stable id.
+  management directly. The Filter Set editor shall show its ND items before
+  its auxiliary items in one physical-item list; it shall not require choosing
+  an ND or auxiliary tab before adding an item. The list's reorder/delete
+  edit-mode exit shall remain directly visible and distinct from closing
+  management. A delete confirmation shall name the targeted set and remain
+  bound to its stable id.
 
 - **FILTER-SET-002** — Each Filter Set shall have a stable id, a non-empty
   user-defined name, a required color, and a user-defined display position.
@@ -77,14 +80,19 @@ could be confused.
 ### Physical filter inventory and conversion
 
 - **FILTER-ITEM-001** — A Filter Set shall contain zero or more physical Filter
-  Items. The user shall be able to add, edit, reorder, and delete them.
+  Items. The user shall be able to add, edit, reorder, and delete them. Its
+  editor shall show ND items first, followed by auxiliary items in Color,
+  Effect, CPL, GND order. It shall offer one Add Filter action rather than
+  separate add actions by kind.
 - **FILTER-ITEM-002** — Every Filter Item shall have a stable item id and a
   non-empty user-defined name. Multiple items may have the same name, kind,
   unit, and value so that two equal physical filters can be mounted together.
 - **FILTER-ITEM-003** — The user shall explicitly identify ND, CPL, GND, Color,
-  or Effect behavior; the app shall not infer behavior from a name. Existing
-  Fixed items retain their ND behavior and identity. Color and Effect items
-  belong to the auxiliary selection surface, not the ND wheels. The internal
+  or Effect behavior; the app shall not infer behavior from a name. New Filter
+  shall open one editor with ND preselected, and the user may change its type
+  inside that editor before entering the type-specific fields. Existing Fixed
+  items retain their ND behavior and identity. Color and Effect items belong
+  to the auxiliary selection surface, not the ND wheels. The internal
   representation of these kinds is not a cross-platform requirement.
 
 - **FILTER-ITEM-004** — Fixed and GND items shall accept a decimal value in
@@ -364,9 +372,11 @@ could be confused.
 ### Camera candidates and shooting workflow
 
 - **FILTER-CAMERA-001** — A camera may have multiple candidate Filter Sets.
-  They shall be explicitly assigned by the user and remembered per camera.
-  The same physical set may be assigned to multiple cameras. Diameter,
-  holder, body name, and adapter compatibility shall not be inferred.
+  They shall be remembered per camera. A Filter Set created from that camera's
+  Shooting Filters flow shall become a candidate for that camera immediately;
+  all other candidate assignments shall be explicit. The same physical set may
+  be assigned to multiple cameras. Diameter, holder, body name, and adapter
+  compatibility shall not be inferred.
 - **FILTER-CAMERA-002** — Standard shall always remain available without
   creating or assigning a Filter Set. Camera selection shall restore that
   camera's context, not force a setup wizard. Creating or assigning a set
@@ -383,28 +393,29 @@ could be confused.
   Target Shutter, wheel region, result rows, camera paging, and timers. The
   new interaction shall use the existing wheel region and popups, not a new
   permanent vertical panel. No empty auxiliary placeholder shall consume space.
-- **FILTER-FLOW-002** — From initial Main, either the persistent ND-header
-  entry or the Auxiliary filters action in Plus shall open shooting selection
-  on the auxiliary tab. Once mounted, tapping the summary shall open the same
-  popup showing this camera's current selections. It shall not open inventory
-  editing in place of current-shot selection.
-- **FILTER-FLOW-003** — Shooting selection shall have Auxiliary and ND tabs.
-  Auxiliary contains mounting controls, CPL choices, and GND modes; ND contains
-  Standard and eligible set sources with an explicit add-ND-wheel action.
-  Editing stored item definitions shall use the separate inventory editor.
-  Returning from setup shall allow selection without automatically mounting
-  newly created filters. One-time inventory setup and repeated shot adjustment
-  shall remain separate tasks.
+- **FILTER-FLOW-002** — From initial Main, the persistent ND-header entry
+  shall open shooting selection on the ND tab. The Auxiliary filters action in
+  Plus, and tapping a mounted auxiliary summary, shall open its Auxiliary tab.
+  The entry route shall not open inventory editing in place of current-shot
+  selection.
+- **FILTER-FLOW-003** — Shooting selection shall have ND and Auxiliary tabs,
+  with ND first. ND contains Standard and eligible set sources with an explicit
+  add-ND-wheel action. Auxiliary contains mounting controls, CPL choices, and
+  GND modes. Editing stored item definitions shall use the separate inventory
+  editor. Returning from setup shall allow selection without automatically
+  mounting newly created filters or adding an ND wheel. One-time inventory
+  setup and repeated shot adjustment shall remain separate tasks.
 
-- **FILTER-FLOW-004** — When the inventory contains no user Filter Set, the
-  Auxiliary tab shall make the first setup action explicit. The Camera Filter
-  Sets entry remains visible but disabled because there is nothing to assign.
-  In place of the ordinary Filter Set management entry, show one enabled
-  **Add Filter Set** action. It opens Filter Set creation; after saving, open
-  that new set's editor so the user can register the first physical filter.
-  Once at least one Filter Set exists, the ordinary Camera Filter Sets and
-  Filter Set management routes resume. This empty-inventory treatment shall
-  match on iOS and Android.
+- **FILTER-FLOW-004** — When the inventory contains no user Filter Set, the ND
+  tab shall make the first setup action explicit. The Camera Filter Sets entry
+  remains visible but disabled because there is nothing to assign. In place of
+  the ordinary Filter Set management entry, show one enabled **Add Filter Set**
+  action. It opens Filter Set creation; after saving, open that new set's
+  editor with its ND-first list and one Add Filter action. The new Set becomes
+  a candidate for the active camera but does not mount an item or add an ND
+  wheel. Once at least one Filter Set exists, the ordinary Camera Filter Sets
+  and Filter Set management routes resume. This empty-inventory treatment
+  shall match on iOS and Android.
 
 ### Mounted auxiliary filters
 

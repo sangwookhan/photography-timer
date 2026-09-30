@@ -291,6 +291,28 @@
         }
       }
     },
+    "Auxiliary subtotal" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보조 필터 소계"
+          }
+        }
+      }
+    },
+    "Auxiliary subtotal %@ %@" : {
+      "comment" : "Filter Sets (PTIMER-221).",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보조 필터 소계 %1$@ %2$@"
+          }
+        }
+      }
+    },
     "Blue" : {
       "comment" : "Filter Sets (PTIMER-221).",
       "localizations" : {

@@ -76,6 +76,17 @@ extension ExposureCalculatorViewModel {
             .compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: inventory) }
     }
 
+    /// The shooting popup's live auxiliary subtotal in stops: only the
+    /// working selection's auxiliary contributions, never the ND
+    /// wheels, which that tab does not show (FILTER-AUX-003). The
+    /// 30-stop guard still uses the complete stack
+    /// (`auxiliaryFiltersPreview`).
+    public func auxiliaryFiltersSubtotal(_ mounts: [MountedAuxiliaryFilter]) -> Double {
+        mounts
+            .compactMap { FilterStack.resolvedAuxiliaryFilter($0, inventory: filterInventory) }
+            .reduce(0) { $0 + $1.contributionStops }
+    }
+
     /// What the shooting popup's working selection would yield if
     /// applied now (FILTER-AUX-003): the effective total in stops, or
     /// the rejection Apply would report. Nothing is committed.

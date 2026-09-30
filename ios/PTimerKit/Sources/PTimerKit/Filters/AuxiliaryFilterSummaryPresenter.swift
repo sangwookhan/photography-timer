@@ -5,9 +5,10 @@ import Foundation
 import PTimerCore
 
 /// One mounted auxiliary filter as the Main summary shows it
-/// (FILTER-AUX-002): its identity, its current contribution, and the
-/// detail that keeps a registered value or mode from being mistaken
-/// for the contribution. Pure value; the view owns fonts and colors.
+/// (FILTER-AUX-002): one compact row with a short identifier and the
+/// current contribution. Modes, registered densities, and other
+/// metadata stay in the shooting popup. Pure value; the view owns
+/// fonts and colors.
 public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
     public let itemID: FilterItemID
     /// The item's registered name (`Soft GND 3`, `CPL`, `Red 25A`).
@@ -17,14 +18,10 @@ public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
     /// Current contribution in canonical stops, plain decimal (`1.5`,
     /// `0`).
     public let contributionText: String
-    /// The line under the name: a GND's mode and registered density
-    /// (`Record only · 3 stops`), a Color filter's optical color name,
-    /// or `nil` when the contribution alone describes the item.
-    public let detailText: String?
-    /// The same detail as separate parts (`Record only`, `3 stops`), so
-    /// a narrow column can break between parts instead of inside one.
-    /// Empty when there is no detail.
-    public let detailSegments: [String]
+    /// The row's identifier, longest first: the view shows the first
+    /// one that fits the column, never a truncated one. See
+    /// `AuxiliaryFilterSummaryPresenter.compactLabels`.
+    public let compactLabels: [String]
     /// Swatch for a Color filter's optical color; `nil` otherwise.
     public let opticalColor: FilterSetColor?
     /// The owning set's user-selected color, shown as the source cue.
@@ -32,13 +29,12 @@ public struct AuxiliaryFilterSummaryItemDisplay: Equatable, Sendable {
     /// Complete spoken description: name, type or mode, contribution.
     public let accessibilityText: String
 
-    public init(itemID: FilterItemID, name: String, kindLabel: String, contributionText: String, detailSegments: [String], opticalColor: FilterSetColor?, sourceColor: FilterSetColor, accessibilityText: String) {
+    public init(itemID: FilterItemID, name: String, kindLabel: String, contributionText: String, compactLabels: [String], opticalColor: FilterSetColor?, sourceColor: FilterSetColor, accessibilityText: String) {
         self.itemID = itemID
         self.name = name
         self.kindLabel = kindLabel
         self.contributionText = contributionText
-        self.detailSegments = detailSegments
-        self.detailText = detailSegments.isEmpty ? nil : detailSegments.joined(separator: " · ")
+        self.compactLabels = compactLabels
         self.opticalColor = opticalColor
         self.sourceColor = sourceColor
         self.accessibilityText = accessibilityText
@@ -74,41 +70,26 @@ public enum AuxiliaryFilterSummaryPresenter {
         guard !rows.isEmpty else {
             return nil
         }
-        let items = rows.map(itemDisplay(for:))
+        let items = rows.map { itemDisplay(for: $0, among: rows) }
         let spoken = ([title] + items.map(\.accessibilityText)).joined(separator: ", ")
         return AuxiliaryFilterSummaryDisplayState(items: items, accessibilityLabel: spoken)
     }
 
-    public static func itemDisplay(for row: ResolvedAuxiliaryFilter) -> AuxiliaryFilterSummaryItemDisplay {
-        let contribution = FilterWheelPresenter.decimalStopsValue(row.contributionStops)
+    /// One row of the summary. `rows` are all mounted items, so the
+    /// identifier can tell two items of the same kind apart.
+    public static func itemDisplay(for row: ResolvedAuxiliaryFilter, among rows: [ResolvedAuxiliaryFilter]) -> AuxiliaryFilterSummaryItemDisplay {
         let contributionSpoken = FilterWheelPresenter.stopsText(row.contributionStops)
         let kind = row.item.behavior.kind
-        let detail: [String]
         let semanticType: String
         switch row.mount.choice {
         case .cplLoss:
-            detail = []
             semanticType = FilterWheelPresenter.kindName(.cpl)
         case .gnd(let mode):
-            // Record only: the registered density stays visible beside
-            // the mode so a 0 is never read as a 0-stop filter. Apply
-            // full value: the contribution already is the registered
-            // density, so the mode alone distinguishes it.
-            switch mode {
-            case .recordOnly:
-                let registered = row.item.behavior.registeredValue.map(FilterWheelPresenter.registeredValueText)
-                    ?? FilterWheelPresenter.stopsText(row.registeredStops)
-                detail = [FilterWheelPresenter.gndModeName(mode), registered]
-            case .applyFullValue:
-                detail = [FilterWheelPresenter.gndModeName(mode)]
-            }
             semanticType = "\(FilterWheelPresenter.kindName(.gnd)) \(FilterWheelPresenter.gndModeName(mode))"
         case .registeredLoss:
             if let color = row.item.behavior.opticalColor {
-                detail = [FilterWheelPresenter.opticalColorName(color)]
                 semanticType = "\(FilterWheelPresenter.kindName(.color)) \(FilterWheelPresenter.opticalColorName(color))"
             } else {
-                detail = []
                 semanticType = FilterWheelPresenter.kindName(kind)
             }
         }
@@ -116,12 +97,57 @@ public enum AuxiliaryFilterSummaryPresenter {
             itemID: row.item.id,
             name: row.item.name,
             kindLabel: FilterWheelPresenter.kindName(kind),
-            contributionText: contribution,
-            detailSegments: detail,
+            contributionText: FilterWheelPresenter.decimalStopsValue(row.contributionStops),
+            compactLabels: compactLabels(for: row, among: rows),
             opticalColor: row.item.behavior.opticalColor,
             sourceColor: row.filterSetColor,
             accessibilityText: "\(row.item.name), \(semanticType), \(contributionSpoken)"
         )
+    }
+
+    /// The deterministic concise-name rule for a compact Main row,
+    /// longest candidate first; the view shows the first that fits.
+    /// - A CPL or GND is identified by its type (`CPL`, `GND`) when it is
+    ///   the only mounted item of that type; with two of the same type,
+    ///   by name so they stay distinct (`Soft GND`, `Hard GND`).
+    /// - A Color or Effect item is identified by name.
+    /// - A name's candidates are the whole name, then the words before
+    ///   the first word that contains a digit (`Soft GND 2` → `Soft GND`,
+    ///   `MARUMI Red 25A` → `MARUMI Red`), then the first word
+    ///   (`MARUMI`). A shortened candidate that another mounted item of
+    ///   the same kind would also show is left out, so rows never read
+    ///   the same.
+    public static func compactLabels(for row: ResolvedAuxiliaryFilter, among rows: [ResolvedAuxiliaryFilter]) -> [String] {
+        let kind = row.item.behavior.kind
+        let sameKind = rows.filter { $0.item.behavior.kind == kind }
+        if kind == .cpl || kind == .gnd, sameKind.count == 1 {
+            return [FilterWheelPresenter.kindName(kind)]
+        }
+        let others = sameKind.filter { $0.item.id != row.item.id }.map { nameCandidates($0.item.name) }
+        let candidates = nameCandidates(row.item.name)
+        guard let whole = candidates.first else {
+            return [row.item.name]
+        }
+        let shortened = candidates.dropFirst().filter { candidate in
+            !others.contains { $0.contains(candidate) }
+        }
+        return [whole] + shortened
+    }
+
+    private static func nameCandidates(_ name: String) -> [String] {
+        let words = name.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard let first = words.first else {
+            return []
+        }
+        var candidates = [words.joined(separator: " ")]
+        let leading = words.prefix { word in !word.contains(where: \.isNumber) }
+        if !leading.isEmpty, leading.count < words.count {
+            candidates.append(leading.joined(separator: " "))
+        }
+        if words.count > 1, candidates.last != first {
+            candidates.append(first)
+        }
+        return candidates
     }
 }
 

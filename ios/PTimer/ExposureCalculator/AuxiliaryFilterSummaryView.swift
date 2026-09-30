@@ -39,16 +39,17 @@ struct AuxiliaryFilterSummaryView: View {
                 .minimumScaleFactor(0.7)
 
                 // Every mounted identity stays whole on Main
-                // (FILTER-AUX-002): the full-name layout is used whenever
-                // it fits the column; only when it cannot does the row
-                // fall back to the one-line form.
+                // (FILTER-AUX-002): whole names at the regular size, then
+                // one point smaller; only when neither fits the column
+                // does it fall back to the one-line form.
                 ViewThatFits(in: .vertical) {
-                    itemList(fullNames: true)
-                    itemList(fullNames: false)
+                    itemList(nameFont: style.auxiliarySummaryNameFont)
+                    itemList(nameFont: style.auxiliarySummaryTightNameFont)
+                    itemList(nameFont: nil)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 4)
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color(.secondarySystemBackground))
@@ -66,11 +67,12 @@ struct AuxiliaryFilterSummaryView: View {
         .accessibilityIdentifier("auxiliary-filter-summary")
     }
 
-    private func itemList(fullNames: Bool) -> some View {
+    /// Whole-name items at `nameFont`, or the one-line form when `nil`.
+    private func itemList(nameFont: Font?) -> some View {
         VStack(alignment: .leading, spacing: style.auxiliarySummaryRowSpacing) {
             ForEach(summary.items, id: \.itemID) { item in
-                if fullNames {
-                    fullNameItem(item)
+                if let nameFont {
+                    fullNameItem(item, nameFont: nameFont)
                 } else {
                     oneLineItem(item)
                 }
@@ -82,18 +84,18 @@ struct AuxiliaryFilterSummaryView: View {
     /// needs and never shortened. The contribution stays beside the
     /// name when both fit one line; otherwise it leads the detail line
     /// under the name.
-    private func fullNameItem(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
+    private func fullNameItem(_ item: AuxiliaryFilterSummaryItemDisplay, nameFont: Font) -> some View {
         ViewThatFits(in: .horizontal) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    nameText(item, wraps: false)
+                    nameText(item, font: nameFont, wraps: false)
                     Spacer(minLength: 2)
                     contributionText(item)
                 }
                 detailText(item)
             }
             VStack(alignment: .leading, spacing: 0) {
-                nameText(item, wraps: true)
+                nameText(item, font: nameFont, wraps: true)
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     contributionText(item)
                     detailText(item)
@@ -142,11 +144,11 @@ struct AuxiliaryFilterSummaryView: View {
     /// The name with its optical-color dot. One line without shrinking
     /// when `wraps` is false (the fit test fails instead); otherwise as
     /// many lines as the name needs.
-    private func nameText(_ item: AuxiliaryFilterSummaryItemDisplay, wraps: Bool) -> some View {
+    private func nameText(_ item: AuxiliaryFilterSummaryItemDisplay, font: Font, wraps: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             opticalDot(item)
             Text(item.name)
-                .font(style.auxiliarySummaryNameFont)
+                .font(font)
                 .foregroundStyle(.primary)
                 .lineLimit(wraps ? nil : 1)
                 .fixedSize(horizontal: !wraps, vertical: true)

@@ -178,7 +178,7 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
             }
             behavior = .cpl(CPLExposureLossChoices(fields: cplChoices))
         case .color:
-            guard let value, let colorRaw = opticalColor, let color = FilterSetColor(rawValue: colorRaw) else {
+            guard let value, let colorRaw = opticalColor, let color = Self.restoredColor(colorRaw) else {
                 return nil
             }
             behavior = .color(FilterExposureLoss(stops: value), color)
@@ -190,6 +190,18 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
         }
         let item = FilterItem(id: FilterItemID(rawValue: trimmedID), name: trimmedName, behavior: behavior)
         return item.isWellFormed ? item : nil
+    }
+
+    /// A Color item's persisted color token. Earlier Draft builds had a
+    /// separate optical-color list with `yellowGreen`, which the shared
+    /// Filter Set palette does not contain; such an item keeps its
+    /// identity and restores as Green instead of being dropped, and is
+    /// written back with the palette token on the next save.
+    static func restoredColor(_ raw: String) -> FilterSetColor? {
+        if let color = FilterSetColor(rawValue: raw) {
+            return color
+        }
+        return raw == "yellowGreen" ? .green : nil
     }
 }
 

@@ -98,6 +98,35 @@ final class FilterInventoryModelTests: XCTestCase {
         XCTAssertEqual(restored.inventory, model.inventory)
     }
 
+    /// A Color item saved by an earlier Draft build with the retired
+    /// `yellowGreen` optical color keeps its id, name, and loss and
+    /// restores as the shared palette's Green; the next save writes
+    /// `green`. Nothing is dropped.
+    func testDraftYellowGreenColorItemRestoresAsGreen() throws {
+        let json = """
+        {
+          "schemaVersion": 1,
+          "filterSets": [
+            { "id": "s1", "name": "Kit", "color": "red",
+              "items": [
+                { "id": "i1", "name": "X1 Yellow-green", "kind": "color", "value": 1.5, "opticalColor": "yellowGreen" },
+                { "id": "i2", "name": "Red 25A", "kind": "color", "value": 3, "opticalColor": "red" }
+              ] }
+          ]
+        }
+        """
+        let result = PersistentFilterInventorySnapshot.decode(from: Data(json.utf8))
+        XCTAssertEqual(result.outcome, .loaded)
+        let items = try XCTUnwrap(result.snapshot.restoredInventory.filterSets.first).items
+        XCTAssertEqual(items.map(\.id.rawValue), ["i1", "i2"])
+        XCTAssertEqual(items[0].name, "X1 Yellow-green")
+        XCTAssertEqual(items[0].behavior, .color(FilterExposureLoss(stops: 1.5), .green))
+        XCTAssertEqual(items[1].behavior, .color(FilterExposureLoss(stops: 3), .red))
+
+        let resaved = PersistentFilterInventorySnapshot(inventory: result.snapshot.restoredInventory)
+        XCTAssertEqual(resaved.filterSets.first?.items.first?.opticalColor, "green")
+    }
+
     func testMalformedSetIsDroppedAndMalformedItemIsSkipped() throws {
         let json = """
         {

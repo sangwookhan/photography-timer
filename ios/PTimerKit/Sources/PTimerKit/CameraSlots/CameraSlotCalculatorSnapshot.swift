@@ -139,8 +139,9 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// state no longer fits the cap — the caller decides whether that
     /// blocks the edit.
     public func reresolvingFilterStack(against inventory: FilterInventory) -> CameraSlotCalculatorSnapshot? {
-        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: inventory)
-        guard let wheels = FilterStack.normalizedWheels(filterWheels, inventory: inventory),
+        let reassigned = FilterStack.reassigningRoles(wheels: filterWheels, auxiliaryFilters: auxiliaryFilters, inventory: inventory)
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, inventory: inventory)
+        guard let wheels = FilterStack.normalizedWheels(reassigned.wheels, inventory: inventory),
               let stack = FilterStack.validated(wheels: wheels, auxiliaryFilters: auxiliary, inventory: inventory) else {
             return nil
         }
@@ -153,11 +154,12 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// the auxiliary filters are unmounted, so nothing is ever
     /// clamped. Standard wheels are untouched.
     public func emptyingMountedItems(against inventory: FilterInventory) -> CameraSlotCalculatorSnapshot {
-        let emptied = (FilterStack.normalizedWheels(filterWheels, inventory: inventory) ?? [.standard(CalculatorDefaults.ndStep)])
+        let reassigned = FilterStack.reassigningRoles(wheels: filterWheels, auxiliaryFilters: auxiliaryFilters, inventory: inventory)
+        let emptied = (FilterStack.normalizedWheels(reassigned.wheels, inventory: inventory) ?? [.standard(CalculatorDefaults.ndStep)])
             .map { wheel -> FilterWheel in
                 wheel.isStandard ? wheel : FilterWheel(source: wheel.source, selection: .empty)
             }
-        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: inventory)
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, inventory: inventory)
         let stack = FilterStack.validated(wheels: emptied, auxiliaryFilters: auxiliary, inventory: inventory)
             ?? FilterStack.validated(wheels: emptied, inventory: inventory)
             ?? FilterStack(single: CalculatorDefaults.ndStep)

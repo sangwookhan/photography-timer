@@ -398,7 +398,8 @@ public enum FilterWheelPresenter {
 
     public static func kindName(_ kind: FilterItemKind) -> String {
         switch kind {
-        case .fixed: return String(localized: "Fixed")
+        // A fixed-value item is an ND filter; users never see "Fixed".
+        case .fixed: return String(localized: "ND")
         case .cpl: return String(localized: "CPL")
         case .gnd: return String(localized: "GND")
         case .color: return String(localized: "Color")

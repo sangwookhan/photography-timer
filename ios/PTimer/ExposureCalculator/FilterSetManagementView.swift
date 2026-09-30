@@ -354,14 +354,17 @@ struct FilterSetDetailView: View {
                               visibleItems.indices.contains(index) else { return }
                         pendingItemDeletion = visibleItems[index]
                     }
+                    // Each tab adds only its own kinds: auxiliary filters
+                    // from the Auxiliary tab, ND filters from the ND tab.
                     Button {
                         editingItem = FilterItemEditorContext(
                             filterSetID: filterSetID,
                             item: nil,
+                            category: itemTab == .auxiliary ? .auxiliary : .nd,
                             initialUnit: editorSession.initialUnit
                         )
                     } label: {
-                        Label("Add filter", systemImage: "plus.circle")
+                        Label(itemTab == .auxiliary ? "Add auxiliary filter" : "Add ND filter", systemImage: "plus.circle")
                     }
                     .accessibilityIdentifier("filter-item-add-button")
                 } header: {

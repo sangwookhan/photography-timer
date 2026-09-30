@@ -9,9 +9,15 @@ public enum FilterItemSaveBlockReason: Equatable, Sendable {
     /// A camera's active contributions would exceed 30 stops.
     case exceedsTotalLimit
     /// A camera currently mounts a row of this item that the edit
-    /// removes — a selected CPL exposure-loss choice, or a row lost to
-    /// a kind change. The selection is never replaced silently.
+    /// removes — a selected CPL exposure-loss choice. The selection is
+    /// never replaced silently.
     case removesSelectedChoice
+    /// A kind change would move a mounted item into the auxiliary
+    /// summary beyond its item limit (FILTER-AUX-004).
+    case tooManyAuxiliaryFilters
+    /// A kind change would move a mounted item onto the ND wheels
+    /// beyond the wheel limit (three beside the summary, four without).
+    case tooManyNDWheels
 }
 
 /// Outcome of saving a physical filter item (FILTER-ITEM-005): the
@@ -311,14 +317,26 @@ extension ExposureCalculatorViewModel {
 
     /// A camera's stack conflicts with the candidate inventory when a
     /// wheel or auxiliary filter mounting `itemID` no longer resolves
-    /// (its selected row, CPL choice, or kind is gone) or when the
-    /// re-resolved stack would exceed the cap.
+    /// (its selected CPL choice is gone), when a kind change would move
+    /// the mounted item into a role that is already full, or when the
+    /// re-resolved stack would exceed the cap. A kind change within the
+    /// limits moves the selection into the new role and does not
+    /// conflict (FILTER-ITEM-005).
     private static func stackConflict(
-        _ wheels: [FilterWheel],
-        auxiliaryFilters: [MountedAuxiliaryFilter],
+        _ currentWheels: [FilterWheel],
+        auxiliaryFilters currentAuxiliaryFilters: [MountedAuxiliaryFilter],
         itemID: FilterItemID,
         candidate: FilterInventory
     ) -> FilterItemSaveBlockReason? {
+        let reassigned = FilterStack.reassigningRoles(wheels: currentWheels, auxiliaryFilters: currentAuxiliaryFilters, inventory: candidate)
+        let wheels = reassigned.wheels
+        let auxiliaryFilters = reassigned.auxiliaryFilters
+        if auxiliaryFilters.count > FilterStack.maximumAuxiliaryFilterCount {
+            return .tooManyAuxiliaryFilters
+        }
+        if wheels.count > FilterStack.wheelLimit(hasAuxiliaryFilters: !auxiliaryFilters.isEmpty) {
+            return .tooManyNDWheels
+        }
         let selectedRowVanishes = wheels.contains { wheel in
             wheel.mountedItemID == itemID
                 && FilterStack.resolvedRow(for: wheel, inventory: candidate) == nil
@@ -343,9 +361,10 @@ extension ExposureCalculatorViewModel {
     public func saveFilterItem(_ item: FilterItem, in filterSetID: FilterSetID) -> FilterItemSaveOutcome {
         let conflicts = filterItemSaveConflictDetails(for: item, in: filterSetID)
         guard conflicts.isEmpty else {
-            let reason: FilterItemSaveBlockReason = conflicts.contains { $0.reason == .removesSelectedChoice }
-                ? .removesSelectedChoice
-                : .exceedsTotalLimit
+            // One reason is shown: a removed selection first, then a
+            // full role, then the cap.
+            let priority: [FilterItemSaveBlockReason] = [.removesSelectedChoice, .tooManyAuxiliaryFilters, .tooManyNDWheels, .exceedsTotalLimit]
+            let reason = priority.first { candidate in conflicts.contains { $0.reason == candidate } } ?? .exceedsTotalLimit
             return .blocked(affectedCameras: conflicts.map(\.cameraName), reason: reason)
         }
         if filterInventory.item(withID: item.id) != nil {

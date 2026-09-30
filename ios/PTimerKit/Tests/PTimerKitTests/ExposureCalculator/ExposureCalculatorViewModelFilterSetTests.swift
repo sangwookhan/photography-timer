@@ -405,31 +405,6 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFiveAgain, in: set.id), .saved)
     }
 
-    func testChangingAMountedItemsKindIsBlockedLikeARemovedRow() throws {
-        let inventory = FilterInventoryModel()
-        let set = try XCTUnwrap(inventory.createFilterSet(name: "S", color: .red))
-        let item = fixed("X", 3)
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
-        inventory.addItem(item, to: set.id)
-        inventory.addItem(cpl, to: set.id)
-        let viewModel = makeViewModel(inventoryModel: inventory)
-        viewModel.assignAllFilterSetsAsCandidates()
-        viewModel.selectFilterSource(.filterSet(set.id))
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(select(item), at: 1)
-        var asGND = item
-        asGND.behavior = .gnd(FilterRegisteredValue(value: 3, unit: .stops))
-        XCTAssertEqual(viewModel.saveFilterItem(asGND, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
-        XCTAssertEqual(viewModel.filterWheels[0].selection, select(item))
-
-        // The same rule protects a mounted auxiliary filter.
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set)]))
-        var asND = cpl
-        asND.behavior = .fixed(FilterRegisteredValue(value: 1, unit: .stops))
-        XCTAssertEqual(viewModel.saveFilterItem(asND, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
-        XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(cpl, in: set)])
-    }
-
     // MARK: FILTER-STACK-002 — rejection notice for a mounted item
 
     func testSelectingAnItemMountedElsewhereIsRejectedWithANotice() throws {

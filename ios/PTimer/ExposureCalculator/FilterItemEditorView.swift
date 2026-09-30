@@ -10,9 +10,46 @@ import SwiftUI
 /// the notation the editing session remembers from the last saved
 /// Fixed or GND item (FILTER-ITEM-007). The kind always starts Fixed.
 struct FilterItemEditorContext: Identifiable {
+    /// Which editing path opened the editor: the Filter Set's Auxiliary
+    /// tab (CPL, GND, Color, Effect) or its ND tab (ND items only). An
+    /// existing item's own kind decides it.
+    enum Category {
+        case auxiliary
+        case nd
+
+        init(kind: FilterItemKind) {
+            self = kind.isAuxiliary ? .auxiliary : .nd
+        }
+
+        /// The kinds a new item on this path may take.
+        var kinds: [FilterItemKind] {
+            switch self {
+            case .auxiliary:
+                return FilterItemKind.allCases.filter(\.isAuxiliary)
+            case .nd:
+                return [.fixed]
+            }
+        }
+    }
+
+    /// Kinds the editor offers: a new item stays within its tab's
+    /// kinds; an existing item may be corrected to any kind (for
+    /// example an ND item entered by mistake becomes a Color filter).
+    var selectableKinds: [FilterItemKind] {
+        item == nil ? category.kinds : FilterItemKind.allCases
+    }
+
     let filterSetID: FilterSetID
     let item: FilterItem?
+    var category: Category
     var initialUnit: FilterValueUnit = .stops
+
+    init(filterSetID: FilterSetID, item: FilterItem?, category: Category? = nil, initialUnit: FilterValueUnit = .stops) {
+        self.filterSetID = filterSetID
+        self.item = item
+        self.category = item.map { Category(kind: $0.behavior.kind) } ?? category ?? .nd
+        self.initialUnit = initialUnit
+    }
 
     var id: String {
         "\(filterSetID.rawValue)-\(item?.id.rawValue ?? "new")"
@@ -71,9 +108,10 @@ struct FilterItemEditorView: View {
         self.onDismiss = onDismiss
         let item = context.item
         _name = State(initialValue: item?.name ?? "")
-        // The kind never inherits from the previous item: every new
-        // item starts Fixed (FILTER-ITEM-007).
-        _kind = State(initialValue: item?.behavior.kind ?? .fixed)
+        // The kind never inherits from the previous item: a new ND item
+        // is ND, and a new auxiliary item starts at the first
+        // auxiliary kind (FILTER-ITEM-007, FILTER-SET-001).
+        _kind = State(initialValue: item?.behavior.kind ?? context.category.kinds[0])
         _opticalColor = State(initialValue: item?.behavior.opticalColor ?? .red)
         switch item?.behavior {
         case .fixed(let value), .gnd(let value):
@@ -180,17 +218,23 @@ struct FilterItemEditorView: View {
                         .textInputAutocapitalization(.words)
                         .focused($focusedField, equals: .name)
                         .accessibilityIdentifier("filter-item-name-field")
-                    Picker("Kind", selection: $kind) {
-                        ForEach(FilterItemKind.allCases, id: \.self) { kind in
-                            Text(FilterWheelPresenter.kindName(kind)).tag(kind)
+                    // The auxiliary path offers only auxiliary kinds; the
+                    // ND path has one kind and shows no picker.
+                    if context.selectableKinds.count > 1 {
+                        Picker("Kind", selection: $kind) {
+                            ForEach(context.selectableKinds, id: \.self) { kind in
+                                Text(FilterWheelPresenter.kindName(kind)).tag(kind)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("filter-item-kind-picker")
                     }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("filter-item-kind-picker")
                 } header: {
-                    Text("Filter")
+                    Text(context.item == nil ? (context.category == .auxiliary ? "Auxiliary filter" : "ND filter") : "Filter")
                 } footer: {
-                    Text("The kind is your choice; the app never guesses it from the name.")
+                    if context.selectableKinds.count > 1 {
+                        Text("The kind is your choice; the app never guesses it from the name.")
+                    }
                 }
 
                 switch kind {
@@ -243,6 +287,10 @@ struct FilterItemEditorView: View {
                     Text("This value would push the filter stack past 30 stops on \(blocked.cameras.joined(separator: ", ")). Change the mounted filters there first, or use a smaller value.")
                 case .removesSelectedChoice:
                     Text("A choice of this filter is currently selected on \(blocked.cameras.joined(separator: ", ")). Keep that choice, or change the wheel selection on those cameras first.")
+                case .tooManyAuxiliaryFilters:
+                    Text("This filter is mounted on \(blocked.cameras.joined(separator: ", ")), where \(FilterStack.maximumAuxiliaryFilterCount) auxiliary filters are already mounted. Remove an auxiliary filter there first, or keep this filter's kind.")
+                case .tooManyNDWheels:
+                    Text("This filter is mounted on \(blocked.cameras.joined(separator: ", ")), where the ND wheels are already full. Remove an ND wheel there first, or keep this filter's kind.")
                 }
             }
             .onAppear {

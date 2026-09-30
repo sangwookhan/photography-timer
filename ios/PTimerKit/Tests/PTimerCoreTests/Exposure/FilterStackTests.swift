@@ -462,4 +462,41 @@ final class FilterStackTests: XCTestCase {
         XCTAssertEqual(entry.calculationMode, .gndRecordOnly)
         XCTAssertEqual(entry.contributedStops, 0)
     }
+
+    // MARK: Kind correction (FILTER-ITEM-005)
+
+    func testReassigningRolesMovesSelectionsAcrossTheNDAndAuxiliaryRoles() {
+        let ndID = FilterItemID(rawValue: "nd")
+        let auxID = FilterItemID(rawValue: "aux")
+        let setID = FilterSetID(rawValue: "set")
+        let redNowColor = FilterItem(id: ndID, name: "Red 25A", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let cplNowND = FilterItem(id: auxID, name: "CPL", behavior: .fixed(FilterRegisteredValue(value: 1, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [FilterSet(id: setID, name: "S", color: .blue, items: [redNowColor, cplNowND])])
+        let standard = FilterWheel.standard(NDStep(stops: 3))
+        let mountedRed = FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: ndID, choice: .fixed)))
+        let mountedCPL = MountedAuxiliaryFilter(filterSetID: setID, itemID: auxID, choice: .cplLoss(1))
+
+        let result = FilterStack.reassigningRoles(wheels: [standard, mountedRed], auxiliaryFilters: [mountedCPL], inventory: inventory)
+
+        XCTAssertEqual(result.wheels, [
+            standard,
+            FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: auxID, choice: .fixed))),
+        ], "The ND wheel leaves the row; the former CPL becomes a wheel at the end.")
+        XCTAssertEqual(result.wheelOrigins, [0, nil])
+        XCTAssertEqual(result.auxiliaryFilters, [MountedAuxiliaryFilter(filterSetID: setID, itemID: ndID, choice: .registeredLoss)])
+    }
+
+    func testReassigningRolesLeavesUnchangedKindsAndUnknownItemsAlone() {
+        let setID = FilterSetID(rawValue: "set")
+        let nd = FilterItem(id: FilterItemID(rawValue: "nd"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [FilterSet(id: setID, name: "S", color: .blue, items: [nd])])
+        let wheel = FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: nd.id, choice: .fixed)))
+        let unknown = MountedAuxiliaryFilter(filterSetID: setID, itemID: FilterItemID(rawValue: "gone"), choice: .registeredLoss)
+
+        let result = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [unknown], inventory: inventory)
+
+        XCTAssertEqual(result.wheels, [wheel])
+        XCTAssertEqual(result.wheelOrigins, [0])
+        XCTAssertEqual(result.auxiliaryFilters, [unknown], "Unknown items are left to normal re-resolution.")
+    }
 }

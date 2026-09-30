@@ -441,6 +441,15 @@ could be confused.
   preserve these meanings across iOS and Android, light and dark appearances.
   Source recoloring shall not change a filter's optical color or calculation.
 
+### Approved field-feedback revision (2026-10-01)
+
+The following requirements supersede conflicting earlier text in this document.
+
+- **FILTER-AUX-005** — There is no maximum count of mounted auxiliary items. The three visible Main lines are a presentation guarantee, not a selection limit. Main shall show the first three mounted items and then `+ N more` when further items are mounted; tapping the summary opens the complete scrollable list.
+- **FILTER-AUX-006** — Main and the shooting popup shall use the fixed auxiliary order Color → Effect → CPL → GND, independent of selection order. Within a kind, keep stable item order. On Main each visible item uses one concise identity-plus-contribution line: Color uses its optical-color swatch, short name, and loss; Effect uses name and loss; CPL uses `CPL` and its chosen loss; GND uses its distinguishing name and contribution.
+- **FILTER-AUX-007** — The Auxiliary tab shall not show the whole-stack Total because its ND configuration is not fully visible there. It may show only the subtotal of selected auxiliary filters. The combined ND-plus-auxiliary 30-stop cap remains mandatory regardless of which side is selected first. A change that would exceed 30 shall be rejected without removing an existing selection.
+- **FILTER-ITEM-008** — All user-facing instances of `Fixed` shall be renamed `ND`. Existing persisted Fixed items retain their stable identities and ND behavior. An item editor shall permit correction between ND and Color even when mounted, preserving the committed camera selection only if the resulting stack is valid.
+- **FILTER-COLOR-004** — The shared selectable optical-color palette shall be ordered Red, Orange, Yellow, Yellow-green, Green, Teal, Blue, Purple, Pink. Each option shall render as its actual color in light and dark appearance. Yellow-green and the Yellow–Green transition are required; duplicate blue-family options are not. A Color item uses this common palette and must not render its choices as black or generic markers.
 ### Persistence and captured context
 
 - **FILTER-PERSIST-001** — The inventory, Filter Set order and colors, every

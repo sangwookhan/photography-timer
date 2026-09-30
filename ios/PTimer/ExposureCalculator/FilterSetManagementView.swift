@@ -7,8 +7,8 @@ import SwiftUI
 
 /// The single Filter Set management surface (FILTER-SET-001): create,
 /// rename, recolor, reorder, and delete Filter Sets, and manage each
-/// set's physical items. Reached from the persistent ND header entry
-/// and by long-pressing the Plus wheel.
+/// set's physical items. Reached by long-pressing the Plus wheel;
+/// Shooting Filters edits and adds sets from its own list.
 struct FilterSetManagementView: View {
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let onDone: () -> Void
@@ -24,12 +24,6 @@ struct FilterSetManagementView: View {
     var body: some View {
         NavigationStack {
             List {
-                if viewModel.filterInventory.filterSets.isEmpty {
-                    Section {
-                        Text("No Filter Sets yet. Create one to register the physical filters you carry.")
-                            .foregroundStyle(.secondary)
-                    }
-                }
                 ForEach(viewModel.filterInventory.filterSets) { filterSet in
                     NavigationLink {
                         FilterSetDetailView(viewModel: viewModel, filterSetID: filterSet.id)
@@ -37,6 +31,10 @@ struct FilterSetManagementView: View {
                         FilterSetRow(filterSet: filterSet)
                     }
                     .accessibilityIdentifier("filter-set-row-\(filterSet.id.rawValue)")
+                    // The built-in Default stays first and is never
+                    // deleted (FILTER-SET-002/004).
+                    .moveDisabled(filterSet.id == .defaultSet)
+                    .deleteDisabled(filterSet.id == .defaultSet)
                 }
                 .onMove { source, destination in
                     viewModel.moveFilterSets(fromOffsets: source, toOffset: destination)
@@ -269,20 +267,14 @@ struct FilterSetColorGrid: View {
     }
 }
 
-/// One Filter Set: rename, recolor, and manage its physical items.
-/// The items are shown in two tabs — auxiliary (CPL, GND, Color,
-/// Effect) and ND — without splitting the physical set or duplicating
-/// an item (FILTER-SET-001).
+/// One Filter Set: rename, recolor, and manage its physical items in
+/// one list, ND first, then Color, Effect, CPL, GND, each kind by name,
+/// with one Add Filter action and no manual reorder (FILTER-SET-001,
+/// FILTER-ITEM-001).
 struct FilterSetDetailView: View {
-    enum ItemTab: Hashable {
-        case auxiliary
-        case nd
-    }
-
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let filterSetID: FilterSetID
 
-    @State private var itemTab: ItemTab = .auxiliary
     @State private var nameDraft: String = ""
     @FocusState private var isNameFieldFocused: Bool
     @State private var editingItem: FilterItemEditorContext?
@@ -320,20 +312,12 @@ struct FilterSetDetailView: View {
                 }
 
                 Section {
-                    Picker("Filters", selection: $itemTab) {
-                        Text(AuxiliaryFilterSummaryPresenter.title).tag(ItemTab.auxiliary)
-                        Text("ND").tag(ItemTab.nd)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("filter-set-item-tab")
-                    let visibleItems = itemTab == .auxiliary ? filterSet.auxiliaryItems : filterSet.ndItems
-                    if visibleItems.isEmpty {
-                        Text(itemTab == .auxiliary
-                            ? "No auxiliary filters registered yet."
-                            : "No ND filters registered yet.")
+                    let orderedItems = FilterSetItemOrder.ordered(filterSet.items)
+                    if orderedItems.isEmpty {
+                        Text("No filters registered yet.")
                             .foregroundStyle(.secondary)
                     }
-                    ForEach(visibleItems) { item in
+                    ForEach(orderedItems) { item in
                         Button {
                             editingItem = FilterItemEditorContext(filterSetID: filterSetID, item: item)
                         } label: {
@@ -342,30 +326,23 @@ struct FilterSetDetailView: View {
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
                     }
-                    .onMove { source, destination in
-                        // The tab lists a filtered view of the one item
-                        // list; map the move back onto the full list so
-                        // the physical set is never split.
-                        guard let move = Self.fullListMove(visible: visibleItems, all: filterSet.items, fromOffsets: source, toOffset: destination) else { return }
-                        viewModel.moveFilterItems(in: filterSetID, fromOffsets: IndexSet(integer: move.from), toOffset: move.to)
-                    }
                     .onDelete { offsets in
                         // One row per delete gesture; see the set list.
                         guard offsets.count == 1, let index = offsets.first,
-                              visibleItems.indices.contains(index) else { return }
-                        pendingItemDeletion = visibleItems[index]
+                              orderedItems.indices.contains(index) else { return }
+                        pendingItemDeletion = orderedItems[index]
                     }
-                    // Each tab adds only its own kinds: auxiliary filters
-                    // from the Auxiliary tab, ND filters from the ND tab.
+                    // One Add Filter action; the new filter starts as ND
+                    // in this set, and its type and set are chosen in the
+                    // editor (FILTER-ITEM-003/009).
                     Button {
                         editingItem = FilterItemEditorContext(
                             filterSetID: filterSetID,
                             item: nil,
-                            category: itemTab == .auxiliary ? .auxiliary : .nd,
                             initialUnit: editorSession.initialUnit
                         )
                     } label: {
-                        Label(itemTab == .auxiliary ? "Add auxiliary filter" : "Add ND filter", systemImage: "plus.circle")
+                        Label("Add filter", systemImage: "plus.circle")
                     }
                     .accessibilityIdentifier("filter-item-add-button")
                 } header: {
@@ -440,26 +417,6 @@ struct FilterSetDetailView: View {
             Text("This Filter Set no longer exists.")
                 .foregroundStyle(.secondary)
         }
-    }
-
-    /// Maps a move inside the tab's filtered list onto the full item
-    /// list: the moved item's full index, and the full index it lands
-    /// before (or the end). `nil` for a multi-row or out-of-range move.
-    static func fullListMove(visible: [FilterItem], all: [FilterItem], fromOffsets source: IndexSet, toOffset destination: Int) -> (from: Int, to: Int)? {
-        guard source.count == 1, let visibleFrom = source.first,
-              visible.indices.contains(visibleFrom),
-              let from = all.firstIndex(where: { $0.id == visible[visibleFrom].id }) else {
-            return nil
-        }
-        let to: Int
-        if destination >= visible.count {
-            guard let last = visible.last, let lastIndex = all.firstIndex(where: { $0.id == last.id }) else { return nil }
-            to = lastIndex + 1
-        } else {
-            guard let index = all.firstIndex(where: { $0.id == visible[destination].id }) else { return nil }
-            to = index
-        }
-        return (from, to)
     }
 
     private func commitRename() {

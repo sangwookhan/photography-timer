@@ -5,49 +5,26 @@ import PTimerCore
 import PTimerKit
 import SwiftUI
 
-/// `.sheet(item:)` payload for the item editor: the owning set, the
-/// item being edited (`nil` when creating), and — for a new item —
-/// the notation the editing session remembers from the last saved
-/// Fixed or GND item (FILTER-ITEM-007). The kind always starts Fixed.
+/// `.sheet(item:)` payload for the item editor: the Filter Set it
+/// starts in, the item being edited (`nil` when creating), and — for a
+/// new item — the notation the editing session remembers from the last
+/// saved ND or GND item (FILTER-ITEM-007). A new item starts as ND
+/// (FILTER-ITEM-003) in Default when Add Filter comes from Shooting
+/// Filters, or in the Filter Set whose editor it comes from
+/// (FILTER-ITEM-009).
 struct FilterItemEditorContext: Identifiable {
-    /// Which editing path opened the editor: the Filter Set's Auxiliary
-    /// tab (CPL, GND, Color, Effect) or its ND tab (ND items only). An
-    /// existing item's own kind decides it.
-    enum Category {
-        case auxiliary
-        case nd
-
-        init(kind: FilterItemKind) {
-            self = kind.isAuxiliary ? .auxiliary : .nd
-        }
-
-        /// The kinds a new item on this path may take.
-        var kinds: [FilterItemKind] {
-            switch self {
-            case .auxiliary:
-                return FilterItemKind.allCases.filter(\.isAuxiliary)
-            case .nd:
-                return [.fixed]
-            }
-        }
-    }
-
-    /// Kinds the editor offers: a new item stays within its tab's
-    /// kinds; an existing item may be corrected to any kind (for
-    /// example an ND item entered by mistake becomes a Color filter).
-    var selectableKinds: [FilterItemKind] {
-        item == nil ? category.kinds : FilterItemKind.allCases
-    }
+    /// Every kind, ND first, for new and existing items alike: the type
+    /// is chosen inside the editor, and an existing item may be
+    /// corrected to any kind (FILTER-ITEM-003/008).
+    let selectableKinds = FilterSetItemOrder.kinds
 
     let filterSetID: FilterSetID
     let item: FilterItem?
-    var category: Category
     var initialUnit: FilterValueUnit = .stops
 
-    init(filterSetID: FilterSetID, item: FilterItem?, category: Category? = nil, initialUnit: FilterValueUnit = .stops) {
+    init(filterSetID: FilterSetID, item: FilterItem?, initialUnit: FilterValueUnit = .stops) {
         self.filterSetID = filterSetID
         self.item = item
-        self.category = item.map { Category(kind: $0.behavior.kind) } ?? category ?? .nd
         self.initialUnit = initialUnit
     }
 
@@ -56,9 +33,11 @@ struct FilterItemEditorContext: Identifiable {
     }
 }
 
-/// Registers or edits one physical filter (FILTER-ITEM-002/003/004,
-/// FILTER-CPL-001…004, FILTER-GND-001/003, FILTER-COLOR-001/002). The
-/// kind is chosen explicitly; Fixed and GND take a decimal value in
+/// Registers or edits one physical filter (FILTER-ITEM-002/003/004/009,
+/// FILTER-CPL-001…004, FILTER-GND-001/003, FILTER-COLOR-001/002). A new
+/// or existing filter chooses its Filter Set here, or creates one
+/// inline and comes back with it selected and the entered values kept.
+/// The kind is chosen explicitly; Fixed and GND take a decimal value in
 /// Stops, OD, or ND factor and show the canonical conversion; a CPL
 /// exposes its three exposure-loss fields on a decimal-capable numeric
 /// keyboard; a Color filter records its optical color beside an
@@ -73,6 +52,11 @@ struct FilterItemEditorView: View {
     /// session can remember a new item's notation (FILTER-ITEM-007).
     var onSaved: (FilterItem) -> Void = { _ in }
 
+    /// Where the filter is saved; an existing filter starts in the set
+    /// that holds it.
+    @State private var filterSetID: FilterSetID
+    /// Filter Set creation opened from the Filter Set field.
+    @State private var creationDraft: FilterSetDraft?
     @State private var name: String
     @State private var kind: FilterItemKind
     @State private var valueText: String
@@ -107,11 +91,11 @@ struct FilterItemEditorView: View {
         self.onSaved = onSaved
         self.onDismiss = onDismiss
         let item = context.item
+        _filterSetID = State(initialValue: item.flatMap { viewModel.filterInventory.item(withID: $0.id)?.filterSet.id } ?? context.filterSetID)
         _name = State(initialValue: item?.name ?? "")
-        // The kind never inherits from the previous item: a new ND item
-        // is ND, and a new auxiliary item starts at the first
-        // auxiliary kind (FILTER-ITEM-007, FILTER-SET-001).
-        _kind = State(initialValue: item?.behavior.kind ?? context.category.kinds[0])
+        // The kind never inherits from the previous item: every new
+        // item starts as ND (FILTER-ITEM-003/007).
+        _kind = State(initialValue: item?.behavior.kind ?? FilterSetItemOrder.newItemKind)
         _opticalColor = State(initialValue: item?.behavior.opticalColor ?? .red)
         switch item?.behavior {
         case .fixed(let value), .gnd(let value):
@@ -213,28 +197,24 @@ struct FilterItemEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                filterSetSection
+
                 Section {
                     TextField("Filter name", text: $name)
                         .textInputAutocapitalization(.words)
                         .focused($focusedField, equals: .name)
                         .accessibilityIdentifier("filter-item-name-field")
-                    // The auxiliary path offers only auxiliary kinds; the
-                    // ND path has one kind and shows no picker.
-                    if context.selectableKinds.count > 1 {
-                        Picker("Kind", selection: $kind) {
-                            ForEach(context.selectableKinds, id: \.self) { kind in
-                                Text(FilterWheelPresenter.kindName(kind)).tag(kind)
-                            }
+                    Picker("Kind", selection: $kind) {
+                        ForEach(context.selectableKinds, id: \.self) { kind in
+                            Text(FilterWheelPresenter.kindName(kind)).tag(kind)
                         }
-                        .pickerStyle(.segmented)
-                        .accessibilityIdentifier("filter-item-kind-picker")
                     }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("filter-item-kind-picker")
                 } header: {
-                    Text(context.item == nil ? (context.category == .auxiliary ? "Auxiliary filter" : "ND filter") : "Filter")
+                    Text("Filter")
                 } footer: {
-                    if context.selectableKinds.count > 1 {
-                        Text("The kind is your choice; the app never guesses it from the name.")
-                    }
+                    Text("The kind is your choice; the app never guesses it from the name.")
                 }
 
                 switch kind {
@@ -296,8 +276,44 @@ struct FilterItemEditorView: View {
                     DispatchQueue.main.async { focusedField = .name }
                 }
             }
+            .sheet(item: $creationDraft) { draft in
+                FilterSetEditorSheet(
+                    draft: draft,
+                    onSave: { saved in
+                        // Back in this editor with the new set selected;
+                        // the entered values are this view's state and
+                        // stay as they were.
+                        if let created = viewModel.createFilterSet(name: saved.name, color: saved.color) {
+                            filterSetID = created.id
+                        }
+                        creationDraft = nil
+                    },
+                    onCancel: { creationDraft = nil }
+                )
+            }
         }
         .presentationDragIndicator(.visible)
+    }
+
+    /// The Filter Set the filter is saved into, always visible and
+    /// enabled (FILTER-ITEM-009): Default and every user set, plus Add
+    /// Filter Set. Saving an existing filter into another set moves it
+    /// there with its identity.
+    private var filterSetSection: some View {
+        Section {
+            Picker("Filter Set", selection: $filterSetID) {
+                ForEach(viewModel.filterInventory.filterSets) { filterSet in
+                    Text(filterSet.name).tag(filterSet.id)
+                }
+            }
+            .accessibilityIdentifier("filter-item-filter-set-picker")
+            Button {
+                creationDraft = FilterSetDraft(name: "", color: viewModel.suggestFilterSetCreationColor())
+            } label: {
+                Label("Add Filter Set", systemImage: "plus.circle")
+            }
+            .accessibilityIdentifier("filter-item-add-filter-set-button")
+        }
     }
 
     private var valueSection: some View {
@@ -421,7 +437,7 @@ struct FilterItemEditorView: View {
             name: trimmedName,
             behavior: behavior
         )
-        switch viewModel.saveFilterItem(item, in: context.filterSetID) {
+        switch viewModel.saveFilterItem(item, in: filterSetID) {
         case .saved:
             onSaved(item)
             onDismiss()

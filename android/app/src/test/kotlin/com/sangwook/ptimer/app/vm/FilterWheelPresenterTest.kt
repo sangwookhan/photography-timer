@@ -44,7 +44,7 @@ class FilterWheelPresenterTest {
         FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, null))),
     )
 
-    private val filterSet = FilterSet("Lee holder", FilterSetColor.indigo, listOf(bigStopper, gnd, cpl))
+    private val filterSet = FilterSet("Lee holder", FilterSetColor.blue, listOf(bigStopper, gnd, cpl))
     private val inventory = FilterInventory(listOf(filterSet))
     private val source = FilterSource.FilterSet(filterSet.id)
 
@@ -70,34 +70,14 @@ class FilterWheelPresenterTest {
         )
     }
 
-    @Test
-    fun gndShowsItsRegisteredDensityInBothModesWithTheGndCategory() {
-        for (mode in listOf(GndCalculationMode.recordOnly, GndCalculationMode.applyFullValue)) {
-            val stops = row(NDNotationMode.STOPS, "Lee GND 0.9", mode)
-            val od = row(NDNotationMode.OPTICAL_DENSITY, "Lee GND 0.9", mode)
-            assertEquals("3", stops.compactValueText)
-            assertEquals("0.9", od.compactValueText)
-            assertEquals(FilterRowTypeCategory.gnd, stops.typeCategory)
-            assertEquals(mode, stops.gndMode)
-            assertEquals(3.0, stops.registeredStops, 1e-9)
-        }
-        // Only the contribution differs between the two modes.
-        assertEquals(0.0, row(NDNotationMode.STOPS, "Lee GND 0.9", GndCalculationMode.recordOnly).contributionStops, 1e-9)
-        assertEquals(
-            3.0,
-            row(NDNotationMode.STOPS, "Lee GND 0.9", GndCalculationMode.applyFullValue).contributionStops,
-            1e-9,
-        )
-    }
+
 
     @Test
-    fun cplChoicesStayExposureLossInStopsInEveryNotation() {
+    fun auxiliaryItemsAreNeverWheelRows() {
+        // FILTER-STACK-003: the set's CPL and GND are mounted from the
+        // shooting popup, so the ND wheel offers Empty and its ND item.
         for (mode in NDNotationMode.entries) {
-            val cplRows = rows(mode).filter { it.itemName == "Lee CPL" }
-            assertEquals(listOf("1", "1.5"), cplRows.map { it.compactValueText })
-            assertEquals(listOf(1.0, 1.5), cplRows.map { it.cplLossStops })
-            assertEquals(listOf(FilterRowTypeCategory.cpl, FilterRowTypeCategory.cpl), cplRows.map { it.typeCategory })
-            assertNull("A CPL row carries choices, not a registered value.", cplRows[0].registeredValue)
+            assertEquals(listOf(null, "Big Stopper"), rows(mode).map { it.itemName })
         }
     }
 

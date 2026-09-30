@@ -28,7 +28,10 @@ public final class FilterInventoryModel: ObservableObject {
         initial: FilterInventory = .empty
     ) {
         self.store = store
-        self.inventory = store.loadSnapshot()?.restoredInventory ?? initial
+        // The Default Filter Set always exists (FILTER-SET-002). An
+        // inventory stored before it existed gains it here; it is
+        // written back with the next change.
+        self.inventory = (store.loadSnapshot()?.restoredInventory ?? initial).ensuringDefaultFilterSet()
     }
 
     public var filterSets: [FilterSet] {
@@ -86,16 +89,23 @@ public final class FilterInventoryModel: ObservableObject {
     }
 
     /// Reorders Filter Sets with `Array.move` semantics (the SwiftUI
-    /// `onMove` shape). Ids never change.
+    /// `onMove` shape). Ids never change, and Default stays first
+    /// (FILTER-SET-004).
     public func moveFilterSets(fromOffsets source: IndexSet, toOffset destination: Int) {
         guard !source.isEmpty else { return }
-        inventory.filterSets.move(fromOffsets: source, toOffset: destination)
+        var moved = inventory
+        moved.filterSets.move(fromOffsets: source, toOffset: destination)
+        moved = moved.ensuringDefaultFilterSet()
+        guard moved != inventory else { return }
+        inventory = moved
         persist()
     }
 
     /// Removes a Filter Set and every item it holds. Stack cleanup for
     /// wheels that referenced the set is the facade's responsibility.
+    /// The Default Filter Set is never deleted (FILTER-SET-002).
     public func deleteFilterSet(id: FilterSetID) {
+        guard id != .defaultSet else { return }
         let before = inventory.filterSets.count
         inventory.filterSets.removeAll { $0.id == id }
         if inventory.filterSets.count != before {

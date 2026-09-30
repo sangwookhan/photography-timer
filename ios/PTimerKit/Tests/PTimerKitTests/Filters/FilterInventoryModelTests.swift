@@ -14,17 +14,51 @@ final class FilterInventoryModelTests: XCTestCase {
         let model = FilterInventoryModel()
         let first = try XCTUnwrap(model.createFilterSet(name: "Lee", color: .red))
         let second = try XCTUnwrap(model.createFilterSet(name: "NiSi", color: .red), "Duplicate colors are allowed.")
-        XCTAssertEqual(model.filterSets.map(\.id), [first.id, second.id])
+        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet, first.id, second.id], "Default comes first.")
         XCTAssertNil(model.createFilterSet(name: "   ", color: .blue), "A blank name creates nothing.")
 
         model.renameFilterSet(id: first.id, name: "  Lee 100  ")
         model.recolorFilterSet(id: first.id, color: .green)
-        model.moveFilterSets(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+        model.moveFilterSets(fromOffsets: IndexSet(integer: 2), toOffset: 0)
 
-        XCTAssertEqual(model.filterSets.map(\.id), [second.id, first.id])
+        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet, second.id, first.id], "A set dropped above Default still follows it.")
         XCTAssertEqual(model.filterSet(withID: first.id)?.name, "Lee 100")
         XCTAssertEqual(model.filterSet(withID: first.id)?.color, .green)
-        XCTAssertEqual(model.inventory.sources, [.standard, .filterSet(second.id), .filterSet(first.id)])
+        XCTAssertEqual(model.inventory.sources, [.standard, .filterSet(.defaultSet), .filterSet(second.id), .filterSet(first.id)])
+    }
+
+    /// FILTER-SET-002/004: the built-in Default Filter Set always
+    /// exists, comes first, keeps its id through rename and recolor, and
+    /// cannot be deleted. An inventory stored before it existed gains it
+    /// ahead of the user's sets without reordering them.
+    func testDefaultFilterSetIsBuiltInFirstEditableAndNeverDeleted() throws {
+        let store = InMemoryFilterInventoryStore()
+        let model = FilterInventoryModel(store: store)
+        XCTAssertEqual(model.filterSets, [FilterInventory.defaultFilterSet])
+        XCTAssertEqual(model.filterSets[0].name, "Default")
+        XCTAssertTrue(model.filterSets[0].items.isEmpty)
+
+        model.renameFilterSet(id: .defaultSet, name: "Bag")
+        model.recolorFilterSet(id: .defaultSet, color: .green)
+        let nd = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        model.addItem(nd, to: .defaultSet)
+        model.deleteFilterSet(id: .defaultSet)
+        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet], "Default is never deleted.")
+
+        let restored = FilterInventoryModel(store: store)
+        let restoredDefault = try XCTUnwrap(restored.filterSet(withID: .defaultSet))
+        XCTAssertEqual(restoredDefault.name, "Bag")
+        XCTAssertEqual(restoredDefault.color, .green)
+        XCTAssertEqual(restoredDefault.items, [nd])
+
+        let json = """
+        { "schemaVersion": 1, "filterSets": [
+            { "id": "s1", "name": "Lee", "color": "red", "items": [] },
+            { "id": "s2", "name": "NiSi", "color": "blue", "items": [] } ] }
+        """
+        let older = InMemoryFilterInventoryStore()
+        older.stored = PersistentFilterInventorySnapshot.decode(from: Data(json.utf8)).snapshot
+        XCTAssertEqual(FilterInventoryModel(store: older).filterSets.map(\.id.rawValue), ["default", "s1", "s2"])
     }
 
     func testColorSuggestionDiffersFromThePreviousSuggestion() {
@@ -63,7 +97,7 @@ final class FilterInventoryModelTests: XCTestCase {
         XCTAssertEqual(model.filterSet(withID: set.id)?.items.count, 1, "Malformed items are refused.")
 
         model.deleteFilterSet(id: set.id)
-        XCTAssertTrue(model.filterSets.isEmpty)
+        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet])
     }
 
     // MARK: Persistence
@@ -83,7 +117,7 @@ final class FilterInventoryModelTests: XCTestCase {
         model.addItem(red, to: set.id)
         model.addItem(night, to: set.id)
 
-        let redRecord = try XCTUnwrap(store.stored?.filterSets.first?.items.first { $0.id == red.id.rawValue })
+        let redRecord = try XCTUnwrap(store.stored?.filterSets.first { $0.id == set.id.rawValue }?.items.first { $0.id == red.id.rawValue })
         XCTAssertEqual(redRecord.kind, "color")
         XCTAssertEqual(redRecord.opticalColor, "red")
         XCTAssertEqual(redRecord.value, 3)

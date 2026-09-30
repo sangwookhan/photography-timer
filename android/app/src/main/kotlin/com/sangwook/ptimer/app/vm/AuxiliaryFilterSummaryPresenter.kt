@@ -96,10 +96,11 @@ object AuxiliaryFilterSummaryPresenter {
     /**
      * The deterministic concise-name rule for a compact Main row, longest
      * candidate first; the view shows the first that fits.
-     * - A CPL or GND is identified by its type (`CPL`, `GND`) when it is
-     *   the only mounted item of that type; with two of the same type, by
-     *   name so they stay distinct (`Soft GND`, `Hard GND`).
-     * - A Color or Effect item is identified by name.
+     * - A CPL is identified as `CPL` when it is the only mounted CPL; with
+     *   two, by name so they stay distinct.
+     * - A GND, Color, or Effect item is identified by name
+     *   (FILTER-AUX-006: a GND by its distinguishing name, so equal Hard
+     *   and Soft densities never read alike).
      * - A name's candidates are the whole name, then the words before the
      *   first word that contains a digit (`Soft GND 2` → `Soft GND`,
      *   `MARUMI Red 25A` → `MARUMI Red`), then the first word (`MARUMI`).
@@ -109,9 +110,7 @@ object AuxiliaryFilterSummaryPresenter {
     fun compactLabels(row: ResolvedAuxiliaryFilter, rows: List<ResolvedAuxiliaryFilter>): List<String> {
         val kind = row.item.behavior.kind
         val sameKind = rows.filter { it.item.behavior.kind == kind }
-        if ((kind == FilterItemKind.cpl || kind == FilterItemKind.gnd) && sameKind.size == 1) {
-            return listOf(if (kind == FilterItemKind.cpl) "CPL" else "GND")
-        }
+        if (kind == FilterItemKind.cpl && sameKind.size == 1) return listOf("CPL")
         val others = sameKind.filter { it.item.id != row.item.id }.map { nameCandidates(it.item.name) }
         val candidates = nameCandidates(row.item.name)
         val whole = candidates.firstOrNull() ?: return listOf(row.item.name)

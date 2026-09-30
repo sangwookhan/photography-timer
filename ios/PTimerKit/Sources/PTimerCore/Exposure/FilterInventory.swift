@@ -244,17 +244,6 @@ public enum FilterItemKind: String, CaseIterable, Sendable {
     }
 }
 
-/// Optical color of a Color filter (FILTER-COLOR-001) — equipment
-/// identity separate from the source-set color and from the loss.
-/// Persisted by `rawValue`, shared by both platforms.
-public enum FilterOpticalColor: String, CaseIterable, Sendable {
-    case red
-    case orange
-    case yellow
-    case yellowGreen
-    case green
-}
-
 /// User-supplied exposure loss of a Color or Effect filter, in stops
 /// (FILTER-COLOR-001/002). Distinct from `FilterRegisteredValue`: no
 /// unit conversion, and zero is allowed so a filter with no measurable
@@ -278,8 +267,9 @@ public enum FilterItemBehavior: Hashable, Sendable {
     case fixed(FilterRegisteredValue)
     case cpl(CPLExposureLossChoices)
     case gnd(FilterRegisteredValue)
-    /// A Color filter: its optical color and its explicit loss.
-    case color(FilterExposureLoss, FilterOpticalColor)
+    /// A Color filter: its explicit loss and its color, chosen from the
+    /// same palette as Filter Sets (FILTER-COLOR-001).
+    case color(FilterExposureLoss, FilterSetColor)
     /// An Effect filter (for example a night light-pollution filter)
     /// with its explicit loss.
     case effect(FilterExposureLoss)
@@ -315,8 +305,8 @@ public enum FilterItemBehavior: Hashable, Sendable {
         }
     }
 
-    /// The optical color of a Color item; `nil` otherwise.
-    public var opticalColor: FilterOpticalColor? {
+    /// The color of a Color item; `nil` otherwise.
+    public var opticalColor: FilterSetColor? {
         if case .color(_, let color) = self {
             return color
         }

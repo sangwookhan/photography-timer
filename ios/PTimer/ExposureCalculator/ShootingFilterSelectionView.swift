@@ -274,7 +274,7 @@ private struct AuxiliaryItemSelectionRow: View {
                     HStack(spacing: 5) {
                         if let color = item.behavior.opticalColor {
                             Circle()
-                                .fill(Color.filterOptical(color))
+                                .fill(Color.filterSet(color))
                                 .frame(width: 10, height: 10)
                                 .accessibilityHidden(true)
                         }

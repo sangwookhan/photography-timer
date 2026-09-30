@@ -136,7 +136,7 @@ struct AuxiliaryFilterSummaryView: View {
     private func opticalDot(_ item: AuxiliaryFilterSummaryItemDisplay) -> some View {
         if let opticalColor = item.opticalColor {
             Circle()
-                .fill(Color.filterOptical(opticalColor))
+                .fill(Color.filterSet(opticalColor))
                 .frame(width: 6, height: 6)
         }
     }

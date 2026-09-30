@@ -126,7 +126,7 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
     public let unit: String?
     /// The three CPL fields; `null` entries are empty fields.
     public let cplChoices: [Double?]?
-    /// `FilterOpticalColor.rawValue` for Color items. Additive: Color
+    /// `FilterSetColor.rawValue` of a Color item's color. Additive: Color
     /// and Effect items store their loss in `value` (always stops, so
     /// `unit` stays `nil`) and pre-Color records omit this key.
     public let opticalColor: String?
@@ -178,7 +178,7 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
             }
             behavior = .cpl(CPLExposureLossChoices(fields: cplChoices))
         case .color:
-            guard let value, let colorRaw = opticalColor, let color = FilterOpticalColor(rawValue: colorRaw) else {
+            guard let value, let colorRaw = opticalColor, let color = FilterSetColor(rawValue: colorRaw) else {
                 return nil
             }
             behavior = .color(FilterExposureLoss(stops: value), color)

@@ -406,15 +406,23 @@ public enum FilterWheelPresenter {
         }
     }
 
-    /// Localized optical color name of a Color filter
-    /// (FILTER-COLOR-001) — always shown as text beside any swatch.
-    public static func opticalColorName(_ color: FilterOpticalColor) -> String {
+    /// Localized name of a palette color — a Filter Set's color or a
+    /// Color filter's color (FILTER-COLOR-001, FILTER-SET-005). Color is
+    /// never the only cue, so the name is shown or spoken beside it.
+    public static func opticalColorName(_ color: FilterSetColor) -> String {
         switch color {
         case .red: return String(localized: "Red")
         case .orange: return String(localized: "Orange")
         case .yellow: return String(localized: "Yellow")
-        case .yellowGreen: return String(localized: "Yellow-green")
         case .green: return String(localized: "Green")
+        case .mint: return String(localized: "Mint")
+        case .teal: return String(localized: "Teal")
+        case .cyan: return String(localized: "Cyan")
+        case .blue: return String(localized: "Blue")
+        case .indigo: return String(localized: "Indigo")
+        case .purple: return String(localized: "Purple")
+        case .pink: return String(localized: "Pink")
+        case .brown: return String(localized: "Brown")
         }
     }
 

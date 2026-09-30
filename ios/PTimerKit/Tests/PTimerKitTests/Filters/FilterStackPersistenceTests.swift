@@ -108,7 +108,7 @@ final class FilterStackPersistenceTests: XCTestCase {
             .mount(gnd, in: set, .gnd(.applyFullValue)),
         ], "Identity, choice, and mode are preserved.")
         XCTAssertEqual(viewModel.ndStep.stops, 3 + 1.5 + 2 + 2, accuracy: 1e-9, "The effective total is preserved.")
-        XCTAssertEqual(viewModel.candidateFilterSetIDs, [set.id], "The referenced legacy set becomes a candidate.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [.defaultSet, set.id], "A legacy slot starts as a fresh camera with Default; the referenced set becomes a candidate.")
         XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(set.id))
 
         // The migrated shape is what persists from now on.

@@ -60,15 +60,21 @@ public struct CameraSlotCalculatorSnapshot: Equatable {
     /// Default snapshot used when a slot is initialized without prior
     /// state. Reads through `CalculatorDefaults` so a fresh slot is
     /// indistinguishable from a fresh app — one source of truth for
-    /// shipping defaults across the ViewModel and slot snapshots.
-    public static let initial = CameraSlotCalculatorSnapshot(
-        baseShutterSeconds: CalculatorDefaults.baseShutterSeconds,
-        ndStep: CalculatorDefaults.ndStep,
-        scaleMode: CalculatorDefaults.scaleMode,
-        selectedPresetFilm: nil,
-        selectedProfileOverride: nil,
-        targetShutterSeconds: nil
-    )
+    /// shipping defaults across the ViewModel and slot snapshots. A
+    /// fresh camera starts with the Default Filter Set selected
+    /// (FILTER-CAMERA-001, FILTER-SET-002).
+    public static let initial: CameraSlotCalculatorSnapshot = {
+        var snapshot = CameraSlotCalculatorSnapshot(
+            baseShutterSeconds: CalculatorDefaults.baseShutterSeconds,
+            ndStep: CalculatorDefaults.ndStep,
+            scaleMode: CalculatorDefaults.scaleMode,
+            selectedPresetFilm: nil,
+            selectedProfileOverride: nil,
+            targetShutterSeconds: nil
+        )
+        snapshot.candidateFilterSetIDs = CalculatorDefaults.candidateFilterSetIDs
+        return snapshot
+    }()
 
     /// Single-wheel convenience kept for the legacy restore path and
     /// pre-stack call sites: one Standard wheel holding `ndStep`.

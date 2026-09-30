@@ -146,7 +146,7 @@ public final class CalculatorModel {
     /// The active slot's candidate Filter Sets (FILTER-CAMERA-001), in
     /// user-defined set order. Assignment never mounts anything; every
     /// set the stack references is always a candidate.
-    public private(set) var candidateFilterSetIDs: [FilterSetID] = []
+    public private(set) var candidateFilterSetIDs: [FilterSetID] = CalculatorDefaults.candidateFilterSetIDs
 
     /// Stable per-wheel identity (PTIMER-199 §4.3): `ndFilterWheelIDs[i]`
     /// names the wheel at `filterWheels[i]` and follows it through
@@ -942,6 +942,59 @@ extension CalculatorModel {
         switch filterStack.replacingAuxiliaryFilters(with: mounts, inventory: filterInventory) {
         case .success(let replaced):
             filterStack = replaced
+            normalizeCandidatesAndLastSource()
+            return nil
+        case .failure(let rejection):
+            return rejection
+        }
+    }
+
+    /// The stack a Shooting Filters session would commit
+    /// (FILTER-AUX-003, FILTER-CAMERA-003): this camera's ND wheels
+    /// without those from sets the session leaves unselected — one
+    /// Standard 0-stop wheel when none is left — with `mounts` as the
+    /// mounted auxiliary filters, and the identities of the surviving
+    /// wheels. A rejection names why the session cannot be applied.
+    func shootingFiltersStack(
+        selectedFilterSetIDs selected: Set<FilterSetID>,
+        mounts: [MountedAuxiliaryFilter]
+    ) -> (result: Result<FilterStack, FilterStackRejection>, wheelIDs: [Int]) {
+        var wheels: [FilterWheel] = []
+        var ids: [Int] = []
+        for (wheel, wheelID) in zip(filterStack.wheels, ndFilterWheelIDs) {
+            if let setID = wheel.source.filterSetID, !selected.contains(setID) {
+                continue
+            }
+            wheels.append(wheel)
+            ids.append(wheelID)
+        }
+        if wheels.isEmpty {
+            wheels = [.standard(NDStep(stops: 0))]
+            ids = [makeNDFilterWheelID()]
+        }
+        guard let remaining = FilterStack.validated(wheels: wheels, inventory: filterInventory) else {
+            return (.failure(.unresolvedSelection), ids)
+        }
+        return (remaining.replacingAuxiliaryFilters(with: mounts, inventory: filterInventory), ids)
+    }
+
+    /// Commits a Shooting Filters session at once (FILTER-AUX-003,
+    /// FILTER-CAMERA-003): the selected Filter Sets become this camera's
+    /// candidates in their selection order (FILTER-SET-004), `mounts`
+    /// its auxiliary filters, and the ND wheels of the sets left
+    /// unselected are removed. Returns the rejection — leaving
+    /// everything unchanged — when the domain refuses it.
+    @discardableResult
+    public func applyShootingFilters(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter]
+    ) -> FilterStackRejection? {
+        let (result, ids) = shootingFiltersStack(selectedFilterSetIDs: Set(selected), mounts: mounts)
+        switch result {
+        case .success(let stack):
+            filterStack = stack
+            ndFilterWheelIDs = ids
+            candidateFilterSetIDs = selected
             normalizeCandidatesAndLastSource()
             return nil
         case .failure(let rejection):

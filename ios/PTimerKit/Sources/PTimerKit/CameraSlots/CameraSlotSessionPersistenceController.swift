@@ -208,7 +208,11 @@ public struct CameraSlotSessionPersistenceController {
             baseShutterSeconds: entry.baseShutterSeconds ?? CalculatorDefaults.baseShutterSeconds,
             filterStack: stack,
             candidateFilterSetIDs: inventory.normalizedCandidateFilterSetIDs(
-                (entry.candidateFilterSetIDs ?? []).map(FilterSetID.init(rawValue:)),
+                // A slot stored before it had any selection starts with
+                // a fresh camera's (FILTER-CAMERA-001); an emptied
+                // selection is stored as an empty list.
+                entry.candidateFilterSetIDs.map { $0.map(FilterSetID.init(rawValue:)) }
+                    ?? CalculatorDefaults.candidateFilterSetIDs,
                 referencedBy: stack.wheels,
                 auxiliaryFilters: stack.auxiliaryFilters
             ),
@@ -415,11 +419,13 @@ public struct CameraSlotSessionPersistenceController {
                 ? PersistentFilterWheelSnapshot.standardSourceKind
                 : PersistentFilterWheelSnapshot.filterSetSourceKind,
             lastFilterSetID: snapshot.lastFilterSource.filterSetID?.rawValue,
-            // Auxiliary filters and candidates are additive: written
-            // whenever present, omitted otherwise so a slot that never
-            // used them keeps the pre-auxiliary shape.
+            // Auxiliary filters are additive: written whenever present,
+            // omitted otherwise so a slot that never used them keeps the
+            // pre-auxiliary shape. Candidates are always written, an
+            // empty list included, so a camera whose sets were all
+            // removed does not restore as a fresh camera with Default.
             auxiliaryFilters: snapshot.auxiliaryFilters.isEmpty ? nil : persistentAuxiliaryFilters(snapshot.auxiliaryFilters),
-            candidateFilterSetIDs: snapshot.candidateFilterSetIDs.isEmpty ? nil : snapshot.candidateFilterSetIDs.map(\.rawValue)
+            candidateFilterSetIDs: snapshot.candidateFilterSetIDs.map(\.rawValue)
         )
     }
 

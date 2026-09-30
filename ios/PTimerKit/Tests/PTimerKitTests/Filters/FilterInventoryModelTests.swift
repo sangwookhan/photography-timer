@@ -10,7 +10,7 @@ import PTimerCore
 @MainActor
 final class FilterInventoryModelTests: XCTestCase {
 
-    func testCreatedFilterSetsAppendInUserOrderAndKeepIDsThroughRenameRecolorReorder() throws {
+    func testCreatedFilterSetsFollowDefaultAndKeepIDsThroughRenameAndRecolor() throws {
         let model = FilterInventoryModel()
         let first = try XCTUnwrap(model.createFilterSet(name: "Lee", color: .red))
         let second = try XCTUnwrap(model.createFilterSet(name: "NiSi", color: .red), "Duplicate colors are allowed.")
@@ -19,12 +19,11 @@ final class FilterInventoryModelTests: XCTestCase {
 
         model.renameFilterSet(id: first.id, name: "  Lee 100  ")
         model.recolorFilterSet(id: first.id, color: .green)
-        model.moveFilterSets(fromOffsets: IndexSet(integer: 2), toOffset: 0)
 
-        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet, second.id, first.id], "A set dropped above Default still follows it.")
+        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet, first.id, second.id])
         XCTAssertEqual(model.filterSet(withID: first.id)?.name, "Lee 100")
         XCTAssertEqual(model.filterSet(withID: first.id)?.color, .green)
-        XCTAssertEqual(model.inventory.sources, [.standard, .filterSet(.defaultSet), .filterSet(second.id), .filterSet(first.id)])
+        XCTAssertEqual(model.inventory.sources, [.standard, .filterSet(.defaultSet), .filterSet(first.id), .filterSet(second.id)])
     }
 
     /// FILTER-SET-002/004: the built-in Default Filter Set always
@@ -86,7 +85,18 @@ final class FilterInventoryModelTests: XCTestCase {
         model.updateItem(edited)
         XCTAssertEqual(model.item(withID: a.id)?.item, edited)
 
-        model.moveItems(in: set.id, fromOffsets: IndexSet(integer: 1), toOffset: 0)
+        // FILTER-ITEM-009: an existing item moves to another set with
+        // its id and edits, in one change.
+        let other = try XCTUnwrap(model.createFilterSet(name: "Pouch", color: .orange))
+        var renamed = edited
+        renamed.name = "Hoya GND"
+        model.moveItem(renamed, to: other.id)
+        XCTAssertEqual(model.filterSet(withID: set.id)?.items.map(\.id), [b.id])
+        XCTAssertEqual(model.filterSet(withID: other.id)?.items, [renamed])
+        XCTAssertEqual(model.item(withID: a.id)?.filterSet.id, other.id)
+        model.moveItem(renamed, to: other.id)
+        XCTAssertEqual(model.filterSet(withID: other.id)?.items.count, 1, "Moving into its own set changes nothing.")
+        model.moveItem(renamed, to: set.id)
         XCTAssertEqual(model.filterSet(withID: set.id)?.items.map(\.id), [b.id, a.id])
 
         model.deleteItem(id: b.id)
@@ -97,7 +107,7 @@ final class FilterInventoryModelTests: XCTestCase {
         XCTAssertEqual(model.filterSet(withID: set.id)?.items.count, 1, "Malformed items are refused.")
 
         model.deleteFilterSet(id: set.id)
-        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet])
+        XCTAssertEqual(model.filterSets.map(\.id), [.defaultSet, other.id])
     }
 
     // MARK: Persistence

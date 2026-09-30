@@ -162,7 +162,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.ndStep.stops, 30, accuracy: 1e-9)
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.contributionStops), [0])
         XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 30))], "Mounting never touches the ND wheels.")
-        XCTAssertEqual(viewModel.candidateFilterSetIDs, [set.id], "A mounted set is a candidate.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [.defaultSet, set.id], "A mounted set is a candidate, after the fresh camera's Default.")
         XCTAssertEqual(viewModel.occupiedFilterSpaceCount, 2)
 
         // Example 6: enabling the contribution is rejected, state intact.
@@ -780,12 +780,11 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(timer.filterSummary?[0].itemKind, .color)
         XCTAssertEqual(timer.filterSummary?[0].contributedStops, 3)
 
-        // Rename, edit, reorder, delete — the captured record never moves.
+        // Rename, edit, delete — the captured record never moves.
         viewModel.renameFilterSet(id: haida.id, name: "Renamed")
         var edited = nd400
         edited.name = "Edited"
         XCTAssertEqual(viewModel.saveFilterItem(edited, in: haida.id), .saved)
-        viewModel.moveFilterItems(in: haida.id, fromOffsets: IndexSet(integer: 1), toOffset: 0)
         viewModel.deleteFilterSet(id: haida.id)
         XCTAssertEqual(viewModel.timers.first?.filterReferenceText, expected)
         XCTAssertEqual(viewModel.timers.first?.filterSummary, timer.filterSummary)
@@ -1311,7 +1310,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedFilterSource, .standard)
         viewModel.addFilterWheel(from: .filterSet(ndSet.id))
         XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(ndSet.id))
-        XCTAssertEqual(viewModel.candidateFilterSetIDs, [ndSet.id])
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [.defaultSet, ndSet.id], "Added after Default, which a fresh camera starts with.")
     }
 
     // MARK: FILTER-STACK-001 / FILTER-AUX-003 — the wheel limit with auxiliary filters
@@ -1331,7 +1330,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set)]), .tooManyNDWheels)
         XCTAssertEqual(viewModel.filterWheels.count, 4, "No ND wheel is removed or merged to make room.")
         XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
-        XCTAssertTrue(viewModel.candidateFilterSetIDs.isEmpty, "A refused Apply assigns nothing.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [.defaultSet], "A refused Apply assigns nothing.")
 
         // With three wheels the same Apply succeeds, Plus disappears,
         // and clearing the auxiliary filters restores the fourth space.
@@ -1387,16 +1386,16 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.filterSources, [.standard], "Standard is always available without setup.")
 
         XCTAssertEqual(viewModel.setCandidateFilterSetIDs([nd.id, color.id]), .assigned)
-        XCTAssertEqual(viewModel.candidateFilterSetIDs, [color.id, nd.id], "Candidates follow the user-defined set order.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [nd.id, color.id], "Candidates keep their selection order.")
         XCTAssertEqual(viewModel.filterSources, [.standard, .filterSet(nd.id)], "Plus offers the candidates that hold ND items.")
         XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 0))], "Assignment mounts nothing.")
         XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
 
         viewModel.selectCameraSlot(.camera2)
-        XCTAssertTrue(viewModel.candidateFilterSetIDs.isEmpty, "Candidates are per camera.")
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [.defaultSet], "Candidates are per camera; a fresh one has Default.")
         XCTAssertEqual(viewModel.setCandidateFilterSetIDs([color.id]), .assigned, "The same set may be assigned to several cameras.")
         viewModel.selectCameraSlot(.camera1)
-        XCTAssertEqual(viewModel.candidateFilterSetIDs, [color.id, nd.id])
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [nd.id, color.id])
 
         // A referenced set cannot leave the candidates until its
         // selections are cleared; nothing changes on a blocked attempt.
@@ -1405,7 +1404,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedFilterSource, .filterSet(nd.id))
         XCTAssertEqual(viewModel.setCandidateFilterSetIDs([nd.id]), .blocked(referencedFilterSetNames: ["52mm Color"]))
         XCTAssertEqual(viewModel.setCandidateFilterSetIDs([color.id]), .blocked(referencedFilterSetNames: ["Film ND"]), "An Empty wheel still references its set.")
-        XCTAssertEqual(viewModel.candidateFilterSetIDs, [color.id, nd.id])
+        XCTAssertEqual(viewModel.candidateFilterSetIDs, [nd.id, color.id])
         XCTAssertEqual(viewModel.ndStep.stops, 2, accuracy: 1e-9, "A candidate change never alters the calculation.")
 
         // After clearing the wheel, excluding its set is allowed and the

@@ -1900,6 +1900,42 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         return nil
     }
 
+    /// Commits a Shooting Filters session at once (FILTER-AUX-003,
+    /// FILTER-CAMERA-003): the working Filter Set selection and the
+    /// working mounts of the selected sets. Sets left unselected lose
+    /// this camera's auxiliary mounts and ND wheels; one Standard 0-stop
+    /// wheel remains when no ND wheel is left. The sets stay in the
+    /// inventory. Returns the rejection — committing nothing — when the
+    /// result would be invalid.
+    @discardableResult
+    public func applyShootingFilters(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter]
+    ) -> FilterStackRejection? {
+        exitNDWheelReshapingForCommand()
+        defer { attemptFilterStackOrderReconciliation() }
+        let stackBefore = calculatorModel.filterStack
+        let candidatesBefore = calculatorModel.candidateFilterSetIDs
+        if let rejection = calculatorModel.applyShootingFilters(
+            selectedFilterSetIDs: selected,
+            mounts: mounts.filter { selected.contains($0.filterSetID) }
+        ) {
+            return rejection
+        }
+        guard calculatorModel.filterStack != stackBefore || calculatorModel.candidateFilterSetIDs != candidatesBefore else {
+            return nil
+        }
+        clearFilterRejectionNotice()
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+        reexamineNDWheelCleanup()
+        return nil
+    }
+
     /// Updates the platform-neutral screen-reader ordering policy
     /// (FILTER-A11Y-006). Enabling freezes the complete order now in
     /// the model and cancels a queued resume. Disabling queues one

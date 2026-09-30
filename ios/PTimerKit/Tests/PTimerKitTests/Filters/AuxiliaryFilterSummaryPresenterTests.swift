@@ -34,7 +34,7 @@ final class AuxiliaryFilterSummaryPresenterTests: XCTestCase {
             try resolved(marumi, .registeredLoss),
         ]
         let state = try XCTUnwrap(AuxiliaryFilterSummaryPresenter.displayState(for: rows))
-        XCTAssertEqual(state.items.map(\.compactLabels), [["CPL"], ["GND"], ["MARUMI"]], "A single CPL or GND reads by type; a Color reads by name.")
+        XCTAssertEqual(state.items.map(\.compactLabels), [["CPL"], ["Soft GND 3", "Soft GND", "Soft"], ["MARUMI"]], "A single CPL reads by type; a GND by its distinguishing name; a Color by name.")
         XCTAssertEqual(state.items.map(\.contributionText), ["1.5", "0", "2"], "Contributions are plain stops values.")
         XCTAssertEqual(state.items.map(\.kindLabel), ["CPL", "GND", "Color"])
         XCTAssertEqual(state.items[2].opticalColor, .red, "The circle is the optical color, not the set cue.")

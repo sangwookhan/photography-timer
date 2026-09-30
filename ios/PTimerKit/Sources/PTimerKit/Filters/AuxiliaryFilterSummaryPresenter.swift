@@ -127,10 +127,11 @@ public enum AuxiliaryFilterSummaryPresenter {
 
     /// The deterministic concise-name rule for a compact Main row,
     /// longest candidate first; the view shows the first that fits.
-    /// - A CPL or GND is identified by its type (`CPL`, `GND`) when it is
-    ///   the only mounted item of that type; with two of the same type,
-    ///   by name so they stay distinct (`Soft GND`, `Hard GND`).
-    /// - A Color or Effect item is identified by name.
+    /// - A CPL is identified as `CPL` when it is the only mounted CPL;
+    ///   with two, by name so they stay distinct.
+    /// - A GND, Color, or Effect item is identified by name
+    ///   (FILTER-AUX-006: a GND by its distinguishing name, so equal
+    ///   Hard and Soft densities never read alike).
     /// - A name's candidates are the whole name, then the words before
     ///   the first word that contains a digit (`Soft GND 2` → `Soft GND`,
     ///   `MARUMI Red 25A` → `MARUMI Red`), then the first word
@@ -140,7 +141,7 @@ public enum AuxiliaryFilterSummaryPresenter {
     public static func compactLabels(for row: ResolvedAuxiliaryFilter, among rows: [ResolvedAuxiliaryFilter]) -> [String] {
         let kind = row.item.behavior.kind
         let sameKind = rows.filter { $0.item.behavior.kind == kind }
-        if kind == .cpl || kind == .gnd, sameKind.count == 1 {
+        if kind == .cpl, sameKind.count == 1 {
             return [FilterWheelPresenter.kindName(kind)]
         }
         let others = sameKind.filter { $0.item.id != row.item.id }.map { nameCandidates($0.item.name) }

@@ -16,6 +16,7 @@ import com.sangwook.ptimer.core.exposure.FilterRowChoice
 import com.sangwook.ptimer.core.exposure.FilterRowSelection
 import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
+import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
@@ -1019,7 +1020,7 @@ class FilterSetControllerTest {
         assertEquals(before, committed(restored))
         assertEquals(mounted(c), mounted(restored))
         assertEquals("15", total(restored))
-        assertEquals(listOf(lee.id), restored.state.value.candidateFilterSetIds)
+        assertEquals(listOf(FilterSetId.defaultSet, lee.id), restored.state.value.candidateFilterSetIds)
         assertEquals(
             "The remembered source survives the restart.",
             source(lee),

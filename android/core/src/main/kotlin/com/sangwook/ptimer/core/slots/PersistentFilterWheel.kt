@@ -241,9 +241,9 @@ fun SlotCalculatorSnapshot.restoredFilterWheels(inventory: FilterInventory): Lis
     restoredFilterStack(inventory).wheels
 
 /**
- * The slot's candidate Filter Sets (FILTER-CAMERA-001), in user-defined
- * set order: the stored assignment, without sets that no longer exist,
- * plus every set the restored stack still references.
+ * The slot's candidate Filter Sets (FILTER-CAMERA-001), in their selection
+ * order: the stored assignment, without sets that no longer exist, plus
+ * every set the restored stack still references.
  */
 fun SlotCalculatorSnapshot.restoredCandidateFilterSetIds(inventory: FilterInventory): List<FilterSetId> {
     val stack = restoredFilterStack(inventory)
@@ -254,18 +254,24 @@ fun SlotCalculatorSnapshot.restoredCandidateFilterSetIds(inventory: FilterInvent
     )
 }
 
-/** The raw stored candidate ids, before normalization. */
+/**
+ * The raw stored candidate ids, before normalization. A slot with no
+ * stored selection — a fresh camera, or one stored before it had any —
+ * starts with the Default Filter Set (FILTER-CAMERA-001, FILTER-SET-002);
+ * an emptied selection is stored as an empty list.
+ */
 val SlotCalculatorSnapshot.storedCandidateFilterSetIds: List<FilterSetId>
-    get() = candidateFilterSetIds.orEmpty().filter { it.isNotEmpty() }.map { FilterSetId(it) }
+    get() = candidateFilterSetIds?.filter { it.isNotEmpty() }?.map { FilterSetId(it) } ?: listOf(FilterSetId.defaultSet)
 
 /**
- * The Filter Sources the Plus wheel and the popup's ND tab offer for a
- * camera with [candidates] (FILTER-PLUS-001): Standard, then the
- * candidate sets that hold at least one ND item, in set order.
+ * The Filter Sources the Plus wheel offers for a camera with [candidates]
+ * (FILTER-PLUS-001, FILTER-SET-004): Standard, then the candidate sets
+ * that hold at least one ND item, in selection order.
  */
 fun FilterInventory.offeredFilterSources(candidates: List<FilterSetId>): List<FilterSource> =
-    listOf(FilterSource.Standard) + filterSets
-        .filter { it.id in candidates && it.ndItems.isNotEmpty() }
+    listOf(FilterSource.Standard) + candidates
+        .mapNotNull { filterSet(it) }
+        .filter { it.ndItems.isNotEmpty() }
         .map { FilterSource.FilterSet(it.id) }
 
 /**
@@ -285,8 +291,10 @@ fun SlotCalculatorSnapshot.restoredLastFilterSource(inventory: FilterInventory):
 /**
  * Writes [stack], [lastSource], and [candidates] into the snapshot
  * (FILTER-PERSIST-001). The additive mixed-stack, auxiliary, and
- * candidate fields are authoritative for new builds and are omitted while
- * empty; the pre-Filter-Set fields describe only the stack's STANDARD
+ * candidate fields are authoritative for new builds; the auxiliary field
+ * is omitted while empty, and the candidates are always written, an empty
+ * list included, so an emptied selection does not restore as a fresh
+ * camera with Default; the pre-Filter-Set fields describe only the stack's STANDARD
  * wheels — one Standard 0 wheel when it has none — so an older build
  * restores a valid Standard-only projection, with the legacy scalar
  * carrying the strongest Standard wheel exactly as the Standard-only path
@@ -308,7 +316,7 @@ fun SlotCalculatorSnapshot.writingFilterStack(
         auxiliaryFilters = stack.auxiliaryRows
             .map { PersistentAuxiliaryFilter.from(it.mount, it.item.behavior.kind) }
             .ifEmpty { null },
-        candidateFilterSetIds = candidates.map { it.rawValue }.ifEmpty { null },
+        candidateFilterSetIds = candidates.map { it.rawValue },
         lastFilterSourceKind = when (lastSource) {
             is FilterSource.Standard -> PersistentFilterWheel.STANDARD_SOURCE_KIND
             is FilterSource.FilterSet -> PersistentFilterWheel.FILTER_SET_SOURCE_KIND

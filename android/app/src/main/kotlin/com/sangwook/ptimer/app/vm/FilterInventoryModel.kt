@@ -40,8 +40,11 @@ class FilterInventoryModel(
     initial: FilterInventory? = null,
     private val persistenceWriter: PersistenceWriter = AppPersistenceWriter,
 ) {
+    // The Default Filter Set always exists (FILTER-SET-002). An inventory
+    // stored before it existed gains it here; it is written back with
+    // the next change.
     private val _inventory = MutableStateFlow(
-        initial ?: store.loadSnapshot()?.restoredInventory ?: FilterInventory.empty,
+        (initial ?: store.loadSnapshot()?.restoredInventory ?: FilterInventory.empty).ensuringDefaultFilterSet(),
     )
     val inventory: StateFlow<FilterInventory> = _inventory.asStateFlow()
 
@@ -88,21 +91,12 @@ class FilterInventoryModel(
     }
 
     /**
-     * Reorders Filter Sets: the set at [fromIndex] is removed and
-     * re-inserted at [toIndex] of the resulting list. Ids never change.
-     */
-    fun moveFilterSet(fromIndex: Int, toIndex: Int) {
-        val sets = filterSets
-        if (fromIndex !in sets.indices || toIndex !in sets.indices || fromIndex == toIndex) return
-        mutate { it.moving(fromIndex, toIndex) }
-    }
-
-    /**
      * Removes a Filter Set and every item it holds. Stack cleanup for
      * wheels that referenced the set is the controller's responsibility.
+     * The Default Filter Set is never deleted (FILTER-SET-002).
      */
     fun deleteFilterSet(id: FilterSetId) {
-        if (indexOfSet(id) == null) return
+        if (id == FilterSetId.defaultSet || indexOfSet(id) == null) return
         mutate { sets -> sets.filterNot { it.id == id } }
     }
 
@@ -129,7 +123,7 @@ class FilterInventoryModel(
 
     /**
      * Replaces the item matching `item.id` wherever it lives. Item
-     * identity and position are preserved.
+     * identity and set are preserved.
      */
     fun updateItem(item: FilterItem) {
         if (!item.isWellFormed) return
@@ -148,13 +142,18 @@ class FilterInventoryModel(
         }
     }
 
-    /** Reorders one Filter Set's items; see [moveFilterSet] for the index rule. */
-    fun moveItem(setId: FilterSetId, fromIndex: Int, toIndex: Int) {
-        val setIndex = indexOfSet(setId) ?: return
-        val items = filterSets[setIndex].items
-        if (fromIndex !in items.indices || toIndex !in items.indices || fromIndex == toIndex) return
+    /**
+     * Moves an existing item, with its edits, into [toSetId] in one
+     * change, keeping its id (FILTER-ITEM-009). Cameras that reference it
+     * follow it through the controller's inventory-change reconciliation.
+     */
+    fun relocateItem(item: FilterItem, toSetId: FilterSetId) {
+        if (!item.isWellFormed) return
+        val destination = indexOfSet(toSetId) ?: return
+        if (inventory.value.item(item.id) == null || filterSets[destination].items.any { it.id == item.id }) return
         mutate { sets ->
-            sets.replacing(setIndex, sets[setIndex].copy(items = sets[setIndex].items.moving(fromIndex, toIndex)))
+            sets.map { set -> set.copy(items = set.items.filterNot { it.id == item.id }) }
+                .let { stripped -> stripped.replacing(destination, stripped[destination].copy(items = stripped[destination].items + item)) }
         }
     }
 
@@ -195,6 +194,3 @@ class FilterInventoryModel(
 
 private fun <T> List<T>.replacing(index: Int, element: T): List<T> =
     toMutableList().also { it[index] = element }
-
-private fun <T> List<T>.moving(fromIndex: Int, toIndex: Int): List<T> =
-    toMutableList().also { it.add(toIndex, it.removeAt(fromIndex)) }

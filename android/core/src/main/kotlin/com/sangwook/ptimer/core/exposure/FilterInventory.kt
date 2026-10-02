@@ -19,6 +19,10 @@ import kotlin.random.Random
 data class FilterSetId(val rawValue: String) {
     companion object {
         fun generate(): FilterSetId = FilterSetId(UUID.randomUUID().toString())
+
+        /** The built-in Default Filter Set (FILTER-SET-002). Generated
+         *  ids are UUIDs, so they never collide with it. */
+        val defaultSet = FilterSetId("default")
     }
 }
 
@@ -399,7 +403,8 @@ data class FilterSet(
 /**
  * The complete user inventory: Filter Sets in user-defined display
  * order. Standard is a fixed built-in source that always precedes every
- * Filter Set (FILTER-SET-004). (iOS: `FilterInventory`.)
+ * Filter Set; the built-in Default Filter Set, once ensured, precedes
+ * the user-created sets (FILTER-SET-004). (iOS: `FilterInventory`.)
  */
 data class FilterInventory(val filterSets: List<FilterSet> = emptyList()) {
 
@@ -435,23 +440,39 @@ data class FilterInventory(val filterSets: List<FilterSet> = emptyList()) {
 
     /**
      * A camera's candidate Filter Sets made consistent with this inventory
-     * and its stack (FILTER-CAMERA-001, FILTER-PERSIST-002): unknown sets
-     * are dropped, every set a wheel or a mounted auxiliary filter still
-     * references is included so the restored selections stay reachable,
-     * and the result follows the user-defined set order.
+     * and its stack (FILTER-CAMERA-001, FILTER-SET-004, FILTER-PERSIST-002):
+     * unknown and repeated sets are dropped, the candidates keep their
+     * selection order, and every other set a wheel or a mounted auxiliary
+     * filter still references is appended, in inventory order, so the
+     * restored selections stay reachable.
      */
     fun normalizedCandidateFilterSetIds(
         candidates: List<FilterSetId>,
         wheels: List<FilterWheel>,
         auxiliaryFilters: List<MountedAuxiliaryFilter>,
     ): List<FilterSetId> {
-        val referenced = candidates.toSet() +
-            wheels.mapNotNull { it.source.filterSetId } +
-            auxiliaryFilters.map { it.filterSetId }
-        return filterSets.map { it.id }.filter { it in referenced }
+        val existing = filterSets.map { it.id }.toSet()
+        val kept = candidates.filter { it in existing }.distinct()
+        val referenced = wheels.mapNotNull { it.source.filterSetId }.toSet() + auxiliaryFilters.map { it.filterSetId }
+        return kept + filterSets.map { it.id }.filter { it in referenced && it !in kept }
+    }
+
+    /**
+     * This inventory with the Default Filter Set present and first
+     * (FILTER-SET-002/004). A stored Default keeps its name, color, and
+     * items; the user-created sets keep their order after it.
+     */
+    fun ensuringDefaultFilterSet(): FilterInventory {
+        val default = filterSet(FilterSetId.defaultSet) ?: defaultFilterSet
+        return FilterInventory(listOf(default) + filterSets.filterNot { it.id == FilterSetId.defaultSet })
     }
 
     companion object {
         val empty = FilterInventory()
+
+        /** The built-in Default Filter Set as first provided
+         *  (FILTER-SET-002): empty and named Default. Its name, color, and
+         *  items may change later; its id never does. */
+        val defaultFilterSet = FilterSet(name = "Default", color = FilterSetColor.blue, id = FilterSetId.defaultSet)
     }
 }

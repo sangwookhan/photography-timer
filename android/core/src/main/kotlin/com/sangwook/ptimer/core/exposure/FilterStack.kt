@@ -832,18 +832,31 @@ class FilterStack private constructor(
          * CPL / GND wheel row keeps its choice); an auxiliary mount whose
          * item is now ND becomes a Filter Set ND wheel at the end of the
          * row; an auxiliary mount whose item changed to another auxiliary
-         * kind takes that kind's default choice. Mounts of unknown sets or
-         * items are left for normal re-resolution. A result with no wheel
-         * gets one Standard 0 wheel. Limits are not checked here; callers
+         * kind takes that kind's default choice. A wheel or mount whose
+         * item moved to another Filter Set follows it there first, keeping
+         * the same item (FILTER-ITEM-009). Mounts of unknown sets or items
+         * are left for normal re-resolution. A result with no wheel gets
+         * one Standard 0 wheel. Limits are not checked here; callers
          * validate.
          */
         fun reassigningRoles(
-            wheels: List<FilterWheel>,
-            auxiliaryFilters: List<MountedAuxiliaryFilter>,
+            inputWheels: List<FilterWheel>,
+            inputAuxiliaryFilters: List<MountedAuxiliaryFilter>,
             inventory: FilterInventory,
         ): RoleReassignment {
             fun item(itemId: FilterItemId, filterSetId: FilterSetId): FilterItem? =
                 inventory.filterSet(filterSetId)?.item(itemId)
+            fun owner(itemId: FilterItemId, filterSetId: FilterSetId): FilterSetId? =
+                if (item(itemId, filterSetId) != null) null else inventory.item(itemId)?.first?.id
+            val wheels = inputWheels.map { wheel ->
+                val selection = wheel.selection as? FilterWheelSelection.Item
+                val setId = wheel.source.filterSetId
+                val moved = if (selection != null && setId != null) owner(selection.selection.itemId, setId) else null
+                if (moved != null) wheel.copy(source = FilterSource.FilterSet(moved)) else wheel
+            }
+            val auxiliaryFilters = inputAuxiliaryFilters.map { mount ->
+                owner(mount.itemId, mount.filterSetId)?.let { mount.copy(filterSetId = it) } ?: mount
+            }
             val keptWheels = ArrayList<FilterWheel>()
             val origins = ArrayList<Int?>()
             val mounts = auxiliaryFilters.toMutableList()

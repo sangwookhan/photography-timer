@@ -3,35 +3,51 @@
 
 package com.sangwook.ptimer.app.vm
 
+import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemKind
+import com.sangwook.ptimer.core.exposure.FilterSet
+import java.text.Collator
 
 /**
- * Which editing path opened the filter editor: the Filter Set's
- * Auxiliary tab (CPL, GND, Color, Effect) or its ND tab (ND items only)
- * (FILTER-SET-001). An existing item's own kind decides it.
- * (iOS: `FilterItemEditorContext.Category`.)
+ * The fixed presentation order of Filter Sets and their items
+ * (FILTER-SET-004, FILTER-ITEM-001/003). There is no manual reorder: a
+ * Set's items read ND first, then Color, Effect, CPL, and GND, each kind
+ * alphabetically by name; Available Sets read alphabetically by name.
+ * Names compare the way the platform collates them for the current
+ * locale. The kind order is also the type choice of the item editor,
+ * where a new filter starts at ND. (iOS: `FilterSetItemOrder`.)
  */
-enum class FilterItemCategory {
-    auxiliary,
-    nd;
+object FilterSetItemOrder {
+    val kinds: List<FilterItemKind> = listOf(
+        FilterItemKind.fixed,
+        FilterItemKind.color,
+        FilterItemKind.effect,
+        FilterItemKind.cpl,
+        FilterItemKind.gnd,
+    )
 
-    /** The kinds a new item on this path may take; the first is the
-     *  kind a new item starts at. */
-    val kinds: List<FilterItemKind>
-        get() = when (this) {
-            auxiliary -> FilterItemKind.entries.filter { it.isAuxiliary }
-            nd -> listOf(FilterItemKind.fixed)
-        }
+    /** The auxiliary part of the same order, which is also the fixed
+     *  auxiliary order of Main and Shooting Filters (FILTER-AUX-006). */
+    val auxiliaryKinds: List<FilterItemKind> = kinds.filter { it.isAuxiliary }
 
-    companion object {
-        fun of(kind: FilterItemKind): FilterItemCategory = if (kind.isAuxiliary) auxiliary else nd
+    /** The kind a new filter starts at. */
+    val newItemKind: FilterItemKind = FilterItemKind.fixed
 
-        /**
-         * Kinds the editor offers: a new item stays within its tab's
-         * kinds; an existing item may be corrected to any kind (for
-         * example an ND item entered by mistake becomes a Color filter).
-         */
-        fun selectableKinds(category: FilterItemCategory, isNewItem: Boolean): List<FilterItemKind> =
-            if (isNewItem) category.kinds else FilterItemKind.entries
+    /** [items] by kind, then by name; equal names keep a stable order by id. */
+    fun ordered(items: List<FilterItem>): List<FilterItem> {
+        val collator = Collator.getInstance()
+        return items.sortedWith(
+            compareBy<FilterItem> { kinds.indexOf(it.behavior.kind) }
+                .thenComparator { a, b -> collator.compare(a.name, b.name) }
+                .thenBy { it.id.rawValue },
+        )
+    }
+
+    /** [filterSets] by name; equal names keep a stable order by id. */
+    fun sortedByName(filterSets: List<FilterSet>): List<FilterSet> {
+        val collator = Collator.getInstance()
+        return filterSets.sortedWith(
+            Comparator<FilterSet> { a, b -> collator.compare(a.name, b.name) }.thenBy { it.id.rawValue },
+        )
     }
 }

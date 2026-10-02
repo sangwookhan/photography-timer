@@ -78,6 +78,22 @@ object AuxiliaryFilterSummaryPresenter {
         return AuxiliaryFilterSummaryDisplayState(rows.map { itemDisplay(it, rows) })
     }
 
+    /**
+     * The working selection as one short line for the top of Shooting
+     * Filters (FILTER-FLOW-003): each item's concise identity and
+     * contribution in Main's order; `null` when nothing is selected. The
+     * identity is Main's first concise name without a number, so a name's
+     * number never runs into the contribution (`Soft GND 0`, not
+     * `Soft GND 2 0`); a name that is all number keeps its whole form.
+     */
+    fun selectedFiltersText(rows: List<ResolvedAuxiliaryFilter>): String? =
+        displayState(rows)?.items?.joinToString(" · ") { item ->
+            val label = item.compactLabels.firstOrNull { label ->
+                label.split(Regex("\\s+")).none { word -> word.any { it.isDigit() } }
+            } ?: item.compactLabels.firstOrNull() ?: item.name
+            "$label ${item.contributionText}"
+        }
+
     /** One row of the summary. [rows] are all mounted items, so the
      *  identifier can tell two items of the same kind apart. */
     fun itemDisplay(row: ResolvedAuxiliaryFilter, rows: List<ResolvedAuxiliaryFilter>): AuxiliaryFilterSummaryItemDisplay =

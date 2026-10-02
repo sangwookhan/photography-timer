@@ -98,7 +98,7 @@ class FilterStackInteractionTest {
                     onAddFilterWheel = controller::addFilterWheel,
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onOverscrollRemove = controller::removeNdWheelFromOverscroll,
-                    onManageFilterSets = {},
+                    onOpenShootingFilters = {},
                 )
             }
         }
@@ -148,7 +148,7 @@ class FilterStackInteractionTest {
         val red = FilterItem("Red 25A", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
         val kit = FilterSet("Kit", FilterSetColor.blue, listOf(nd8, nd64, red))
         val c = controller(FilterInventory(listOf(kit)))
-        c.setCandidateFilterSets(listOf(kit.id))
+        c.arrangeCandidateFilterSets(listOf(kit.id))
         commit(c, 0, FilterWheelSelection.Standard(2.0))
         for (item in listOf(nd8, nd64)) {
             c.addFilterWheel(FilterSource.FilterSet(kit.id))
@@ -156,7 +156,7 @@ class FilterStackInteractionTest {
             commit(c, added, FilterWheelSelection.Item(FilterRowSelection(item.id, FilterRowChoice.Fixed)))
         }
         assertEquals(3, c.state.value.filterWheels.size)
-        assertNull(c.applyAuxiliaryFilters(listOf(MountedAuxiliaryFilter(kit.id, red.id, AuxiliaryFilterChoice.RegisteredLoss))))
+        assertNull(c.applyShootingFilters(listOf(kit.id), listOf(MountedAuxiliaryFilter(kit.id, red.id, AuxiliaryFilterChoice.RegisteredLoss))))
         assertFalse("Three ND wheels beside an auxiliary filter leave no room for Plus.", c.state.value.plus.isVisible)
 
         composeTestRule.setContent {
@@ -183,7 +183,7 @@ class FilterStackInteractionTest {
         composeTestRule.waitForIdle()
 
         // Nothing but Apply with the filter cleared; no wheel is touched.
-        composeTestRule.runOnIdle { assertNull(c.applyAuxiliaryFilters(emptyList())) }
+        composeTestRule.runOnIdle { assertNull(c.applyShootingFilters(listOf(kit.id), emptyList())) }
         composeTestRule.waitForIdle()
 
         val row = composeTestRule.onNodeWithTag("row").getUnclippedBoundsInRoot()

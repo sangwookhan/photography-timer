@@ -211,7 +211,7 @@ fun SlotCalculatorSnapshot.restoredFilterStack(inventory: FilterInventory): Filt
         // the live reconciliation applies it (FILTER-ITEM-005/009) before
         // the references are normalized; if that no longer fits the
         // limits, the references normalize as they are.
-        val reassigned = FilterStack.reassigningRoles(wheels, mounts, inventory)
+        val reassigned = FilterStack.reassigningRoles(wheels, mounts, storedCandidateFilterSetIds, inventory)
         normalizedStack(reassigned.wheels, reassigned.auxiliaryFilters, inventory)?.let { return it }
         normalizedStack(wheels, mounts, inventory)?.let { return it }
     }

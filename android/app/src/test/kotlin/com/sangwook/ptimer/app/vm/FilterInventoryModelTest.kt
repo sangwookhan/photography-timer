@@ -116,6 +116,22 @@ class FilterInventoryModelTest {
         assertEquals("The seed is written once.", samples, store.saved.single().restoredInventory)
     }
 
+    /** FILTER-SET-008: an upgrade that never saved an inventory gets the
+     *  Samples once, like a fresh installation; a saved empty inventory
+     *  counts as saved and gets none (an unreadable or failed read reads as
+     *  a saved empty inventory, DataStoreFilterInventoryStoreTest). */
+    @Test
+    fun samplesAreSeededOnlyWhenNoInventoryWasEverSaved() {
+        val samples = FilterInventorySamples.inventory("Sample ND", "Sample ND — Extended", "Sample Aux Filter Set")
+        val neverSaved = RecordingStore()
+        assertEquals("Upgrade with nothing saved: Samples.", samples, FilterInventoryModel(store = neverSaved, persistenceWriter = inlineWriter, firstLaunchInventory = samples).inventory.value)
+
+        val savedEmpty = RecordingStore(PersistentFilterInventorySnapshot.from(FilterInventory()))
+        val model = FilterInventoryModel(store = savedEmpty, persistenceWriter = inlineWriter, firstLaunchInventory = samples)
+        assertTrue("A saved empty inventory stays empty.", model.filterSets.isEmpty())
+        assertTrue("Nothing is written over it.", savedEmpty.saved.isEmpty())
+    }
+
     /** FILTER-SET-009: an upgrade keeps the saved inventory: no Samples,
      *  and a former Default Set is ordinary inventory that can be deleted. */
     @Test

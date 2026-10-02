@@ -3,6 +3,7 @@
 
 package com.sangwook.ptimer.app.vm
 
+import androidx.annotation.VisibleForTesting
 import com.sangwook.ptimer.app.calc.ShootingCalculator
 import com.sangwook.ptimer.app.calc.ShootingResult
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
@@ -798,10 +799,10 @@ class CalculatorController(
      * than its limit after a kind change. A selected CPL choice is never
      * silently replaced with another configured value; a kind change
      * within the limits moves the selection into the item's new role. An
-     * existing item saved into another set moves there with its id; every
-     * camera that references it keeps the reference under that set and
-     * gains the set as a candidate, without losing the old one
-     * (FILTER-ITEM-009).
+     * existing item saved into another set moves there with its id at once:
+     * an ND wheel mounting it follows it there, and an auxiliary filter
+     * stays mounted only on a camera that selects that set and is
+     * unmounted elsewhere, without selecting the set (FILTER-ITEM-009).
      */
     fun saveFilterItem(item: FilterItem, setId: FilterSetId): FilterItemSaveOutcome {
         val conflicts = filterItemSaveConflicts(item, setId)
@@ -889,7 +890,9 @@ class CalculatorController(
         }
         return session.availableSlots.mapNotNull { slotId ->
             val stack = stackForSlot(slotId) ?: return@mapNotNull null
-            val reason = stackConflict(stack, item.id, candidate) ?: return@mapNotNull null
+            val selected = (if (slotId == session.activeSlotId) session.activeSnapshot else session.snapshot(slotId))
+                ?.storedCandidateFilterSetIds ?: emptyList()
+            val reason = stackConflict(stack, selected, item.id, candidate) ?: return@mapNotNull null
             session.identity(slotId) to reason
         }
     }
@@ -905,10 +908,11 @@ class CalculatorController(
      */
     private fun stackConflict(
         stack: FilterStack,
+        selectedFilterSetIds: List<FilterSetId>,
         itemId: FilterItemId,
         candidate: FilterInventory,
     ): FilterItemSaveBlockReason? {
-        val reassigned = FilterStack.reassigningRoles(stack.wheels, stack.auxiliaryFilters, candidate)
+        val reassigned = FilterStack.reassigningRoles(stack.wheels, stack.auxiliaryFilters, selectedFilterSetIds, candidate)
         val wheels = reassigned.wheels
         val auxiliaryFilters = reassigned.auxiliaryFilters
         if (wheels.size > FilterStack.wheelLimit(auxiliaryFilters.isNotEmpty())) {
@@ -954,7 +958,7 @@ class CalculatorController(
         for (slotId in session.availableSlots) {
             if (slotId == session.activeSlotId) continue
             session.updateSnapshot(slotId) { snapshot ->
-                val resolved = reresolvedStack(storedReferences(snapshot), current)
+                val resolved = reresolvedStack(storedReferences(snapshot), snapshot.storedCandidateFilterSetIds, current)
                 snapshot.writingFilterStack(
                     resolved,
                     snapshot.restoredLastFilterSource(current),
@@ -970,7 +974,12 @@ class CalculatorController(
      *  wheel's stable identity carried through the role move. */
     private fun reresolvedActiveStack(current: FilterInventory): Pair<FilterStack, List<Int>> {
         val (storedWheels, storedMounts) = storedReferences(session.activeSnapshot)
-        val reassigned = FilterStack.reassigningRoles(storedWheels, storedMounts, current)
+        val reassigned = FilterStack.reassigningRoles(
+            storedWheels,
+            storedMounts,
+            session.activeSnapshot.storedCandidateFilterSetIds,
+            current,
+        )
         val wheels = ArrayList<FilterWheel>()
         val ids = ArrayList<Int>()
         reassigned.wheels.zip(reassigned.wheelOrigins).forEach { (wheel, origin) ->
@@ -1009,9 +1018,10 @@ class CalculatorController(
      *  [reresolvedActiveStack] without wheel identities. */
     private fun reresolvedStack(
         references: Pair<List<FilterWheel>, List<MountedAuxiliaryFilter>>,
+        selectedFilterSetIds: List<FilterSetId>,
         current: FilterInventory,
     ): FilterStack {
-        val reassigned = FilterStack.reassigningRoles(references.first, references.second, current)
+        val reassigned = FilterStack.reassigningRoles(references.first, references.second, selectedFilterSetIds, current)
         val wheels = FilterStack.normalizedWheels(reassigned.wheels, current) ?: listOf(FilterWheel.standard(0.0))
         val onWheels = wheels.mapNotNull { it.mountedItemId }.toSet()
         val auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, current)
@@ -1042,46 +1052,22 @@ class CalculatorController(
     // --- Mounted auxiliary filters (FILTER-AUX) ---
 
     /**
-     * What the shooting popup's working selection would yield if applied
-     * now (FILTER-AUX-003): `null` when Apply would succeed, otherwise the
-     * rejection it would report. Nothing is committed.
-     */
-    fun auxiliaryFiltersRejection(mounts: List<MountedAuxiliaryFilter>): FilterStackRejection? =
-        (activeFilterStack().replacingAuxiliaryFilters(mounts, inventory) as? FilterStackChange.Rejected)?.reason
-
-    /**
-     * The shooting popup's live auxiliary subtotal in stops: only the
-     * working selection's auxiliary contributions, never the ND wheels,
-     * which that tab does not show (FILTER-AUX-003). The 30-stop guard
-     * still uses the complete stack ([auxiliaryFiltersRejection]).
+     * The Shooting Filters exposure reduction in stops: only the working
+     * selection's auxiliary contributions, never the ND wheels, which
+     * Shooting Filters does not show (FILTER-AUX-003). The 30-stop guard
+     * still uses the complete stack ([shootingFiltersRejection]).
      */
     fun auxiliaryFiltersSubtotal(mounts: List<MountedAuxiliaryFilter>): Double {
         val current = inventory
         return mounts.sumOf { FilterStack.resolvedAuxiliaryFilter(it, current)?.contributionStops ?: 0.0 }
     }
 
-    /**
-     * Commits the complete mounted auxiliary selection at once
-     * (FILTER-AUX-003 Apply). Returns the rejection — leaving everything
-     * unchanged — when the domain refuses it: an unresolvable or
-     * duplicated item, four ND wheels, or a total over 30 stops. Existing
-     * ND wheels are never removed or merged to make room.
-     */
-    fun applyAuxiliaryFilters(mounts: List<MountedAuxiliaryFilter>): FilterStackRejection? =
-        when (val change = activeFilterStack().replacingAuxiliaryFilters(mounts, inventory)) {
-            is FilterStackChange.Accepted -> {
-                writeFilterStack(change.stack)
-                null
-            }
-
-            is FilterStackChange.Rejected -> change.reason
-        }
-
     // --- Camera candidate Filter Sets (FILTER-CAMERA) ---
 
     /** Sets the active camera's stack still references — through an ND
-     *  wheel (Empty included) or a mounted auxiliary filter. They cannot
-     *  leave the candidates until those selections are cleared. */
+     *  wheel (Empty included) or a mounted auxiliary filter. Shooting
+     *  Filters marks them in use; leaving one out on Apply takes its
+     *  filters and ND wheels off this camera (FILTER-CAMERA-003). */
     private val filterSetIdsReferencedByActiveCamera: Set<FilterSetId>
         get() {
             val stack = activeFilterStack()
@@ -1090,20 +1076,15 @@ class CalculatorController(
         }
 
     /**
-     * Replaces the active camera's candidate Filter Sets
-     * (FILTER-CAMERA-001). Assignment saves immediately and mounts
-     * nothing. Excluding a set this camera still references is blocked
-     * with the set ids, so a candidate change can never alter the
-     * exposure calculation implicitly; a remembered ND source that is no
-     * longer a candidate falls back to Standard.
+     * Arranges the active camera's candidate Filter Sets without a
+     * Shooting Filters commit: no wheel is removed and Plus does not move.
+     * Sets the stack references stay candidates, and a remembered source
+     * that is no longer offered falls back to Standard. No production
+     * caller: unit tests arrange a camera with it, while the app assigns
+     * candidates only through [applyShootingFilters] and restore.
      */
-    fun setCandidateFilterSets(ids: List<FilterSetId>): CandidateFilterSetAssignmentOutcome {
-        val excludedReferenced = filterSetIdsReferencedByActiveCamera - ids.toSet()
-        if (excludedReferenced.isNotEmpty()) {
-            return CandidateFilterSetAssignmentOutcome.Blocked(
-                inventory.filterSets.filter { it.id in excludedReferenced },
-            )
-        }
+    @VisibleForTesting
+    internal fun arrangeCandidateFilterSets(ids: List<FilterSetId>) {
         val stack = activeFilterStack()
         val candidates = inventory.normalizedCandidateFilterSetIds(ids, stack.wheels, stack.auxiliaryFilters)
         session.updateActiveSnapshot { it.writingFilterStack(stack, lastFilterSource, candidates) }
@@ -1112,7 +1093,6 @@ class CalculatorController(
         val source = lastFilterSource
         session.updateActiveSnapshot { it.writingFilterStack(stack, source, candidates) }
         publish()
-        return CandidateFilterSetAssignmentOutcome.Assigned
     }
 
     /** The working Selected Sets that still exist, in their selection
@@ -1379,8 +1359,17 @@ class CalculatorController(
 
     private fun resetActiveSlotSettingsFields() {
         // The camera's candidate Filter Sets are an assignment, not a
-        // shooting setting: a reset unmounts everything but keeps them.
-        session.updateActiveSnapshot { defaultSnapshot.copy(candidateFilterSetIds = it.candidateFilterSetIds) }
+        // shooting setting: a reset unmounts every auxiliary filter and
+        // returns the ND wheels to one Standard 0 (RESET-011) but keeps
+        // them, and keeps the remembered Plus source, which only a
+        // successful addition changes (FILTER-PLUS-004).
+        session.updateActiveSnapshot {
+            defaultSnapshot.copy(
+                candidateFilterSetIds = it.candidateFilterSetIds,
+                lastFilterSourceKind = it.lastFilterSourceKind,
+                lastFilterSetId = it.lastFilterSetId,
+            )
+        }
         clearNdInteraction()
         clearFilterRejectionNotice()
         ndWheelIds = emptyList()
@@ -1694,8 +1683,12 @@ class CalculatorController(
             if (options.size > 1) options.map { ModelOption(it.id, it.selectorLabel ?: it.name) } else emptyList()
         } ?: emptyList()
 
+        // A wheel with an ND value, or any mounted auxiliary filter,
+        // zero-contribution ones included. Selected Filter Sets alone do not
+        // count, nor do the Empty or Standard 0 wheels an Apply leaves
+        // (RESET-004).
         val canReset = snapshot.shutterIndex != defaultShutterIndex ||
-            committedStack.wheels != listOf(FilterWheel.standard(0.0)) ||
+            committedStack.wheels.any { it.mountedItemId != null || (it.standardStops ?: 0.0) != 0.0 } ||
             committedStack.hasAuxiliaryFilters ||
             film != null ||
             snapshot.targetSeconds != null ||

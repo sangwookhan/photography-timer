@@ -73,18 +73,41 @@ class FilterRestoreReconciliationTest {
 
     private val savedStops = saved.restoredFilterStack(FilterInventory(listOf(kit, pouch))).effectiveStops
 
-    @Test fun movedItemsKeepTheirReferencesUnderTheirNewSet() {
+    /** One saved inventory moved an ND item and an auxiliary item into
+     *  Pouch, which the camera does not select. The auxiliary rule is judged
+     *  against the stored selection, so the CPL is unmounted even though the
+     *  ND wheel follows its item into Pouch (today's ND-wheel behavior, its
+     *  policy still open on #70, 6001226087). */
+    @Test fun aMovedNdWheelFollowsAndAMovedAuxiliaryItemIsJudgedAgainstTheStoredSelection() {
         val moved = FilterInventory(listOf(kit.copy(items = listOf(red)), pouch.copy(items = listOf(nd8, cpl))))
 
         val restored = saved.restoredFilterStack(moved)
 
         assertTrue("${restored.wheels}", ndWheel(pouchId, nd8) in restored.wheels)
         assertEquals(
-            setOf(MountedAuxiliaryFilter(pouchId, cpl.id, cplAt15), MountedAuxiliaryFilter(kitId, red.id, AuxiliaryFilterChoice.RegisteredLoss)),
-            restored.auxiliaryFilters.toSet(),
+            "The ND wheel does not select Pouch for the CPL.",
+            listOf(MountedAuxiliaryFilter(kitId, red.id, AuxiliaryFilterChoice.RegisteredLoss)),
+            restored.auxiliaryFilters,
         )
-        assertEquals("The new Set joins the selection.", listOf(kitId, pouchId), saved.restoredCandidateFilterSetIds(moved))
-        assertEquals("Contributions are unchanged.", savedStops, restored.effectiveStops, 1e-9)
+        assertEquals("Pouch is referenced by the ND wheel.", listOf(kitId, pouchId), saved.restoredCandidateFilterSetIds(moved))
+        assertEquals("Only the CPL's contribution is gone.", savedStops - 1.5, restored.effectiveStops, 1e-9)
+    }
+
+    /** FILTER-ITEM-009 at restore: an auxiliary item moved to a Set the
+     *  camera does not select restores unmounted, without selecting that
+     *  Set; moved to a selected Set, it restores under it. */
+    @Test fun aMovedAuxiliaryItemRestoresOnlyUnderASelectedSet() {
+        val moved = FilterInventory(listOf(kit.copy(items = listOf(nd8, red)), pouch.copy(items = listOf(cpl))))
+
+        val unselected = saved.restoredFilterStack(moved)
+        assertEquals(listOf(MountedAuxiliaryFilter(kitId, red.id, AuxiliaryFilterChoice.RegisteredLoss)), unselected.auxiliaryFilters)
+        assertEquals("The destination is not selected.", listOf(kitId), saved.restoredCandidateFilterSetIds(moved))
+
+        val withPouch = saved.copy(candidateFilterSetIds = listOf(kitId.rawValue, pouchId.rawValue))
+        assertEquals(
+            setOf(MountedAuxiliaryFilter(pouchId, cpl.id, cplAt15), MountedAuxiliaryFilter(kitId, red.id, AuxiliaryFilterChoice.RegisteredLoss)),
+            withPouch.restoredFilterStack(moved).auxiliaryFilters.toSet(),
+        )
     }
 
     @Test fun aKindChangeMovesTheSelectionIntoTheItemsNewRole() {

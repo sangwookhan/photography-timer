@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,14 +48,14 @@ import com.sangwook.ptimer.ui.theme.filterSetColor
  * The Main summary of the mounted auxiliary filters (FILTER-AUX-001/002):
  * one space immediately after Base Shutter, the same width as an ND
  * wheel, shown only while an auxiliary filter is mounted. The label row
- * names the space and leads to the shooting popup; below it, one compact
+ * names the space and leads to Shooting Filters; below it, one compact
  * row per item — a short identifier and its current contribution in
  * stops — for the first three items in display order, spread down the
  * space, and a `+ N more` line for the rest. The space never scrolls.
  *
  * The whole column is one button (FILTER-A11Y-001) that speaks every
- * mounted item, including the ones the count hides, and opens the
- * popup; it never pretends to be an adjustable wheel.
+ * mounted item, including the ones the count hides, and opens Shooting
+ * Filters; it never pretends to be an adjustable wheel.
  * (iOS: `AuxiliaryFilterSummaryView`.)
  */
 @Composable
@@ -66,54 +67,38 @@ internal fun AuxiliaryFilterSummaryColumn(
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(R.string.filter_auxiliary_title)
-    val openLabel = stringResource(R.string.filter_auxiliary_open)
+    val openLabel = stringResource(R.string.filter_shooting_open)
     val spoken = (listOf(title) + summary.items.map { auxiliarySummaryItemSpokenText(it) }).joinToString(", ")
     val moreText = summary.hiddenItemCount.takeIf { it > 0 }?.let { stringResource(R.string.filter_auxiliary_more, it) }
 
-    Column(
-        modifier = modifier
-            .clickable(enabled = enabled, onClickLabel = openLabel, onClick = onOpen)
-            .clearAndSetSemantics {
-                contentDescription = spoken
-                role = Role.Button
-                if (enabled) {
-                    onClick(openLabel) {
-                        onOpen()
-                        true
-                    }
-                }
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // The label row every wheel column reserves (FILTER-STACK-007),
-        // here naming the space and leading to the popup.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(FilterWheelLabelRowHeight),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "$title ›",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                softWrap = false,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = MaterialTheme.typography.labelSmall.fontSize * 0.7f,
-                    maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                ),
-            )
-        }
+    // Below the label row every wheel column reserves (FILTER-STACK-007),
+    // so the summary's background, frame, and touch area share the picker
+    // viewports' top and bottom (FILTER-AUX-005); its title sits inside.
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(Modifier.height(FilterWheelLabelRowHeight))
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(viewportHeight)
                 .clip(RoundedCornerShape(10.dp))
                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
-                .padding(horizontal = 3.dp),
+                .clickable(enabled = enabled, onClickLabel = openLabel, onClick = onOpen)
+                .clearAndSetSemantics {
+                    contentDescription = spoken
+                    role = Role.Button
+                    if (enabled) {
+                        onClick(openLabel) {
+                            onOpen()
+                            true
+                        }
+                    }
+                }
+                .padding(horizontal = 3.dp, vertical = 4.dp),
         ) {
+            // The title and the more-count wrap to a second line in a
+            // narrow column rather than being cut; the rows keep their
+            // size (FILTER-AUX-002).
+            SummaryCue("$title ›")
             // One to three rows spread down the space rather than packed
             // at the top (FILTER-AUX-002).
             summary.visibleItems.forEach { item ->
@@ -122,17 +107,38 @@ internal fun AuxiliaryFilterSummaryColumn(
             }
             if (moreText != null) {
                 Spacer(Modifier.weight(1f))
-                Text(
-                    moreText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SummaryCue(moreText)
             }
             Spacer(Modifier.weight(1f))
         }
+    }
+}
+
+/**
+ * The summary's title or more-count, whole: on one line when it fits at
+ * most slightly smaller, otherwise on two lines broken between words.
+ */
+@Composable
+private fun SummaryCue(text: String) {
+    val base = MaterialTheme.typography.labelSmall
+    val style = base.copy(
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = base.fontSize * 1.15f,
+        lineBreak = LineBreak.Heading.copy(wordBreak = LineBreak.WordBreak.Phrase),
+    )
+    val minFontSize = base.fontSize * 0.8f
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val measurer = rememberTextMeasurer()
+        val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        val fitsOneLine = measurer.measure(text, style.copy(fontSize = minFontSize), softWrap = false, maxLines = 1).size.width <= widthPx
+        Text(
+            text,
+            style = style,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = if (fitsOneLine) 1 else 2,
+            softWrap = !fitsOneLine,
+            autoSize = TextAutoSize.StepBased(minFontSize = minFontSize, maxFontSize = base.fontSize),
+        )
     }
 }
 

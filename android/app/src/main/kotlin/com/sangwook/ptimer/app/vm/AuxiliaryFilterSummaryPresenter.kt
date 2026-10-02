@@ -11,14 +11,6 @@ import com.sangwook.ptimer.core.exposure.GndCalculationMode
 import com.sangwook.ptimer.core.exposure.ResolvedAuxiliaryFilter
 
 /**
- * One mounted auxiliary filter as the Main summary shows it
- * (FILTER-AUX-002): one compact row with a short identifier and the
- * current contribution. Modes, registered densities, and other metadata
- * stay in the shooting popup. Pure value; the display layer localizes the
- * kind and mode words and owns fonts and colors.
- * (iOS: `AuxiliaryFilterSummaryItemDisplay`.)
- */
-/**
  * One selected filter in the Selected filters panel of Shooting Filters
  * (FILTER-FLOW-003): the whole name, the kind apart from it, and the
  * current contribution or GND mode. The view localizes the kind and mode.
@@ -35,6 +27,14 @@ data class SelectedFilterRowDisplayState(
     val opticalColor: FilterSetColor?,
 )
 
+/**
+ * One mounted auxiliary filter as the Main summary shows it
+ * (FILTER-AUX-002): one compact row with a short identifier and the
+ * current contribution. Modes, registered densities, and other metadata
+ * stay in Shooting Filters. Pure value; the display layer localizes the
+ * kind and mode words and owns fonts and colors.
+ * (iOS: `AuxiliaryFilterSummaryItemDisplay`.)
+ */
 data class AuxiliaryFilterSummaryItemDisplay(
     val itemId: FilterItemId,
     /** The item's registered name (`Soft GND 3`, `CPL`, `Red 25A`). */

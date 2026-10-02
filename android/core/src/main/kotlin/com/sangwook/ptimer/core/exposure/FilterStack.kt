@@ -832,9 +832,12 @@ class FilterStack private constructor(
          * CPL / GND wheel row keeps its choice); an auxiliary mount whose
          * item is now ND becomes a Filter Set ND wheel at the end of the
          * row; an auxiliary mount whose item changed to another auxiliary
-         * kind takes that kind's default choice. A wheel or mount whose
-         * item moved to another Filter Set follows it there first, keeping
-         * the same item (FILTER-ITEM-009). Mounts of unknown sets or items
+         * kind takes that kind's default choice. A wheel whose item moved
+         * to another Filter Set follows it there first, keeping the same
+         * item. An auxiliary mount whose item moved follows it only into a
+         * Set the camera has selected ([selectedFilterSetIds], judged before
+         * any wheel moves) and is otherwise unmounted, so the move never
+         * selects the destination (FILTER-ITEM-009). Mounts of unknown sets or items
          * are left for normal re-resolution. A result with no wheel gets
          * one Standard 0 wheel. Limits are not checked here; callers
          * validate.
@@ -842,6 +845,7 @@ class FilterStack private constructor(
         fun reassigningRoles(
             inputWheels: List<FilterWheel>,
             inputAuxiliaryFilters: List<MountedAuxiliaryFilter>,
+            selectedFilterSetIds: List<FilterSetId>,
             inventory: FilterInventory,
         ): RoleReassignment {
             fun item(itemId: FilterItemId, filterSetId: FilterSetId): FilterItem? =
@@ -854,8 +858,13 @@ class FilterStack private constructor(
                 val moved = if (selection != null && setId != null) owner(selection.selection.itemId, setId) else null
                 if (moved != null) wheel.copy(source = FilterSource.FilterSet(moved)) else wheel
             }
-            val auxiliaryFilters = inputAuxiliaryFilters.map { mount ->
-                owner(mount.itemId, mount.filterSetId)?.let { mount.copy(filterSetId = it) } ?: mount
+            val selected = selectedFilterSetIds.toSet()
+            val auxiliaryFilters = inputAuxiliaryFilters.mapNotNull { mount ->
+                val moved = owner(mount.itemId, mount.filterSetId) ?: return@mapNotNull mount
+                // A moved auxiliary item follows only into a selected Set;
+                // the move never selects the destination (FILTER-ITEM-009).
+                val stillAuxiliary = item(mount.itemId, moved)?.behavior?.kind?.isAuxiliary == true
+                if (stillAuxiliary && moved !in selected) null else mount.copy(filterSetId = moved)
             }
             val keptWheels = ArrayList<FilterWheel>()
             val origins = ArrayList<Int?>()
@@ -865,7 +874,11 @@ class FilterStack private constructor(
                 val filterSetId = wheel.source.filterSetId
                 val mountedItem = if (selection != null && filterSetId != null) item(selection.itemId, filterSetId) else null
                 if (selection != null && filterSetId != null && mountedItem != null && mountedItem.behavior.kind.isAuxiliary) {
-                    if (mounts.none { it.itemId == selection.itemId }) {
+                    // Now auxiliary and moved to a Set the camera does not
+                    // select: unchecked like any moved auxiliary item
+                    // (FILTER-ITEM-009).
+                    val moved = inputWheels[index].source != wheel.source
+                    if (!(moved && filterSetId !in selected) && mounts.none { it.itemId == selection.itemId }) {
                         val choice = carriedChoice(selection.choice, mountedItem)
                             ?: MountedAuxiliaryFilter.initialChoice(mountedItem)
                         if (choice != null) mounts.add(MountedAuxiliaryFilter(filterSetId, selection.itemId, choice))

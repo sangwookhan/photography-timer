@@ -110,8 +110,8 @@ class ShootingFilterSetSelectionTest {
         val kit = FilterSet("Kit", FilterSetColor.teal, listOf(red, nd8))
         val other = FilterSet("Other", FilterSetColor.blue, listOf(cpl))
         val (c, model) = controller(kit, other)
-        c.setCandidateFilterSets(listOf(kit.id, other.id))
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(kit, red), mount(other, cpl, AuxiliaryFilterChoice.CplLoss(1.5)))))
+        c.arrangeCandidateFilterSets(listOf(kit.id, other.id))
+        assertNull(c.applyMounts(listOf(mount(kit, red), mount(other, cpl, AuxiliaryFilterChoice.CplLoss(1.5)))))
         c.addFilterWheel(FilterSource.FilterSet(kit.id))
         val kitWheel = c.state.value.filterWheels.indexOfFirst { it.source == FilterSource.FilterSet(kit.id) }
         val row = c.state.value.filterWheels[kitWheel].rows.indexOfFirst {
@@ -224,9 +224,9 @@ class ShootingFilterSetSelectionTest {
         working = working.rebased(
             c.state.value.candidateFilterSetIds,
             c.state.value.mountedAuxiliaryFilters,
-            model.inventory.value.filterSets.map { it.id }.toSet(),
+            model.inventory.value,
         )
-        assertFalse("A deleted set leaves the working selection.", working.isSelected(created.id))
+        assertFalse("A deleted set leaves the working selection.", created.id in working.selectedFilterSetIds)
 
         // Cancel drops the session; the inventory edits stay.
         assertEquals("Kit 2", model.inventory.value.filterSet(kit.id)!!.name)
@@ -237,7 +237,7 @@ class ShootingFilterSetSelectionTest {
     @Test fun removingTheOnlyNdWheelsFallsBackToOneStandardWheel() {
         val kit = FilterSet("Kit", FilterSetColor.teal, listOf(nd8))
         val (c, _) = controller(kit)
-        c.setCandidateFilterSets(listOf(kit.id))
+        c.arrangeCandidateFilterSets(listOf(kit.id))
         c.addFilterWheel(FilterSource.FilterSet(kit.id))
         val standard = c.state.value.filterWheels.first { it.source == FilterSource.Standard }
         c.removeNdWheelFromOverscroll(standard.id)
@@ -430,7 +430,7 @@ class ShootingFilterSetSelectionTest {
         val kit = FilterSet("Kit", FilterSetColor.teal, listOf(red))
         val holder = FilterSet("Holder", FilterSetColor.blue, listOf(nd8))
         val (c, _) = controller(kit, holder)
-        c.setCandidateFilterSets(listOf(kit.id, holder.id))
+        c.arrangeCandidateFilterSets(listOf(kit.id, holder.id))
         c.addFilterWheel(FilterSource.FilterSet(holder.id))
         c.addFilterWheel(FilterSource.Standard)
         c.addFilterWheel(FilterSource.Standard)
@@ -446,7 +446,11 @@ class ShootingFilterSetSelectionTest {
         assertEquals("Nothing is committed before Apply.", 4, c.state.value.filterWheels.size)
     }
 
-    @Test fun movingAnItemToAnotherSetKeepsItsIdAndEveryCameraReference() {
+    /** FILTER-ITEM-009: a moved item keeps its id; an auxiliary selection
+     *  follows it only into a Set the camera selects, an ND wheel follows
+     *  it as before (FILTER-ITEM-005), and no camera selects the
+     *  destination because of an auxiliary filter. */
+    @Test fun movingAnItemKeepsItsIdAndEveryCameraJudgesItsOwnSelection() {
         val bag = FilterSet("Bag", FilterSetColor.blue)
         val kit = FilterSet("Kit", FilterSetColor.teal)
         val (c, model) = controller(bag, kit)
@@ -454,19 +458,19 @@ class ShootingFilterSetSelectionTest {
         assertEquals(FilterItemSaveOutcome.Saved, c.saveFilterItem(nd8, bag.id))
         val bagSet = model.inventory.value.filterSet(bag.id)!!
 
-        // Camera 1 mounts Red and an ND8 wheel from Bag; camera 2,
-        // active while the items move, mounts Red only.
-        c.setCandidateFilterSets(listOf(bag.id))
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(bagSet, red))))
+        // Camera 1 selects Bag only, mounts Red, and has an ND8 wheel from
+        // Bag; camera 2, active while the items move, selects Bag and Kit
+        // and mounts Red.
+        c.arrangeCandidateFilterSets(listOf(bag.id))
+        assertNull(c.applyMounts(listOf(mount(bagSet, red))))
         c.addFilterWheel(FilterSource.FilterSet(bag.id))
         val wheel = c.state.value.filterWheels.first { it.source == FilterSource.FilterSet(bag.id) }
         val row = wheel.rows.indexOfFirst { it.selection == FilterWheelSelection.Item(FilterRowSelection(nd8.id, FilterRowChoice.Fixed)) }
         c.setNdWheelValue(wheel.id, row)
         c.setNdWheelActive(wheel.id, false)
-        val cameraOneWheels = wheels(c)
         c.selectSlot(CameraSlotId.camera2)
-        c.setCandidateFilterSets(listOf(bag.id))
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(bagSet, red))))
+        c.arrangeCandidateFilterSets(listOf(bag.id, kit.id))
+        assertNull(c.applyMounts(listOf(mount(bagSet, red))))
 
         val renamed = red.copy(name = "Red 25A Hoya")
         assertEquals(FilterItemSaveOutcome.Saved, c.saveFilterItem(renamed, kit.id))
@@ -474,17 +478,24 @@ class ShootingFilterSetSelectionTest {
         assertEquals("The same items, with their ids.", listOf(red.id, nd8.id), model.inventory.value.filterSet(kit.id)!!.items.map { it.id })
         assertTrue(model.inventory.value.filterSet(bag.id)!!.items.isEmpty())
 
-        // The active camera keeps Red under Kit; Kit joins its sets and
-        // Bag stays.
+        // Camera 2 selects Kit: Red follows it there.
         assertEquals(listOf(MountedAuxiliaryFilter(kit.id, red.id, AuxiliaryFilterChoice.RegisteredLoss)), c.state.value.mountedAuxiliaryFilters)
         assertEquals(listOf(bag.id, kit.id), c.state.value.candidateFilterSetIds)
 
-        // The inactive camera kept both references the same way.
+        // Camera 1 did not select Kit when Red moved: Red is unmounted and
+        // Kit is not selected for it; the later ND8 move takes its wheel to
+        // Kit, which that wheel then references.
         c.selectSlot(CameraSlotId.camera1)
-        assertEquals(listOf(kit.id), c.state.value.mountedAuxiliaryFilters.map { it.filterSetId })
+        assertTrue(c.state.value.mountedAuxiliaryFilters.isEmpty())
         assertTrue("The ND8 wheel follows its item.", c.state.value.filterWheels.any { it.source == FilterSource.FilterSet(kit.id) })
-        assertEquals(cameraOneWheels, wheels(c))
         assertEquals(listOf(bag.id, kit.id), c.state.value.candidateFilterSetIds)
+        assertEquals("Only the ND8 contributes now.", "3", c.state.value.filterStatus.totalStopsText)
+
+        // A restart restores the same.
+        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        assertTrue(restored.state.value.mountedAuxiliaryFilters.isEmpty())
+        restored.selectSlot(CameraSlotId.camera2)
+        assertEquals(listOf(kit.id), restored.state.value.mountedAuxiliaryFilters.map { it.filterSetId })
     }
 
     @Test fun itemsReadNdFirstThenByKindAndNameWithoutManualOrder() {
@@ -574,7 +585,7 @@ class ShootingFilterSetSelectionTest {
         val old = ndSet("Old", 1)
         val fresh = ndSet("Fresh", 1)
         val (c, model) = controller(old, fresh)
-        c.setCandidateFilterSets(listOf(old.id))
+        c.arrangeCandidateFilterSets(listOf(old.id))
         c.addFilterWheel(FilterSource.FilterSet(old.id))
         commit(c, 1, FilterWheelSelection.Item(FilterRowSelection(old.items[0].id, FilterRowChoice.Fixed)))
         val standardWheel = { c.state.value.filterWheels.first { it.source == FilterSource.Standard }.id }
@@ -602,7 +613,7 @@ class ShootingFilterSetSelectionTest {
         val pouch = ndSet("Pouch", 0, auxiliary = true)
         val (c, _) = controller(kit, pouch)
         commit(c, 0, FilterWheelSelection.Standard(2.0))
-        c.setCandidateFilterSets(listOf(kit.id))
+        c.arrangeCandidateFilterSets(listOf(kit.id))
         c.addFilterWheel(FilterSource.FilterSet(kit.id))
         commit(c, 1, kitNd(kit))
         c.addFilterWheel(FilterSource.Standard)

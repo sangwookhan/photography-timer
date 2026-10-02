@@ -107,7 +107,7 @@ class FilterSetControllerTest {
         }
 
         fun assignAllFilterSetsAsCandidates() {
-            controller.setCandidateFilterSets(model.inventory.value.filterSets.map { it.id })
+            controller.arrangeCandidateFilterSets(model.inventory.value.filterSets.map { it.id })
         }
     }
 
@@ -347,10 +347,10 @@ class FilterSetControllerTest {
         c.addFilterWheel(source(lee))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(nd))
         val order = wheels(c).map { it.id }
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))))
+        assertNull(c.applyMounts(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))))
         assertEquals("8", total(c))
 
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd))))
+        assertNull(c.applyMounts(listOf(mount(lee, leeGnd))))
         assertEquals("An auxiliary change never moves an ND wheel.", order, wheels(c).map { it.id })
         assertEquals("5", total(c))
     }
@@ -694,11 +694,11 @@ class FilterSetControllerTest {
             listOf(FilterSource.Standard),
             c.state.value.plus.sources.map { it.source },
         )
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd))))
+        assertNull(c.applyMounts(listOf(mount(lee, leeGnd))))
         assertEquals("30", total(c))
         assertEquals(
             FilterStackRejection.exceedsTotalLimit,
-            c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))),
+            c.applyMounts(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))),
         )
         assertEquals("A refused Apply changes nothing.", listOf(mount(lee, leeGnd)), mounted(c))
     }
@@ -714,7 +714,7 @@ class FilterSetControllerTest {
         commit(c, 0, standard(5.0))
         c.addFilterWheel(source(lee))
         c.addFilterWheel(source(lee))
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd))))
+        assertNull(c.applyMounts(listOf(mount(lee, leeGnd))))
 
         c.cleanupEmptyNdWheels()
 
@@ -781,10 +781,10 @@ class FilterSetControllerTest {
 
         c.selectSlot(CameraSlotId.camera2)
         f.assignAllFilterSetsAsCandidates()
-        assertNull(c.applyAuxiliaryFilters(listOf(recordOnly)))
+        assertNull(c.applyMounts(listOf(recordOnly)))
 
         c.selectSlot(CameraSlotId.camera1)
-        assertNull(c.applyAuxiliaryFilters(listOf(full)))
+        assertNull(c.applyMounts(listOf(full)))
 
         assertEquals(listOf(full), mounted(c))
         assertEquals("Camera 2 keeps its own per-shot mode.", listOf(recordOnly), page(c, CameraSlotId.camera2).mountedAuxiliaryFilters)
@@ -891,7 +891,7 @@ class FilterSetControllerTest {
         for (slot in listOf(CameraSlotId.camera2, CameraSlotId.camera1)) {
             c.selectSlot(slot)
             f.assignAllFilterSetsAsCandidates()
-            assertNull(c.applyAuxiliaryFilters(listOf(selected)))
+            assertNull(c.applyMounts(listOf(selected)))
         }
 
         val outcome = c.saveFilterItem(
@@ -941,7 +941,7 @@ class FilterSetControllerTest {
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(nd, red, polarizer))
         val f = fixture(lee)
         val c = f.controller
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, red), mount(lee, polarizer))))
+        assertNull(c.applyMounts(listOf(mount(lee, red), mount(lee, polarizer))))
         c.addFilterWheel(FilterSource.Standard)
         c.addFilterWheel(FilterSource.Standard)
         assertEquals(3, wheels(c).size)
@@ -1010,7 +1010,7 @@ class FilterSetControllerTest {
         commit(c, 0, standard(2.0))
         c.addFilterWheel(source(lee))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(bigStopper))
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))))
+        assertNull(c.applyMounts(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))))
         val before = committed(c)
         val sources = wheels(c).map { it.source }
 

@@ -3,6 +3,7 @@
 
 package com.sangwook.ptimer.app.vm
 
+import androidx.annotation.VisibleForTesting
 import com.sangwook.ptimer.core.exposure.AuxiliaryFilterChoice
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterStack
@@ -53,8 +54,6 @@ data class ShootingFiltersSession(
     val hasChanges: Boolean
         get() = selectedFilterSetIds != committedFilterSetIds || mounts.toSet() != committedMounts
 
-    fun isSelected(id: FilterSetId): Boolean = id in selectedFilterSetIds
-
     /** Adds a set to the end of the working selection, or removes it, in
      *  the working state only. */
     fun withSelected(id: FilterSetId, selected: Boolean): ShootingFiltersSession = copy(
@@ -73,23 +72,48 @@ data class ShootingFiltersSession(
         copy(workingMounts = workingMounts.filter { it.itemId != itemId } + listOfNotNull(mount))
 
     /**
+     * Follows an inventory edit made from a set editor opened here, which
+     * is immediate and not rolled back (FILTER-FLOW-003). Call it whenever
+     * the camera's committed state or the inventory changes: it rebases on
+     * a committed change and then reconciles against the inventory, so the
+     * screen may run it from any trigger, or more than once, with the same
+     * result. (iOS: `follow`.)
+     */
+    fun followed(
+        committedFilterSetIds: List<FilterSetId>,
+        committedMounts: List<MountedAuxiliaryFilter>,
+        inventory: FilterInventory,
+    ): ShootingFiltersSession {
+        val rebased =
+            if (committedFilterSetIds == this.committedFilterSetIds && committedMounts.toSet() == this.committedMounts) this
+            else rebased(committedFilterSetIds, committedMounts, inventory)
+        return rebased.reconciled(inventory)
+    }
+
+    /**
      * The camera's committed state changed underneath the session — an
      * inventory edit made from a set editor opened here, which is
      * immediate and not rolled back (FILTER-FLOW-003). Each item follows
      * the edit only where its committed mount changed: a pick the session
-     * had not changed takes the new committed mount (or leaves with it), a
-     * pick the session had changed keeps its choice under the item's new
-     * Set, and every other working pick or unmount stays as it is, so
-     * Apply never undoes the edit and never loses an unrelated draft
-     * change. A set the camera gained — a moved item's new set — joins the
-     * selection, and sets that no longer exist leave it.
+     * had not changed takes the new committed mount, a pick the session had
+     * changed keeps its choice, and every other working pick or unmount
+     * stays as it is, so Apply never undoes the edit and never loses an
+     * unrelated draft change. A committed mount whose item moved stays
+     * picked only while the session selects the item's new Set
+     * (FILTER-ITEM-009), and one the camera dropped otherwise leaves the
+     * session too. A set the camera gained joins the selection, and sets
+     * that no longer exist leave it. Together with [reconciled], which
+     * leaves these committed picks alone, the result does not depend on
+     * which of the two runs first.
      */
-    fun rebased(
+    @VisibleForTesting
+    internal fun rebased(
         committedFilterSetIds: List<FilterSetId>,
         committedMounts: List<MountedAuxiliaryFilter>,
-        existingFilterSetIds: Set<FilterSetId>,
+        inventory: FilterInventory,
     ): ShootingFiltersSession {
         val gained = committedFilterSetIds.filter { it !in this.committedFilterSetIds && it !in selectedFilterSetIds }
+        val selected = selectedFilterSetIds + gained
         val before = this.committedMounts.associateBy { it.itemId }
         val after = committedMounts.associateBy { it.itemId }
         val rebased = workingMounts.mapNotNull { working ->
@@ -97,9 +121,15 @@ data class ShootingFiltersSession(
             val new = after[working.itemId]
             when {
                 old == new -> working
-                working == old -> new
-                new != null ->
-                    if (new.choice.sameRole(working.choice)) working.copy(filterSetId = new.filterSetId) else new
+                new != null && old != null && old.filterSetId != new.filterSetId && new.filterSetId !in selected -> null
+                new != null -> if (working == old || !new.choice.sameRole(working.choice)) new else working.copy(filterSetId = new.filterSetId)
+                // The camera dropped a pick the session had not changed. An
+                // item that moved to a Set this session selects stays picked
+                // there; anything else leaves with the camera's mount.
+                working == old -> inventory.item(working.itemId)?.first?.id
+                    ?.takeIf { it != working.filterSetId && it in selected }
+                    ?.let { owner -> working.copy(filterSetId = owner) }
+                    ?.takeIf { FilterStack.resolvedAuxiliaryFilter(it, inventory) != null }
                 else -> working
             }
         }
@@ -109,7 +139,7 @@ data class ShootingFiltersSession(
             mount.itemId !in before && rebased.none { it.itemId == mount.itemId }
         }
         return ShootingFiltersSession(
-            selectedFilterSetIds = (selectedFilterSetIds + gained).filter { it in existingFilterSetIds },
+            selectedFilterSetIds = selected.filter { inventory.filterSet(it) != null },
             workingMounts = rebased + joined,
             committedFilterSetIds = committedFilterSetIds,
             committedMounts = committedMounts.toSet(),
@@ -123,16 +153,30 @@ data class ShootingFiltersSession(
      * an item in a deleted Set, or with a choice no longer configured or no
      * longer fitting the item's kind is dropped, never replaced
      * (FILTER-ITEM-006, FILTER-PERSIST-002), and a deleted Set leaves the
-     * selection. A pick whose item now lives in another Set is left as it
-     * is. Every other working choice is kept.
+     * selection. A pick whose item now lives in another Set follows it
+     * there with its choice while the session selects that Set, and is
+     * otherwise cleared for good, so selecting the Set later does not bring
+     * it back (FILTER-ITEM-009). A pick that still equals the camera's
+     * committed mount is left to [rebased]: the camera's own reconciliation
+     * decides it. Every other working choice is kept.
      */
-    fun reconciled(inventory: FilterInventory): ShootingFiltersSession = copy(
-        selectedFilterSetIds = selectedFilterSetIds.filter { inventory.filterSet(it) != null },
-        workingMounts = workingMounts.filter { mount ->
-            FilterStack.resolvedAuxiliaryFilter(mount, inventory) != null ||
-                inventory.item(mount.itemId)?.first?.id.let { owner -> owner != null && owner != mount.filterSetId }
-        },
-    )
+    @VisibleForTesting
+    internal fun reconciled(inventory: FilterInventory): ShootingFiltersSession {
+        val selected = selectedFilterSetIds.filter { inventory.filterSet(it) != null }
+        return copy(
+            selectedFilterSetIds = selected,
+            workingMounts = workingMounts.mapNotNull { mount ->
+                if (mount in committedMounts) return@mapNotNull mount
+                val owner = inventory.item(mount.itemId)?.first?.id ?: return@mapNotNull null
+                val rehomed = when {
+                    owner == mount.filterSetId -> mount
+                    owner in selected -> mount.copy(filterSetId = owner)
+                    else -> return@mapNotNull null
+                }
+                rehomed.takeIf { FilterStack.resolvedAuxiliaryFilter(it, inventory) != null }
+            },
+        )
+    }
 }
 
 /** The same kind of choice: a CPL loss, a GND mode, or a registered loss. */

@@ -115,6 +115,8 @@ fun ShootingApp(
             slotStore = bootstrap.slotStore,
             inventoryStore = bootstrap.inventoryStore,
             initialInventory = bootstrap.initialInventory,
+            // The bootstrap always reads the store: `null` is a fresh install.
+            initialInventoryIsStoreRead = true,
             // Read per start, so the reference string a timer captures is
             // written in the language in use at that moment.
             referenceVocabulary = { filterReferenceVocabulary(context.resources) },

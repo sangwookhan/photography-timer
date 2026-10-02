@@ -18,6 +18,23 @@ import com.sangwook.ptimer.core.exposure.ResolvedAuxiliaryFilter
  * kind and mode words and owns fonts and colors.
  * (iOS: `AuxiliaryFilterSummaryItemDisplay`.)
  */
+/**
+ * One selected filter in the Selected filters panel of Shooting Filters
+ * (FILTER-FLOW-003): the whole name, the kind apart from it, and the
+ * current contribution or GND mode. The view localizes the kind and mode.
+ * (iOS: `SelectedFilterRowDisplayState`.)
+ */
+data class SelectedFilterRowDisplayState(
+    val itemId: FilterItemId,
+    /** The item's registered name, never shortened. */
+    val name: String,
+    val kind: FilterItemKind,
+    /** A GND's mode; `null` for the other kinds. */
+    val gndMode: GndCalculationMode?,
+    val contributionStops: Double,
+    val opticalColor: FilterSetColor?,
+)
+
 data class AuxiliaryFilterSummaryItemDisplay(
     val itemId: FilterItemId,
     /** The item's registered name (`Soft GND 3`, `CPL`, `Red 25A`). */
@@ -77,6 +94,24 @@ object AuxiliaryFilterSummaryPresenter {
         if (rows.isEmpty()) return null
         return AuxiliaryFilterSummaryDisplayState(rows.map { itemDisplay(it, rows) })
     }
+
+    /**
+     * The Selected filters panel of Shooting Filters (FILTER-FLOW-003):
+     * every selected filter in Main's order with its whole name, its kind,
+     * and its contribution — a GND also its mode. Names are never shortened
+     * here; only the view may truncate one that does not fit.
+     */
+    fun selectedFilterRows(rows: List<ResolvedAuxiliaryFilter>): List<SelectedFilterRowDisplayState> =
+        rows.map { row ->
+            SelectedFilterRowDisplayState(
+                itemId = row.item.id,
+                name = row.item.name,
+                kind = row.item.behavior.kind,
+                gndMode = (row.mount.choice as? AuxiliaryFilterChoice.Gnd)?.mode,
+                contributionStops = row.contributionStops,
+                opticalColor = row.item.behavior.opticalColor,
+            )
+        }
 
     /** One row of the summary. [rows] are all mounted items, so the
      *  identifier can tell two items of the same kind apart. */

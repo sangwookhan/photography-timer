@@ -58,8 +58,9 @@ sealed class FilterPlusChoice {
 }
 
 /**
- * The Plus wheel (FILTER-PLUS-001/003/004/005): present while fewer than
- * four actual wheels exist, browsing every source in selection order,
+ * The Plus wheel (FILTER-PLUS-001/003/004/005): present while the Filter
+ * Stack is under its cap, browsing Standard and the selected Filter Sets in
+ * display order,
  * showing the camera's remembered source, and disabled with a reason when
  * that source cannot currently add a usable row.
  */

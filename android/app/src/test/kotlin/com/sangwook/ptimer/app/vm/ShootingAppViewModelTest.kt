@@ -89,7 +89,9 @@ class ShootingAppViewModelTest {
 
     private class FakeInventoryStore : FilterInventoryStoring {
         val saved = mutableListOf<PersistentFilterInventorySnapshot>()
-        override fun loadSnapshot(): PersistentFilterInventorySnapshot? = null
+        var loads = 0
+            private set
+        override fun loadSnapshot(): PersistentFilterInventorySnapshot? { loads++; return null }
         override fun saveSnapshot(snapshot: PersistentFilterInventorySnapshot) { saved += snapshot }
         override fun clearSnapshot() {}
     }
@@ -112,6 +114,7 @@ class ShootingAppViewModelTest {
         clock: () -> Instant = { t0 },
         inventoryStore: FilterInventoryStoring = FakeInventoryStore(),
         initialInventory: FilterInventory? = null,
+        initialInventoryIsStoreRead: Boolean = initialInventory != null,
     ): ShootingAppViewModel = ShootingAppViewModel(
         films = emptyList(),
         library = CustomFilmLibrary(),
@@ -122,6 +125,7 @@ class ShootingAppViewModelTest {
         completionNotifier = completionNotifier,
         inventoryStore = inventoryStore,
         initialInventory = initialInventory,
+        initialInventoryIsStoreRead = initialInventoryIsStoreRead,
         clock = clock,
         // Shares the test scheduler so ordered reads and submitted writes run
         // under virtual time and the tests can assert exact debounce timing.
@@ -455,6 +459,18 @@ class ShootingAppViewModelTest {
             listOf("Bootstrap kit", "NiSi kit"),
             inventoryStore.saved.last().filterSets.map { it.name },
         )
+    }
+
+    /** The bootstrap reads the inventory off the main thread; when it
+     *  found nothing saved, the owner does not read the store again. */
+    @Test
+    fun anAbsentInventoryTheBootstrapReadIsNotReadAgain() {
+        val inventoryStore = FakeInventoryStore()
+        val sut = holder(inventoryStore = inventoryStore, initialInventory = null, initialInventoryIsStoreRead = true)
+        scheduler.advanceUntilIdle()
+
+        assertEquals("No second store read.", 0, inventoryStore.loads)
+        assertTrue(sut.filterInventory.inventory.value.filterSets.isEmpty())
     }
 
     @Test

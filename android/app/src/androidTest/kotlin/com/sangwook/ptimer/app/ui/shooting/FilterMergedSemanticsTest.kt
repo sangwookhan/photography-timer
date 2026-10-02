@@ -4,10 +4,6 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -22,12 +18,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.app.vm.CalculatorUiState
-import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
 import com.sangwook.ptimer.app.vm.ModelOption
 import com.sangwook.ptimer.app.vm.SlotTab
-import com.sangwook.ptimer.core.exposure.FilterInventory
-import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.slots.CameraSlotId
@@ -90,22 +83,11 @@ class FilterMergedSemanticsTest {
     @Test
     fun colorSwatches_reportNameAndSelectedStateOnTheMergedNode() {
         composeTestRule.setContent {
-            var inventory by remember { mutableStateOf(FilterInventory.empty) }
             PTimerTheme {
-                FilterSetManagementScreen(
-                    inventory = inventory,
-                    actions = managementActions(
-                        onCreate = { name, color ->
-                            inventory = FilterInventory(inventory.filterSets + FilterSet(name, color))
-                        },
-                    ),
-                    onDismiss = {},
-                )
+                // The creation dialog preselects the suggested color.
+                NewFilterSetDialog(suggestedColor = FilterSetColor.blue, onSave = { _, _ -> }, onDismiss = {})
             }
         }
-
-        // The creation dialog preselects Blue (the stubbed suggestion).
-        composeTestRule.onNodeWithContentDescription("New Filter Set").performClick()
         composeTestRule.waitForIdle()
 
         assertSwatch("Blue", expectedSelected = true)
@@ -137,21 +119,6 @@ class FilterMergedSemanticsTest {
         swatch.assertHeightIsAtLeast(32.dp)
     }
 
-    private fun managementActions(onCreate: (String, FilterSetColor) -> Unit) =
-        FilterSetManagementActions(
-            suggestCreationColor = { FilterSetColor.blue },
-            createFilterSet = onCreate,
-            renameFilterSet = { _, _ -> },
-            recolorFilterSet = { _, _ -> },
-            moveFilterSet = { _, _ -> },
-            deleteFilterSet = {},
-            moveFilterItem = { _, _, _ -> },
-            deleteFilterItem = {},
-            saveFilterItem = { _, _ -> FilterItemSaveOutcome.Saved },
-            camerasAffectedByDeletingFilterSet = { emptyList() },
-            camerasAffectedByDeletingItem = { emptyList() },
-        )
-
     @Composable
     private fun ShootingScreenHarness() {
         ShootingScreen(
@@ -162,7 +129,7 @@ class FilterMergedSemanticsTest {
             onAddFilterWheel = {},
             onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
             onRemoveNdWheelOverscroll = {},
-            onManageFilterSets = {},
+            onOpenShootingFilters = {},
             onSelectNotation = {},
             onSelectFilm = {},
             onSelectProfile = {},

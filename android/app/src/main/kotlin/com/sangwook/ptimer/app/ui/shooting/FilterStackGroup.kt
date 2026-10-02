@@ -132,7 +132,6 @@ internal fun FilterStackGroup(
     onAddFilterWheel: (FilterSource) -> Unit,
     onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
     onOverscrollRemove: (Int) -> Unit,
-    onManageFilterSets: () -> Unit,
     onOpenShootingFilters: () -> Unit,
     modifier: Modifier = Modifier,
     wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
@@ -213,7 +212,6 @@ internal fun FilterStackGroup(
                                     // Plus control short of the viewport.
                                     height = viewportHeight,
                                     onAdd = onAddFilterWheel,
-                                    onManage = onManageFilterSets,
                                     onOpenAuxiliaryFilters = onOpenShootingFilters,
                                     browsing = browsing,
                                     onBrowsingChanged = { browsing = it },

@@ -54,9 +54,6 @@ import com.sangwook.ptimer.app.vm.FilterPlusUiState
 import com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiter
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.ui.theme.filterSetColor
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** Slim trailing-edge Plus control width (iOS uses a 26 pt ghost column). */
 internal val FilterPlusControlWidth = 26.dp
@@ -76,15 +73,15 @@ internal val FilterPlusControlWidth = 26.dp
  *   releasing on the Auxiliary filters action opens the shooting popup
  *   without adding anything, and a return to the starting source adds
  *   nothing;
- * - a stationary long press opens Filter Set management; movement past
- *   the stationary tolerance cancels it, and once the drag threshold is
- *   crossed browsing has won for the rest of the touch (FILTER-PLUS-001).
+ * - once the drag threshold is crossed browsing has won for the rest of
+ *   the touch; Filter Sets are managed from Shooting Filters, not from a
+ *   long press (FILTER-FLOW-005).
  *
  * At rest the compact control shows the candidate source's color as a
  * secondary cue. TalkBack sees ONE focusable element (FILTER-A11Y-001,
  * FILTER-PLUS-004): its adjustable value steps a transient displayed
  * candidate through the sources without adding or touching the camera's
- * remembered source, Manage Filter Sets is always a named action, and
+ * remembered source, Open auxiliary filters is always a named action, and
  * Add — activation and the named action — exists only while the
  * DISPLAYED source can add right now; otherwise the state description
  * carries the reason and the element stays adjustable so the user can
@@ -95,7 +92,6 @@ internal fun FilterSourcePlusControl(
     plus: FilterPlusUiState,
     height: Dp,
     onAdd: (FilterSource) -> Unit,
-    onManage: () -> Unit,
     /** Opens the shooting popup — the Auxiliary filters action. */
     onOpenAuxiliaryFilters: () -> Unit,
     /** The choice a touch is browsing right now, owned by the caller;
@@ -128,7 +124,6 @@ internal fun FilterSourcePlusControl(
     val isBrowsing = browsing != null
 
     val addLabel = stringResource(R.string.nd_add_filter)
-    val manageLabel = stringResource(R.string.filter_manage_sets)
     val auxiliaryLabel = stringResource(R.string.filter_auxiliary_open)
     val auxiliaryTitle = stringResource(R.string.filter_auxiliary_title)
     val displayedName = when (displayed) {
@@ -140,9 +135,7 @@ internal fun FilterSourcePlusControl(
     val currentOnOpenAuxiliary by rememberUpdatedState(onOpenAuxiliaryFilters)
 
     val haptics = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
     val currentOnAdd by rememberUpdatedState(onAdd)
-    val currentOnManage by rememberUpdatedState(onManage)
     val currentOnBrowsingChanged by rememberUpdatedState(onBrowsingChanged)
 
     Box(
@@ -152,39 +145,26 @@ internal fun FilterSourcePlusControl(
             .clip(RoundedCornerShape(10.dp))
             .background(tint.copy(alpha = if (isBrowsing) 0.22f else 0.12f))
             .border(1.5.dp, tint.copy(alpha = if (isBrowsing) 0.9f else 0.55f), RoundedCornerShape(10.dp))
-            // One gesture decides tap / long press / browse from the
-            // touch's travel and duration, so the three never compete.
+            // One gesture decides tap or browse from the touch's travel,
+            // so the two never compete.
             .pointerInput(sources, settledIndex) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val arbiter = FilterSourcePlusGestureArbiter(settledIndex, choices.size)
-                    var longPress: Job? = scope.launch {
-                        delay(FilterSourcePlusGestureArbiter.LONG_PRESS_MILLIS)
-                        if (arbiter.deadlineElapsed()) currentOnManage()
-                    }
-                    try {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) {
-                                change.consume()
-                                break
-                            }
-                            val dx = (change.position.x - down.position.x).toDp().value
-                            val dy = (change.position.y - down.position.y).toDp().value
-                            val moved = arbiter.moved(dx, dy)
-                            if (arbiter.phase != FilterSourcePlusGestureArbiter.Phase.pressing) {
-                                longPress?.cancel()
-                                longPress = null
-                            }
-                            if (moved) {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                currentOnBrowsingChanged(arbiter.candidateIndex?.let { choices.getOrNull(it) })
-                            }
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
                             change.consume()
+                            break
                         }
-                    } finally {
-                        longPress?.cancel()
+                        val dx = (change.position.x - down.position.x).toDp().value
+                        val dy = (change.position.y - down.position.y).toDp().value
+                        if (arbiter.moved(dx, dy)) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            currentOnBrowsingChanged(arbiter.candidateIndex?.let { choices.getOrNull(it) })
+                        }
+                        change.consume()
                     }
                     val outcome = arbiter.released()
                     currentOnBrowsingChanged(null)
@@ -262,7 +242,6 @@ internal fun FilterSourcePlusControl(
                             true
                         },
                     )
-                    add(CustomAccessibilityAction(manageLabel) { onManage(); true })
                 }
             },
         contentAlignment = Alignment.Center,

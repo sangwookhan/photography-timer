@@ -112,8 +112,8 @@ fun ShootingScreen(
     onAddFilterWheel: (FilterSource) -> Unit,
     onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
     onRemoveNdWheelOverscroll: (Int) -> Unit,
-    onManageFilterSets: () -> Unit,
-    /** Opens the shooting popup (FILTER-FLOW-002). */
+    /** Opens Shooting Filters — from the ND header, the Plus auxiliary
+     *  action, or the mounted summary (FILTER-FLOW-002). */
     onOpenShootingFilters: () -> Unit,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
@@ -355,7 +355,6 @@ fun ShootingScreen(
                                 { _, _ -> FilterWheelAdjustmentOutcome.Boundary }
                             },
                             onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
-                            onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
                             onOpenShootingFilters = if (writesActiveSlot) onOpenShootingFilters else fun() {},
                             // Narrower sides than the other cards so the
                             // one-row header gives each notation option

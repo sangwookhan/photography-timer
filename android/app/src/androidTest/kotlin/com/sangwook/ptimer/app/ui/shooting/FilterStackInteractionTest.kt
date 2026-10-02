@@ -90,7 +90,7 @@ class FilterStackInteractionTest {
                     onAddFilterWheel = controller::addFilterWheel,
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onOverscrollRemove = controller::removeNdWheelFromOverscroll,
-                    onManageFilterSets = {},
+                    onOpenShootingFilters = {},
                 )
             }
         }

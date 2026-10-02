@@ -104,6 +104,14 @@ internal fun localizedGndModeName(mode: GndCalculationMode): String = when (mode
     GndCalculationMode.applyFullValue -> stringResource(R.string.filter_mode_apply_full_value)
 }
 
+/** The short GND mode label of a compact choice in Shooting Filters
+ *  (FILTER-AUX-006): `Record` or `Full`. */
+@Composable
+internal fun localizedGndModeShortName(mode: GndCalculationMode): String = when (mode) {
+    GndCalculationMode.recordOnly -> stringResource(R.string.filter_mode_record_short)
+    GndCalculationMode.applyFullValue -> stringResource(R.string.filter_mode_full_short)
+}
+
 /**
  * Persistent type / mode label above a wheel viewport (FILTER-STACK-007):
  * `ND`, `CPL`, `GND REC`, `GND FULL`, `EMPTY`. The tokens are identical

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.exposure.NDPresetLadderTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-04T18:19:13.137Z" hostname="AL03230922ui-MacBookPro.local" time="0.014">
+  <properties/>
+  <testcase name="aSavedFractionalStandardValueRestoresAndStaysOnItsOwnWheel" classname="com.sangwook.ptimer.core.exposure.NDPresetLadderTest" time="0.01"/>
+  <testcase name="presetsAreNeitherWholeNorThirdStop" classname="com.sangwook.ptimer.core.exposure.NDPresetLadderTest" time="0.002"/>
+  <testcase name="shippingLadderIsWholeStopsOnly" classname="com.sangwook.ptimer.core.exposure.NDPresetLadderTest" time="0.0"/>
+  <testcase name="presetsUseConfiguredStopValueInCalculation" classname="com.sangwook.ptimer.core.exposure.NDPresetLadderTest" time="0.0"/>
+  <testcase name="commercialPresetMatchNormalizesAndRejectsUnsupported" classname="com.sangwook.ptimer.core.exposure.NDPresetLadderTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

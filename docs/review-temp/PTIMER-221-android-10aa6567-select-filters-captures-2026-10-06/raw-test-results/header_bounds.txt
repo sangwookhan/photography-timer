@@ -1,0 +1,17 @@
+Android emulator-5554, 360 dp wide, default font scale, dark, build of the tree at the pushed head.
+Layout bounds in dp from the layout dumps; drawn edges from the 3x captures.
+
+Korean (A01 / layout_dump_ko_header.xml):
+  Base Shutter            18.0 .. 67.3   (full size)
+  central gap             49.4
+  Select Filters target   116.7 .. 190.0 (drawn border 117.0 .. 189.7)
+  button-to-notation gap  8.0            (drawn 9.0)
+  notation                198.0 .. 342.0 (three of 48.0)
+English (E01 / layout_dump_en_header.xml):
+  Base Shutter            18.0 .. 93.0   (full size; before this change 18.0 .. 75.7 at its 0.75 floor)
+  central gap             12.0           (drawn 13.0)
+  Select Filters target   105.0 .. 206.0 (drawn border 105.3 .. 205.7)
+  button-to-notation gap  8.0            (drawn 9.3)
+  notation                214.0 .. 342.0 (three of 42.7; uiautomator reports the last target's touch expansion to 344.7)
+Taps (y 236 dp): KO 118 / 153 / 185 and EN 107 / 155 / 197 opened Shooting filters;
+OD, ND, Stops changed only the notation; Base Shutter 40 / 50 opened nothing.

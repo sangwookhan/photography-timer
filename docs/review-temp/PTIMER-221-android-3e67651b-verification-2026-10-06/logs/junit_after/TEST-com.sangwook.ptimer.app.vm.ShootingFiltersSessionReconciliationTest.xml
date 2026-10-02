@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T18:12:29.930Z" hostname="AL03230922ui-MacBookPro.local" time="0.006">
+  <properties/>
+  <testcase name="aWorkingOnlyPickWhoseItemMovedIsLeftAsItIs" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.002"/>
+  <testcase name="deletingAWorkingOnlySetDropsItsSelectionAndPicks" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.001"/>
+  <testcase name="deletingAWorkingOnlyPickDropsItAndKeepsTheOtherPicks" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.0"/>
+  <testcase name="aCommittedChangeKeepsThePicksOfASetRemovedInTheSession" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.001"/>
+  <testcase name="removingTheWorkingChoiceOfACplDropsThePickWithoutAReplacement" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.001"/>
+  <testcase name="aCommittedMoveKeepsTheDraftChoiceUnderTheNewSet" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.001"/>
+  <testcase name="aCommittedMoveKeepsUnrelatedDraftPicksAndUnmounts" classname="com.sangwook.ptimer.app.vm.ShootingFiltersSessionReconciliationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

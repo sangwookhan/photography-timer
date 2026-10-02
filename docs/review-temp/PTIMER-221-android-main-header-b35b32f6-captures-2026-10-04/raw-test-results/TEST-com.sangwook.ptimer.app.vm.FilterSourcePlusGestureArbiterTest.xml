@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-04T07:46:43.163Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="browsing wins past the drag threshold and management never opens" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.001"/>
+  <testcase name="returning to the starting source adds nothing" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <testcase name="an opened long press ignores later movement" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <testcase name="movement past the stationary tolerance cancels the long press" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <testcase name="a stationary hold opens management and the release adds nothing" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <testcase name="releasing on a different source adds that index once" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <testcase name="a stationary release adds the displayed source" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <testcase name="browsing clamps to the ends of the source list" classname="com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

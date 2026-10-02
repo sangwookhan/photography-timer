@@ -1,0 +1,37 @@
+diff --git a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
+index 394b05da..4950c327 100644
+--- a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
++++ b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
+@@ -602,7 +602,7 @@ private fun SettingsMenuButton(onOpenFilterManagement: () -> Unit, onOpenAbout:
+ private val NdHeaderCaptionGroupGap = 12.dp
+ 
+ /** Gap between the Select Filters button and the notation control. */
+-private val NdHeaderButtonNotationGap = 8.dp
++private val NdHeaderButtonNotationGap = 5.dp
+ 
+ /**
+  * Gutter between the Base Shutter column and the ND column. Without
+@@ -902,12 +902,12 @@ private fun ShootingFiltersHeaderButton(enabled: Boolean, onClick: () -> Unit) {
+                 .clip(shape)
+                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                 .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f), shape)
+-                .padding(start = 6.dp, end = 2.dp, top = 4.dp, bottom = 4.dp),
++                .padding(start = 4.dp, end = 0.dp, top = 4.dp, bottom = 4.dp),
+             verticalAlignment = Alignment.CenterVertically,
+         ) {
+             Text(
+                 stringResource(R.string.filter_aux_header_title),
+-                style = MaterialTheme.typography.labelMedium,
++                style = MaterialTheme.typography.labelSmall,
+                 fontWeight = FontWeight.SemiBold,
+                 color = MaterialTheme.colorScheme.primary,
+                 maxLines = 1,
+@@ -917,7 +917,7 @@ private fun ShootingFiltersHeaderButton(enabled: Boolean, onClick: () -> Unit) {
+                 Icons.Filled.ArrowDropDown,
+                 contentDescription = null,
+                 tint = MaterialTheme.colorScheme.primary,
+-                modifier = Modifier.size(16.dp),
++                modifier = Modifier.size(12.dp),
+             )
+         }
+     }

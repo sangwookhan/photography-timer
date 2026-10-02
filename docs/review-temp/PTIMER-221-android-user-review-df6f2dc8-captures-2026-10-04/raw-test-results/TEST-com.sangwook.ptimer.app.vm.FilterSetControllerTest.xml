@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.FilterSetControllerTest" tests="41" skipped="0" failures="0" errors="0" timestamp="2026-10-04T03:11:34.503Z" hostname="AL03230922ui-MacBookPro.local" time="0.074">
+  <properties/>
+  <testcase name="suspensionFreezesTheOrderAndResumingReconcilesExactlyOnce" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="theFallbackSkipsEveryUnavailableRowItTraverses" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.005"/>
+  <testcase name="anAdditionWhileOrderingIsSuspendedDefersToTheSingleReconciliation" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="aStalePersistedCplChoiceUnmountsNeverAnotherChoice" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="aCommittedFallbackLeavesNoTraceOfTheRejectedCandidate" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="anAssistiveAdjustmentSkipsAMountedRowAndCommitsTheNextAvailableOne" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="launchingWithSuspensionActiveRestoresThePersistedOrder" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.0"/>
+  <testcase name="aKindChangeIsBlockedOnlyByTheWheelLimitOrTheCap" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="aFullStackRefusesAndReportsStackFull" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="changingAMountedItemsKindMovesItsSelectionIntoTheNewRole" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="anAssistiveAdjustmentReportsBoundaryAndUnavailableCorrectly" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="cleanupRemovesEmptyWheelsButKeepsAMountedRecordOnlyGnd" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="editingAnItemUpdatesEveryStackAndIsBlockedByTheCap" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="sourceGroupsSortByRegisteredSubtotalAndStayContiguous" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="anAddedWheelJoinsItsSourceGroupImmediately" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="noSelectableTraversedRowKeepsThePreviousSelectionAndShowsTheReason" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="aGndModeSwitchChangesTheContributionButNotTheNdOrder" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="aSettleOnAMountedRowFallsBackToTheNearestTraversedSelectableRow" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="aMixedStackRoundTripsThroughExportSession" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="saturationShedsEveryCleanableWheelThatCanHoldNoUsableRow" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="addingAStandardWheelReturnsAGroupedAndSortedStack" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="anOverCapSettleFallsBackTheSameWay" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="onlyAnActualRemovalPublishesAnEvent" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.013"/>
+  <testcase name="aRefusedAddKeepsTheStackTheTotalAndTheRememberedSource" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="anAddedWheelSortsLastInsideItsOwnGroup" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="a wheel added from a mounted set joins its own group past another set" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="theRememberedSourceIsPerCameraAndAFreshCameraUsesStandard" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.0"/>
+  <testcase name="aRecordOnlyGndMountsAtThirtyStopsWhileItsFullValueIsRefused" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="removingASelectedCplChoiceIsBlockedAndNamesEveryAffectedCamera" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="anInactivePageJudgesItsSourcesAgainstItsOwnStack" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="aStandardOnlyTimerCapturesAStandardOnlySummary" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.0"/>
+  <testcase name="aLaterLanguageChangeDoesNotRewriteAnAlreadyCapturedReference" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="deletingAFilterSetRemovesItsWheelsAndFallsBackToStandard" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="theFallbackNeverSearchesBeyondTheAttemptedRowOrWraps" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="theRejectionNoticeIsClearedByASlotSwitchAndByAnInventoryChange" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="deletingAnItemEmptiesItsWheelsOnEveryCamera" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="theCapturedSummaryAndReferenceSurviveLaterRenames" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <testcase name="aGndModeSwitchDoesNotTouchAnotherCamera" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.0"/>
+  <testcase name="resumingWaitsForTouchAndPendingCommitsAndCanBeCancelled" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.001"/>
+  <testcase name="anAssistiveCommitGetsNoSightedFallback" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.005"/>
+  <testcase name="twoEqualItemsMountTogetherWhileASecondSelectionOfOneIsRejected" classname="com.sangwook.ptimer.app.vm.FilterSetControllerTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

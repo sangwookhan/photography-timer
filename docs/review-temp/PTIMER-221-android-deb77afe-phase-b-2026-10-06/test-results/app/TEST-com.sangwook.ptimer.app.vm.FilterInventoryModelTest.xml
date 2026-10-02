@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:53:09.494Z" hostname="AL03230922ui-MacBookPro.local" time="0.022">
+  <properties/>
+  <testcase name="createdSetsAreListedByName" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.014"/>
+  <testcase name="readsTheStoreOnlyWhenNoBootstrapInventoryIsSupplied" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.001"/>
+  <testcase name="addAndUpdateRejectAMalformedItem" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="anUpgradeKeepsAFormerDefaultAsAnOrdinarySet" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.001"/>
+  <testcase name="aBootstrapReadThatFoundNothingSeedsWithoutReadingAgain" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="relocateItemAndDeleteItemKeepTheItemID" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.001"/>
+  <testcase name="consecutiveColorSuggestionsDiffer" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.002"/>
+  <testcase name="theSamplesHoldTheApprovedItems" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="renameAndRecolorKeepTheStableIdAndSkipNoOps" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.001"/>
+  <testcase name="samplesAreSeededOnlyWhenNoInventoryWasEverSaved" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="everyMutationRoundTripsThroughThePersistedSnapshot" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="updateReplacesWhereverTheItemLivesAndSkipsAnUnchangedSave" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.001"/>
+  <testcase name="deleteRemovesTheSetAndItsItems" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="aProposedFilterSetIsCreatedTogetherWithItsFilter" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="aFreshInstallSeedsTheFirstLaunchInventoryOnce" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.001"/>
+  <testcase name="addAppendsAndADuplicateIdReplacesInPlace" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <testcase name="creationAppendsToTheUserDefinedOrderAndRejectsABlankName" classname="com.sangwook.ptimer.app.vm.FilterInventoryModelTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

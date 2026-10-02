@@ -1,0 +1,61 @@
+diff --git a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
+index ce05fda3..10b7d73f 100644
+--- a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
++++ b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
+@@ -3,6 +3,8 @@
+ 
+ package com.sangwook.ptimer.app.ui.shooting
+ 
++import androidx.compose.material3.DropdownMenuItem
++import androidx.compose.material3.DropdownMenu
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.clickable
+@@ -793,12 +795,41 @@ private fun NdFilterHeaderRow(
+             ShootingFiltersHeaderButton(enabled = enabled, onClick = onOpenShootingFilters)
+             }
+             Spacer(Modifier.width(NdHeaderGutter))
+-            NotationToggle(
+-                mode = mode,
+-                enabled = enabled,
+-                onSelect = onSelectNotation,
+-                modifier = Modifier.width(notationWidth),
+-            )
++            NotationMenuPrototype(mode = mode, enabled = enabled, onSelect = onSelectNotation)
++        }
++    }
++}
++
++@Composable
++private fun NotationMenuPrototype(mode: NDNotationMode, enabled: Boolean, onSelect: (NDNotationMode) -> Unit) {
++    var expanded by remember { mutableStateOf(false) }
++    val options = NotationOptionModes.zip(notationOptionLabels())
++    val current = options.first { it.first == mode }.second
++    Box {
++        Row(
++            modifier = Modifier
++                .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
++                .clickable(enabled = enabled, role = Role.DropdownList) { expanded = true }
++                .padding(horizontal = 4.dp),
++            verticalAlignment = Alignment.CenterVertically,
++        ) {
++            Box(
++                modifier = Modifier
++                    .clip(CircleShape)
++                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
++                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
++                    .padding(start = 10.dp, end = 4.dp, top = 3.dp, bottom = 3.dp),
++            ) {
++                Row(verticalAlignment = Alignment.CenterVertically) {
++                    Text(current, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
++                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
++                }
++            }
++        }
++        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
++            options.forEach { (m, label) ->
++                DropdownMenuItem(text = { Text(label) }, onClick = { expanded = false; onSelect(m) })
++            }
+         }
+     }
+ }

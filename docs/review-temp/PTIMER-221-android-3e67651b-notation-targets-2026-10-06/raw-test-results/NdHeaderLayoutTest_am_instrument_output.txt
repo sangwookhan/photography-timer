@@ -1,0 +1,407 @@
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest:
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w device]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 1w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w device](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 1w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w device]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w device]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 3w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w device](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 3w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w device]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w device]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 4w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w device](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 4w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w device]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 360dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 1w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 360dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 1w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 360dp]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=5
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 360dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=5
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 3w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 360dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 3w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 360dp]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=6
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 360dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=6
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 4w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 360dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 4w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 360dp]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=7
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 411dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=7
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 1w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 411dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 1w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 411dp]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=8
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 411dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=8
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 3w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 411dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 3w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 411dp]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=9
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 411dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=9
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: en-US 4w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: stream=
+Error in theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 411dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest):
+java.lang.AssertionError: en-US 4w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 411dp]
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=10
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 1w device]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=10
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 1w device]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=11
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 3w device]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=11
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 3w device]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=12
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 4w device]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=12
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 4w device]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=13
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 1w 360dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=13
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 1w 360dp]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=14
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 3w 360dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=14
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 3w 360dp]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=15
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 4w 360dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=15
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 4w 360dp]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=16
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 1w 411dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=16
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 1w 411dp]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=17
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 3w 411dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=17
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 3w 411dp]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=18
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 4w 411dp]
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest
+INSTRUMENTATION_STATUS: current=18
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=18
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=theNdHeaderKeepsItsControlsNamedAndReachable[ko-KR 4w 411dp]
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 12.643
+There were 9 failures:
+1) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w device](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 1w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+2) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w device](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 3w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+3) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w device](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 4w device: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+4) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 360dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 1w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+5) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 360dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 3w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+6) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 360dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 4w 360dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 360.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+7) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 1w 411dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 1w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+8) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 3w 411dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 3w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+9) theNdHeaderKeepsItsControlsNamedAndReachable[en-US 4w 411dp](com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest)
+java.lang.AssertionError: en-US 4w 411dp: the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp. Viewport 411.0.dp, header band 48.0.dp tall. Header nodes were: Base Shutter 18..93dp 75x16dp | Select Filters 105..206dp 101x48dp | <unnamed> 214..342dp 128x26dp | Stops 214..256dp 42x48dp | OD 256..299dp 42x48dp | ND 299..342dp 42x48dp
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.sangwook.ptimer.app.ui.shooting.NdHeaderLayoutTest.theNdHeaderKeepsItsControlsNamedAndReachable(NdHeaderLayoutTest.kt:354)
+
+FAILURES!!!
+Tests run: 18,  Failures: 9
+
+
+INSTRUMENTATION_CODE: -1

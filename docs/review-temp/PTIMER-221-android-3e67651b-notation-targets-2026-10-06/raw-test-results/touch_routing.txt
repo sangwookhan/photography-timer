@@ -1,0 +1,23 @@
+Android emulator-5554, 360 dp, English, committed build of head 3c8bcef2 (tree unchanged at this head).
+Header row y 236 dp. Layout: Base Shutter 18.0..93.0, Select Filters target 105.0..206.0,
+notation 214.0..342.0 (Stops 214.0..256.7, OD 256.7..299.3, ND 299.3..342.0).
+Each tap started from a known selected segment (third argument of bprobe.sh).
+
+tap 100 dp   (central gap)          -> nothing
+tap 104 dp   (central gap)          -> nothing
+tap 106 dp   (button left edge)     -> Shooting filters
+tap 205 dp   (button right edge)    -> Shooting filters
+tap 207 dp   (button/notation gap)  -> nothing
+tap 210 dp   (button/notation gap)  -> nothing
+tap 213 dp   (1 dp before Stops)    -> Stops selected (touch slop)
+tap 215 dp   (Stops)                -> Stops
+tap 255 dp   (Stops, 1.7 before OD) -> Stops
+tap 258 dp   (OD, 1.3 after Stops)  -> OD
+tap 298 dp   (OD, 1.3 before ND)    -> OD
+tap 300 dp   (ND, 0.7 after OD)     -> ND
+tap 341 dp   (ND)                   -> ND
+tap 343 dp   (1 dp past the row)    -> ND (touch slop)
+
+NdHeaderLayoutTest (am instrument, app kept installed): 18 run, 9 passed (all ko-KR), 9 failed (all en-US) at
+assertion (b): "the `Stops` option is laid out 42.666668.dp x 48.0.dp, under 48.0.dp".
+The "411dp" cases also rendered at 360 dp (the test's constrained box cannot exceed the device width).

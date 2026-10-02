@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" tests="26" skipped="0" failures="0" errors="0" timestamp="2026-10-04T18:20:16.249Z" hostname="AL03230922ui-MacBookPro.local" time="0.024">
+  <properties/>
+  <testcase name="filterFirstRegistrationSavesIntoANewOrInlineSetWithoutSelectingIt" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="applyAddingSetsWhilePlusIsStandardPrefersTheWinnerAndEmptiesZeroStandardWheels" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.002"/>
+  <testcase name="removingTheOnlyNdWheelsFallsBackToOneStandardWheel" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="movingAnItemToAnotherSetKeepsItsIdAndEveryCameraReference" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.002"/>
+  <testcase name="aSetOnlyChangeOffersApply" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="noPreferenceWithoutAnAddedNdSetOrWhenPlusAlreadyNamesASet" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="selectedFiltersListEveryFilterWithItsWholeNameKindAndContribution" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="severalSelectedSetsOfferTheirGroupedUnionAndFollowTheWorkingSelectionAndSetOrder" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="applyRemovesTheUncheckedSetsFiltersAndNdWheelsAndPersistsTheSelection" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.002"/>
+  <testcase name="selectedSetsKeepTheirOrderAndAvailableSetsReadByName" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="itemsReadNdFirstThenByKindAndNameWithoutManualOrder" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="aFreshCameraStartsWithNoSelectedSet" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="cancellingASessionLeavesTheCameraAsItWas" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.002"/>
+  <testcase name="everySetWithNdFiltersShowsTheNdCue" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="aMountOverThirtyStopsIsRefusedAtOnceAndTheSessionStays" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="anEmptySelectedSetOffersAnAddFilterRowAndAFilledOneAHeaderControl" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="auxiliaryFiltersFromDifferentSelectedSetsApplyTogetherWithTheSetSelection" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="availableSetContentsHintCountsRegisteredItemsByKindInFixedOrder" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="globalDeletionRemovesTheSetAndReconcilesTheCamera" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="uncheckingAUsedSetChangesNothingCommittedBeforeApply" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="aMountBesideFourKeptNdWheelsIsRefusedUntilASetReleasesOne" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="addingARemovedSetBackRestoresItsRetainedWorkingSelectionsAtTheEnd" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="preferredNdSourceRanksByCountThenNdOnlyThenNameThenSelectionOrder" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.0"/>
+  <testcase name="selectedSetsShowGroupedByContentsInSelectionOrderAndRegroupAtOnce" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.001"/>
+  <testcase name="preferredSourceAlsoTakesTheFallbackWheelAndSurvivesARestore" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.002"/>
+  <testcase name="inventoryEditsDuringASessionStayDespiteCancel" classname="com.sangwook.ptimer.app.vm.ShootingFilterSetSelectionTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

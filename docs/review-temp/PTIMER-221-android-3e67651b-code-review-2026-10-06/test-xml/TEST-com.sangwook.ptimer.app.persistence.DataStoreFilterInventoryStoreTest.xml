@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-05T17:00:51.497Z" hostname="AL03230922ui-MacBookPro.local" time="0.073">
+  <properties/>
+  <testcase name="roundTripsIdsNamesColorsOrderAndItems" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.013"/>
+  <testcase name="quarantineWriteFailureStillReturnsRecoveredFilterSets" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.005"/>
+  <testcase name="clearRemovesTheLiveSnapshotAndItsQuarantine" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.01"/>
+  <testcase name="itemLevelDamageIsQuarantinedAndSurvivesTheNextSave" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.009"/>
+  <testcase name="missingKeyReadsAsNullRatherThanThrowing" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.001"/>
+  <testcase name="aFilterSetThatCannotBeRestoredIsQuarantined" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.006"/>
+  <testcase name="aFailedReadIsASavedEmptyInventoryNotAFreshInstallation" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.002"/>
+  <testcase name="corruptPayloadReadsAsASavedEmptyInventoryAndIsQuarantined" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.004"/>
+  <testcase name="anIntactPayloadLeavesNoQuarantineCopy" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.005"/>
+  <testcase name="secondFailureReplacesQuarantineAndANormalSaveKeepsIt" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.01"/>
+  <testcase name="aNonArrayItemsFieldIsQuarantinedAndSurvivesTheNextSave" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

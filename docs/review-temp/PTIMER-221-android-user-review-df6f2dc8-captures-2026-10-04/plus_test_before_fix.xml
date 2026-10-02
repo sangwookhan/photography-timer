@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="1" errors="0" skipped="0" time="0.000" timestamp="2026-10-04T03:12:21" hostname="localhost">
+  <testsuite name="com.sangwook.ptimer.app.ui.shooting.FilterStackInteractionTest" tests="1" failures="1" errors="0" skipped="0" time="2.431" timestamp="2026-10-04T03:12:21" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="clearingAuxiliaryFilters_showsPlusInsideTheRowWithoutAWheelGesture" classname="com.sangwook.ptimer.app.ui.shooting.FilterStackInteractionTest" time="2.431">
+      <failure>java.lang.AssertionError: Failed to retrieve bounds of the node.
+Reason: Expected exactly '1' node but could not find any node that satisfies: (ContentDescription = 'Add filter' (ignoreCase: false))
+
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)
+	at androidx.compose.ui.test.BoundsAssertionsKt.withUnclippedBoundsInRoot(BoundsAssertions.kt:259)
+	at androidx.compose.ui.test.BoundsAssertionsKt.getUnclippedBoundsInRoot(BoundsAssertions.kt:150)
+	at com.sangwook.ptimer.app.ui.shooting.FilterStackInteractionTest.clearingAuxiliaryFilters_showsPlusInsideTheRowWithoutAWheelGesture(FilterStackInteractionTest.kt:190)
+</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

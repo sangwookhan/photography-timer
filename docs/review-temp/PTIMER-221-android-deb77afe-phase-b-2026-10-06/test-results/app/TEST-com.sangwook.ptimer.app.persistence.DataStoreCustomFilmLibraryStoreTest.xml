@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:53:08.934Z" hostname="AL03230922ui-MacBookPro.local" time="0.134">
+  <properties/>
+  <testcase name="corruptPayloadIsQuarantinedAtLoad" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.086"/>
+  <testcase name="quarantineWriteFailureStillReturnsRecoveredFilms" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.005"/>
+  <testcase name="missingKeyReadsAsNullRatherThanThrowing" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.003"/>
+  <testcase name="secondFailureReplacesQuarantine" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.014"/>
+  <testcase name="normalSaveAfterFailureKeepsQuarantine" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.007"/>
+  <testcase name="corruptPayloadFailsSafeToNullInsteadOfThrowing" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.005"/>
+  <testcase name="clearRemovesLiveSnapshotButKeepsQuarantine" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.008"/>
+  <testcase name="roundTripsAnEncodedLibrarySnapshot" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.003"/>
+  <testcase name="clearRemovesThePersistedSnapshotEntirely" classname="com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStoreTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

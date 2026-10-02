@@ -1,0 +1,145 @@
+diff --git a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
+index 194683ac..4ea32fa0 100644
+--- a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
++++ b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/shooting/ShootingScreen.kt
+@@ -65,6 +65,7 @@ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
++import androidx.compose.ui.layout.Layout
+ import androidx.compose.ui.platform.LocalDensity
+ import androidx.compose.ui.platform.LocalLayoutDirection
+ import androidx.compose.ui.platform.testTag
+@@ -76,6 +77,7 @@ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.rememberTextMeasurer
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.unit.Constraints
+ import androidx.compose.ui.unit.Dp
+ import androidx.compose.ui.unit.dp
+ import com.sangwook.ptimer.R
+@@ -98,6 +100,7 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
+ import com.sangwook.ptimer.core.slots.CameraSlotId
+ import com.sangwook.ptimer.core.target.TargetShutterDisplayState
+ import com.sangwook.ptimer.ui.component.SnapWheel
++import kotlin.math.roundToInt
+ 
+ 
+ /**
+@@ -598,11 +601,9 @@ private fun SettingsMenuButton(onOpenFilterManagement: () -> Unit, onOpenAbout:
+  *  group; the caption's unused width adds to it. */
+ private val NdHeaderCaptionGroupGap = 12.dp
+ 
+-/** Gap between the Aux Filter button and the passive `ND Filter` title. */
+-private val NdHeaderAuxTitleGap = 8.dp
+-
+-/** Gap between the `ND Filter` title and the notation control. */
+-private val NdHeaderTitleNotationGap = 6.dp
++/** Gap on each side of the Aux Filter button: from the notation control
++ *  and to the passive `ND Filter` title. */
++private val NdHeaderAuxGap = 8.dp
+ 
+ /**
+  * Gutter between the Base Shutter column and the ND column. Without
+@@ -811,12 +812,13 @@ private fun ndCardColumnSplit(
+ 
+ /**
+  * The wheel card's one header row (FILTER-FLOW-002): the passive Base
+- * Shutter caption on the leading side, then a trailing group of the Aux
+- * Filter button, which opens the current camera's Shooting Filters, the
+- * passive ND Filter title, and the Stops / OD / ND control in a compact
+- * region about the share of the card's width it takes on iPhone. The
+- * caption yields first in a longer language; whatever width it leaves
+- * unused widens the gap before the group.
++ * Shutter caption on the leading side, a flexible gap of at least 12 dp,
++ * the Stops / OD / ND control, then the Aux Filter button, which opens
++ * the current camera's Shooting Filters, and the passive ND Filter title
++ * at the trailing edge. The notation control gets three 48 dp targets
++ * when the row has room for them beside the caption at its smallest
++ * size; otherwise it takes what is left. The caption shrinks first and
++ * whatever width it leaves unused widens the gap.
+  */
+ @Composable
+ private fun NdFilterHeaderRow(
+@@ -827,42 +829,57 @@ private fun NdFilterHeaderRow(
+     onSelectNotation: (NDNotationMode) -> Unit,
+     onOpenShootingFilters: () -> Unit,
+ ) {
+-    BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(MinTouchTargetSize)) {
+-        val notationWidth = maxWidth * NotationShareOfHeader
+-        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
++    val captionStyle = MaterialTheme.typography.labelMedium
++    val measurer = rememberTextMeasurer()
++    val captionNatural = remember(baseShutterCaption, captionStyle) {
++        measurer.measure(baseShutterCaption, captionStyle, maxLines = 1, softWrap = false).size.width
++    }
++    Layout(
++        content = {
+             Text(
+                 baseShutterCaption,
+-                style = MaterialTheme.typography.labelMedium,
++                style = captionStyle,
+                 maxLines = 1,
+                 softWrap = false,
+                 autoSize = TextAutoSize.StepBased(
+-                    minFontSize = MaterialTheme.typography.labelMedium.fontSize * 0.75f,
+-                    maxFontSize = MaterialTheme.typography.labelMedium.fontSize,
++                    minFontSize = captionStyle.fontSize * NdHeaderCaptionMinScale,
++                    maxFontSize = captionStyle.fontSize,
+                 ),
+-                modifier = Modifier.weight(1f),
+             )
+-            Spacer(Modifier.width(NdHeaderCaptionGroupGap))
++            NotationToggle(mode = mode, enabled = enabled, onSelect = onSelectNotation)
+             ShootingFiltersHeaderButton(enabled = enabled, onClick = onOpenShootingFilters)
+-            Spacer(Modifier.width(NdHeaderAuxTitleGap))
+-            Text(
+-                ndFilterTitle,
+-                style = MaterialTheme.typography.labelMedium,
+-                maxLines = 1,
+-                softWrap = false,
+-            )
+-            Spacer(Modifier.width(NdHeaderTitleNotationGap))
+-            NotationToggle(
+-                mode = mode,
+-                enabled = enabled,
+-                onSelect = onSelectNotation,
+-                modifier = Modifier.width(notationWidth),
+-            )
++            Text(ndFilterTitle, style = captionStyle, maxLines = 1, softWrap = false)
++        },
++        modifier = Modifier.fillMaxWidth().height(MinTouchTargetSize),
++    ) { measurables, constraints ->
++        val width = constraints.maxWidth
++        val height = constraints.maxHeight
++        val loose = constraints.copy(minWidth = 0, minHeight = 0)
++        val button = measurables[2].measure(loose)
++        val title = measurables[3].measure(loose)
++        val gap = NdHeaderAuxGap.roundToPx()
++        val fixed = button.width + title.width + gap * 2 + NdHeaderCaptionGroupGap.roundToPx()
++        val captionMin = (captionNatural * NdHeaderCaptionMinScale).roundToInt()
++        val notationWidth = (width - fixed - captionMin)
++            .coerceAtMost(MinTouchTargetSize.roundToPx() * NotationOptionModes.size)
++            .coerceAtLeast(0)
++        val notation = measurables[1].measure(Constraints.fixed(notationWidth, height))
++        val caption = measurables[0].measure(
++            loose.copy(maxWidth = (width - fixed - notationWidth).coerceIn(0, captionNatural)),
++        )
++        layout(width, height) {
++            val titleX = width - title.width
++            val buttonX = titleX - gap - button.width
++            caption.placeRelative(0, (height - caption.height) / 2)
++            notation.placeRelative(buttonX - gap - notationWidth, 0)
++            button.placeRelative(buttonX, (height - button.height) / 2)
++            title.placeRelative(titleX, (height - title.height) / 2)
+         }
+     }
+ }
+ 
+-/** The notation control's share of the header row, as on iPhone. */
+-private const val NotationShareOfHeader = 0.30f
++/** The smallest the Base Shutter caption is drawn, as a share of its size. */
++private const val NdHeaderCaptionMinScale = 0.75f
+ 
+ /**
+  * The Aux Filter header button (FILTER-FLOW-002): a tinted,

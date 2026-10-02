@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:53:09.084Z" hostname="AL03230922ui-MacBookPro.local" time="0.08">
+  <properties/>
+  <testcase name="roundTripsIdsNamesColorsOrderAndItems" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.013"/>
+  <testcase name="aSaveAfterAFailedReadQuarantinesTheUnreadPayloadFirst" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.01"/>
+  <testcase name="quarantineWriteFailureStillReturnsRecoveredFilterSets" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.004"/>
+  <testcase name="clearRemovesTheLiveSnapshotAndItsQuarantine" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.009"/>
+  <testcase name="itemLevelDamageIsQuarantinedAndSurvivesTheNextSave" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.01"/>
+  <testcase name="missingKeyReadsAsNullRatherThanThrowing" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.002"/>
+  <testcase name="aFilterSetThatCannotBeRestoredIsQuarantined" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.004"/>
+  <testcase name="aFailedReadIsASavedEmptyInventoryNotAFreshInstallation" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.001"/>
+  <testcase name="corruptPayloadReadsAsASavedEmptyInventoryAndIsQuarantined" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.005"/>
+  <testcase name="anIntactPayloadLeavesNoQuarantineCopy" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.004"/>
+  <testcase name="secondFailureReplacesQuarantineAndANormalSaveKeepsIt" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.01"/>
+  <testcase name="aNonArrayItemsFieldIsQuarantinedAndSurvivesTheNextSave" classname="com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStoreTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

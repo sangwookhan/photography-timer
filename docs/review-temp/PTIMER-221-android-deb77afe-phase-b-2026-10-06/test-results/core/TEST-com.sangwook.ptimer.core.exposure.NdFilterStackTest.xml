@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.exposure.NdFilterStackTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-05T19:53:06.321Z" hostname="AL03230922ui-MacBookPro.local" time="0.002">
+  <properties/>
+  <testcase name="constructionRejectsOverThirtyStops" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="budgetExcludesTheWheelItself" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="restoredStackValidationRejectsNeverClamps" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="addAndRemoveRules" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="effectiveStopsIsTheSum" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="replacingWheelRefusesOverLimitAndInvalidWrites" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="sortIsDescendingZerosRightAndStable" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.001"/>
+  <testcase name="constructionRejectsEmptyAndOversizedStacks" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <testcase name="constructionRejectsNegativeWheels" classname="com.sangwook.ptimer.core.exposure.NdFilterStackTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

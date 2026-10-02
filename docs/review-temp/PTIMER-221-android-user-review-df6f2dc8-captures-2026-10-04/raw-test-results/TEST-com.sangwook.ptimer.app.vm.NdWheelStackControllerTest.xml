@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-10-04T03:11:34.584Z" hostname="AL03230922ui-MacBookPro.local" time="0.033">
+  <properties/>
+  <testcase name="saturatedSetShedsLeftoverZerosInTheSameCommit" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.002"/>
+  <testcase name="setCommitDefersWhileAnotherWheelIsActive" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="overBudgetRejectionFollowsSettleOrderNotChangeOrder" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.002"/>
+  <testcase name="legacySetNdIndexCollapsesTheStack" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="structuralChangeRestartsTheGracePeriodForNewZeros" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.003"/>
+  <testcase name="invalidPersistedStackFallsBackToTheLegacyScalar" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.0"/>
+  <testcase name="cleanupRemovesAllZerosButKeepsOneWheelWhenAllZero" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="quickSpinPlusOverscrollRemovalLeavesAQuietMachine" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.005"/>
+  <testcase name="addRefusedAtSaturationAndWhileAWheelMoves" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="fireTimeCleanupRunsOnlyWhenQuiet" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="overscrollRefusalsMatchTheRules" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="commitSortsDescendingAndIdentityFollowsThePermutation" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="slotSwitchDiscardsInFlightSelections" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="cleanupJudgmentRequiresAQuietMachine" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="refusedOverscrollPullMutatesNothing" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="stackPersistsAndLegacyScalarCarriesTheMaximumWheel" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="maximumMarkerFollowsTheLiveTotal" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="wiggleAndReturnReleaseRestoresAddAvailability" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.002"/>
+  <testcase name="addRefusedWhenNewWheelCouldHoldNoValue" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="lateWheelCallbacksAfterSlotSwitchAreInert" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="ownedTimerDefersUnderAFingerThenCleansOnTheNextFire" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.002"/>
+  <testcase name="overBudgetSelectionIsRejectedInSettleOrder" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="ownedTimerCleansAnUntouchedZeroAfterTheGracePeriod" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="overscrollRemovesExactlyThePulledWheel" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.001"/>
+  <testcase name="startsWithASingleZeroWheelAndNonIndexIdentity" classname="com.sangwook.ptimer.app.vm.NdWheelStackControllerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

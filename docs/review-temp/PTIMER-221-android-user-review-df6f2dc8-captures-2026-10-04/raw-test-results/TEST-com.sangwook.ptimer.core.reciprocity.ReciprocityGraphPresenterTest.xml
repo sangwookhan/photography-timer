@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-03T18:58:49.428Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="limitedGuidanceFilmHasNoGraph" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" time="0.0"/>
+  <testcase name="tableFilmExposesAnchorDots" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" time="0.001"/>
+  <testcase name="formulaFilmProducesACurveWithBandsAndCurrentMarker" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" time="0.0"/>
+  <testcase name="axisTicksUseRoundDurationLabels" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" time="0.0"/>
+  <testcase name="steepUnlimitedFormulaKeepsTheYAxisUnderADay" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" time="0.0"/>
+  <testcase name="formulaFilmPlotsSourceEvidenceMarkersAndNotRecommendedBoundary" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

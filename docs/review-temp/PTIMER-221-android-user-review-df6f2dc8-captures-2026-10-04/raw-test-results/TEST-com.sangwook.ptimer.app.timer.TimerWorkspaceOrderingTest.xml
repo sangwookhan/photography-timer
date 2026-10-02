@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-04T03:11:34.393Z" hostname="AL03230922ui-MacBookPro.local" time="0.005">
+  <properties/>
+  <testcase name="activeGroupOrdersMostRecentlyCreatedFirst" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.002"/>
+  <testcase name="runningToPausedToRunningDoesNotReorderActive" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.001"/>
+  <testcase name="historyGroupTieBreakIsDeterministicForEqualTerminalStamps" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.0"/>
+  <testcase name="activeGroupKeepsLifoOrderAcrossMixedRunningAndPausedStates" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.001"/>
+  <testcase name="publishedOrderMatchesBothSurfaceConsumptionContract" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.0"/>
+  <testcase name="historyGroupOrdersMostRecentlyFinishedFirstAcrossCompletedAndCanceled" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.001"/>
+  <testcase name="canceledOnlyHistoryOrdersMostRecentlyCanceledFirst" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.0"/>
+  <testcase name="activeGroupTieBreakIsDeterministicForEqualStartInstants" classname="com.sangwook.ptimer.app.timer.TimerWorkspaceOrderingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

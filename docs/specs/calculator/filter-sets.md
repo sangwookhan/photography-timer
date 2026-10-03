@@ -37,8 +37,9 @@ applies only the exposure loss selected for the current shot.
 - **Auxiliary filters** are mounted CPL, GND, Color, or Effect items. They
   share one summary space; they are not scrolling wheels.
 - **Candidate Filter Sets** are the Filter Sets explicitly selected for a camera.
-  A camera may select more than one. Availability does not mean mounted, and
-  does not certify compatibility.
+  A camera may select more than one. Selected Filter Sets with ND items supply ND
+  sources on Main; their auxiliary items are offered in Shooting Filters.
+  Availability does not mean mounted and does not certify compatibility.
 - A **Filter Source** is either Standard or one Filter Set and determines what
   a newly added ND wheel can select. Only its ND items appear in that wheel.
 - A **Filter Item** is one physical filter with a stable id. Equal names and
@@ -53,7 +54,7 @@ could be confused.
 ### Filter-set management
 
 - **FILTER-SET-001** — Shooting Filters shall present Filter Sets in two
-  sections: **Selected Sets** and **Available Sets**. A selected Set shall use
+  sections: **Selected Filter Sets** and **Available Filter Sets**. A selected Set shall use
   one compact header row: a leading remove control, its color and name as the
   central edit target, and, when the Set contains at least one Filter Item, a
   trailing add-filter control that creates a new Filter Item directly in that
@@ -61,7 +62,7 @@ could be confused.
   add a second inventory-detail line. If a selected Set contains no Filter
   Items, the trailing add-filter control shall be omitted and one compact
   full-width **Add Filter** row shall appear beneath the header instead. A
-  non-empty selected Set shall present auxiliary items in one horizontally
+  selected Set containing at least one auxiliary Filter Item shall present those items in one horizontally
   scrollable strip of equal-width controls directly beneath the header. On the
   iPhone shooting surface at default text size, the strip shall size ordinary
   item controls so at least three complete item controls are visible at once.
@@ -69,8 +70,8 @@ could be confused.
   remains independently visible. The strip shall be visually indented from the
   Set header so Set ownership is immediately clear. An available Set shall use
   one compact row: its color/name as the edit target and one trailing add
-  control that moves it into working Selected Sets. Removing a selected Set
-  moves it into Available Sets without committing camera state until Apply.
+  control that moves it into working Selected Filter Sets. Removing a selected Set
+  moves it into Available Filter Sets without committing camera state until Apply.
   Shooting Filters shall not expose Filter Set reorder handles. A separate
   pencil-style edit icon shall not be required. The final inventory action shall
   remain **Add Filter Set**. A delete confirmation shall name the targeted set
@@ -81,7 +82,7 @@ could be confused.
   created / fresh camera by default, and is the initially selected Filter Set
   when a new Filter Item is created, so first-time filter registration does not
   require creating or naming a Filter Set first. The user may later remove
-  Default from that camera's working Selected Sets like any other Set. Its
+  Default from that camera's working Selected Filter Sets like any other Set. Its
   contents, display name, and color may be edited like other Filter Sets, but
   the built-in set itself shall remain present and shall not be deleted.
 - **FILTER-SET-003** — Each user-created Filter Set shall have a stable id, a
@@ -92,12 +93,18 @@ could be confused.
   required. Renaming or recoloring a Filter Set shall not change its id.
 - **FILTER-SET-004** — Standard is a fixed built-in Filter Source for ND wheels
   and is not a Filter Set. Shooting Filters shall not provide manual Filter Set
-  reordering. Selected Sets shall retain their working selection/addition order;
-  Default starts first on a fresh camera. Available Sets shall be sorted by
-  display name using the platform's ordinary locale-aware alphabetical order.
-  Adding an Available Set appends it to Selected Sets; removing a Selected Set
-  places it back into the alphabetically sorted Available Sets. In Main's ND
-  source browsing, Standard shall appear before eligible selected Filter Sets.
+  reordering. Only the displayed **Selected Filter Sets** order shall group a
+  Set by its current physical inventory: ND-only Sets first (one or more ND
+  items and no auxiliary item), then mixed Sets (both ND and auxiliary items),
+  then auxiliary-only Sets (one or more auxiliary items and no ND item), then
+  empty Sets last. Within each group, relative order shall retain working
+  selection/addition order. Adding or removing a Set changes its group
+  membership immediately; editing, moving, or deleting an item shall re-group
+  its containing Set immediately without changing the relative order of other
+  Sets. Available Filter Sets remain sorted by display name using the
+  platform's ordinary locale-aware alphabetical order. In Main's ND source
+  browsing, Standard shall appear before eligible selected Filter Sets and
+  retain its existing source-browsing order.
 - **FILTER-SET-005** — Filter-set names and colors are presentation and
   navigation metadata. Calculation and item identity shall never depend on
   either value, and color shall never be the only means of identification.
@@ -182,6 +189,8 @@ could be confused.
   newly created item shall continue to start as Fixed even when the preceding
   successfully saved new item was GND.
 
+- **FILTER-ITEM-008** — All user-facing instances of `Fixed` shall be renamed `ND`. Existing persisted Fixed items retain their stable identities and ND behavior. An item editor shall permit correction between ND and Color even when mounted, preserving the committed camera selection only if the resulting stack is valid.
+
 ### CPL exposure-loss choices
 
 - **FILTER-CPL-001** — A CPL item shall expose three decimal input fields for
@@ -202,14 +211,15 @@ could be confused.
 - **FILTER-CPL-005** — A CPL item shall offer its distinct configured exposure-loss
   choices in the auxiliary popup. It shall be mounted once with exactly one
   selected choice; changing that choice shall update the same mounted item.
-  Its current contribution shall remain immediately readable on the main
-  summary without opening the popup.
+  Its current contribution shall be readable on Main when included among
+  the visible rows under FILTER-AUX-005, and in the complete Selected filters
+  panel otherwise.
 
 ### GND recording and calculation
 
 - **FILTER-GND-001** — A GND item shall preserve its registered full-density
   value while offering two shooting modes in the auxiliary popup: Record only, contributing 0 stops,
-  and Apply full value, contributing the registered canonical stops.
+  and Apply to exposure, contributing the registered canonical stops.
 - **FILTER-GND-002** — Record only shall be the default when a GND is first
   selected. Switching modes shall affect only that mounted item in the active camera;
   it shall not change the inventory default, another camera, or a timer already
@@ -386,10 +396,9 @@ could be confused.
   ND-wheel limit permits another wheel: four without auxiliary items, three
   with them. Its vertical choices shall be Standard, the active camera's
   candidate Filter Sets containing ND items in FILTER-SET-004 order, and an
-  Auxiliary filters action. That action is not a source or a filter value.
-  The persistent ND-header entry shall still reach auxiliary selection when
-  Plus is absent. A management long press succeeds only within stationary
-  tolerance; crossing the drag threshold cancels it for that gesture.
+  Shooting Filters action. That action is not a source or a filter value.
+  The persistent ND-header entry shall still reach Shooting Filters when
+  Plus is absent. Plus shall not expose a management long-press route.
 
 - **FILTER-PLUS-002** — While the Plus wheel moves, an expanded, non-blocking
   label shall display the complete candidate source name. At rest the compact
@@ -402,10 +411,8 @@ could be confused.
   barrier, then add exactly one ND wheel from that final source without requiring
   another tap. Passing intermediate sources shall never create wheels. If the
   gesture settles back on its starting source, it shall create no wheel; the
-  ordinary tap remains the explicit add gesture for that source. Once browsing
-  wins, the pending management long press shall remain cancelled for the rest
-  of that gesture.
-  Settling on the Auxiliary filters action shall instead open the shooting
+  ordinary tap remains the explicit add gesture for that source. Browsing shall not expose a management long-press route.
+  Settling on the Shooting Filters action shall instead open the shooting
   popup after the same gesture barrier, without creating an ND wheel. Tapping
   that action, when presented as a selectable control, shall do the same.
   Closing the popup shall return Plus to its preceding ND source; auxiliary
@@ -416,7 +423,7 @@ could be confused.
   fresh camera and a camera whose remembered source no longer exists shall use
   Standard. Shooting Filters shall not add or select ND wheels.
 - **FILTER-PLUS-005** — When an ND source cannot add a usable row, browsing and
-  the Auxiliary filters action shall remain available while Plus is present;
+  the Shooting Filters action shall remain available while Plus is present;
   adding an ND wheel shall be disabled with a reason. At a 30-stop total,
   mounting a Record-only GND shall remain possible within the composition
   limits, while a change to non-zero contribution that exceeds 30 is rejected.
@@ -437,10 +444,10 @@ could be confused.
   wizard. Film selection and Filter Set selection are independent; neither
   custom inventory nor auxiliary filters are prerequisites for film reciprocity
   calculation.
-- **FILTER-CAMERA-003** — Shooting Filters shall keep both Selected Sets and
-  Available Sets visible while choosing auxiliary filters. Multiple Filter Sets
+- **FILTER-CAMERA-003** — Shooting Filters shall keep both Selected Filter Sets and
+  Available Filter Sets visible while choosing auxiliary filters. Multiple Filter Sets
   may be selected simultaneously. Adding or removing a Set changes working
-  state only until Apply. Removing a Set moves it to Available Sets and hides
+  state only until Apply. Removing a Set moves it to Available Filter Sets and hides
   its auxiliary rows without immediately changing the camera's committed
   candidate Sets, mounted auxiliary filters, ND wheels, calculation, or Main
   summary. Auxiliary working selections belonging to a removed Set shall be
@@ -450,8 +457,9 @@ could be confused.
   auxiliary references and ND wheels whose Set is no longer selected,
   preserving a valid ND stack with Standard 0 as the fallback when necessary.
   Apply shall not ask for an additional confirmation. Cancel or dismissing
-  Shooting Filters shall preserve the complete camera shooting state from
-  before the surface opened. This camera-only selection is distinct from global
+  Shooting Filters shall discard session selection changes. Explicit inventory
+  edits and their required camera-reference reconciliation remain in effect;
+  Cancel shall not undo them. This camera-only selection is distinct from global
   inventory deletion under FILTER-ITEM-006.
 
 - **FILTER-FLOW-001** — Main shall retain the existing camera/film controls,
@@ -461,9 +469,11 @@ could be confused.
   consume space.
 - **FILTER-FLOW-002** — ND selection and ND-wheel creation shall remain on
   Main. Shooting Filters shall not present an ND tab, ND-source browser, or
-  add-ND-wheel action. The persistent ND-header entry, the Auxiliary filters
+  add-ND-wheel action. The persistent ND-header entry, the Shooting Filters
   action in Plus, and tapping a mounted auxiliary summary may open Shooting
-  Filters; each route opens the same auxiliary-selection surface. The compact
+  Filters; each route opens the same camera Filter Set and auxiliary-selection surface.
+  The Plus entry and its accessibility action shall use **Shooting Filters**
+  (Korean **촬영 필터**), rather than name the destination Auxiliary filters. The compact
   Main entry shall remain in the **ND Filter** header without adding a
   persistent explanatory line; its accessible description shall identify
   Shooting Filters as the place to manage Filter Sets and auxiliary filters
@@ -484,13 +494,14 @@ could be confused.
   필터 없음** and English **No auxiliary filters selected** — rather than
   looking empty or erroneous. Below it, each Selected Set uses one compact
   header
-  followed by one indented horizontal Filter Item strip; a Set shall not consume
+  followed by one indented horizontal Filter Item strip only when it contains
+  auxiliary items; a Set shall not consume
   one vertical row per Filter Item. Horizontal overflow is local to that Set's
   strip, uses free scrolling without snapping item names or recentering after a
   selection, and shall preserve scroll position across selection and choice
   changes. Selecting an item shall not insert or remove a per-Set explanatory
   row or otherwise change that Set's vertical footprint. Explanatory footer
-  paragraphs shall not occupy the shooting surface. Available Sets and Add
+  paragraphs shall not occupy the shooting surface. Available Filter Sets and Add
   Filter Set follow in compact rows. Auxiliary selection is multi-select:
   the user may mount more than one auxiliary Filter Item, including items from
   different selected Filter Sets. Apply/Cancel governs the complete
@@ -502,14 +513,16 @@ could be confused.
   explicit inventory operations and are not rolled back by Shooting Filters
   Cancel. The **Selected Filter Sets** section heading shall include one
   passive trailing cue, **ND → Main** (localized equivalently, e.g. Korean
-  **ND 선택 → 메인**), to indicate that its selected Filter Sets also supply
-  ND candidates on Main. The cue is not an action and shall not be repeated
-  in individual Set rows. A Selected Filter Set containing one or more ND
-  Filter Items but no auxiliary Filter Item shall show one passive inline
-  **ND** cue in its compact header, without adding a second row or implying
-  that an ND value is selected there. This keeps an ND-only Set from reading
+  **ND 선택 → 메인**), to identify where actual ND values are selected. It shall not imply that
+  every selected Set contains ND items. The cue is not an action and shall not be repeated
+  in individual Set rows. A Selected Filter Set containing one or more ND Filter Items, including a
+  mixed ND-plus-auxiliary Set, shall show one passive inline **ND** cue in its compact header, without adding a second row or implying
+  that an ND value is selected there. An ND-only Set has no auxiliary strip. This keeps it from reading
   as empty; the section-heading cue remains the path to choose its ND value
-  on Main.
+  on Main. When no Filter Set is selected, the Selected Filter Sets section
+  shall show a compact non-error state: **No Filter Set selected · Standard ND
+  on Main** (Korean **선택한 Filter Set 없음 · Standard ND는 메인에서 사용**).
+  It shall not require adding a Set to continue Standard-only shooting.
 - **FILTER-FLOW-004** — First-time registration shall be filter-first rather
   than Filter-Set-first. Because the built-in Default Filter Set always exists
   and starts selected for a fresh camera, Shooting Filters shall not replace its
@@ -519,11 +532,11 @@ could be confused.
   **Add Filter** row in its content area and omits that trailing add-filter
   control. Either path opens New Filter directly in that Set. The user may save
   there, choose another existing Filter Set, or create a new Filter Set inline.
-- **FILTER-FLOW-005** — Selected Sets and Available Sets shall remain visible
+- **FILTER-FLOW-005** — Selected Filter Sets and Available Filter Sets shall remain visible
   regardless of how many Sets are selected or how many auxiliary filters are
   mounted. Set names open the Set editor. The leading remove control on a
-  Selected Set moves it to Available Sets; the trailing add control on an
-  Available Set appends it to Selected Sets. Shooting Filters shall not provide
+  Selected Set moves it to Available Filter Sets; the trailing add control on an
+  Available Set appends it to Selected Filter Sets. Shooting Filters shall not provide
   Filter Set reorder, a separate **Manage Filter Sets** destination, or a hidden
   Plus/long-press management route. **Add Filter Set** remains available after
   the Set sections. Creating a Filter Set adds it to inventory and returns to
@@ -537,11 +550,11 @@ could be confused.
   Base Shutter only while at least one auxiliary item is mounted. Removing the
   last item shall hide it and return that space to ND use. A Record-only GND
   shall keep it visible. Its position shall not change with exposure value.
-- **FILTER-AUX-002** — Main shall show every mounted auxiliary item's identity
-  and current contribution in stops, without requiring a tap or cycling through
-  items. A combined total, count, color dot, or generic GND label alone is
-  insufficient. Registered GND density shall be explicitly distinguished from
-  its current contribution and Record only / Apply full value mode. Equal-value
+- **FILTER-AUX-002** — For each auxiliary item visible under FILTER-AUX-005,
+  Main shall show its identity and current contribution in stops. A combined
+  total, count, color dot, or generic GND label alone is insufficient for a
+  visible item. The complete selected list is reachable by tapping the summary. Registered GND density shall be explicitly distinguished from
+  its current contribution and Record only / Apply to exposure mode. Equal-value
   Hard, Soft, and Reverse GNDs shall be distinguishable by their registered
   names in both selection and the summary. CPL choice and Color/Effect loss
   shall be immediately readable. The summary shall not replace ND numeric
@@ -551,38 +564,15 @@ could be confused.
   committed state. Apply shall atomically validate and commit the working
   Filter Set selection, auxiliary mounting, CPL choices, and GND modes,
   including removal of ND wheels that belong to Filter Sets excluded by the
-  applied working selection. Cancel or surface dismissal shall preserve the
-  prior selected Sets, mounted auxiliary state, ND wheels, calculation, and
-  summary visibility. An invalid Apply shall explain the constraint and leave
+  applied working selection. Cancel or surface dismissal shall discard session changes and preserve
+  committed state, including any explicit inventory edits and their required
+  camera-reference reconciliation made while the surface was open. An invalid Apply shall explain the constraint and leave
   the committed state unchanged. Rechecking a Set within the same session shall
   restore that Set's retained auxiliary working selections.
 - **FILTER-AUX-004** — Physical-item exclusivity and the 30-stop cap shall cover
   ND and auxiliary selections together. A zero-contribution mounted item is
   still present and cannot be mounted twice. The wheel limit shall not be
   interpreted as a maximum count of physical auxiliary items.
-
-### Color and effect filters
-
-- **FILTER-COLOR-001** — A Color item shall record an optical color separately
-  from its user-defined name and exposure loss. Red, Orange, Yellow, Green, and
-  Yellow-green shall be representable without pretending they are ND, CPL, or
-  GND. For example, a named red filter with registered loss 2 stops shall show
-  both its Red identity and 2-stop contribution. No exposure loss shall be
-  inferred from the optical color, product name, or camera.
-- **FILTER-COLOR-002** — Effect items, including a night light-pollution filter,
-  shall be usable as mounted auxiliary filters on digital and film cameras.
-  Their exposure contribution shall be explicitly user-supplied, not an
-  app-estimated correction. Color and Effect inventory shall participate in
-  item identity, per-camera state, total validation, and captured context.
-- **FILTER-COLOR-003** — Source-set color, filter behavior type, and a Color
-  filter's optical color are different information. Each shall be identifiable
-  by text and shall not overwrite the other. Color-code presentation shall
-  preserve these meanings across iOS and Android, light and dark appearances.
-  Source recoloring shall not change a filter's optical color or calculation.
-
-### Approved field-feedback revision (2026-10-01)
-
-The following requirements supersede conflicting earlier text in this document.
 
 - **FILTER-AUX-005** — There is no maximum count of mounted auxiliary items. The three visible Main lines are a presentation guarantee, not a selection limit. Main shall show the first three mounted items, distributing one, two, or three compact rows through the available summary height rather than packing them at its top, and then `+ N more` when further items are mounted. Main shall not scroll or fade; tapping its summary opens the complete scrollable list.
 - **FILTER-AUX-006** — Shooting Filters shall group offered auxiliary items by
@@ -604,10 +594,35 @@ The following requirements supersede conflicting earlier text in this document.
   because ND configuration remains on Main. It shall show the selected
   auxiliary filters' exposure contribution as **Exposure reduction** (localized
   equivalently, e.g. Korean **노출 감소량**) in stops. The combined
-  ND-plus-auxiliary 30-stop cap remains mandatory. A change that would exceed
-  30 shall be rejected without removing an existing selection.
-- **FILTER-ITEM-008** — All user-facing instances of `Fixed` shall be renamed `ND`. Existing persisted Fixed items retain their stable identities and ND behavior. An item editor shall permit correction between ND and Color even when mounted, preserving the committed camera selection only if the resulting stack is valid.
+  ND-plus-auxiliary 30-stop cap remains mandatory. Mounting or changing a contribution that would exceed 30 shall be refused
+  immediately with a visible reason, retaining the previous valid working
+  selection. This refusal shall not replace the auxiliary count or exposure
+  reduction. With four retained ND wheels, an auxiliary mount shall similarly
+  be refused with a reason identifying the three-ND-wheel limit; removing a
+  Set in the working session may release its ND wheels for Apply. The system
+  shall not automatically remove a committed ND wheel to fit an auxiliary item.
+
+### Color and effect filters
+
+- **FILTER-COLOR-001** — A Color item shall record an optical color separately
+  from its user-defined name and exposure loss. Red, Orange, Yellow, Green, and
+  Yellow-green shall be representable without pretending they are ND, CPL, or
+  GND. For example, a named red filter with registered loss 2 stops shall show
+  both its Red identity and 2-stop contribution. No exposure loss shall be
+  inferred from the optical color, product name, or camera.
+- **FILTER-COLOR-002** — Effect items, including a night light-pollution filter,
+  shall be usable as mounted auxiliary filters on digital and film cameras.
+  Their exposure contribution shall be explicitly user-supplied, not an
+  app-estimated correction. Color and Effect inventory shall participate in
+  item identity, per-camera state, total validation, and captured context.
+- **FILTER-COLOR-003** — Source-set color, filter behavior type, and a Color
+  filter's optical color are different information. Each shall be identifiable
+  by text and shall not overwrite the other. Color-code presentation shall
+  preserve these meanings across iOS and Android, light and dark appearances.
+  Source recoloring shall not change a filter's optical color or calculation.
+
 - **FILTER-COLOR-004** — The shared selectable optical-color palette shall be ordered Red, Red-orange, Orange, Yellow-orange, Yellow, Yellow-green, Green, Teal, Blue, Purple, Pink. This keeps the existing intermediate hues while adding the common photographic Red↔Orange↔Yellow transitions. Each option shall render as a clear recognizable hue in light and dark appearance: Yellow shall be a bright photographic yellow rather than a muted mustard/brown; Yellow-green shall remain visibly between Yellow and Green; Red-orange and Yellow-orange shall remain visibly between their neighbors. Duplicate blue-family options are not required. A Color item uses this common palette and must not render its choices as black or generic markers.
+
 ### Persistence and captured context
 
 - **FILTER-PERSIST-001** — The inventory, Filter Set order and colors, every
@@ -656,7 +671,7 @@ The following requirements supersede conflicting earlier text in this document.
   The complete registered representation and calculation detail shall remain
   reachable through the status region. Add and ND source selection shall have
   explicit assistive-technology actions on the focusable Plus control,
-  including a distinct Open auxiliary filters action. Filter Set selection,
+  including a distinct Open Shooting Filters action. Filter Set selection,
   editing, creation, and user-created Set deletion shall remain directly
   reachable from Shooting Filters and the Filter Set editor rather than through
   a separate Plus management action. Set and Filter Item reordering actions are
@@ -735,15 +750,15 @@ they do not prescribe native navigation components or a new app shell.
 | Screen | Contents and primary task |
 | --- | --- |
 | 1. Main | Existing camera/film and Target controls; Base Shutter → optional auxiliary summary → ND wheels → Plus; one status row with prominent Total; existing results and timers. ND selection and ND-wheel creation stay here. |
-| 2. Shooting Filters | Fixed-height Selected filters panel with selected count, exposure reduction, and a vertically scrollable complete selected-item list; Selected Sets with one compact header and one indented free-scrolling strip of equal-width Filter Item controls per Set; item name and type shown separately; direct CPL/GND secondary choices; Available Sets alphabetically with name-to-edit and trailing add-to-selected; Add Filter Set; Apply/Cancel for the whole working session. No ND tab, ND-wheel-add action, manual Set/item reorder, or separate Manage Filter Sets entry. |
+| 2. Shooting Filters | Fixed-height Selected filters panel with selected count, exposure reduction, and a vertically scrollable complete selected-item list; Selected Filter Sets grouped ND-only, mixed, auxiliary-only, then empty, with one compact header per Set and an indented free-scrolling strip of equal-width controls only for Sets containing auxiliary items; inline ND on Sets with ND items; item name and type shown separately; direct CPL/GND secondary choices; Available Filter Sets alphabetically with name-to-edit and trailing add-to-selected; Add Filter Set; Apply/Cancel for the whole working session. No ND tab, ND-wheel-add action, manual Set/item reorder, or separate Manage Filter Sets entry. |
 | 3. Filter Set editor | Name and source color; one physical-item list ordered ND, Color, Effect, CPL, GND and alphabetically within kind; Add Filter; delete items; destructive Delete Filter Set for user-created Sets only. |
 | 4. Filter Item editor | Name, explicit kind, registered exposure metadata, and enabled Filter Set selection for both new and existing items; inline Add Filter Set; optical color for Color, CPL choices, or GND full density as applicable. |
 
 ```mermaid
 flowchart TD
-  M["1. Main: ND wheels and optional auxiliary summary"] -->|"Header / Plus auxiliary / mounted summary"| P["2. Shooting Filters"]
-  P -->|"Apply / Cancel auxiliary"| M
-  P -->|"Add / remove Selected Sets"| P
+  M["1. Main: ND wheels and optional auxiliary summary"] -->|"Header / Plus Shooting Filters / mounted summary"| P["2. Shooting Filters"]
+  P -->|"Apply / Cancel Set and auxiliary selection"| M
+  P -->|"Add / remove Selected Filter Sets"| P
   P -->|"Add Filter in selected Set"| I["4. Filter Item editor"]
   P -->|"Edit Filter Set"| E["3. Filter Set editor"]
   P -->|"Add Filter Set"| E
@@ -753,8 +768,8 @@ flowchart TD
   E -->|"Done"| P
 ```
 
-ND remains on Main throughout this flow. Selecting Filter Sets changes which
-auxiliary items Shooting Filters offers; it does not mount those items. Popup
+ND remains on Main throughout this flow. Selecting Filter Sets determines the eligible ND sources on Main and the
+auxiliary items Shooting Filters offers; it does not mount either kind. Popup
 structure and system dismissal gestures may follow each platform; the committed
 behavior and availability of these paths shall match.
 
@@ -765,16 +780,43 @@ behavior and availability of these paths shall match.
 | Digital, Standard only | Start from a fresh digital camera, set Base Shutter and Standard ND, add another ND with Plus. No inventory setup or auxiliary placeholder; calculated exposure remains available. |
 | Film, Standard only | Select film and Standard ND directly. Film/model and corrected result remain in their existing positions; custom inventory is not required. |
 | Inventory preparation | Start with Add Filter and save the first item into Default without creating a Filter Set first. Add another filter, create a 52 mm Filter Set from the Filter Set field, and return with it selected. Create additional 67/72 mm, 82 mm, and shared sets as needed. Mixed sets do not need splitting. |
+| ND-only via Plus | Browse Plus to Shooting Filters, select an ND-only Filter Set, verify the zero auxiliary state, its inline ND cue, and ND → Main. Apply; on Main add a wheel from that Set and select an ND value. No auxiliary registration or mounting is required. Repeat with a mixed Set without mounting its auxiliary items. |
+| No selected Filter Sets | Remove all working selected Sets and Apply. The compact non-error state explains that Standard ND remains usable on Main; reopening and restart preserve the empty Set selection. |
 | Digital with auxiliary | From initial Main open Shooting Filters. Select two Filter Sets at once and verify the auxiliary list becomes their union. Mount CPL from one and Record-only GND from the other, Apply, then add/select ND on Main. Summary appears left of ND and shows both contributions; Total includes CPL and zero GND. |
 | Film with auxiliary | Select film, mount Red from the camera's Color set, select ND from a separate shared set. Main retains film results, individual auxiliary loss, and ND values. |
 | Field maximum | Register and mount Red plus ND400, ND4, and ND16. Main shows one auxiliary summary and all three ND wheels. The ND400 conversion follows FILTER-ITEM-004 rather than a fabricated Standard preset. A fourth ND cannot be added until auxiliary items are removed. |
 | Four ND without auxiliary | Reach four ND wheels. The persistent header still opens auxiliary selection; no ND is silently removed to accommodate it. Return with Cancel and verify unchanged values. |
-| GND identity and mode | Register Hard 2, Soft 2, Soft 3, and Reverse 3 with distinguishing names. Select the intended item, then switch Record only / Apply full value. Both registered density and current contribution remain distinguishable on Main. Mount two distinct GND items and verify both identities and contributions are readable. |
+| GND identity and mode | Register Hard 2, Soft 2, Soft 3, and Reverse 3 with distinguishing names. Select the intended item, then switch Record only / Apply to exposure. Both registered density and current contribution remain distinguishable on Main. Mount two distinct GND items and verify both identities and contributions are readable. |
 | Removal and cancellation | Remove all auxiliary selections and Cancel: Main is unchanged. Repeat and Apply: the summary disappears and capacity returns to four ND. A sole Record-only GND still keeps the summary visible. |
 | Camera and restart | Use different candidate sets, mounted items, and last ND sources on two cameras; switch and restart. Each restores independently. Assigning the same physical set to both is allowed. |
 | Combined cap | At 30 total stops with no more than three ND wheels, mount Record-only GND. Enabling its non-zero contribution is rejected; Cancel or rejected Apply cannot change the committed stack. CPL/Color/Effect all share the same total budget. |
 
 Additional regression checks:
+
+- On iPhone 17 at default text size, select at least five auxiliary items in
+  one Set, including `MARUMI Red R2X1 72mm`, `72mm`, Color, Effect, CPL,
+  and GND. Verify the fixed panel, complete internal scroll, separate type and
+  contribution, three complete controls at the strip start, free intermediate
+  positions, and position retention through mount/unmount and CPL/GND changes.
+- Verify Selected Filter Sets grouping ND-only → mixed → auxiliary-only →
+  empty, selection order within a group, and immediate regrouping after item
+  edit/move/delete. Available ordering and Main source order are unchanged.
+- For digital, color-film, and black-and-white-film workflows, combine the
+  applicable ND and auxiliary items; verify all contributions feed Adjusted
+  Shutter once, and film reciprocity consumes that adjusted result. GND
+  Record only contributes zero; changing its mode updates its own contribution.
+- At the 30-stop and four-ND-wheel boundaries, an invalid auxiliary action
+  retains the previous working selection and shows its refusal reason. Verify
+  recovery by reducing ND or removing an applicable Set, then applying valid
+  working state; Cancel preserves committed state.
+- Register a filter into a newly created Set, return, find it under Available
+  Filter Sets, select the Set, and use the filter through its appropriate ND or
+  auxiliary path. Registration alone mounts nothing.
+- Change working selections, perform an inventory edit, then Cancel: only
+  session changes are discarded; inventory changes and required camera-reference
+  updates survive. Include ambiguous duplicate names and visually truncated
+  names in the identity review; do not introduce a new editing path in selected
+  rows merely to satisfy this review.
 
 1. Two distinct equal-strength ND items may both be selected; the same item id
    cannot. A sighted unavailable-row fallback uses only the traversed interval.
@@ -784,8 +826,7 @@ Additional regression checks:
    disabling it reconciles once after settlement. Reorders animate stable items.
 3. Tap Plus adds its displayed ND source once. A changed final ND source adds
    once after settling; intermediate sources or returning to the starting source
-   add nothing. The auxiliary action only opens the popup. Drag cancels long
-   press; a stationary long press opens management. Failed additions do not
+   add nothing. The Shooting Filters action only opens the popup. A stationary long press shall not open management. Failed additions do not
    change source memory. Verify header entry with Plus absent.
 4. CPL decimal input supports locale separators and rejects 0, 10, and 1.25.
    Editing away a choice mounted on any camera is blocked with affected cameras

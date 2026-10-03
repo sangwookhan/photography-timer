@@ -131,6 +131,17 @@ class FilterInventoryTest {
         }
     }
 
+    // --- FILTER-COLOR-004 — the palette in hue order ---
+
+    @Test fun paletteIsInHueOrderAndKeepsStoredTokens() {
+        assertEquals(
+            listOf("red", "redOrange", "orange", "yellowOrange", "yellow", "yellowGreen", "green", "teal", "blue", "purple", "pink"),
+            FilterSetColor.entries.map { it.name },
+        )
+        assertEquals(FilterSetColor.redOrange, FilterSetColor.restoredToken("redOrange"))
+        assertEquals(FilterSetColor.yellowGreen, FilterSetColor.restoredToken("yellowGreen"))
+    }
+
     // --- FILTER-ITEM-002 — duplicates are distinct items ---
 
     @Test fun equalItemsRemainDistinctById() {

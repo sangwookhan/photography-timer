@@ -463,11 +463,17 @@ could be confused.
   Main. Shooting Filters shall not present an ND tab, ND-source browser, or
   add-ND-wheel action. The persistent ND-header entry, the Auxiliary filters
   action in Plus, and tapping a mounted auxiliary summary may open Shooting
-  Filters; each route opens the same auxiliary-selection surface.
+  Filters; each route opens the same auxiliary-selection surface. The compact
+  Main entry shall remain in the **ND Filter** header without adding a
+  persistent explanatory line; its accessible description shall identify
+  Shooting Filters as the place to manage Filter Sets and auxiliary filters
+  while ND values are selected on Main.
 - **FILTER-FLOW-003** — Shooting Filters shall use a dense shooting-oriented
   layout with two stable information zones. At the top, a fixed-height
-  **Selected filters** panel shall show the working selected-filter count and
-  current auxiliary exposure reduction prominently, followed by a vertically
+  **Selected filters** panel shall show the working selected auxiliary-filter
+  count, explicitly identified as auxiliary filters — for example Korean
+  **선택된 보조 필터 N개** and English **N auxiliary filters** — and current
+  auxiliary exposure reduction prominently, followed by a vertically
   scrollable list containing every working selected auxiliary Filter Item; no
   selected item may be replaced by ellipsis-only summary or a **+N more**
   placeholder. Each selected-item row shall keep the user-defined item name
@@ -490,7 +496,11 @@ could be confused.
   discards both kinds of working changes. Inventory edits such as creating,
   editing, moving, or globally deleting Filter Sets / Filter Items remain
   explicit inventory operations and are not rolled back by Shooting Filters
-  Cancel.
+  Cancel. The **Selected Filter Sets** section heading shall include one
+  passive trailing cue, **ND → Main** (localized equivalently, e.g. Korean
+  **ND 선택 → 메인**), to indicate that its selected Filter Sets also supply
+  ND candidates on Main. The cue is not an action and shall not be repeated
+  in individual Set rows.
 - **FILTER-FLOW-004** — First-time registration shall be filter-first rather
   than Filter-Set-first. Because the built-in Default Filter Set always exists
   and starts selected for a fresh camera, Shooting Filters shall not replace its

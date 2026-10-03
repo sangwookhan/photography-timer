@@ -94,12 +94,10 @@ class AffectedCameraNameTest {
 
     private val actions = FilterSetManagementActions(
         suggestCreationColor = { FilterSetColor.blue },
-        createFilterSet = { _, _ -> },
+        createFilterSet = { _, _ -> null },
         renameFilterSet = { _, _ -> },
         recolorFilterSet = { _, _ -> },
-        moveFilterSet = { _, _ -> },
         deleteFilterSet = {},
-        moveFilterItem = { _, _, _ -> },
         deleteFilterItem = {},
         saveFilterItem = { _, _ -> FilterItemSaveOutcome.Saved },
         camerasAffectedByDeletingFilterSet = { cameras },
@@ -123,13 +121,13 @@ class AffectedCameraNameTest {
     @Test
     fun theFilterSetDeleteConfirmationNamesTheCamerasInEnglish() {
         openFilterSetDeleteConfirmation(ENGLISH)
-        assertCamerasRendered(R.string.filter_set_delete_message_cameras, ENGLISH_CAMERAS)
+        assertSetDeletionRendered(ENGLISH_CAMERAS)
     }
 
     @Test
     fun theFilterSetDeleteConfirmationNamesTheCamerasInKorean() {
         openFilterSetDeleteConfirmation(KOREAN)
-        assertCamerasRendered(R.string.filter_set_delete_message_cameras, KOREAN_CAMERAS)
+        assertSetDeletionRendered(KOREAN_CAMERAS)
     }
 
     @Test
@@ -201,19 +199,15 @@ class AffectedCameraNameTest {
 
     // ---- navigation --------------------------------------------------
 
-    /** Edit mode on the list level, then delete the only Filter Set. */
+    /** The set's editor, then its Delete Filter Set action. */
     private fun openFilterSetDeleteConfirmation(language: String) {
         renderManagementScreen(language)
-        clickText(R.string.action_edit)
-        clickDescription(R.string.action_delete)
+        clickText(R.string.filter_set_delete)
     }
 
-    /** Open the only Filter Set, then delete its only Filter Item. */
+    /** The set's editor, then delete its only Filter Item. */
     private fun openFilterItemDeleteConfirmation(language: String) {
         renderManagementScreen(language)
-        // The row reads out as "name, color, count"; the name is enough.
-        composeTestRule.onNodeWithContentDescription(set.name, substring = true).performClick()
-        composeTestRule.waitForIdle()
         clickText(R.string.action_edit)
         clickDescription(R.string.action_delete)
     }
@@ -223,7 +217,11 @@ class AffectedCameraNameTest {
         render(language) {
             FilterItemEditorDialog(
                 target = FilterItemEditorTarget.Existing(item),
-                onSave = {
+                filterSets = listOf(set),
+                initialFilterSetId = set.id,
+                suggestCreationColor = { FilterSetColor.blue },
+                createFilterSet = { _, _ -> null },
+                onSave = { _, _ ->
                     FilterItemSaveOutcome.Blocked(cameras, FilterItemSaveBlockReason.removesSelectedChoice)
                 },
                 onSaved = {},
@@ -237,6 +235,7 @@ class AffectedCameraNameTest {
         render(language) {
             FilterSetManagementScreen(
                 inventory = FilterInventory(listOf(set)),
+                filterSetId = set.id,
                 actions = actions,
                 onDismiss = {},
             )
@@ -252,6 +251,12 @@ class AffectedCameraNameTest {
      */
     private fun assertCamerasRendered(@StringRes message: Int, cameraNames: String) {
         composeTestRule.onNodeWithText(rendered.getString(message, cameraNames)).assertIsDisplayed()
+    }
+
+    private fun assertSetDeletionRendered(cameraNames: String) {
+        composeTestRule.onNodeWithText(
+            rendered.getString(R.string.filter_set_delete_global_message_cameras, set.name, cameraNames),
+        ).assertIsDisplayed()
     }
 
     private fun clickText(@StringRes label: Int) {

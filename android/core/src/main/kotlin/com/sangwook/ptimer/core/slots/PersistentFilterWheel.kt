@@ -3,6 +3,7 @@
 
 package com.sangwook.ptimer.core.slots
 
+import com.sangwook.ptimer.core.exposure.AuxiliaryFilterChoice
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItemId
@@ -15,6 +16,7 @@ import com.sangwook.ptimer.core.exposure.FilterStack
 import com.sangwook.ptimer.core.exposure.FilterWheel
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
+import com.sangwook.ptimer.core.exposure.MountedAuxiliaryFilter
 import com.sangwook.ptimer.core.exposure.NDStep
 import com.sangwook.ptimer.core.exposure.NdFilterStack
 import kotlinx.serialization.Serializable
@@ -90,7 +92,8 @@ data class PersistentFilterWheel(
         FilterItemKind.fixed -> FilterRowChoice.Fixed
         FilterItemKind.cpl -> cplLossStops?.takeIf { it.isFinite() }?.let { FilterRowChoice.CplLoss(it) }
         FilterItemKind.gnd -> GndCalculationMode.fromToken(gndMode)?.let { FilterRowChoice.Gnd(it) }
-        null -> null
+        // Color and Effect items are never wheel rows.
+        FilterItemKind.color, FilterItemKind.effect, null -> null
     }
 
     companion object {
@@ -140,49 +143,167 @@ data class PersistentFilterWheel(
 }
 
 /**
- * The slot's restored mixed Filter Stack wheels (FILTER-PERSIST-001/002).
- * The additive [SlotCalculatorSnapshot.filterStack] is authoritative when
- * it is present and EVERY wheel restores structurally; the surviving
- * wheels are then re-resolved against the live inventory (unknown sets
- * dropped, vanished items and CPL choices restored as Empty, never
- * another choice). Anything else — the field absent, a structurally
- * corrupted wheel, or more than four wheels — falls back to the legacy
- * Standard-only stack, which itself falls back to the legacy scalar.
+ * One mounted auxiliary filter in its on-disk shape (FILTER-AUX,
+ * FILTER-PERSIST-001): the owning set, the item, the item's kind, and the
+ * per-shot choice — a CPL's loss in stops or a GND's mode; Color and
+ * Effect items carry neither and contribute their registered loss.
+ * (iOS: PersistentAuxiliaryFilterSnapshot.)
  */
-fun SlotCalculatorSnapshot.restoredFilterWheels(inventory: FilterInventory): List<FilterWheel> {
-    val persisted = filterStack
-    if (!persisted.isNullOrEmpty()) {
-        val restored = persisted.map { it.restoredWheel() }
-        if (restored.none { it == null }) {
-            FilterStack.normalizedWheels(restored.filterNotNull(), inventory)?.let { return it }
+@Serializable
+data class PersistentAuxiliaryFilter(
+    val filterSetId: String,
+    val itemId: String,
+    /** [FilterItemKind] token of the mounted item. */
+    val kind: String,
+    val cplLossStops: Double? = null,
+    /** [GndCalculationMode] token. */
+    val gndMode: String? = null,
+) {
+    /**
+     * The mount reference; whether the set and item still exist, and
+     * whether the choice still fits the item, is decided against the live
+     * inventory by the caller. `null` marks a structurally corrupted entry.
+     */
+    fun restoredMount(): MountedAuxiliaryFilter? {
+        if (filterSetId.isEmpty() || itemId.isEmpty()) return null
+        val choice = when (FilterItemKind.fromToken(kind)) {
+            FilterItemKind.cpl ->
+                cplLossStops?.takeIf { it.isFinite() }?.let { AuxiliaryFilterChoice.CplLoss(it) } ?: return null
+            FilterItemKind.gnd ->
+                GndCalculationMode.fromToken(gndMode)?.let { AuxiliaryFilterChoice.Gnd(it) } ?: return null
+            FilterItemKind.color, FilterItemKind.effect -> AuxiliaryFilterChoice.RegisteredLoss
+            FilterItemKind.fixed, null -> return null
+        }
+        return MountedAuxiliaryFilter(FilterSetId(filterSetId), FilterItemId(itemId), choice)
+    }
+
+    companion object {
+        fun from(mount: MountedAuxiliaryFilter, kind: FilterItemKind): PersistentAuxiliaryFilter {
+            val base = PersistentAuxiliaryFilter(mount.filterSetId.rawValue, mount.itemId.rawValue, kind.name)
+            return when (val choice = mount.choice) {
+                is AuxiliaryFilterChoice.CplLoss -> base.copy(cplLossStops = choice.stops)
+                is AuxiliaryFilterChoice.Gnd -> base.copy(gndMode = choice.mode.name)
+                is AuxiliaryFilterChoice.RegisteredLoss -> base
+            }
         }
     }
-    return canonicalNdStackStops().map { FilterWheel.standard(it) }
 }
+
+/**
+ * The slot's restored Filter Stack — ND wheels and mounted auxiliary
+ * filters (FILTER-PERSIST-001/002). The additive
+ * [SlotCalculatorSnapshot.filterStack] is authoritative when it is
+ * present and EVERY wheel and auxiliary entry restores structurally; a
+ * legacy wheel that mounted a CPL or GND row migrates into an auxiliary
+ * filter with the same item, choice, and mode, and the rest re-resolve
+ * against the live inventory (unknown sets dropped, vanished items read
+ * Empty, an unresolvable auxiliary filter is unmounted, never replaced
+ * by another choice). Anything else — the field absent, a structurally
+ * corrupted entry, more than four wheels, or a result that no longer
+ * fits the limits — falls back to the legacy Standard-only stack, which
+ * itself falls back to the legacy scalar.
+ */
+fun SlotCalculatorSnapshot.restoredFilterStack(inventory: FilterInventory): FilterStack {
+    storedFilterReferences()?.let { (wheels, mounts) ->
+        val normalized = FilterStack.normalizedWheels(wheels, inventory)
+        if (normalized != null) {
+            val onWheels = normalized.mapNotNull { it.mountedItemId }.toSet()
+            val auxiliary = FilterStack.normalizedAuxiliaryFilters(mounts, inventory)
+                .filter { it.itemId !in onWheels }
+            FilterStack.validated(normalized, auxiliary, inventory)?.let { return it }
+        }
+    }
+    return FilterStack.validated(canonicalNdStackStops().map { FilterWheel.standard(it) }, inventory)
+        ?: FilterStack.single(0.0)
+}
+
+/**
+ * The stored wheel and auxiliary references before any inventory
+ * resolution, with legacy CPL / GND wheel rows already migrated into
+ * auxiliary filters. `null` when the mixed-stack field is absent or any
+ * entry is structurally corrupted. A caller that has to follow a kind
+ * change (FILTER-ITEM-005) reads these, since resolution against the new
+ * inventory would already have emptied a wheel whose item left the ND
+ * role.
+ */
+fun SlotCalculatorSnapshot.storedFilterReferences(): Pair<List<FilterWheel>, List<MountedAuxiliaryFilter>>? {
+    val persisted = filterStack
+    if (persisted.isNullOrEmpty() || persisted.size > FilterStack.MAX_WHEEL_COUNT) return null
+    val restored = persisted.map { it.restoredWheel() }
+    val mounts = auxiliaryFilters.orEmpty().map { it.restoredMount() }
+    if (restored.any { it == null } || mounts.any { it == null }) return null
+    val (wheels, legacy) = FilterStack.migratingLegacyWheels(restored.filterNotNull())
+    return wheels to (mounts.filterNotNull() + legacy)
+}
+
+/** The wheels of [restoredFilterStack]. */
+fun SlotCalculatorSnapshot.restoredFilterWheels(inventory: FilterInventory): List<FilterWheel> =
+    restoredFilterStack(inventory).wheels
+
+/**
+ * The slot's candidate Filter Sets (FILTER-CAMERA-001), in their selection
+ * order: the stored assignment, without sets that no longer exist, plus
+ * every set the restored stack still references.
+ */
+fun SlotCalculatorSnapshot.restoredCandidateFilterSetIds(inventory: FilterInventory): List<FilterSetId> {
+    val stack = restoredFilterStack(inventory)
+    return inventory.normalizedCandidateFilterSetIds(
+        storedCandidateFilterSetIds,
+        stack.wheels,
+        stack.auxiliaryFilters,
+    )
+}
+
+/**
+ * The raw stored candidate ids, before normalization. A slot with no
+ * stored selection — a fresh camera, or one stored before it had any —
+ * starts with the Default Filter Set (FILTER-CAMERA-001, FILTER-SET-002);
+ * an emptied selection is stored as an empty list.
+ */
+val SlotCalculatorSnapshot.storedCandidateFilterSetIds: List<FilterSetId>
+    get() = candidateFilterSetIds?.filter { it.isNotEmpty() }?.map { FilterSetId(it) } ?: listOf(FilterSetId.defaultSet)
+
+/**
+ * The Filter Sources the Plus wheel offers for a camera with [candidates]
+ * (FILTER-PLUS-001, FILTER-SET-004): Standard, then the candidate sets
+ * that hold at least one ND item, in selection order.
+ */
+fun FilterInventory.offeredFilterSources(candidates: List<FilterSetId>): List<FilterSource> =
+    listOf(FilterSource.Standard) + candidates
+        .mapNotNull { filterSet(it) }
+        .filter { it.ndItems.isNotEmpty() }
+        .map { FilterSource.FilterSet(it.id) }
 
 /**
  * The slot's remembered Filter Source for the Plus wheel
  * (FILTER-PLUS-004). A fresh camera, an absent field, and a Filter Set
- * that no longer exists all fall back to Standard.
+ * the camera no longer offers (deleted, no longer a candidate, or without
+ * ND items) all fall back to Standard.
  */
 fun SlotCalculatorSnapshot.restoredLastFilterSource(inventory: FilterInventory): FilterSource {
     if (lastFilterSourceKind != PersistentFilterWheel.FILTER_SET_SOURCE_KIND) return FilterSource.Standard
     val setId = lastFilterSetId?.takeIf { it.isNotEmpty() } ?: return FilterSource.Standard
     val source = FilterSource.FilterSet(FilterSetId(setId))
-    return if (inventory.contains(source)) source else FilterSource.Standard
+    val offered = inventory.offeredFilterSources(restoredCandidateFilterSetIds(inventory))
+    return if (source in offered) source else FilterSource.Standard
 }
 
 /**
- * Writes [stack] and [lastSource] into the snapshot (FILTER-PERSIST-001).
- * The additive mixed-stack field is authoritative for new builds; the
- * pre-Filter-Set fields describe only the stack's STANDARD wheels — one
- * Standard 0 wheel when it has none — so an older build restores a valid
- * Standard-only projection, with the legacy scalar carrying the strongest
- * Standard wheel exactly as the Standard-only path writes it.
+ * Writes [stack], [lastSource], and [candidates] into the snapshot
+ * (FILTER-PERSIST-001). The additive mixed-stack, auxiliary, and
+ * candidate fields are authoritative for new builds; the auxiliary field
+ * is omitted while empty, and the candidates are always written, an empty
+ * list included, so an emptied selection does not restore as a fresh
+ * camera with Default; the pre-Filter-Set fields describe only the stack's STANDARD
+ * wheels — one Standard 0 wheel when it has none — so an older build
+ * restores a valid Standard-only projection, with the legacy scalar
+ * carrying the strongest Standard wheel exactly as the Standard-only path
+ * writes it.
  */
 fun SlotCalculatorSnapshot.writingFilterStack(
     stack: FilterStack,
     lastSource: FilterSource,
+    candidates: List<FilterSetId> = storedCandidateFilterSetIds,
 ): SlotCalculatorSnapshot {
     val standardStops = stack.wheels.mapNotNull { it.standardStops }
     val projected = standardStops.ifEmpty { listOf(0.0) }
@@ -192,6 +313,10 @@ fun SlotCalculatorSnapshot.writingFilterStack(
         ndStops = ExposureScale.commercialNDPresetStop(strongest),
         ndStack = projected,
         filterStack = stack.wheels.map { PersistentFilterWheel.from(it) },
+        auxiliaryFilters = stack.auxiliaryRows
+            .map { PersistentAuxiliaryFilter.from(it.mount, it.item.behavior.kind) }
+            .ifEmpty { null },
+        candidateFilterSetIds = candidates.map { it.rawValue },
         lastFilterSourceKind = when (lastSource) {
             is FilterSource.Standard -> PersistentFilterWheel.STANDARD_SOURCE_KIND
             is FilterSource.FilterSet -> PersistentFilterWheel.FILTER_SET_SOURCE_KIND

@@ -28,14 +28,15 @@ class FilterItemEditorSessionMemory {
 
     /**
      * A new item was saved in this session. Fixed and GND carry a
-     * registered notation and update the memory; a CPL has none and
-     * leaves it unchanged. Editing an existing item never calls this.
+     * registered notation and update the memory; CPL, Color, and Effect
+     * items have none and leave it unchanged. Editing an existing item
+     * never calls this.
      */
     fun didSaveNewItem(item: FilterItem) {
         when (val behavior = item.behavior) {
             is FilterItemBehavior.Fixed -> initialUnit = behavior.value.unit
             is FilterItemBehavior.Gnd -> initialUnit = behavior.value.unit
-            is FilterItemBehavior.Cpl -> Unit
+            is FilterItemBehavior.Cpl, is FilterItemBehavior.Color, is FilterItemBehavior.Effect -> Unit
         }
     }
 }

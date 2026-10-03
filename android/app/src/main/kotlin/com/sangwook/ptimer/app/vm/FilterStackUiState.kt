@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
+import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
@@ -38,6 +39,23 @@ data class FilterSourceUiOption(
      *  `null` when it can. */
     val addUnavailability: FilterAddUnavailability? = null,
 )
+
+/**
+ * What the Plus wheel can settle on (FILTER-PLUS-001): an ND Filter
+ * Source that adds a wheel, or the Auxiliary filters action — last, after
+ * every source — that opens the shooting popup without adding anything.
+ * (iOS: `FilterPlusChoice`.)
+ */
+sealed class FilterPlusChoice {
+    data class Source(val option: FilterSourceUiOption) : FilterPlusChoice()
+
+    data object AuxiliaryFilters : FilterPlusChoice()
+
+    companion object {
+        fun choices(sources: List<FilterSourceUiOption>): List<FilterPlusChoice> =
+            sources.map { Source(it) } + AuxiliaryFilters
+    }
+}
 
 /**
  * The Plus wheel (FILTER-PLUS-001/003/004/005): present while fewer than
@@ -113,15 +131,27 @@ data class FilterRejectionNotice(
     val addUnavailability: FilterAddUnavailability? = null,
 )
 
+/** Outcome of a camera candidate assignment (FILTER-CAMERA-001). */
+sealed class CandidateFilterSetAssignmentOutcome {
+    data object Assigned : CandidateFilterSetAssignmentOutcome()
+
+    /** The excluded sets this camera still references; nothing changed. */
+    data class Blocked(val referencedFilterSets: List<FilterSet>) : CandidateFilterSetAssignmentOutcome()
+}
+
 /** Why an item save is blocked (FILTER-ITEM-005). */
 enum class FilterItemSaveBlockReason {
     /** A camera's active contributions would exceed 30 stops. */
     exceedsTotalLimit,
 
     /** A camera currently mounts a row of this item that the edit removes
-     *  — a selected CPL exposure-loss choice, or a row lost to a kind
-     *  change. The selection is never replaced silently. */
+     *  — a selected CPL exposure-loss choice. The selection is never
+     *  replaced silently. */
     removesSelectedChoice,
+
+    /** A kind change would move a mounted item onto the ND wheels beyond
+     *  the wheel limit (three beside the summary, four without). */
+    tooManyNDWheels,
 }
 
 /**

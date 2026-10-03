@@ -4,8 +4,10 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.app.persistence.PersistenceWriter
+import com.sangwook.ptimer.core.exposure.AuxiliaryFilterChoice
 import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
 import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
+import com.sangwook.ptimer.core.exposure.FilterExposureLoss
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemBehavior
@@ -14,12 +16,14 @@ import com.sangwook.ptimer.core.exposure.FilterRowChoice
 import com.sangwook.ptimer.core.exposure.FilterRowSelection
 import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
+import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
+import com.sangwook.ptimer.core.exposure.MountedAuxiliaryFilter
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotIdentity
@@ -95,6 +99,16 @@ class FilterSetControllerTest {
             inventoryModel = model,
             referenceVocabulary = { vocabulary },
         )
+
+        init {
+            // Every set is a candidate of the starting camera, so the
+            // tests reach its ND sources (FILTER-CAMERA-001).
+            assignAllFilterSetsAsCandidates()
+        }
+
+        fun assignAllFilterSetsAsCandidates() {
+            controller.setCandidateFilterSets(model.inventory.value.filterSets.map { it.id })
+        }
     }
 
     private fun fixture(vararg sets: FilterSet) = Fixture(FilterInventory(sets.toList()))
@@ -136,6 +150,13 @@ class FilterSetControllerTest {
 
     private fun standard(value: Double) = FilterWheelSelection.Standard(value)
 
+    /** A mounted auxiliary filter with the item's default choice unless
+     *  one is given. */
+    private fun mount(set: FilterSet, item: FilterItem, choice: AuxiliaryFilterChoice? = null) =
+        MountedAuxiliaryFilter(set.id, item.id, choice ?: MountedAuxiliaryFilter.initialChoice(item)!!)
+
+    private fun mounted(c: CalculatorController) = c.state.value.mountedAuxiliaryFilters
+
     private fun total(c: CalculatorController) = c.state.value.filterStatus.totalStopsText
 
     private fun indexOfWheel(c: CalculatorController, id: Int) = wheels(c).indexOfFirst { it.id == id }
@@ -152,7 +173,7 @@ class FilterSetControllerTest {
     fun twoEqualItemsMountTogetherWhileASecondSelectionOfOneIsRejected() {
         val a = stops("A", 3.0)
         val b = stops("B", 3.0)
-        val lee = FilterSet("Lee holder", FilterSetColor.indigo, listOf(a, b))
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(a, b))
         val f = fixture(lee)
         f.controller.addFilterWheel(source(lee))
         f.controller.addFilterWheel(source(lee))
@@ -183,8 +204,8 @@ class FilterSetControllerTest {
         val bigStopper = ndFactor("Big Stopper", 1000.0)
         val nisi = FilterSet("NiSi kit", FilterSetColor.red, listOf(bigStopper))
         val nd8 = ndFactor("Lee ND8", 8.0)
-        val leeCpl = cpl("Lee CPL", 1.0, 1.5, 2.0)
-        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(nd8, leeCpl))
+        val nd2 = ndFactor("Lee ND2", 2.0)
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(nd8, nd2))
         val f = fixture(nisi, lee)
         val c = f.controller
 
@@ -194,7 +215,7 @@ class FilterSetControllerTest {
         c.addFilterWheel(source(lee))
         commit(c, indexOfWheel(c, wheels(c).first { it.source == source(nisi) }.id), itemSelection(bigStopper))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(nd8))
-        commit(c, wheels(c).indexOfLast { it.source == source(lee) }, itemSelection(leeCpl, FilterRowChoice.CplLoss(1.0)))
+        commit(c, wheels(c).indexOfLast { it.source == source(lee) }, itemSelection(nd2))
 
         assertEquals(
             "NiSi (10) before Lee (3 + 1 = 4) before Standard (2), each group contiguous.",
@@ -315,34 +336,23 @@ class FilterSetControllerTest {
     }
 
     @Test
-    fun aGndModeSwitchChangesTheContributionButNotTheGroupPosition() {
+    fun aGndModeSwitchChangesTheContributionButNotTheNdOrder() {
         val leeGnd = gnd("Lee GND 0.9", 0.9)
-        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd))
+        val nd = stops("ND8", 3.0)
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd, nd))
         val f = fixture(lee)
         val c = f.controller
 
         commit(c, 0, standard(2.0))
         c.addFilterWheel(source(lee))
-        val gndWheel = wheels(c).first { it.source == source(lee) }.id
-        commit(
-            c,
-            indexOfWheel(c, gndWheel),
-            itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
-        )
-        assertEquals(listOf(source(lee), FilterSource.Standard), wheels(c).map { it.source })
-        assertEquals("5", total(c))
+        commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(nd))
+        val order = wheels(c).map { it.id }
+        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))))
+        assertEquals("8", total(c))
 
-        commit(
-            c,
-            indexOfWheel(c, gndWheel),
-            itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-        )
-        assertEquals(
-            "The registered full density sorts the wheel in BOTH modes, so it does not move.",
-            listOf(source(lee), FilterSource.Standard),
-            wheels(c).map { it.source },
-        )
-        assertEquals("2", total(c))
+        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd))))
+        assertEquals("An auxiliary change never moves an ND wheel.", order, wheels(c).map { it.id })
+        assertEquals("5", total(c))
     }
 
     // MARK: - sighted fallback (FILTER-STACK-004)
@@ -609,7 +619,11 @@ class FilterSetControllerTest {
     fun anInactivePageJudgesItsSourcesAgainstItsOwnStack() {
         val three = stops("Three", 3.0)
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(three))
-        val c = fixture(lee).controller
+        val f = fixture(lee)
+        val c = f.controller
+        c.selectSlot(CameraSlotId.camera2)
+        f.assignAllFilterSetsAsCandidates()
+        c.selectSlot(CameraSlotId.camera1)
         c.addFilterWheel(source(lee))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(three))
 
@@ -626,24 +640,26 @@ class FilterSetControllerTest {
 
     @Test
     fun aRefusedAddKeepsTheStackTheTotalAndTheRememberedSource() {
-        val empty = FilterSet("Empty kit", FilterSetColor.brown)
-        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(stops("Three", 3.0)))
-        val f = fixture(lee, empty)
+        val three = stops("Three", 3.0)
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(three))
+        val f = fixture(lee)
         val c = f.controller
         c.addFilterWheel(source(lee))
+        commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(three))
+        c.addFilterWheel(FilterSource.Standard)
         val before = committed(c)
 
-        c.addFilterWheel(source(empty))
+        c.addFilterWheel(source(lee))
 
         assertEquals(before, committed(c))
-        assertEquals("0", total(c))
+        assertEquals("3", total(c))
         assertEquals(
             "The memory only moves on a SUCCESSFUL addition.",
-            source(lee),
+            FilterSource.Standard,
             c.state.value.plus.sources[c.state.value.plus.selectedIndex].source,
         )
         assertEquals(
-            FilterAddUnavailability.filterSetHasNoItems,
+            FilterAddUnavailability.allItemsMounted,
             c.state.value.filterStatus.rejection?.addUnavailability,
         )
     }
@@ -666,25 +682,25 @@ class FilterSetControllerTest {
     }
 
     @Test
-    fun aRecordOnlyItemKeepsItsSourceAddableAtThirtyStops() {
+    fun aRecordOnlyGndMountsAtThirtyStopsWhileItsFullValueIsRefused() {
         val leeGnd = gnd("Lee GND 0.9", 0.9)
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd))
         val f = fixture(lee)
         val c = f.controller
         commit(c, 0, standard(30.0))
 
-        assertNull(
-            "A Record-only row fits a 0-stop budget, so the source stays addable.",
-            plusOption(c, source(lee)).addUnavailability,
-        )
         assertEquals(
-            FilterAddUnavailability.noSelectableValue,
-            plusOption(c, FilterSource.Standard).addUnavailability,
+            "A GND-only set holds no ND item and is not an ND source.",
+            listOf(FilterSource.Standard),
+            c.state.value.plus.sources.map { it.source },
         )
-
-        c.addFilterWheel(source(lee))
-        assertEquals(2, wheels(c).size)
+        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd))))
         assertEquals("30", total(c))
+        assertEquals(
+            FilterStackRejection.exceedsTotalLimit,
+            c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))),
+        )
+        assertEquals("A refused Apply changes nothing.", listOf(mount(lee, leeGnd)), mounted(c))
     }
 
     // MARK: - cleanup (FILTER-STACK-006)
@@ -692,32 +708,28 @@ class FilterSetControllerTest {
     @Test
     fun cleanupRemovesEmptyWheelsButKeepsAMountedRecordOnlyGnd() {
         val leeGnd = gnd("Lee GND 0.9", 0.9)
-        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd))
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd, stops("ND8", 3.0)))
         val f = fixture(lee)
         val c = f.controller
         commit(c, 0, standard(5.0))
         c.addFilterWheel(source(lee))
         c.addFilterWheel(source(lee))
-        commit(
-            c,
-            wheels(c).indexOfFirst { it.source == source(lee) },
-            itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-        )
+        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd))))
 
         c.cleanupEmptyNdWheels()
 
-        assertEquals(2, wheels(c).size)
-        assertTrue(
-            "A mounted Record-only item contributes 0 but is never cleaned up.",
-            committed(c).contains(itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly))),
+        assertEquals(listOf(standard(5.0)), committed(c))
+        assertEquals(
+            "A mounted Record-only GND contributes 0 but is never cleaned up.",
+            listOf(mount(lee, leeGnd)),
+            mounted(c),
         )
         assertEquals("5", total(c))
     }
 
     @Test
-    fun saturationShedsOnlyTheWheelThatCanHoldNoUsableRow() {
-        val leeGnd = gnd("Lee GND 0.9", 0.9)
-        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd))
+    fun saturationShedsEveryCleanableWheelThatCanHoldNoUsableRow() {
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(stops("ND8", 3.0)))
         val f = fixture(lee)
         val c = f.controller
         c.addFilterWheel(source(lee))
@@ -726,10 +738,10 @@ class FilterSetControllerTest {
         commit(c, wheels(c).indexOfFirst { it.source == FilterSource.Standard }, standard(30.0))
 
         assertEquals(
-            "The Standard 0 wheel can hold nothing at 30 stops and goes; the Empty " +
-                "Lee wheel can still mount a Record-only GND and stays.",
-            listOf(FilterSource.Standard, source(lee)),
-            wheels(c).map { it.source },
+            "At 30 stops neither the Standard 0 wheel nor the Empty Lee wheel can " +
+                "take a non-zero ND, so both go and one wheel stays.",
+            listOf(standard(30.0)),
+            committed(c),
         )
         assertEquals("30", total(c))
     }
@@ -764,22 +776,18 @@ class FilterSetControllerTest {
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(leeGnd))
         val f = fixture(lee)
         val c = f.controller
-        val recordOnly = itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly))
-        val full = itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue))
+        val recordOnly = mount(lee, leeGnd)
+        val full = mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue))
 
         c.selectSlot(CameraSlotId.camera2)
-        c.addFilterWheel(source(lee))
-        commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, recordOnly)
+        f.assignAllFilterSetsAsCandidates()
+        assertNull(c.applyAuxiliaryFilters(listOf(recordOnly)))
 
         c.selectSlot(CameraSlotId.camera1)
-        c.addFilterWheel(source(lee))
-        commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, full)
+        assertNull(c.applyAuxiliaryFilters(listOf(full)))
 
-        assertTrue(committed(c).contains(full))
-        assertTrue(
-            "Camera 2 keeps its own per-shot mode.",
-            committed(c, CameraSlotId.camera2).contains(recordOnly),
-        )
+        assertEquals(listOf(full), mounted(c))
+        assertEquals("Camera 2 keeps its own per-shot mode.", listOf(recordOnly), page(c, CameraSlotId.camera2).mountedAuxiliaryFilters)
     }
 
     @Test
@@ -790,6 +798,7 @@ class FilterSetControllerTest {
         val c = f.controller
         for (slot in listOf(CameraSlotId.camera2, CameraSlotId.camera1)) {
             c.selectSlot(slot)
+            f.assignAllFilterSetsAsCandidates()
             c.addFilterWheel(source(lee))
             commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(item))
         }
@@ -840,6 +849,7 @@ class FilterSetControllerTest {
         val c = f.controller
 
         c.selectSlot(CameraSlotId.camera2)
+        f.assignAllFilterSetsAsCandidates()
         commit(c, 0, standard(27.0))
         c.addFilterWheel(source(lee))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(item))
@@ -877,11 +887,11 @@ class FilterSetControllerTest {
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(item))
         val f = fixture(lee)
         val c = f.controller
-        val selected = itemSelection(item, FilterRowChoice.CplLoss(1.5))
+        val selected = mount(lee, item, AuxiliaryFilterChoice.CplLoss(1.5))
         for (slot in listOf(CameraSlotId.camera2, CameraSlotId.camera1)) {
             c.selectSlot(slot)
-            c.addFilterWheel(source(lee))
-            commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, selected)
+            f.assignAllFilterSetsAsCandidates()
+            assertNull(c.applyAuxiliaryFilters(listOf(selected)))
         }
 
         val outcome = c.saveFilterItem(
@@ -896,37 +906,68 @@ class FilterSetControllerTest {
             ),
             outcome,
         )
-        assertTrue("The selection is never silently replaced.", committed(c).contains(selected))
+        assertEquals("The selection is never silently replaced.", listOf(selected), mounted(c))
     }
 
     @Test
-    fun changingAMountedItemsKindIsBlockedLikeARemovedRow() {
-        val item = stops("Three", 3.0)
+    fun changingAMountedItemsKindMovesItsSelectionIntoTheNewRole() {
+        val item = stops("Red 25A", 3.0)
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(item))
         val f = fixture(lee)
         val c = f.controller
         c.addFilterWheel(source(lee))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(item))
 
-        val outcome = c.saveFilterItem(
-            item.copy(behavior = FilterItemBehavior.Cpl(CplExposureLossChoices.defaults)),
-            lee.id,
-        )
+        // ND entered by mistake -> Color: the wheel leaves the ND row and
+        // the item is mounted as an auxiliary filter at the same loss.
+        val asColor = item.copy(behavior = FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        assertEquals(FilterItemSaveOutcome.Saved, c.saveFilterItem(asColor, lee.id))
+        assertFalse(committed(c).contains(itemSelection(item)))
+        assertEquals(listOf(mount(lee, asColor)), mounted(c))
+        assertEquals("3", total(c))
 
-        assertEquals(
-            FilterItemSaveOutcome.Blocked(
-                listOf(CameraSlotIdentity(CameraSlotId.camera1)),
-                FilterItemSaveBlockReason.removesSelectedChoice,
-            ),
-            outcome,
-        )
+        // Back to ND: the mount becomes a Filter Set ND wheel again.
+        assertEquals(FilterItemSaveOutcome.Saved, c.saveFilterItem(item, lee.id))
+        assertTrue(mounted(c).isEmpty())
         assertTrue(committed(c).contains(itemSelection(item)))
+        assertEquals("3", total(c))
+    }
+
+    @Test
+    fun aKindChangeIsBlockedOnlyByTheWheelLimitOrTheCap() {
+        val nd = stops("ND8", 3.0)
+        val red = FilterItem("Red 25A", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        val polarizer = cpl("CPL", 1.0)
+        val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(nd, red, polarizer))
+        val f = fixture(lee)
+        val c = f.controller
+        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, red), mount(lee, polarizer))))
+        c.addFilterWheel(FilterSource.Standard)
+        c.addFilterWheel(FilterSource.Standard)
+        assertEquals(3, wheels(c).size)
+
+        // Summary (the CPL stays) + three ND wheels: the auxiliary item
+        // turned ND has no wheel left to take.
+        val redAsNd = red.copy(behavior = FilterItemBehavior.Fixed(FilterRegisteredValue(3.0, FilterValueUnit.stops)))
+        assertEquals(
+            FilterItemSaveOutcome.Blocked(listOf(CameraSlotIdentity(CameraSlotId.camera1)), FilterItemSaveBlockReason.tooManyNDWheels),
+            c.saveFilterItem(redAsNd, lee.id),
+        )
+        assertEquals(listOf(mount(lee, red), mount(lee, polarizer)), mounted(c))
+
+        // A kind change that would push the stack past 30 is blocked by the cap.
+        commit(c, 0, standard(25.0))
+        val heavier = red.copy(behavior = FilterItemBehavior.Color(FilterExposureLoss(5.0), FilterSetColor.red))
+        assertEquals(
+            FilterItemSaveOutcome.Blocked(listOf(CameraSlotIdentity(CameraSlotId.camera1)), FilterItemSaveBlockReason.exceedsTotalLimit),
+            c.saveFilterItem(heavier, lee.id),
+        )
     }
 
     // MARK: - restore (FILTER-PERSIST-001/002)
 
     @Test
-    fun aStalePersistedCplChoiceRestoresAsEmpty() {
+    fun aStalePersistedCplChoiceUnmountsNeverAnotherChoice() {
         val item = cpl("Lee CPL", 1.0, 1.5, 2.0)
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(item))
         val session = PersistentSlotSession(
@@ -952,12 +993,11 @@ class FilterSetControllerTest {
         )
         val f = Fixture(FilterInventory(listOf(lee)), session)
 
-        assertEquals(
-            "A configured choice that no longer exists restores as Empty, never as another choice.",
-            listOf(FilterWheelSelection.Empty),
-            committed(f.controller),
+        assertTrue(
+            "A configured choice that no longer exists is unmounted, never replaced by another choice.",
+            mounted(f.controller).isEmpty(),
         )
-        assertEquals(listOf(source(lee)), wheels(f.controller).map { it.source })
+        assertEquals(listOf(standard(0.0)), committed(f.controller))
     }
 
     @Test
@@ -969,13 +1009,8 @@ class FilterSetControllerTest {
         val c = f.controller
         commit(c, 0, standard(2.0))
         c.addFilterWheel(source(lee))
-        c.addFilterWheel(source(lee))
         commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(bigStopper))
-        commit(
-            c,
-            wheels(c).indexOfLast { it.source == source(lee) },
-            itemSelection(leeGnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-        )
+        assertNull(c.applyAuxiliaryFilters(listOf(mount(lee, leeGnd, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)))))
         val before = committed(c)
         val sources = wheels(c).map { it.source }
 
@@ -983,7 +1018,9 @@ class FilterSetControllerTest {
 
         assertEquals(sources, wheels(restored).map { it.source })
         assertEquals(before, committed(restored))
-        assertEquals(total(c), total(restored))
+        assertEquals(mounted(c), mounted(restored))
+        assertEquals("15", total(restored))
+        assertEquals(listOf(FilterSetId.defaultSet, lee.id), restored.state.value.candidateFilterSetIds)
         assertEquals(
             "The remembered source survives the restart.",
             source(lee),
@@ -1232,20 +1269,25 @@ class FilterSetControllerTest {
 
     @Test
     fun theRejectionNoticeIsClearedByASlotSwitchAndByAnInventoryChange() {
-        val empty = FilterSet("Empty kit", FilterSetColor.brown)
-        val f = fixture(empty)
+        val only = stops("Only", 3.0)
+        val lee = FilterSet("Lee holder", FilterSetColor.orange, listOf(only))
+        val f = fixture(lee)
         val c = f.controller
+        c.addFilterWheel(source(lee))
+        commit(c, wheels(c).indexOfFirst { it.source == source(lee) }, itemSelection(only))
 
-        c.addFilterWheel(source(empty))
+        c.addFilterWheel(source(lee))
         assertNotNull(c.state.value.filterStatus.rejection)
         c.selectSlot(CameraSlotId.camera2)
         assertNull("A refusal belongs to the camera that produced it.", c.state.value.filterStatus.rejection)
 
-        c.addFilterWheel(source(empty))
+        c.selectSlot(CameraSlotId.camera1)
+        c.addFilterWheel(source(lee))
         assertNotNull(c.state.value.filterStatus.rejection)
         c.createFilterSet("NiSi kit", FilterSetColor.red)
         assertNull("A changed inventory drops the stale reason.", c.state.value.filterStatus.rejection)
     }
+
     /**
      * PTIMER-221 FILTER-STACK-005, the owner's device report: TWO Filter
      * Sets, added A / B / A. The existing coverage is one Filter Set

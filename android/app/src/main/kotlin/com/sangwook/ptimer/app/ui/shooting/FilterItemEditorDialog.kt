@@ -19,12 +19,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -44,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -55,18 +61,23 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.vm.FilterSetItemOrder
 import com.sangwook.ptimer.app.vm.FilterItemEditorDraft
 import com.sangwook.ptimer.app.vm.FilterItemSaveBlockReason
 import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
 import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemKind
+import com.sangwook.ptimer.core.exposure.FilterSet
+import com.sangwook.ptimer.core.exposure.FilterSetColor
+import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 
 /** Which physical filter the editor opened on. */
 internal sealed class FilterItemEditorTarget {
-    /** A brand-new item, starting in the session's remembered notation
-     *  (FILTER-ITEM-007). The kind always starts Fixed. */
+    /** A brand-new item from an Add Filter action, starting at ND in the
+     *  session's remembered notation (FILTER-ITEM-003/007); the type and
+     *  the Filter Set are chosen inside the editor. */
     data class New(val initialUnit: FilterValueUnit) : FilterItemEditorTarget()
 
     data class Existing(val item: FilterItem) : FilterItemEditorTarget()
@@ -74,12 +85,21 @@ internal sealed class FilterItemEditorTarget {
 
 /**
  * Registers or edits one physical filter (FILTER-ITEM-002/003/004,
- * FILTER-CPL-001..004, FILTER-GND-001/003). The kind is chosen
- * explicitly; Fixed and GND take a decimal value in Stops, OD, or ND
- * factor with the canonical conversion shown live, and a CPL exposes its
- * three exposure-loss fields on a decimal keyboard. Saving is refused —
+ * FILTER-CPL-001..004, FILTER-GND-001/003, FILTER-COLOR-001/002). The
+ * kind is chosen explicitly; ND and GND take a decimal value in Stops,
+ * OD, or ND factor with the canonical conversion shown live, a CPL
+ * exposes its three exposure-loss fields on a decimal keyboard, a Color
+ * filter records its optical color beside an explicit loss in stops, and
+ * an Effect filter its explicit loss. Saving is refused —
  * with the affected cameras — when a stack would exceed 30 stops or
  * would lose a row it currently mounts (FILTER-ITEM-005).
+ *
+ * A new filter always shows its Filter Set (FILTER-ITEM-009): it starts
+ * in [initialFilterSetId] — Default from Shooting Filters, the
+ * containing set from a set editor — may move to any set, and Add Filter
+ * Set creates one in place and returns with it selected and the entered
+ * values kept. The field stays enabled for an existing filter: saving it
+ * into another set moves it there with its identity.
  *
  * [onSaved] receives the committed item so the owning Filter Set editor
  * can remember a NEW item's notation. (iOS: `FilterItemEditorView`.)
@@ -88,14 +108,23 @@ internal sealed class FilterItemEditorTarget {
 @Composable
 internal fun FilterItemEditorDialog(
     target: FilterItemEditorTarget,
-    onSave: (FilterItem) -> FilterItemSaveOutcome,
+    filterSets: List<FilterSet>,
+    initialFilterSetId: FilterSetId,
+    suggestCreationColor: () -> FilterSetColor,
+    createFilterSet: (String, FilterSetColor) -> FilterSet?,
+    onSave: (FilterItem, FilterSetId) -> FilterItemSaveOutcome,
     onSaved: (FilterItem) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var filterSetId by remember(target) { mutableStateOf(initialFilterSetId) }
+    var creationColor by remember { mutableStateOf<FilterSetColor?>(null) }
     var draft by remember(target) {
         mutableStateOf(
             when (target) {
-                is FilterItemEditorTarget.New -> FilterItemEditorDraft(unit = target.initialUnit)
+                is FilterItemEditorTarget.New -> FilterItemEditorDraft(
+                    kind = FilterSetItemOrder.newItemKind,
+                    unit = target.initialUnit,
+                )
                 is FilterItemEditorTarget.Existing ->
                     FilterItemEditorDraft.editing(target.item.name, target.item.behavior)
             },
@@ -104,11 +133,14 @@ internal fun FilterItemEditorDialog(
     var blocked by remember { mutableStateOf<FilterItemSaveOutcome.Blocked?>(null) }
     val nameFocus = remember { FocusRequester() }
     val isNew = target is FilterItemEditorTarget.New
+    // Every type, ND first, for a new and an existing item alike: a new
+    // filter chooses its type here, an existing one may be corrected.
+    val selectableKinds = FilterSetItemOrder.kinds
     LaunchedEffect(target) { if (isNew) runCatching { nameFocus.requestFocus() } }
 
     fun save() {
         val item = draft.toItem((target as? FilterItemEditorTarget.Existing)?.item?.id) ?: return
-        when (val outcome = onSave(item)) {
+        when (val outcome = onSave(item, filterSetId)) {
             is FilterItemSaveOutcome.Saved -> {
                 onSaved(item)
                 onDismiss()
@@ -163,6 +195,13 @@ internal fun FilterItemEditorDialog(
                             .padding(horizontal = 16.dp)
                             .verticalScroll(rememberScrollState()),
                     ) {
+                        FilterSetField(
+                            filterSets = filterSets,
+                            selection = filterSetId,
+                            onSelect = { filterSetId = it },
+                            onAddFilterSet = { creationColor = suggestCreationColor() },
+                        )
+                        Spacer(Modifier.height(16.dp))
                         OutlinedTextField(
                             value = draft.name,
                             onValueChange = { draft = draft.copy(name = it) },
@@ -173,18 +212,20 @@ internal fun FilterItemEditorDialog(
                                 .fillMaxWidth()
                                 .focusRequester(nameFocus),
                         )
+                        // The type comes first, before its type-specific
+                        // fields (FILTER-ITEM-003).
                         Spacer(Modifier.height(16.dp))
                         SectionLabel(stringResource(R.string.filter_item_kind))
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            FilterItemKind.entries.forEachIndexed { index, kind ->
+                            selectableKinds.forEachIndexed { index, kind ->
                                 SegmentedButton(
                                     selected = draft.kind == kind,
                                     onClick = { draft = draft.copy(kind = kind) },
                                     shape = SegmentedButtonDefaults.itemShape(
                                         index = index,
-                                        count = FilterItemKind.entries.size,
+                                        count = selectableKinds.size,
                                     ),
-                                ) { Text(localizedFilterKindName(kind)) }
+                                ) { Text(localizedFilterKindName(kind), maxLines = 1) }
                             }
                         }
                         FooterText(stringResource(R.string.filter_item_kind_footer))
@@ -195,6 +236,14 @@ internal fun FilterItemEditorDialog(
                                 RegisteredValueSection(draft) { draft = it }
 
                             FilterItemKind.cpl -> CplChoicesSection(draft) { draft = it }
+
+                            FilterItemKind.color -> {
+                                OpticalColorSection(draft) { draft = it }
+                                Spacer(Modifier.height(20.dp))
+                                ExposureLossSection(draft) { draft = it }
+                            }
+
+                            FilterItemKind.effect -> ExposureLossSection(draft) { draft = it }
                         }
 
                         if (draft.kind == FilterItemKind.gnd) {
@@ -218,6 +267,19 @@ internal fun FilterItemEditorDialog(
         }
     }
 
+    creationColor?.let { color ->
+        NewFilterSetDialog(
+            suggestedColor = color,
+            onSave = { name, chosen ->
+                creationColor = null
+                // Back in the editor with the new set selected; the
+                // entered values are this dialog's state and stay.
+                createFilterSet(name, chosen)?.let { filterSetId = it.id }
+            },
+            onDismiss = { creationColor = null },
+        )
+    }
+
     blocked?.let { outcome ->
         val cameras = localizedCameraNames(outcome.affectedCameras)
         AlertDialog(
@@ -233,6 +295,9 @@ internal fun FilterItemEditorDialog(
 
                                 FilterItemSaveBlockReason.removesSelectedChoice ->
                                     R.string.filter_item_save_blocked_choice
+
+                                FilterItemSaveBlockReason.tooManyNDWheels ->
+                                    R.string.filter_item_save_blocked_nd_wheels
                             },
                             cameras,
                         ),
@@ -306,6 +371,47 @@ private fun RegisteredValueSection(draft: FilterItemEditorDraft, onDraft: (Filte
     FooterText(stringResource(R.string.filter_item_value_footer))
 }
 
+/** Color of a Color filter (FILTER-COLOR-001): chosen from the same
+ *  palette as Filter Sets, each choice drawn in its actual color, with
+ *  the selected color's name, separate from the loss. */
+@Composable
+private fun OpticalColorSection(draft: FilterItemEditorDraft, onDraft: (FilterItemEditorDraft) -> Unit) {
+    SectionLabel(stringResource(R.string.filter_item_optical_color))
+    FilterSetColorGrid(selection = draft.opticalColor, onSelect = { onDraft(draft.copy(opticalColor = it)) })
+    Spacer(Modifier.height(8.dp))
+    Text(filterColorName(draft.opticalColor), style = MaterialTheme.typography.bodyMedium)
+    FooterText(stringResource(R.string.filter_item_optical_color_footer))
+}
+
+/** Explicit loss of a Color or Effect filter in stops
+ *  (FILTER-COLOR-001/002): user-supplied, zero allowed, never inferred
+ *  from the color or the name. */
+@Composable
+private fun ExposureLossSection(draft: FilterItemEditorDraft, onDraft: (FilterItemEditorDraft) -> Unit) {
+    SectionLabel(stringResource(R.string.filter_item_exposure_loss))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = draft.valueText,
+            onValueChange = { onDraft(draft.copy(valueText = it)) },
+            label = { Text(stringResource(R.string.filter_item_value)) },
+            singleLine = true,
+            isError = draft.hasValueError,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            stringResource(R.string.notation_stops),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    if (draft.hasValueError) {
+        Spacer(Modifier.height(4.dp))
+        ErrorText(stringResource(R.string.filter_item_loss_error))
+    }
+    FooterText(stringResource(R.string.filter_item_loss_footer))
+}
+
 /** The three CPL exposure-loss fields (FILTER-CPL-001/002/003). */
 @Composable
 private fun CplChoicesSection(draft: FilterItemEditorDraft, onDraft: (FilterItemEditorDraft) -> Unit) {
@@ -372,4 +478,56 @@ internal fun FooterText(text: String) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+/**
+ * The Filter Set a filter is saved into (FILTER-ITEM-009): a menu of
+ * Default and every user set, and Add Filter Set, enabled for a new and
+ * an existing filter alike.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterSetField(
+    filterSets: List<FilterSet>,
+    selection: FilterSetId,
+    onSelect: (FilterSetId) -> Unit,
+    onAddFilterSet: () -> Unit,
+) {
+    val selected = filterSets.firstOrNull { it.id == selection }
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selected?.name.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.filter_set_section_set)) },
+            leadingIcon = selected?.let { { FilterSetColorSwatch(it.color, size = 12.dp) } },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .testTag("filter-item-filter-set"),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            filterSets.forEach { filterSet ->
+                DropdownMenuItem(
+                    text = { Text(filterSet.name) },
+                    leadingIcon = { FilterSetColorSwatch(filterSet.color, size = 12.dp) },
+                    onClick = {
+                        onSelect(filterSet.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+    TextButton(onClick = onAddFilterSet, modifier = Modifier.testTag("filter-item-add-filter-set")) {
+        Icon(Icons.Filled.Add, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.filter_add_filter_set))
+    }
 }

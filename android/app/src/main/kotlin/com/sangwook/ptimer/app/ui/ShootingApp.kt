@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersActions
+import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersScreen
 import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -60,6 +62,7 @@ import com.sangwook.ptimer.app.notify.AndroidTimerForegroundServiceControlling
 import com.sangwook.ptimer.app.notify.TimerAlertPlanner
 import com.sangwook.ptimer.app.notify.TimerNotifications
 import com.sangwook.ptimer.app.persistence.DataStoreTimerWorkspaceStore
+import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.timer.TimerStatus
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -259,10 +262,12 @@ fun ShootingApp(
 
     var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }
     var showAbout by remember { mutableStateOf(false) }
-    // The Filter Set management surface (FILTER-SET-001), reached from the ND
-    // header entry and the Plus wheel's management long press. It reads the
-    // inventory live so an edit inside it redraws the list it was made from.
-    var manageFilterSets by remember { mutableStateOf(false) }
+    // Shooting Filters (FILTER-FLOW-002), opened from the ND header, the
+    // Plus auxiliary action, and the mounted summary.
+    var showShootingFilters by remember { mutableStateOf(false) }
+    // The Filter Set whose editor is open above Shooting Filters; it reads
+    // the inventory live so an edit inside it redraws the list.
+    var editedFilterSetId by remember { mutableStateOf<FilterSetId?>(null) }
     val filterInventory by holder.filterInventory.inventory.collectAsStateWithLifecycle()
     var showExactAlarmInfo by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
@@ -407,7 +412,7 @@ fun ShootingApp(
                     onAddFilterWheel = controller::addFilterWheel,
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
-                    onManageFilterSets = { manageFilterSets = true },
+                    onOpenShootingFilters = { showShootingFilters = true },
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }
@@ -552,25 +557,48 @@ fun ShootingApp(
             }
         }
 
-        if (manageFilterSets) {
+        if (showShootingFilters) {
+            ShootingFiltersScreen(
+                inventory = filterInventory,
+                committed = calcState.mountedAuxiliaryFilters,
+                candidateFilterSetIds = calcState.candidateFilterSetIds,
+                actions = remember(controller) {
+                    ShootingFiltersActions(
+                        rejection = controller::shootingFiltersRejection,
+                        subtotal = controller::auxiliaryFiltersSubtotal,
+                        apply = controller::applyShootingFilters,
+                        selectedFilterSets = controller::selectedFilterSets,
+                        availableFilterSets = controller::availableFilterSets,
+                        selectedFiltersText = controller::selectedFiltersText,
+                        isInUse = controller::isFilterSetInUseOnActiveCamera,
+                        suggestCreationColor = controller::suggestFilterSetCreationColor,
+                        createFilterSet = { name, color -> controller.createFilterSet(name, color) },
+                        saveFilterItem = controller::saveFilterItem,
+                        openFilterSet = { editedFilterSetId = it },
+                    )
+                },
+                onDismiss = { showShootingFilters = false },
+            )
+        }
+
+        editedFilterSetId?.let { filterSetId ->
             FilterSetManagementScreen(
                 inventory = filterInventory,
+                filterSetId = filterSetId,
                 actions = remember(controller) {
                     FilterSetManagementActions(
                         suggestCreationColor = controller::suggestFilterSetCreationColor,
                         createFilterSet = { name, color -> controller.createFilterSet(name, color) },
                         renameFilterSet = controller::renameFilterSet,
                         recolorFilterSet = controller::recolorFilterSet,
-                        moveFilterSet = controller::moveFilterSet,
                         deleteFilterSet = controller::deleteFilterSet,
-                        moveFilterItem = controller::moveFilterItem,
                         deleteFilterItem = controller::deleteFilterItem,
                         saveFilterItem = controller::saveFilterItem,
                         camerasAffectedByDeletingFilterSet = controller::camerasAffectedByDeletingFilterSet,
                         camerasAffectedByDeletingItem = controller::camerasAffectedByDeletingItem,
                     )
                 },
-                onDismiss = { manageFilterSets = false },
+                onDismiss = { editedFilterSetId = null },
             )
         }
 

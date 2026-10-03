@@ -142,4 +142,19 @@ class FilterInventoryTest {
         assertEquals(second, inventory.item(second.id)?.second)
         assertNotNull(inventory.item(first.id))
     }
+
+    /** FILTER-SET-002/004: ensuring the Default Filter Set adds it once,
+     *  first, and moves a stored Default back to the front with its name,
+     *  color, and items intact. */
+    @Test
+    fun ensuringTheDefaultFilterSetPlacesItFirstExactlyOnce() {
+        val lee = FilterSet("Lee", FilterSetColor.red)
+        val ensured = FilterInventory(listOf(lee)).ensuringDefaultFilterSet()
+        assertEquals(listOf(FilterInventory.defaultFilterSet, lee), ensured.filterSets)
+        assertEquals(ensured, ensured.ensuringDefaultFilterSet())
+
+        val nd8 = FilterItem("ND8", FilterItemBehavior.Fixed(FilterRegisteredValue(3.0, FilterValueUnit.stops)))
+        val renamed = FilterSet("Bag", FilterSetColor.green, listOf(nd8), FilterSetId.defaultSet)
+        assertEquals(listOf(renamed, lee), FilterInventory(listOf(lee, renamed)).ensuringDefaultFilterSet().filterSets)
+    }
 }

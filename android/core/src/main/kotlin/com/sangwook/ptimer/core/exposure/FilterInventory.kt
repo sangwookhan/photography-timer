@@ -19,6 +19,10 @@ import kotlin.random.Random
 data class FilterSetId(val rawValue: String) {
     companion object {
         fun generate(): FilterSetId = FilterSetId(UUID.randomUUID().toString())
+
+        /** The built-in Default Filter Set (FILTER-SET-002). Generated
+         *  ids are UUIDs, so they never collide with it. */
+        val defaultSet = FilterSetId("default")
     }
 }
 
@@ -33,34 +37,50 @@ data class FilterItemId(val rawValue: String) {
 }
 
 /**
- * Fixed, platform-neutral color palette for Filter Sets. Persisted by
- * [name] so both platforms map the same token to their own color
- * system. Duplicate colors across Filter Sets are allowed.
- * (iOS: `FilterSetColor`.)
+ * Fixed, platform-neutral color palette shared by Filter Sets and Color
+ * filters, in hue order: the required Red, Yellow, Yellow-green, Green,
+ * and Blue, with one transition color between neighbors (orange, teal,
+ * purple, pink) and no near-duplicates. Persisted by [name] so both
+ * platforms map the same token to their own color system; tokens retired
+ * from the earlier palette map explicitly on restore. Duplicate colors
+ * across Filter Sets are allowed. (iOS: `FilterSetColor`.)
  */
 enum class FilterSetColor {
     red,
     orange,
     yellow,
+    yellowGreen,
     green,
-    mint,
     teal,
-    cyan,
     blue,
-    indigo,
     purple,
-    pink,
-    brown;
+    pink;
 
     companion object {
-        /** Fail-safe parse: an unknown/missing token restores as [blue]. */
-        fun fromToken(token: String?): FilterSetColor =
-            entries.firstOrNull { it.name == token } ?: blue
+        /** Fail-safe parse for a Filter Set: an unknown/missing token
+         *  restores as [blue]. */
+        fun fromToken(token: String?): FilterSetColor = restoredToken(token) ?: blue
+
+        /**
+         * A persisted palette token — a Filter Set's color or a Color
+         * item's color. Tokens retired from the earlier twelve-color
+         * palette map to their nearest remaining hue (mint and cyan to
+         * teal, indigo to blue, brown to orange) so no set or item loses
+         * its color; the next save writes the current token. `null` for
+         * an unknown token.
+         */
+        fun restoredToken(token: String?): FilterSetColor? =
+            entries.firstOrNull { it.name == token } ?: when (token) {
+                "mint", "cyan" -> teal
+                "indigo" -> blue
+                "brown" -> orange
+                else -> null
+            }
 
         /**
          * Random suggestion for a new Filter Set that differs from the
          * suggestion offered on the immediately preceding creation
-         * opening. With one color excluded there are always eleven
+         * opening. With one color excluded there are always eight
          * candidates left, so the call never fails.
          */
         fun suggestion(excluding: FilterSetColor?, random: Random = Random.Default): FilterSetColor =
@@ -245,7 +265,9 @@ enum class GndCalculationMode {
 /**
  * Behavior kind of a physical item — chosen explicitly by the user,
  * never inferred from the name (FILTER-ITEM-003). Persisted by [name].
- * (iOS: `FilterItemKind`.)
+ * [fixed] is the ND kind: the only kind an ND wheel offers. CPL, GND,
+ * Color, and Effect are auxiliary kinds, mounted through the shooting
+ * selection surface instead. (iOS: `FilterItemKind`.)
  */
 @Serializable
 enum class FilterItemKind {
@@ -256,11 +278,34 @@ enum class FilterItemKind {
     cpl,
 
     @SerialName("gnd")
-    gnd;
+    gnd,
+
+    @SerialName("color")
+    color,
+
+    @SerialName("effect")
+    effect;
+
+    /** Whether items of this kind are mounted as auxiliary filters rather
+     *  than selected on an ND wheel (FILTER-ITEM-003). */
+    val isAuxiliary: Boolean get() = this != fixed
 
     companion object {
         fun fromToken(token: String?): FilterItemKind? = entries.firstOrNull { it.name == token }
     }
+}
+
+/**
+ * User-supplied exposure loss of a Color or Effect filter, in stops
+ * (FILTER-COLOR-001/002). Distinct from [FilterRegisteredValue]: no unit
+ * conversion, and zero is allowed so a filter with no measurable loss can
+ * still be mounted and recorded. Valid when finite and in the closed
+ * range 0–30 stops. (iOS: `FilterExposureLoss`.)
+ */
+data class FilterExposureLoss(val stops: Double) {
+    val isValid: Boolean
+        get() = stops.isFinite() && stops >= 0 &&
+            stops <= ExposureScale.MAXIMUM_WHOLE_ND_STOPS.toDouble()
 }
 
 /** (iOS: `FilterItemBehavior`.) */
@@ -269,29 +314,52 @@ sealed class FilterItemBehavior {
     data class Cpl(val choices: CplExposureLossChoices) : FilterItemBehavior()
     data class Gnd(val value: FilterRegisteredValue) : FilterItemBehavior()
 
+    /** A Color filter: its explicit loss and its color, chosen from the
+     *  same palette as Filter Sets (FILTER-COLOR-001). */
+    data class Color(val loss: FilterExposureLoss, val color: FilterSetColor) : FilterItemBehavior()
+
+    /** An Effect filter (for example a night light-pollution filter) with
+     *  its explicit loss. */
+    data class Effect(val loss: FilterExposureLoss) : FilterItemBehavior()
+
     val kind: FilterItemKind
         get() = when (this) {
             is Fixed -> FilterItemKind.fixed
             is Cpl -> FilterItemKind.cpl
             is Gnd -> FilterItemKind.gnd
+            is Color -> FilterItemKind.color
+            is Effect -> FilterItemKind.effect
         }
 
     /**
-     * Registered full-density value for Fixed and GND items; CPL items
-     * carry choices instead.
+     * Registered full-density value for Fixed and GND items; the other
+     * kinds carry choices or a plain loss instead.
      */
     val registeredValue: FilterRegisteredValue?
         get() = when (this) {
             is Fixed -> value
             is Gnd -> value
-            is Cpl -> null
+            is Cpl, is Color, is Effect -> null
         }
+
+    /** The explicit loss of a Color or Effect item; `null` otherwise. */
+    val exposureLoss: FilterExposureLoss?
+        get() = when (this) {
+            is Color -> loss
+            is Effect -> loss
+            is Fixed, is Cpl, is Gnd -> null
+        }
+
+    /** The color of a Color item; `null` otherwise. */
+    val opticalColor: FilterSetColor? get() = (this as? Color)?.color
 
     val isValid: Boolean
         get() = when (this) {
             is Fixed -> value.isValid
             is Gnd -> value.isValid
             is Cpl -> choices.isValid
+            is Color -> loss.isValid
+            is Effect -> loss.isValid
         }
 }
 
@@ -322,12 +390,21 @@ data class FilterSet(
     val isWellFormed: Boolean get() = name.trim().isNotEmpty()
 
     fun item(withId: FilterItemId): FilterItem? = items.firstOrNull { it.id == withId }
+
+    /** The set's ND items — the only items an ND wheel offers
+     *  (FILTER-STACK-003). */
+    val ndItems: List<FilterItem> get() = items.filter { !it.behavior.kind.isAuxiliary }
+
+    /** The set's auxiliary items (CPL, GND, Color, Effect), mounted
+     *  through shooting selection. */
+    val auxiliaryItems: List<FilterItem> get() = items.filter { it.behavior.kind.isAuxiliary }
 }
 
 /**
  * The complete user inventory: Filter Sets in user-defined display
  * order. Standard is a fixed built-in source that always precedes every
- * Filter Set (FILTER-SET-004). (iOS: `FilterInventory`.)
+ * Filter Set; the built-in Default Filter Set, once ensured, precedes
+ * the user-created sets (FILTER-SET-004). (iOS: `FilterInventory`.)
  */
 data class FilterInventory(val filterSets: List<FilterSet> = emptyList()) {
 
@@ -361,7 +438,41 @@ data class FilterInventory(val filterSets: List<FilterSet> = emptyList()) {
         is FilterSource.FilterSet -> filterSet(source.id) != null
     }
 
+    /**
+     * A camera's candidate Filter Sets made consistent with this inventory
+     * and its stack (FILTER-CAMERA-001, FILTER-SET-004, FILTER-PERSIST-002):
+     * unknown and repeated sets are dropped, the candidates keep their
+     * selection order, and every other set a wheel or a mounted auxiliary
+     * filter still references is appended, in inventory order, so the
+     * restored selections stay reachable.
+     */
+    fun normalizedCandidateFilterSetIds(
+        candidates: List<FilterSetId>,
+        wheels: List<FilterWheel>,
+        auxiliaryFilters: List<MountedAuxiliaryFilter>,
+    ): List<FilterSetId> {
+        val existing = filterSets.map { it.id }.toSet()
+        val kept = candidates.filter { it in existing }.distinct()
+        val referenced = wheels.mapNotNull { it.source.filterSetId }.toSet() + auxiliaryFilters.map { it.filterSetId }
+        return kept + filterSets.map { it.id }.filter { it in referenced && it !in kept }
+    }
+
+    /**
+     * This inventory with the Default Filter Set present and first
+     * (FILTER-SET-002/004). A stored Default keeps its name, color, and
+     * items; the user-created sets keep their order after it.
+     */
+    fun ensuringDefaultFilterSet(): FilterInventory {
+        val default = filterSet(FilterSetId.defaultSet) ?: defaultFilterSet
+        return FilterInventory(listOf(default) + filterSets.filterNot { it.id == FilterSetId.defaultSet })
+    }
+
     companion object {
         val empty = FilterInventory()
+
+        /** The built-in Default Filter Set as first provided
+         *  (FILTER-SET-002): empty and named Default. Its name, color, and
+         *  items may change later; its id never does. */
+        val defaultFilterSet = FilterSet(name = "Default", color = FilterSetColor.blue, id = FilterSetId.defaultSet)
     }
 }

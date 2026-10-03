@@ -25,4 +25,8 @@ public enum CalculatorDefaults {
     /// Active exposure scale for fresh surfaces. One-third-stop is the
     /// shipping mode per `docs/specs/Calculator.md` §1.4.
     public static let scaleMode: ExposureScaleMode = .oneThirdStop
+
+    /// Filter Sets a fresh camera starts with: the built-in Default
+    /// Filter Set (FILTER-CAMERA-001, FILTER-SET-002).
+    public static let candidateFilterSetIDs: [FilterSetID] = [.defaultSet]
 }

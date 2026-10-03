@@ -24,13 +24,23 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(content?.secondaryText, "Total 18 stops", "The trailing text is the localized total alone; the contribution lives in the leading detail.")
         XCTAssertEqual(content?.isHeld, true)
         XCTAssertEqual(content?.isWarning, false)
+        // The numeric value travels separately so the view can render
+        // it prominently while the spoken total stays complete.
+        XCTAssertEqual(content?.totalValueText, "18")
+        XCTAssertEqual(content?.isTotalAtMaximum, false)
+        XCTAssertEqual(FilterStatusRegionPresenter.totalLeadingWord(), "Total")
+        XCTAssertEqual(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: false), "stops")
+        XCTAssertEqual(FilterStatusRegionPresenter.totalTrailingWords(isAtMaximum: true), "stops · Maximum")
+        let capped = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: NDStackTotalDisplayState(effectiveStep: NDStep(stops: 30), wheelCount: 2))
+        XCTAssertEqual(capped?.totalValueText, "30")
+        XCTAssertEqual(capped?.isTotalAtMaximum, true)
     }
 
     // MARK: One row in every state (FILTER-STACK-007/008)
 
     func testEveryStateIsLeadingTextPlusCompleteTotalWithFullAccessibilityText() {
         let longName = "Formatt-Hitech Firecrest Ultra 100mm"
-        let summary = items([("Standard", nil), ("Lee holder", .mint), (longName, .blue)])
+        let summary = items([("Standard", nil), ("Lee holder", .green), (longName, .blue)])
         let totalText = FilterStatusRegionPresenter.totalText(total)
         let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: summary)
         let movingContent = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: summary)
@@ -156,7 +166,7 @@ final class FilterStatusRegionTests: XCTestCase {
     private func color(_ source: FilterSource) -> FilterSetColor? {
         switch source {
         case .standard: return nil
-        case .filterSet(let id): return id == nisi ? .indigo : .teal
+        case .filterSet(let id): return id == nisi ? .purple : .teal
         }
     }
 
@@ -175,7 +185,7 @@ final class FilterStatusRegionTests: XCTestCase {
         let summary = FilterStatusRegionPresenter.sourceSummary(wheels: wheels, sourceName: name, sourceColor: color)
         XCTAssertEqual(summary?.map(\.text), ["NiSi kit", "Lee holder ×2", "Standard"])
         XCTAssertEqual(summary?.map(\.count), [1, 2, 1])
-        XCTAssertEqual(summary?.map(\.color), [.indigo, .teal, nil], "Filter Sets carry their source color; Standard stays text only.")
+        XCTAssertEqual(summary?.map(\.color), [.purple, .teal, nil], "Filter Sets carry their source color; Standard stays text only.")
         XCTAssertEqual(summary?.map(\.source), [.filterSet(nisi), .filterSet(lee), .standard])
         XCTAssertEqual(summary.map(FilterStatusRegionPresenter.summaryText), "NiSi kit · Lee holder ×2 · Standard")
         XCTAssertEqual(
@@ -194,7 +204,7 @@ final class FilterStatusRegionTests: XCTestCase {
     }
 
     func testIdleSummaryIsPersistentAndSecondaryWhileStandardOnlyIdleIsUnchanged() {
-        let nisiStandard = items([("NiSi kit", .indigo), ("Standard", nil)])
+        let nisiStandard = items([("NiSi kit", .purple), ("Standard", nil)])
         let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: nisiStandard)
         XCTAssertEqual(idle?.primaryText, "NiSi kit · Standard")
         XCTAssertEqual(idle?.secondaryText, "Total 18 stops")
@@ -232,14 +242,14 @@ final class FilterStatusRegionTests: XCTestCase {
     func testSummaryReturnsAfterTheIntervalFollowingSettlementAndImmediatelyAfterRejection() async {
         let controller = FilterStatusRegionViewModel()
         controller.fadeDelay = 0.05
-        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(idle)
         XCTAssertEqual(controller.visibleContent, idle, "The persistent summary shows at once from an empty region.")
         try? await Task.sleep(nanoseconds: 150_000_000)
         XCTAssertEqual(controller.visibleContent, idle, "The persistent summary never fades.")
 
         // Movement replaces it immediately at normal emphasis.
-        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(held)
         XCTAssertEqual(controller.visibleContent, held)
 
@@ -250,7 +260,7 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(controller.visibleContent, idle, "The summary returns after the interval.")
 
         // Plus browsing settles the same way.
-        let browsing = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: "Lee holder", rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let browsing = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: "Lee holder", rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(browsing)
         controller.apply(idle)
         XCTAssertEqual(controller.visibleContent, browsing)
@@ -258,7 +268,7 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(controller.visibleContent, idle)
 
         // A rejection has its own notice interval: the summary returns as soon as it clears.
-        let rejection = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: FilterRejectionNotice(sequence: 1, rejection: .itemAlreadyMounted), total: total, idleSourceSummary: items([("NiSi kit", .indigo), ("Standard", nil)]))
+        let rejection = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: FilterRejectionNotice(sequence: 1, rejection: .itemAlreadyMounted), total: total, idleSourceSummary: items([("NiSi kit", .purple), ("Standard", nil)]))
         controller.apply(rejection)
         XCTAssertEqual(controller.visibleContent, rejection)
         controller.apply(idle)
@@ -268,13 +278,13 @@ final class FilterStatusRegionTests: XCTestCase {
     func testNewMovementDuringTheLingerCancelsTheReturnToTheSummary() async {
         let controller = FilterStatusRegionViewModel()
         controller.fadeDelay = 0.05
-        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo)]))
-        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo)]))
+        let idle = FilterStatusRegionPresenter.content(moving: nil, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple)]))
+        let held = FilterStatusRegionPresenter.content(moving: moving, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple)]))
         controller.apply(held)
         controller.apply(idle)
         let staleToken = controller.currentGeneration
         let secondMove = MovingWheelStatus(expandedLabel: "Big Stopper · ND1000 · 10 stops", contributionStops: 10)
-        let heldAgain = FilterStatusRegionPresenter.content(moving: secondMove, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .indigo)]))
+        let heldAgain = FilterStatusRegionPresenter.content(moving: secondMove, browsingSourceName: nil, rejection: nil, total: total, idleSourceSummary: items([("NiSi kit", .purple)]))
         controller.apply(heldAgain)
         controller.fireFadeIfPending(token: staleToken)
         try? await Task.sleep(nanoseconds: 150_000_000)
@@ -300,6 +310,7 @@ final class FilterStatusRegionTests: XCTestCase {
             cameraSlotSessionPersistenceStore: sessionStore,
             filterInventoryModel: inventory
         )
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.ndWheelCleanupDelay = 0.05
         XCTAssertNil(viewModel.filterSourceSummaryText, "Standard-only stacks keep the existing ND behavior.")
@@ -310,22 +321,23 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(viewModel.filterSourceSummaryText, "Standard · Lee holder", "An Empty wheel already identifies its source.")
         viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd8.id, choice: .fixed)), at: 1)
         XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · Standard", "The summary follows the settled order.")
-        viewModel.addFilterWheel()
-        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: cpl.id, choice: .cplLoss(1))), at: 2)
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder ×2 · Standard")
+        // A mounted auxiliary filter names its set first (main-row
+        // order); an ND-wheel count appears only for actual wheels.
+        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: leeSet, .cplLoss(1))]))
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · Standard")
 
         viewModel.selectFilterSource(.filterSet(nisiSet.id))
         viewModel.addFilterWheel()
-        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd1000.id, choice: .fixed)), at: 3)
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Lee holder ×2 · Standard")
-        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.color), [.red, .green, nil], "Each Filter Set carries its own color; Standard none.")
-        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.count), [1, 2, 1])
+        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd1000.id, choice: .fixed)), at: 2)
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · NiSi kit · Standard", "Auxiliary sets first, then the settled ND groups.")
+        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.color), [.green, .red, nil], "Each Filter Set carries its own color; Standard none.")
+        XCTAssertEqual(viewModel.filterSourceSummary?.map(\.count), [1, 1, 1])
 
         // Another camera has its own (Standard-only) identity; restore keeps camera 1's.
         viewModel.selectCameraSlot(.camera2)
         XCTAssertNil(viewModel.filterSourceSummaryText)
         viewModel.selectCameraSlot(.camera1)
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Lee holder ×2 · Standard")
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · NiSi kit · Standard")
         let restored = ExposureCalculatorViewModel(
             calculator: ExposureCalculator(),
             timerManager: FakeTimerManaging(),
@@ -333,13 +345,15 @@ final class FilterStatusRegionTests: XCTestCase {
             cameraSlotSessionPersistenceStore: sessionStore,
             filterInventoryModel: FilterInventoryModel(store: inventoryStore)
         )
-        XCTAssertEqual(restored.filterSourceSummaryText, "NiSi kit · Lee holder ×2 · Standard")
+        XCTAssertEqual(restored.filterSourceSummaryText, "Lee holder · NiSi kit · Standard")
 
-        // Rename follows; deleting a set removes its wheels from the summary.
+        // Rename follows; deleting a set removes its wheels and its
+        // mounted auxiliary filter from the summary.
         viewModel.renameFilterSet(id: leeSet.id, name: "Lee 100")
-        XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Lee 100 ×2 · Standard")
+        XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee 100 · NiSi kit · Standard")
         viewModel.deleteFilterSet(id: leeSet.id)
         XCTAssertEqual(viewModel.filterSourceSummaryText, "NiSi kit · Standard")
+        XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
         // Removing the last Filter Set wheel returns to the Standard-only behavior.
         viewModel.setWheelSelection(.empty, at: 0)
         await awaitCleanupFire()
@@ -353,6 +367,7 @@ final class FilterStatusRegionTests: XCTestCase {
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
         inventory.addItem(nd1000, to: set.id)
         let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: FakeTimerManaging(), filterInventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
@@ -369,27 +384,30 @@ final class FilterStatusRegionTests: XCTestCase {
     func testViewModelMovingWheelStatusCarriesLabelAndContribution() async throws {
         let inventory = FilterInventoryModel()
         let set = try XCTUnwrap(inventory.createFilterSet(name: "Lee holder", color: .red))
-        let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        inventory.addItem(gnd, to: set.id)
+        let nd8 = FilterItem(name: "Lee ND 0.9", behavior: .fixed(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
+        let nd2 = FilterItem(name: "Lee ND2", behavior: .fixed(FilterRegisteredValue(value: 1, unit: .stops)))
+        inventory.addItem(nd8, to: set.id)
+        inventory.addItem(nd2, to: set.id)
         let viewModel = ExposureCalculatorViewModel(calculator: ExposureCalculator(), timerManager: FakeTimerManaging(), filterInventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.ndWheelReshapeDuration = 0
-        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: gnd.id, choice: .gnd(.recordOnly))), at: 1)
+        viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd2.id, choice: .fixed)), at: 1)
         // Let the set-commit RESHAPING window close before observing motion.
         try? await Task.sleep(nanoseconds: 100_000_000)
         XCTAssertNil(viewModel.movingWheelStatus)
 
-        // Live movement onto Apply full value on the settled wheel (the
-        // GND's registered 3 stops lead Standard 0 after the commit).
+        // Live movement onto the OD 0.9 item on the settled wheel (the
+        // set's registered 1 stop leads Standard 0 after the commit).
         let wheelID = viewModel.ndFilterWheelIDs[0]
         viewModel.filterWheelDidObserveRow(
-            .item(FilterRowSelection(itemID: gnd.id, choice: .gnd(.applyFullValue))),
+            .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)),
             wheelID: wheelID,
             generation: viewModel.ndWheelGeneration
         )
         let status = try XCTUnwrap(viewModel.movingWheelStatus)
-        XCTAssertEqual(status.expandedLabel, "Lee GND 0.9 · OD 0.9 · Apply full value · 3 stops")
+        XCTAssertEqual(status.expandedLabel, "Lee ND 0.9 · OD 0.9 · 3 stops")
         XCTAssertEqual(status.contributionStops, 3, accuracy: 1e-9)
     }
 }

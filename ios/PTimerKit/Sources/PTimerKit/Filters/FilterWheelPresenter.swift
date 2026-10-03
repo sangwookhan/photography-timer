@@ -6,7 +6,7 @@ import PTimerCore
 
 /// Semantic type of a filter wheel candidate (FILTER-STACK-007): the
 /// category behind the row's type-color rail. GND Record only and
-/// Apply full value share one category; the persistent label carries
+/// Apply to exposure share one category; the persistent label carries
 /// the mode. Independent of the user-selected Filter Set color.
 public enum FilterRowTypeCategory: Hashable, Sendable, CaseIterable {
     case nd
@@ -310,6 +310,8 @@ public enum FilterWheelPresenter {
             return String(localized: "Already mounted on this camera")
         case .unresolvedSelection:
             return String(localized: "Filter not available")
+        case .tooManyNDWheels:
+            return String(localized: "Reduce the ND wheels to three or fewer")
         }
     }
 
@@ -364,7 +366,7 @@ public enum FilterWheelPresenter {
     /// the committed row's concise value — item or Empty, type or
     /// mode, canonical contribution — followed by the current complete
     /// Total, so a successful adjustment is heard as, for example,
-    /// `Lee GND 0.9, GND Apply full value, 3 stops, Total 21.6 stops`.
+    /// `Lee GND 0.9, GND Apply to exposure, 3 stops, Total 21.6 stops`.
     /// Rejected and boundary adjustments never reach this value; they
     /// announce their reason alone.
     public static func wheelAccessibilityValue(
@@ -394,16 +396,52 @@ public enum FilterWheelPresenter {
 
     public static func kindName(_ kind: FilterItemKind) -> String {
         switch kind {
-        case .fixed: return String(localized: "Fixed")
+        // A fixed-value item is an ND filter; users never see "Fixed".
+        case .fixed: return String(localized: "ND")
         case .cpl: return String(localized: "CPL")
         case .gnd: return String(localized: "GND")
+        case .color: return String(localized: "Color")
+        case .effect: return String(localized: "Effect")
+        }
+    }
+
+    /// Localized name of a palette color — a Filter Set's color or a
+    /// Color filter's color (FILTER-COLOR-001, FILTER-SET-005). Color is
+    /// never the only cue, so the name is shown or spoken beside it.
+    public static func opticalColorName(_ color: FilterSetColor) -> String {
+        switch color {
+        case .red: return String(localized: "Red")
+        case .redOrange: return String(localized: "Red-orange")
+        case .orange: return String(localized: "Orange")
+        case .yellowOrange: return String(localized: "Yellow-orange")
+        case .yellow: return String(localized: "Yellow")
+        case .yellowGreen: return String(localized: "Yellow-green")
+        case .green: return String(localized: "Green")
+        case .teal: return String(localized: "Teal")
+        case .blue: return String(localized: "Blue")
+        case .purple: return String(localized: "Purple")
+        case .pink: return String(localized: "Pink")
+        }
+    }
+
+    /// `Red · 2 stops` / `0.5 stops` — the registered detail of a
+    /// Color or Effect item: the optical color by name (Color only)
+    /// and its explicit loss. `nil` for the other kinds.
+    public static func auxiliaryLossDetailText(for behavior: FilterItemBehavior) -> String? {
+        switch behavior {
+        case .color(let loss, let color):
+            return "\(opticalColorName(color)) · \(stopsText(loss.stops))"
+        case .effect(let loss):
+            return stopsText(loss.stops)
+        case .fixed, .cpl, .gnd:
+            return nil
         }
     }
 
     public static func gndModeName(_ mode: GNDCalculationMode) -> String {
         switch mode {
         case .recordOnly: return String(localized: "Record only")
-        case .applyFullValue: return String(localized: "Apply full value")
+        case .applyFullValue: return String(localized: "Apply to exposure")
         }
     }
 

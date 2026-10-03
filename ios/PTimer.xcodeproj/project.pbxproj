@@ -10,6 +10,8 @@
 		F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */; };
 		F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */; };
 		F2214F1D4F6B9B617788E938 /* FilterItemEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */; };
+		F2210A11B7C3D4E5F6071A03 /* ShootingFilterSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2210A11B7C3D4E5F6071A04 /* ShootingFilterSelectionView.swift */; };
+		F2210A11B7C3D4E5F6071A01 /* AuxiliaryFilterSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2210A11B7C3D4E5F6071A02 /* AuxiliaryFilterSummaryView.swift */; };
 		F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
@@ -64,7 +66,7 @@
 		A0000000000000000000092E /* NDWheelPickerPollingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092F /* NDWheelPickerPollingTests.swift */; };
 		A00000000000000000000930 /* FilterSetLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000931 /* FilterSetLocalizationTests.swift */; };
 		A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */; };
-		A00000000000000000000942 /* FilterSetManagementAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000943 /* FilterSetManagementAccessibilityTests.swift */; };
+		A00000000000000000000970 /* AuxiliaryFilterSummaryStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */; };
 		A00000000000000000000940 /* FilterStatusRegionAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */; };
 		A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */; };
 		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
@@ -123,6 +125,8 @@
 		F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControl.swift; sourceTree = "<group>"; };
 		F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetManagementView.swift; sourceTree = "<group>"; };
 		F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterItemEditorView.swift; sourceTree = "<group>"; };
+		F2210A11B7C3D4E5F6071A04 /* ShootingFilterSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingFilterSelectionView.swift; sourceTree = "<group>"; };
+		F2210A11B7C3D4E5F6071A02 /* AuxiliaryFilterSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuxiliaryFilterSummaryView.swift; sourceTree = "<group>"; };
 		F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsFilterInventoryStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
@@ -180,7 +184,7 @@
 		A0000000000000000000092F /* NDWheelPickerPollingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerPollingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000931 /* FilterSetLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetLocalizationTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControlAccessibilityTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000943 /* FilterSetManagementAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetManagementAccessibilityTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuxiliaryFilterSummaryStabilityTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterStatusRegionAccessibilityTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
@@ -314,6 +318,8 @@
 				F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */,
 				F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */,
 				F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */,
+				F2210A11B7C3D4E5F6071A04 /* ShootingFilterSelectionView.swift */,
+				F2210A11B7C3D4E5F6071A02 /* AuxiliaryFilterSummaryView.swift */,
 				A00000000000000000000106 /* ViewModelDependencyFactory.swift */,
 			);
 			path = ExposureCalculator;
@@ -390,7 +396,7 @@
 				A0000000000000000000092F /* NDWheelPickerPollingTests.swift */,
 				A00000000000000000000931 /* FilterSetLocalizationTests.swift */,
 				A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */,
-				A00000000000000000000943 /* FilterSetManagementAccessibilityTests.swift */,
+				A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */,
 				A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */,
 			);
 			path = App;
@@ -656,6 +662,8 @@
 				F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */,
 				F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */,
 				F2214F1D4F6B9B617788E938 /* FilterItemEditorView.swift in Sources */,
+				F2210A11B7C3D4E5F6071A03 /* ShootingFilterSelectionView.swift in Sources */,
+				F2210A11B7C3D4E5F6071A01 /* AuxiliaryFilterSummaryView.swift in Sources */,
 				F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */,
 				A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */,
 				A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */,
@@ -705,7 +713,7 @@
 				A0000000000000000000092E /* NDWheelPickerPollingTests.swift in Sources */,
 				A00000000000000000000930 /* FilterSetLocalizationTests.swift in Sources */,
 				A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */,
-				A00000000000000000000942 /* FilterSetManagementAccessibilityTests.swift in Sources */,
+				A00000000000000000000970 /* AuxiliaryFilterSummaryStabilityTests.swift in Sources */,
 				A00000000000000000000940 /* FilterStatusRegionAccessibilityTests.swift in Sources */,
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 				A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */,
@@ -761,7 +769,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.8.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -792,7 +800,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.8.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -925,7 +933,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.8.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -946,7 +954,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.8.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -973,7 +981,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.8.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1000,7 +1008,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.8.2;
+				MARKETING_VERSION = 0.8.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

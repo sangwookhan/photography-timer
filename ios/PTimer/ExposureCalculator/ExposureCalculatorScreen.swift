@@ -52,10 +52,10 @@ struct ExposureCalculatorScreen: View {
     /// sheet's `onDismiss`.
     @State private var pendingFormulaSeedFilmID: String?
     @State private var isAboutPresented = false
-    /// Visibility of the Filter Set management sheet (Filter Set
-    /// contract): reached from the ND header entry and by
-    /// long-pressing the Plus wheel.
-    @State private var isFilterSetManagementPresented = false
+    /// Visibility of Shooting Filters (FILTER-FLOW-002): the ND header
+    /// entry, the Plus auxiliary action, and the mounted summary all
+    /// open the same auxiliary-selection surface.
+    @State private var isShootingFilterSelectionPresented = false
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
 
@@ -201,8 +201,8 @@ struct ExposureCalculatorScreen: View {
                     onRequestRename: { slotID in
                         slotIDPendingRename = slotID
                     },
-                    onManageFilterSets: {
-                        isFilterSetManagementPresented = true
+                    onOpenShootingFilters: {
+                        isShootingFilterSelectionPresented = true
                     },
                     onShowAbout: {
                         isAboutPresented = true
@@ -384,9 +384,9 @@ struct ExposureCalculatorScreen: View {
                     )
                 }
             }
-            .sheet(isPresented: $isFilterSetManagementPresented) {
-                FilterSetManagementView(viewModel: viewModel) {
-                    isFilterSetManagementPresented = false
+            .sheet(isPresented: $isShootingFilterSelectionPresented) {
+                ShootingFilterSelectionView(viewModel: viewModel) {
+                    isShootingFilterSelectionPresented = false
                 }
             }
             .sheet(item: $slotIDPendingRename) { slotID in
@@ -614,7 +614,7 @@ private struct ExposureWorkspaceMainContent: View {
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
-    let onManageFilterSets: () -> Void
+    let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
 
     var body: some View {
@@ -630,7 +630,7 @@ private struct ExposureWorkspaceMainContent: View {
                         onRequestRename: {
                             onRequestRename(slotID)
                         },
-                        onManageFilterSets: onManageFilterSets,
+                        onOpenShootingFilters: onOpenShootingFilters,
                         onShowAbout: onShowAbout
                     )
                     .tag(slotID)
@@ -700,8 +700,18 @@ private struct CameraSlotCalculatorPage: View {
     /// through only on the active page; inactive pages pass `nil`
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
-    let onManageFilterSets: () -> Void
+    let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
+
+    /// Occupied filter spaces of this page: the ND wheels plus one for
+    /// a visible auxiliary summary (FILTER-STACK-007).
+    private var occupiedSpaceCount: Int {
+        if pageState.isActive {
+            return viewModel.occupiedFilterSpaceCount
+        }
+        return viewModel.filterWheels(forPage: pageState).count
+            + (viewModel.mountedAuxiliaryFilters(forPage: pageState).isEmpty ? 0 : 1)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -839,10 +849,13 @@ private struct CameraSlotCalculatorPage: View {
                 addUnavailabilityText: { source in
                     pageState.isActive ? viewModel.filterAddUnavailabilityText(for: source) : nil
                 },
-                onManageFilterSets: {
+                onOpenShootingFilters: {
                     guard pageState.isActive else { return }
-                    onManageFilterSets()
+                    onOpenShootingFilters()
                 },
+                auxiliarySummary: viewModel.auxiliaryFilterSummary(forPage: pageState),
+                occupiedSpaceCount: occupiedSpaceCount,
+                filterPlusChoices: viewModel.filterPlusChoices,
                 movingWheelStatus: pageState.isActive ? viewModel.movingWheelStatus : nil,
                 filterRejectionNotice: pageState.isActive ? viewModel.filterRejectionNotice : nil,
                 idleSourceSummary: viewModel.filterSourceSummary(forPage: pageState),

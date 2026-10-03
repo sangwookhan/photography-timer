@@ -42,6 +42,15 @@ final class FilterItemEditorSessionMemoryTests: XCTestCase {
         XCTAssertEqual(memory.initialKind, .fixed, "After a GND the next item is still Fixed.")
     }
 
+    func testColorAndEffectItemsLeaveTheNotationUnchanged() {
+        var memory = FilterItemEditorSessionMemory()
+        memory.didSaveNewItem(fixed(.opticalDensity, 0.9))
+        memory.didSaveNewItem(FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 2), .red)))
+        memory.didSaveNewItem(FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 0.5))))
+        XCTAssertEqual(memory.initialUnit, .opticalDensity, "Color and Effect losses are plain stops and carry no notation.")
+        XCTAssertEqual(memory.initialKind, .fixed)
+    }
+
     func testClosingTheEditorResetsToStops() {
         var memory = FilterItemEditorSessionMemory()
         memory.didSaveNewItem(fixed(.opticalDensity))

@@ -9,10 +9,13 @@ import PTimerKit
 /// complete worst-case content budget — the same production estimate
 /// the screen uses to pick a tier — never from a hand-tuned floor.
 final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
-    /// iPhone 17 (844 pt tall, 59 + 34 pt safe areas) and iPhone 17 Pro
-    /// (874 pt, 62 + 34) workspace budgets after the rail reservation.
-    private let iPhone17Budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 844 - 59 - 34)
+    /// iPhone 17 and iPhone 17 Pro share one body (402 x 874 pt, 62 + 34
+    /// pt safe areas), so both have the same workspace budget after the
+    /// rail reservation. A shorter 844 pt body (59 + 34 pt safe areas)
+    /// covers the Dense floor.
+    private let iPhone17Budget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 874 - 62 - 34)
     private let iPhone17ProBudget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 874 - 62 - 34)
+    private let shortPhoneBudget = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(workspaceArea: 844 - 59 - 34)
 
     func testTierSelectionAndThresholdsUseTheProductionBudget() {
         for density in [ExposureWorkspaceLayoutDensity.regular, .compact, .dense] {
@@ -37,22 +40,25 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
         XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: dense - 1), .dense, "Dense is the floor tier.")
     }
 
-    /// The 611 pt iPhone 17 workspace uses Dense, and Dense fits it.
-    func testIPhone17BudgetUsesDenseAndDenseFits() {
-        let style = ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: iPhone17Budget)
-        XCTAssertEqual(iPhone17Budget, 611)
+    /// The 611 pt workspace of a shorter 844 pt body uses Dense, and
+    /// Dense fits it.
+    func testShortPhoneBudgetUsesDenseAndDenseFits() {
+        let style = ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: shortPhoneBudget)
+        XCTAssertEqual(shortPhoneBudget, 611)
         XCTAssertEqual(style, .dense)
-        XCTAssertLessThanOrEqual(ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total, iPhone17Budget)
+        XCTAssertLessThanOrEqual(ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total, shortPhoneBudget)
     }
 
-    /// SHELL-012 / FILTER-STACK-008 reference outcome (spec revision
-    /// 56e381e2): with the status region reduced to one row, Compact's
-    /// complete derived worst case fits the approximately 638 pt
-    /// iPhone 17 Pro workspace, so the Pro renders Compact (one wheel at
-    /// 26 pt, not Dense 19 pt); the approximately 720 pt iPhone 17 Pro
-    /// Max workspace also qualifies for Compact.
-    func testIPhone17ProAndIPhone17ProMaxUseCompact() {
+    /// SHELL-012 / FILTER-STACK-008 reference outcome: with the status
+    /// region one row tall and the Total's numerals at the ND numeral
+    /// size, Compact's complete derived worst case still fits the 638 pt
+    /// iPhone 17 / iPhone 17 Pro workspace, so both render Compact (one
+    /// wheel at 26 pt, not Dense 19 pt); the approximately 720 pt
+    /// iPhone 17 Pro Max workspace also qualifies for Compact.
+    func testIPhone17AndIPhone17ProAndIPhone17ProMaxUseCompact() {
         let compact = ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget.total
+        XCTAssertEqual(iPhone17Budget, 638)
+        XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: iPhone17Budget), .compact)
         XCTAssertEqual(iPhone17ProBudget, 638)
         XCTAssertLessThanOrEqual(compact, iPhone17ProBudget, "The worst film-result plus active-Target-Shutter composition fits Compact on the Pro.")
         XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: iPhone17ProBudget), .compact)
@@ -64,19 +70,21 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
         XCTAssertEqual(ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: proMaxBudget), .compact)
     }
 
-    /// The derived budgets after the status region became one row
-    /// (spec revision 56e381e2): about 793 / 636 / 582 points for
-    /// Regular / Compact / Dense with the current style (previously
-    /// 811 / 652 / 597 with the two-line region).
+    /// The derived budgets with the Total's numerals at the ND numeral
+    /// size: about 795 / 637.6 / 579.3 points for Regular / Compact /
+    /// Dense (previously 793 / 636 / 582 with a caption-sized Total).
+    /// The region grows to the numerals' cap height and the gap above
+    /// it shrinks from the body spacing to 2 pt.
     func testDerivedBudgetsMatchTheApprovedReferenceValues() {
-        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.regular.worstCaseContentBudget.total, 793, accuracy: 1.5)
-        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget.total, 636, accuracy: 1.5)
-        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total, 582, accuracy: 1.5)
+        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.regular.worstCaseContentBudget.total, 795, accuracy: 1.5)
+        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.compact.worstCaseContentBudget.total, 637.6, accuracy: 0.5)
+        XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total, 579.3, accuracy: 1.5)
     }
 
-    /// The status region is counted once, as exactly one caption row
-    /// plus its padding — no stale second-line capacity anywhere in
-    /// the budget (FILTER-STACK-008, spec revision 56e381e2).
+    /// The status region is counted once, as exactly one visual row —
+    /// the taller of one caption row plus its padding and the Total's
+    /// numeral cap height plus the caption descent — with no stale
+    /// second-line capacity anywhere in the budget (FILTER-STACK-008).
     func testStatusRegionIsCountedOnceAsOneRow() {
         for style in [ExposureWorkspaceMainLayoutStyle.regular, .compact, .dense] {
             let budget = style.worstCaseContentBudget
@@ -85,7 +93,12 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
                 compatibleWith: UITraitCollection(preferredContentSizeCategory: .large)
             ).lineHeight
             XCTAssertEqual(budget.statusRegion, style.filterStatusRegionHeight, "\(style): the budget reads the style's region height.")
-            XCTAssertEqual(style.filterStatusRegionHeight, oneRow + 2 * style.filterStatusRegionVerticalPadding, accuracy: 0.001, "\(style): one caption row plus padding.")
+            XCTAssertEqual(
+                style.filterStatusRegionHeight,
+                max(oneRow + 2 * style.filterStatusRegionVerticalPadding, style.filterStatusTotalReservedAscent + style.filterStatusRegionBaselineDescent),
+                accuracy: 0.001,
+                "\(style): one visual row."
+            )
             XCTAssertLessThan(style.filterStatusRegionHeight, 2 * oneRow, "\(style): no room for a second line.")
             XCTAssertEqual(
                 budget.variableCard,
@@ -93,6 +106,22 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
                 accuracy: 0.001,
                 "\(style): the region appears exactly once in the variable card."
             )
+        }
+    }
+
+    /// FILTER-STACK-008: in every tier and for one to four occupied
+    /// filter spaces, the Total's numerals are at least the ND numeral
+    /// size of the same layout, and the fixed region reserves their cap
+    /// height, so no layout clips them or resizes the row.
+    func testTotalNumeralsMatchTheNDNumeralsAndFitTheRegion() {
+        for style in [ExposureWorkspaceMainLayoutStyle.regular, .compact, .dense] {
+            for count in 1...4 {
+                let totalSize = style.filterStatusTotalValuePointSize(forOccupiedSpaceCount: count)
+                XCTAssertGreaterThanOrEqual(totalSize, style.wheelRowValuePointSize(forNDWheelCount: count), "\(style), \(count) spaces")
+                let base = UIFont.systemFont(ofSize: totalSize, weight: .semibold)
+                let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: totalSize) } ?? base
+                XCTAssertLessThanOrEqual(font.capHeight, style.filterStatusTotalReservedAscent, "\(style), \(count) spaces")
+            }
         }
     }
 

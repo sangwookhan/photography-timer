@@ -479,7 +479,11 @@ could be confused.
   placeholder. Each selected-item row shall keep the user-defined item name
   (one line, ellipsized only when necessary), item type, and current
   contribution or mode visible. The panel's outer height shall not change as
-  selections change. Below it, each Selected Set uses one compact header
+  selections change. With no working selected auxiliary Filter Item, the
+  panel shall make that zero state explicit — for example Korean **선택된 보조
+  필터 없음** and English **No auxiliary filters selected** — rather than
+  looking empty or erroneous. Below it, each Selected Set uses one compact
+  header
   followed by one indented horizontal Filter Item strip; a Set shall not consume
   one vertical row per Filter Item. Horizontal overflow is local to that Set's
   strip, uses free scrolling without snapping item names or recentering after a
@@ -500,7 +504,12 @@ could be confused.
   passive trailing cue, **ND → Main** (localized equivalently, e.g. Korean
   **ND 선택 → 메인**), to indicate that its selected Filter Sets also supply
   ND candidates on Main. The cue is not an action and shall not be repeated
-  in individual Set rows.
+  in individual Set rows. A Selected Filter Set containing one or more ND
+  Filter Items but no auxiliary Filter Item shall show one passive inline
+  **ND** cue in its compact header, without adding a second row or implying
+  that an ND value is selected there. This keeps an ND-only Set from reading
+  as empty; the section-heading cue remains the path to choose its ND value
+  on Main.
 - **FILTER-FLOW-004** — First-time registration shall be filter-first rather
   than Filter-Set-first. Because the built-in Default Filter Set always exists
   and starts selected for a fresh camera, Shooting Filters shall not replace its

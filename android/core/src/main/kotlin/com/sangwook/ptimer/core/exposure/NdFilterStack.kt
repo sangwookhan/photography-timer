@@ -124,8 +124,10 @@ data class NdFilterStack(val entries: List<Double>) {
         /**
          * Restore validation (reject, never clamp): a persisted stack
          * is accepted only when the count, every value (finite,
-         * non-negative, ON the shipping ladder), and the total pass —
-         * otherwise the caller falls back to the legacy scalar.
+         * non-negative, ON the shipping ladder or a commercial value saved
+         * before the ladder became whole stops, ND-PERSIST-005), and the
+         * total pass — otherwise the caller falls back to the legacy
+         * scalar.
          */
         fun isValidRestoredStack(entries: List<Double>?): Boolean {
             if (entries == null) return false
@@ -135,7 +137,7 @@ data class NdFilterStack(val entries: List<Double>) {
             return entries.all { value ->
                 ExposureScale.shippingNDLadder.any { rung ->
                     kotlin.math.abs(rung.stops - value) <= STABILITY_EPSILON
-                }
+                } || ExposureScale.commercialNDPresetStop(value) != null
             }
         }
     }

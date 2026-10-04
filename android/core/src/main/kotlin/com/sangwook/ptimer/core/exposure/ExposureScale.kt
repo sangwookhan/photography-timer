@@ -32,8 +32,8 @@ data class ShutterStep(val seconds: Double)
 
 /**
  * One ND-filter entry, expressed in stops. The shipping ND picker enumerates
- * whole stops plus the three commercial fractional presets (PTIMER-209); the
- * fractional-capable type also stays reserved infrastructure for a future
+ * whole stops; the fractional-capable type carries a saved fractional value
+ * (a former commercial preset) and stays reserved infrastructure for a future
  * custom / variable-ND workflow. `wholeStops` is non-null only on a whole-stop
  * boundary.
  */
@@ -84,23 +84,22 @@ data class ExposureScale(
          * values, not the exact log2 of the marketed factor (`ND100` is `6.6`
          * here, not `log2(100) ≈ 6.644`). The presentation layer maps each to
          * its marketed label: `6.6 → ND100 / OD 2.0`, `7.6 → ND200 / OD 2.3`,
-         * `16.6 → ND100k / OD 5.0`. These are the only non-integer values the
-         * shipping ND picker exposes, and the only off-grid values eligible
-         * for commercial labels and exact persistence. Parity with iOS
+         * `16.6 → ND100k / OD 5.0`. They are no longer new Standard choices
+         * (ND-001) but keep their mappings for registered items and for
+         * Standard values saved before (ND-011, ND-PERSIST-005), and they
+         * are the only off-grid values eligible for commercial labels and
+         * exact persistence. Parity with iOS
          * `ExposureScale.commercialFractionalNDStops`.
          */
         val commercialFractionalNDStops: List<Double> = listOf(6.6, 7.6, 16.6)
 
         /**
-         * The shipping ND ladder: whole stops `0…MAXIMUM_WHOLE_ND_STOPS` plus
-         * the commercial fractional presets, merged in numeric order so the
-         * wheel reads `… 6, 6.6, 7, 7.6, 8, … 16, 16.6, 17 …`. Shared by both
-         * scales so the ND ladder stays identical across modes.
+         * The shipping ND ladder: whole stops `0…MAXIMUM_WHOLE_ND_STOPS` in
+         * numeric order (ND-001). Shared by both scales so the ND ladder
+         * stays identical across modes.
          */
         val shippingNDLadder: List<NDStep> =
-            ((0..MAXIMUM_WHOLE_ND_STOPS).map { it.toDouble() } + commercialFractionalNDStops)
-                .sorted()
-                .map { NDStep(it) }
+            (0..MAXIMUM_WHOLE_ND_STOPS).map { NDStep(it.toDouble()) }
 
         /** Default full-stop scale; shares the shipping ND ladder. */
         val fullStop: ExposureScale = ExposureScale(

@@ -63,9 +63,7 @@ final class NDFilterStackTests: XCTestCase {
 
         XCTAssertEqual(Array(full.prefix(truncated.count)), truncated)
         XCTAssertEqual(truncated.last, NDStep(stops: 7))
-        // 6.6 stays (≤ 7); 7.6 drops.
-        XCTAssertTrue(truncated.contains(NDStep(stops: 6.6)))
-        XCTAssertFalse(truncated.contains(NDStep(stops: 7.6)))
+        XCTAssertTrue(truncated.allSatisfy(\.isWholeStop), "Standard offers whole stops only (ND-001).")
     }
 
     func testLadderTruncationAtZeroBudgetLeavesOnlyZero() {
@@ -75,10 +73,11 @@ final class NDFilterStackTests: XCTestCase {
         )
     }
 
-    func testLadderTruncationKeepsPresetAtExactBudget() {
-        // Budget exactly 6.6: the preset itself stays selectable.
+    func testLadderTruncationStopsAtTheLastWholeStopWithinBudget() {
+        // Budget 6.6: whole stops only, so 6 is the last selectable row
+        // (ND-001).
         let truncated = ExposureScale.default.ndSteps(upToStops: 6.6)
-        XCTAssertEqual(truncated.last, NDStep(stops: 6.6))
+        XCTAssertEqual(truncated.last, NDStep(stops: 6))
     }
 
     // MARK: Commit sort

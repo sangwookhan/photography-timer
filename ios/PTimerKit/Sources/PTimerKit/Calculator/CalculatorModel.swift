@@ -111,11 +111,8 @@ public final class CalculatorModel {
         exposureScale.shutterSteps.map(\.seconds)
     }
 
-    /// Whole-stop subset of the ND ladder, for callers still bound to
-    /// `Int`. The shipping ND ladder is whole stops plus the three
-    /// commercial fractional presets (per `docs/specs/Calculator.md`
-    /// §2.2); this helper drops the presets and returns only the
-    /// whole-stop values. The fractional-aware `pickerNDSteps` surface
+    /// Whole-stop ND ladder, for callers still bound to `Int`. The
+    /// shipping ND ladder is whole stops (ND-001). The fractional-aware `pickerNDSteps` surface
     /// is the canonical source for the SwiftUI picker; both views are
     /// kept for the legacy integer binding compatibility.
     public var pickerWholeNDStops: [Int] {
@@ -645,8 +642,9 @@ public final class CalculatorModel {
 
     /// Whole-stop view of `effectiveNDStep`, kept for callers still
     /// bound to the legacy `Int` ND surface. Exact for whole-stop
-    /// selections; the three commercial presets and any reserved-path
-    /// third-stop value round to the nearest integer here, so callers
+    /// selections; a saved fractional value (a former commercial preset)
+    /// and any reserved-path third-stop value round to the nearest
+    /// integer here, so callers
     /// that need the true fractional value must read `effectiveNDStep`.
     public var effectiveNDStop: Int {
         effectiveNDStep.wholeStops ?? Int(effectiveNDStep.stops.rounded())
@@ -825,16 +823,18 @@ public final class CalculatorModel {
         for mode: ExposureScaleMode
     ) -> NDStep {
         // A value at or near an entry on the target scale's ND ladder
-        // snaps to that canonical entry. This preserves the PTIMER-209
-        // commercial presets (6.6, 7.6, 16.6) — which are neither whole
-        // nor third-stop and would otherwise be forced off the ladder —
-        // and normalizes any drift to the canonical value rather than
-        // keeping a near-match double.
+        // snaps to that canonical entry, normalizing any drift to the
+        // canonical value rather than keeping a near-match double.
         let ladder = ExposureScale.scale(for: mode).ndSteps
         if let match = ladder.first(where: {
             abs($0.stops - step.stops) <= ExposureCalculator.stabilityEpsilon
         }) {
             return match
+        }
+        // A commercial value saved before Standard became whole stops
+        // keeps its exact contribution (ND-PERSIST-005).
+        if let preset = ExposureScale.commercialNDPresetStop(matching: step.stops) {
+            return NDStep(stops: preset)
         }
 
         switch mode {
@@ -859,6 +859,11 @@ public final class CalculatorModel {
             abs($0.stops - step.stops) <= ExposureCalculator.stabilityEpsilon
         }) {
             return match
+        }
+        // A commercial value saved before Standard became whole stops
+        // keeps its exact contribution (ND-PERSIST-005).
+        if let preset = ExposureScale.commercialNDPresetStop(matching: step.stops) {
+            return NDStep(stops: preset)
         }
 
         switch mode {

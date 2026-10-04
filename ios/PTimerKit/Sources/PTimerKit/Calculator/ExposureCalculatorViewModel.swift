@@ -40,8 +40,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
     /// Canonical fractional-aware ND value. Source of truth for the
     /// calc engine and the SwiftUI ND-picker binding. The shipping
-    /// picker writes whole stops and the three commercial presets
-    /// (§2.2); other third-stop values remain reserved infrastructure
+    /// picker writes whole stops; a saved fractional value stays on its
+    /// own wheel, and other third-stop values remain reserved infrastructure
     /// (see `docs/specs/Calculator.md` §1.4). `@Published` so a
     /// reserved-path fractional write — e.g. from a test or a future
     /// custom-ND workflow — still emits `objectWillChange` without
@@ -467,8 +467,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     /// `NDStep` values the SwiftUI ND picker renders. Sourced from
     /// the active scale; the shipping ND ladder is whole stops
-    /// (`0…30`) plus the three commercial fractional presets per
-    /// `docs/specs/Calculator.md` §2.2 in every shipping scale mode.
+    /// (`0…30`, ND-001) in every shipping scale mode.
     public var pickerNDSteps: [NDStep] {
         calculatorModel.exposureScale.ndSteps
     }
@@ -496,7 +495,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             // wrapper — otherwise a reserved-path fractional ND
             // write away from the default zero state would not
             // register as "working" (the shipping ND picker emits
-            // whole stops and the three commercial presets, but this
+            // whole stops and keeps a saved fractional value, and this
             // guard must still cover the reserved third-stop path).
             || abs(ndStep.stops - Double(defaultFilmModeNDStop)) > ExposureCalculator.stabilityEpsilon
             // Any mounted auxiliary filter, zero-contribution ones

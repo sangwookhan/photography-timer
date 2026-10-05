@@ -27,8 +27,10 @@ Cancel; nothing is cleared until one of the two choices is chosen.
   choosing an option, shall leave the active slot's setup unchanged.
 - **RESET-004** — The Reset entry point shall be shown only while the active
   slot has something a reset would clear — a non-default film, ND, base
-  shutter, or Target Shutter, or a custom camera name. While the slot is
-  already at defaults with no custom name, Reset shall not be shown.
+  shutter, or Target Shutter, any mounted auxiliary filter (including a
+  zero-contribution Record-only GND), or a custom camera name. Selected Filter
+  Sets alone shall not make Reset visible. While the slot is already at defaults
+  with no auxiliary selection or custom name, Reset shall not be shown.
 
 - **RESET-005** — Reset shall have a visible button surface (background or
   border), not plain action text alone. Reset and the adjacent global menu
@@ -42,10 +44,13 @@ Cancel; nothing is cleared until one of the two choices is chosen.
   destructive choices, worded identically on both platforms: **"Reset
   settings"** and **"Reset settings and name"**.
 - **RESET-011** — Choosing "Reset settings" shall clear the active slot's
-  selected film and reciprocity profile, ND filter stack, base/adjusted
-  shutter, exposure scale mode, and Target Shutter, restoring each to the
-  shipping default. The slot's custom camera name, if any, shall be
-  preserved.
+  selected film and reciprocity profile, ND filter stack, every auxiliary
+  filter selection, base/adjusted shutter, exposure scale mode, and Target
+  Shutter, restoring each to the shipping default. Auxiliary selections shall
+  clear regardless of contribution, including Record-only GND. The camera's
+  selected Filter Sets shall remain selected; Reset shall not delete or modify
+  global Filter Sets or Filter Items. The slot's custom camera name, if any,
+  shall be preserved.
 - **RESET-012** — Choosing "Reset settings and name" shall perform the same
   clearing as RESET-011 and additionally clear the slot's custom camera
   name, restoring the slot's canonical default name.

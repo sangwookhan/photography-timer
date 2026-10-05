@@ -140,8 +140,8 @@ could be confused.
   create a duplicate Main source or physical-item identity and shall preserve
   repeated equal Standard values across wheels.
 
-- **FILTER-SET-008** — On fresh installation, provide editable, deletable user
-  inventory examples: **Sample ND** with 3, 6 and 10-stop ND items;
+- **FILTER-SET-008** — When no filter inventory has ever been saved, on fresh
+  installation or upgrade, provide editable, deletable user inventory examples: **Sample ND** with 3, 6 and 10-stop ND items;
   **Sample ND — Extended** (Korean **샘플 ND — 확장**) with ND100, ND200,
   ND400 and ND100k registered in ND-factor notation; and **Sample Aux Filter Set**
   with CPL, **B+W 091 Red Dark** (3 stops), **B+W 040 Orange** (2 stops),
@@ -154,7 +154,9 @@ could be confused.
   FILTER-GND-002. Extended ND conversion follows FILTER-ITEM-004 and ND-011.
   Samples shall initially be unselected, with no mounted items. Sample seeding
   shall occur once; deleting or editing a Sample shall survive restart without
-  recreation or overwrite. Sample Sets have ordinary stable inventory identity.
+  recreation or overwrite. A saved empty inventory counts as previously saved;
+  malformed, unsupported or failed reads shall not count as an absent inventory
+  and shall not trigger Sample seeding. Sample Sets have ordinary stable inventory identity.
 
 - **FILTER-SET-009** — Removing Default's special status shall preserve existing
   inventory and camera references. An existing former Default Set shall become
@@ -193,9 +195,21 @@ could be confused.
   the Set for a camera or mount the item. Independent Set creation remains
   available. Inline creation shall return with the destination selected and
   all entered item values preserved. Existing items retain the enabled field
-  for movement between writable Sets. Moving preserves item identity and all
-  existing camera references; referencing cameras add the destination Set when
-  needed without implicitly removing the source Set. FILTER-ITEM-005 applies.
+  for movement between writable Sets. Saving a destination change commits the
+  inventory move immediately; Shooting Filters Apply/Cancel neither commits nor
+  rolls it back. Moving preserves the physical item identity. For auxiliary
+  selections, evaluate the destination against each camera's committed Selected
+  Filter Sets and each open session's working Selected Filter Sets respectively.
+  If the destination is selected, retain the valid choice under the new Set.
+  If it is Available, treat the moved auxiliary item as unchecked: clear its
+  corresponding selection and do not automatically select the destination Set.
+  An open session shall not Apply the stale source-Set reference or retain a
+  hidden pick that reappears merely when the destination is selected later.
+  Preserve unrelated selections and explicit unmounts; do not mount an item
+  that was not selected. Cancel discards remaining session edits while the
+  inventory move and required committed-camera reconciliation remain in effect.
+  Existing ND-wheel movement and kind-correction rules remain governed by
+  FILTER-ITEM-005; this auxiliary rule shall not add or select an ND wheel.
 
 - **FILTER-ITEM-004** — Fixed and GND items shall accept a decimal value in
   Stops, OD, or ND factor and preserve the original value and unit as equipment
@@ -1047,8 +1061,9 @@ Additional regression checks:
    light/dark, Korean/English, and supported text sizes on both platforms.
 7. Exercise inventory rename, recolor, deterministic ordering, Filter Item
    movement between Sets, item edit, and targeted deletion. A moved item's
-   stable identity and every referencing camera stay correct; the destination
-   Set becomes selected for an affected camera when needed. Captured timer
+   stable identity and every referencing camera stay correct. An auxiliary item
+   moved to an Available Set becomes unchecked without selecting that Set;
+   movement between selected Sets preserves its valid choice. Captured timer
    names, modes, contributions, and totals remain immutable. Source color never
    changes an display color.
 8. Restore legacy Standard and legacy mixed snapshots, including CPL/GND-only
@@ -1154,3 +1169,22 @@ Additional regression checks:
   reference reconciliation; opening/closing alone changes no shot.
 - Capture CPL/GND/Effect icons beside type text in unselected and selected
   controls, without extra taps, strip-width loss or changing Set height.
+
+### Inventory movement, Reset and Sample recovery verification
+
+- Begin with zero auxiliary filters, then select an auxiliary item only in
+  the working session and move it to an Available Set through the item editor.
+  Verify immediate inventory movement, unchecked state, no stale-reference
+  Apply blocker and no automatic destination selection. Selecting that Set
+  later shall not resurrect the cleared pick. Repeat with a committed pick,
+  with a destination already selected, with unrelated draft picks/unmounts,
+  then Apply, Cancel, camera switch and restart. Other cameras reconcile
+  independently against their own selected Sets; captured timers stay unchanged.
+- Verify both camera Reset choices under shooting/reset.md with CPL, Color,
+  Effect and GND Record only, including a zero effective total and Empty ND
+  wheels. All auxiliary selections clear; selected Filter Sets remain selected.
+  Inventory and other cameras remain unchanged; reset visibility includes a
+  sole zero-contribution auxiliary selection.
+- Verify fresh installation and upgrade with no previously saved inventory:
+  Samples appear once and remain unselected. A saved empty inventory, deleted
+  Samples, malformed payload or read failure shall not seed or overwrite them.

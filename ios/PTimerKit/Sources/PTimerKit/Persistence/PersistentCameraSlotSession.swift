@@ -108,13 +108,13 @@ public struct PersistentCameraSlotCalculatorSnapshot: Codable, Equatable {
     public let lastFilterSourceKind: String?
     public let lastFilterSetID: String?
     /// Mounted auxiliary filters (FILTER-AUX-001), one entry per
-    /// mounted item in mount order. Additive Optional: a snapshot
+    /// mounted item in display order. Additive Optional: a snapshot
     /// written before auxiliary filters existed omits the key, and
     /// any CPL / GND rows still inside `filterStack` migrate into
     /// auxiliary filters on restore (FILTER-PERSIST-002).
     public let auxiliaryFilters: [PersistentAuxiliaryFilterSnapshot]?
     /// The slot's candidate Filter Sets (FILTER-CAMERA-001) by stable
-    /// id, in user-defined set order. Additive Optional: absent means
+    /// id, in their selection order. Additive Optional: absent means
     /// no explicit assignment; the sets referenced by the restored
     /// wheels and auxiliary filters are always included on restore.
     public let candidateFilterSetIDs: [String]?

@@ -142,7 +142,6 @@ internal fun FilterStackGroup(
     onAddFilterWheel: (FilterSource) -> Unit,
     onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
     onOverscrollRemove: (Int) -> Unit,
-    onManageFilterSets: () -> Unit,
     onOpenShootingFilters: () -> Unit,
     modifier: Modifier = Modifier,
     wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
@@ -157,7 +156,8 @@ internal fun FilterStackGroup(
     // The Plus browsing candidate is pure presentation: it exists only
     // between touch-down and release and never reaches the controller.
     var browsing by remember { mutableStateOf<FilterPlusChoice?>(null) }
-    val auxiliaryTitle = stringResource(R.string.filter_auxiliary_title)
+    // The Plus browsing status names the destination (FILTER-FLOW-002).
+    val auxiliaryTitle = stringResource(R.string.filter_shooting_title)
 
     // A refusal holds the status region for a fixed time and then yields
     // (FILTER-STACK-004). The controller keeps it only as "the current
@@ -229,7 +229,6 @@ internal fun FilterStackGroup(
                                     // Plus control short of the viewport.
                                     height = viewportHeight,
                                     onAdd = onAddFilterWheel,
-                                    onManage = onManageFilterSets,
                                     onOpenAuxiliaryFilters = onOpenShootingFilters,
                                     browsing = browsing,
                                     onBrowsingChanged = { browsing = it },

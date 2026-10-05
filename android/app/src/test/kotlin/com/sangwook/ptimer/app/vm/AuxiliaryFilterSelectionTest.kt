@@ -26,7 +26,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The shooting popup's auxiliary selection on the controller
+ * The Shooting Filters auxiliary selection on the controller
  * (FILTER-AUX-002/003/004, FILTER-STACK-004): any number of auxiliary
  * filters, one display order whatever the mount order, three rows plus a
  * count on Main, an auxiliary-only subtotal, and the 30-stop cap in both
@@ -52,7 +52,7 @@ class AuxiliaryFilterSelectionTest {
             persistenceWriter = PersistenceWriter { it() },
         )
         return CalculatorController(films = emptyList(), inventoryModel = model).also {
-            it.setCandidateFilterSets(listOf(kit.id))
+            it.arrangeCandidateFilterSets(listOf(kit.id))
         }
     }
 
@@ -68,11 +68,11 @@ class AuxiliaryFilterSelectionTest {
 
     @Test fun moreThanThreeMountInDisplayOrderWhateverTheMountOrder() {
         val c = controller()
-        assertNull(c.applyAuxiliaryFilters(listOf(gnd, cpl, night, marumi, red).map(::mount)))
+        assertNull(c.applyMounts(listOf(gnd, cpl, night, marumi, red).map(::mount)))
 
         val expected = listOf(marumi, red, night, cpl, gnd).map { it.id }
         assertEquals(expected, c.state.value.mountedAuxiliaryFilters.map { it.itemId })
-        assertNull(c.applyAuxiliaryFilters(listOf(red, gnd, night, cpl, marumi).map(::mount)))
+        assertNull(c.applyMounts(listOf(red, gnd, night, cpl, marumi).map(::mount)))
         assertEquals("Mount order never matters.", expected, c.state.value.mountedAuxiliaryFilters.map { it.itemId })
         // Color 2 + 3, Effect 1, CPL 1.5, GND Record only 0.
         assertEquals("7.5", c.state.value.filterStatus.totalStopsText)
@@ -80,14 +80,14 @@ class AuxiliaryFilterSelectionTest {
 
     @Test fun mainShowsTheFirstThreeAndCountsTheRest() {
         val c = controller()
-        assertNull(c.applyAuxiliaryFilters(listOf(gnd, cpl, night, marumi, red).map(::mount)))
+        assertNull(c.applyMounts(listOf(gnd, cpl, night, marumi, red).map(::mount)))
         val summary = c.state.value.auxiliarySummary!!
         assertEquals(listOf("MARUMI Red 25A", "Red 25A", "Night Clear"), summary.visibleItems.map { it.name })
         assertEquals(2, summary.hiddenItemCount)
 
-        assertNull(c.applyAuxiliaryFilters(listOf(marumi, red, night).map(::mount)))
+        assertNull(c.applyMounts(listOf(marumi, red, night).map(::mount)))
         assertEquals(0, c.state.value.auxiliarySummary!!.hiddenItemCount)
-        assertNull(c.applyAuxiliaryFilters(emptyList()))
+        assertNull(c.applyMounts(emptyList()))
         assertNull("No mounted item hides the summary space.", c.state.value.auxiliarySummary)
     }
 
@@ -96,7 +96,7 @@ class AuxiliaryFilterSelectionTest {
         ndWheel(c, 10.0)
         val selection = listOf(red, night, cpl).map(::mount)
         assertEquals(5.5, c.auxiliaryFiltersSubtotal(selection), 1e-9)
-        assertNull(c.applyAuxiliaryFilters(selection))
+        assertNull(c.applyMounts(selection))
         assertEquals("The whole Total includes ND.", "15.5", c.state.value.filterStatus.totalStopsText)
         assertEquals("The subtotal never does.", 5.5, c.auxiliaryFiltersSubtotal(c.state.value.mountedAuxiliaryFilters), 1e-9)
     }
@@ -104,11 +104,11 @@ class AuxiliaryFilterSelectionTest {
     @Test fun anAuxiliaryFilterAfterNdIsRefusedPastThirtyStops() {
         val c = controller()
         ndWheel(c, 20.0)
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(red))))
+        assertNull(c.applyMounts(listOf(mount(red))))
         val attempt = listOf(mount(red), mount(heavy))
 
-        assertEquals(FilterStackRejection.exceedsTotalLimit, c.auxiliaryFiltersRejection(attempt))
-        assertEquals(FilterStackRejection.exceedsTotalLimit, c.applyAuxiliaryFilters(attempt))
+        assertEquals(FilterStackRejection.exceedsTotalLimit, c.shootingFiltersRejection(c.state.value.candidateFilterSetIds, attempt))
+        assertEquals(FilterStackRejection.exceedsTotalLimit, c.applyMounts(attempt))
         assertEquals("Nothing already mounted changes.", listOf(mount(red)), c.state.value.mountedAuxiliaryFilters)
         assertEquals("23", c.state.value.filterStatus.totalStopsText)
     }
@@ -116,7 +116,7 @@ class AuxiliaryFilterSelectionTest {
     @Test fun anNdChangeAfterAuxiliaryFiltersIsHeldToTheRemainingBudget() {
         val c = controller()
         ndWheel(c, 15.0)
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(heavy), mount(red))))
+        assertNull(c.applyMounts(listOf(mount(heavy), mount(red))))
 
         val wheel = c.state.value.filterWheels.first()
         val offered = wheel.rows.map { (it.selection as FilterWheelSelection.Standard).stops }
@@ -130,18 +130,17 @@ class AuxiliaryFilterSelectionTest {
         val c = controller()
         repeat(3) { c.addFilterWheel(FilterSource.Standard) }
         assertEquals(FilterStack.MAX_WHEEL_COUNT, c.state.value.filterWheels.size)
-        assertEquals(FilterStackRejection.tooManyNDWheels, c.applyAuxiliaryFilters(listOf(mount(cpl))))
+        assertEquals(FilterStackRejection.tooManyNDWheels, c.applyMounts(listOf(mount(cpl))))
         assertTrue(c.state.value.mountedAuxiliaryFilters.isEmpty())
     }
 
-    @Test fun excludingACandidateSetThisCameraUsesIsBlocked() {
+    /** FILTER-CAMERA-003: leaving a used Set out on Apply takes its filters
+     *  off this camera; the Set stays in the inventory. */
+    @Test fun leavingAUsedSetOutTakesItsFiltersOff() {
         val c = controller()
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(red))))
-        val outcome = c.setCandidateFilterSets(emptyList())
-        assertEquals(CandidateFilterSetAssignmentOutcome.Blocked(listOf(kit)), outcome)
-        assertEquals(listOf(kit.id), c.state.value.candidateFilterSetIds)
-        assertNull(c.applyAuxiliaryFilters(emptyList()))
-        assertEquals(CandidateFilterSetAssignmentOutcome.Assigned, c.setCandidateFilterSets(emptyList()))
+        assertNull(c.applyMounts(listOf(mount(red))))
+        assertNull(c.applyShootingFilters(emptyList(), c.state.value.mountedAuxiliaryFilters))
+        assertTrue(c.state.value.mountedAuxiliaryFilters.isEmpty())
         assertTrue(c.state.value.candidateFilterSetIds.isEmpty())
         assertEquals(
             "Only Standard is offered without candidates.",
@@ -158,13 +157,13 @@ class AuxiliaryFilterSelectionTest {
                 initial = FilterInventory(listOf(kit.copy(items = kit.items + hard))),
                 persistenceWriter = PersistenceWriter { it() },
             ),
-        ).also { it.setCandidateFilterSets(listOf(kit.id)) }
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(cpl), mount(gnd))))
+        ).also { it.arrangeCandidateFilterSets(listOf(kit.id)) }
+        assertNull(c.applyMounts(listOf(mount(cpl), mount(gnd))))
         assertEquals(
             listOf(listOf("CPL"), listOf("Soft GND 2", "Soft GND", "Soft")),
             c.state.value.auxiliarySummary!!.items.map { it.compactLabels },
         )
-        assertNull(c.applyAuxiliaryFilters(listOf(mount(gnd), MountedAuxiliaryFilter(kit.id, hard.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly)))))
+        assertNull(c.applyMounts(listOf(mount(gnd), MountedAuxiliaryFilter(kit.id, hard.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly)))))
         assertEquals(
             listOf(listOf("Soft GND 2", "Soft GND", "Soft"), listOf("Hard GND 3", "Hard GND", "Hard")),
             c.state.value.auxiliarySummary!!.items.map { it.compactLabels },

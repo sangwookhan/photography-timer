@@ -26,8 +26,8 @@ import com.sangwook.ptimer.core.exposure.FilterValueUnit
  */
 data class FilterItemEditorDraft(
     val name: String = "",
-    /** A new ND item is ND and a new auxiliary item starts at the first
-     *  auxiliary kind, whatever the session remembered. */
+    /** A new item starts as ND (FILTER-ITEM-003), whatever the session
+     *  remembered. */
     val kind: FilterItemKind = FilterItemKind.fixed,
     /** Fixed / GND registered value, or a Color / Effect loss in stops,
      *  as typed; `,` and `.` both parse. */

@@ -83,8 +83,14 @@ class ShootingAppViewModel(
     private val completionNotifier: TimerCompletionNotifier,
     /** Durable store for the user's Filter Sets and physical items. */
     inventoryStore: FilterInventoryStoring = NoOpFilterInventoryStore(),
-    /** Bootstrap-loaded inventory; `null` lets the model read the store. */
+    /** Bootstrap-loaded inventory; `null` lets the model read the store,
+     *  unless [initialInventoryIsStoreRead]. */
     initialInventory: FilterInventory? = null,
+    /** Whether [initialInventory] is the bootstrap's store read, so `null`
+     *  means nothing is saved (a fresh installation). */
+    initialInventoryIsStoreRead: Boolean = initialInventory != null,
+    /** Inventory a fresh installation starts with (FILTER-SET-008). */
+    firstLaunchInventory: FilterInventory = FilterInventory.empty,
     clock: () -> Instant = { Instant.now() },
     /** Words the timer's start-time filter reference is written in
      *  (FILTER-PERSIST-003); the composition root reads them from
@@ -113,7 +119,9 @@ class ShootingAppViewModel(
     private val filterInventoryModel = FilterInventoryModel(
         store = inventoryStore,
         initial = initialInventory,
+        initialIsStoreRead = initialInventoryIsStoreRead,
         persistenceWriter = persistence,
+        firstLaunchInventory = firstLaunchInventory,
     )
 
     /** The inventory, read-only, for the composition. */

@@ -243,7 +243,9 @@ internal fun filterRejectionNoticeText(notice: FilterRejectionNotice): String =
 internal fun filterColorName(token: FilterSetColor): String = stringResource(
     when (token) {
         FilterSetColor.red -> R.string.filter_color_red
+        FilterSetColor.redOrange -> R.string.filter_color_red_orange
         FilterSetColor.orange -> R.string.filter_color_orange
+        FilterSetColor.yellowOrange -> R.string.filter_color_yellow_orange
         FilterSetColor.yellow -> R.string.filter_color_yellow
         FilterSetColor.yellowGreen -> R.string.filter_color_yellow_green
         FilterSetColor.green -> R.string.filter_color_green

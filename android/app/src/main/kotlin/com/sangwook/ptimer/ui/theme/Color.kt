@@ -61,8 +61,12 @@ fun filterTypePalette(): FilterTypePalette =
 // source cue reads the same token iOS renders with system colors.
 private val FilterSetColorsLight = mapOf(
     FilterSetColor.red to Color(0xFFD32F2F),
+    // Red-orange and Yellow-orange sit visibly between their neighbors;
+    // Yellow is a bright photographic yellow, not a muted mustard.
+    FilterSetColor.redOrange to Color(0xFFF4511E),
     FilterSetColor.orange to Color(0xFFEF6C00),
-    FilterSetColor.yellow to Color(0xFFC79100),
+    FilterSetColor.yellowOrange to Color(0xFFFFA000),
+    FilterSetColor.yellow to Color(0xFFFFD600),
     // The iOS yellow-green, distinct from both neighbors in light and dark.
     FilterSetColor.yellowGreen to Color(0xFF99CC2E),
     FilterSetColor.green to Color(0xFF2E7D32),
@@ -74,8 +78,10 @@ private val FilterSetColorsLight = mapOf(
 
 private val FilterSetColorsDark = mapOf(
     FilterSetColor.red to Color(0xFFEF5350),
+    FilterSetColor.redOrange to Color(0xFFFF7043),
     FilterSetColor.orange to Color(0xFFFFA726),
-    FilterSetColor.yellow to Color(0xFFFFD54F),
+    FilterSetColor.yellowOrange to Color(0xFFFFB300),
+    FilterSetColor.yellow to Color(0xFFFFEB3B),
     FilterSetColor.yellowGreen to Color(0xFF99CC2E),
     FilterSetColor.green to Color(0xFF66BB6A),
     FilterSetColor.teal to Color(0xFF4DB6AC),

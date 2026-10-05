@@ -280,7 +280,7 @@ fun ShootingApp(
     // The Filter Set whose editor is open above Shooting Filters; it reads
     // the inventory live so an edit inside it redraws the list.
     var editedFilterSetId by remember { mutableStateOf<FilterSetId?>(null) }
-    val filterInventory by holder.filterInventory.inventory.collectAsStateWithLifecycle()
+    val filterInventory by holder.filterInventory.collectAsStateWithLifecycle()
     var showExactAlarmInfo by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()

@@ -22,6 +22,7 @@ itself.
 |---|---|
 | Base shutter, exposure math, duration formatting | `calculator/exposure.md` |
 | ND values, the filter stack, notation | `calculator/nd-filters.md` |
+| Filter inventory, camera Set selection, auxiliary filters, and ND sources | `calculator/filter-sets.md` |
 | Target Shutter | `calculator/target-shutter.md` |
 | Multiple cameras, slot switching, camera names | `shooting/camera-slots.md` |
 | Reset behavior | `shooting/reset.md` |
@@ -36,9 +37,9 @@ itself.
 | Orientation, shooting-screen structure, density, accessibility, touch targets | `cross-cutting/presentation.md` |
 | English/Korean product terminology | `cross-cutting/localization.md` |
 
-A new independent capability (for example, a future physical-filter
-inventory) gets a new file in the appropriate directory when it actually
-ships — not before, and not as a speculative placeholder.
+A new independent capability is proposed in a Spec PR in the appropriate
+directory. Its approved contract reaches main with a conforming implementation
+under the Specification Workflow; speculative placeholders are excluded.
 
 ## What belongs elsewhere
 

@@ -163,7 +163,8 @@ could be confused.
   an ordinary editable/deletable user Set retaining its id, name, color, items
   and camera selections. Upgrade shall not reset existing cameras, create new
   item identities, overwrite inventory, or alter captured timer snapshots.
-  Fresh-install initial selections shall not be reapplied on upgrade.
+  Samples shall remain unselected on both fresh installation and upgrade;
+  existing camera selections shall not be reset by Sample seeding.
 
 ### Physical filter inventory and conversion
 
@@ -193,7 +194,7 @@ could be confused.
   Filter Item Save shall create the proposed Set and item together; Cancel or
   failed validation shall create neither. This shall not automatically select
   the Set for a camera or mount the item. Independent Set creation remains
-  available. Inline creation shall return with the destination selected and
+  available. Inline creation shall return with the editor's destination field set and
   all entered item values preserved. Existing items retain the enabled field
   for movement between writable Sets. Saving a destination change commits the
   inventory move immediately; Shooting Filters Apply/Cancel neither commits nor
@@ -589,7 +590,8 @@ could be confused.
   candidate Sets, mounted auxiliary filters, ND wheels, calculation, or Main
   summary. Auxiliary working selections belonging to a removed Set shall be
   retained for the lifetime of that Shooting Filters session so adding the Set
-  again restores the same working selections. Apply commits the resulting Set
+  again restores the same working selections, except picks cleared under
+  FILTER-ITEM-009. Apply commits the resulting Set
   selection and auxiliary selection together and removes any committed
   auxiliary references and ND wheels whose Set is no longer selected,
   preserving a valid ND stack with Standard 0 as the fallback when necessary.
@@ -757,7 +759,8 @@ could be confused.
   committed state, including any explicit inventory edits and their required
   camera-reference reconciliation made while the surface was open. An invalid Apply shall explain the constraint and leave
   the committed state unchanged. Rechecking a Set within the same session shall
-  restore that Set's retained auxiliary working selections.
+  restore that Set's retained auxiliary working selections, except picks
+  cleared under FILTER-ITEM-009.
 - **FILTER-AUX-004** — Physical-item exclusivity and the 30-stop cap shall cover
   ND and auxiliary selections together. A zero-contribution mounted item is
   still present and cannot be mounted twice. The wheel limit shall not be
@@ -1138,7 +1141,8 @@ Additional regression checks:
   Plus source. Delete all Samples/user Sets and create a filter directly:
   proposed New Filter Set persists only after successful Save; Cancel leaves
   no empty Set and does not mount or select anything. Edit the proposed name.
-- Verify fresh install versus upgrade separately: unselected Samples seed once,
+- Verify fresh install versus upgrade separately: unselected Samples seed once
+  only when inventory has never been saved; saved empty inventory does not seed,
   deleted Samples remain absent, former Default retains ids/references as an
   ordinary Set, and existing fractional Standard selections retain their exact
   contribution through upgrade, camera switch and restart.

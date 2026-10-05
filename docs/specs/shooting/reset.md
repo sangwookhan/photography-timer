@@ -29,7 +29,8 @@ Cancel; nothing is cleared until one of the two choices is chosen.
   slot has something a reset would clear — a non-default film, ND, base
   shutter, or Target Shutter, any mounted auxiliary filter (including a
   zero-contribution Record-only GND), or a custom camera name. Selected Filter
-  Sets alone shall not make Reset visible. While the slot is already at defaults
+  Sets alone shall not make Reset visible. Empty and Standard 0 ND wheels
+  alone shall not make Reset visible. While the slot is already at defaults
   with no auxiliary selection or custom name, Reset shall not be shown.
 
 - **RESET-005** — Reset shall have a visible button surface (background or
@@ -49,7 +50,8 @@ Cancel; nothing is cleared until one of the two choices is chosen.
   Shutter, restoring each to the shipping default. Auxiliary selections shall
   clear regardless of contribution, including Record-only GND. The camera's
   selected Filter Sets shall remain selected; Reset shall not delete or modify
-  global Filter Sets or Filter Items. The slot's custom camera name, if any,
+  global Filter Sets or Filter Items. The remembered Plus Filter Source shall
+  remain unchanged while that source exists. The slot's custom camera name, if any,
   shall be preserved.
 - **RESET-012** — Choosing "Reset settings and name" shall perform the same
   clearing as RESET-011 and additionally clear the slot's custom camera

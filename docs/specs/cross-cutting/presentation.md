@@ -97,6 +97,14 @@ compact presence, not folded into the shooting screen itself.
   understandable through the platform's screen reader (VoiceOver on iOS,
   TalkBack on Android) without relying on color alone to convey state.
 
+### Graphic resource parity
+
+- **SHELL-041** — Native SF Symbols on iOS and Material icons on Android may
+  differ in shape. Any separately supplied app-specific image or icon shall
+  use the same original graphic on both platforms, with consistent visual
+  proportions and meaning. Native icon differences shall not justify two
+  separately drawn versions of an app-specific graphic.
+
 ## Non-goals
 
 - Landscape support of any kind.

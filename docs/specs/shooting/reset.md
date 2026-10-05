@@ -30,6 +30,12 @@ Cancel; nothing is cleared until one of the two choices is chosen.
   shutter, or Target Shutter, or a custom camera name. While the slot is
   already at defaults with no custom name, Reset shall not be shown.
 
+- **RESET-005** — Reset shall have a visible button surface (background or
+  border), not plain action text alone. Reset and the adjacent global menu
+  shall form a compact control group with distinct non-overlapping targets
+  and an ordinary gap; an extra wide spacer shall not separate them.
+  The existing confirmation and visibility rules remain unchanged.
+
 ### The two destructive choices
 
 - **RESET-010** — The confirmation surface shall offer exactly two

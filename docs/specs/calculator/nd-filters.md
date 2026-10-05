@@ -30,11 +30,12 @@ construction rather than by clamping after the fact.
 
 ### Ladder, presets, and notation
 
-- **ND-001** — Every Standard ND wheel shall select from the same shipping ladder:
-  integer stops in the closed range [0, 30], plus three fixed fractional
-  commercial presets — `6.6` (ND100 / OD 2.0), `7.6` (ND200 / OD 2.3), and
-  `16.6` (ND100k / OD 5.0) stops. These presets are permanent entries,
-  present in every notation, spliced into the ladder in numeric order.
+- **ND-001** — Every new Standard ND selection shall use the integer-stop
+  ladder in the closed range [0, 30], in numeric order in every notation.
+  Zero means no ND filter; the read-only Standard list contains 1–30 stops.
+  ND100, ND200, ND400 and ND100k are not new Standard choices; editable Sample
+  inventory for these factors is defined by FILTER-SET-008.
+
 - **ND-002** — The ladder shall not be densified to a continuous
   one-third-stop or 0.1-stop ND scale; rows such as `7 1/3` or `7 2/3` shall
   not exist in the option set.
@@ -67,11 +68,14 @@ construction rather than by clamping after the fact.
   value lands on a clean label (14→`ND16K`, 16→`ND64K`, 20→`ND1M`). A
   lowercase or significant-figure-rounded suffix (e.g. `ND20k`) shall not be
   rendered.
-- **ND-011** — The three fractional presets (`6.6`/`7.6`/`16.6`) do **not**
-  follow ND-007–ND-010. Their `ND`-notation label uses a fixed commercial
-  mapping (`6.6 → ND100`, `7.6 → ND200`, `16.6 → ND100k`), not a `2^stops`
-  computation; their `OD` label still follows ND-006 (`stops × 0.3`); their
-  `Stops` label follows ND-005 like any other value.
+- **ND-011** — The shared formatter and registered ND-factor conversion shall
+  retain explicit commercial mappings 6.6 → ND100, 7.6 → ND200 and
+  16.6 → ND100k independently of membership in the Standard option list.
+  These labels retain their canonical values for registered Filter Items
+  under FILTER-ITEM-004. ND400 uses log2(400), without snapping.
+  OD and Stops rendering continue under ND-005/006. Removing an option from
+  Standard shall not rewrite already saved physical-item metadata.
+
 - **ND-012** — The notation control renders as one horizontal row reading
   `ND Filter [Stops | OD | ND]`, directly associated with the ND picker
   header. All three segment labels shall remain legible and unclipped at
@@ -196,7 +200,7 @@ construction rather than by clamping after the fact.
 - **ND-PERSIST-001** — Each camera slot shall persist its complete committed
   ND stack.
 - **ND-PERSIST-002** — On restore, a persisted stack is validated as a
-  whole: wheel count in [1, 4], every value on the shipping ladder, and a
+  whole: wheel count in [1, 4], every value on the shipping ladder or a retained legacy fractional Standard value under ND-PERSIST-005, and a
   total of 30 stops or fewer. Any violation discards the entire stack —
   never a partial recovery — and falls back to a single legacy ND value.
 - **ND-PERSIST-003** — The legacy single-value field is always written
@@ -205,6 +209,13 @@ construction rather than by clamping after the fact.
   rejecting an off-ladder sum outright.
 - **ND-PERSIST-004** — A snapshot that predates the ND stack shall continue
   to restore correctly, as a single wheel holding the legacy ND value.
+
+- **ND-PERSIST-005** — Upgrade shall retain an existing committed fractional
+  Standard selection at its exact canonical value, source and wheel identity;
+  it shall not reset exposure merely because that value is absent from the new
+  Standard choices. Camera switching and restart shall preserve it. Selecting
+  a different Standard value uses ND-001; old fractional options shall not be
+  reintroduced into new Standard choices.
 
 ## Non-goals
 

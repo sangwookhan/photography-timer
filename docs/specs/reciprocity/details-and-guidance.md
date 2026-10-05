@@ -55,6 +55,11 @@ corrected exposure came from, without cluttering the primary result.
   from authority/calculation. A community/custom model should carry its own
   short label (e.g. a source name) rather than a generic fallback.
 
+- **DETAILS-014** — On Main, the displayed reciprocity correction value and
+  its information icon shall form one details-entry target on both platforms.
+  Tapping the value or icon opens the same existing details surface; the
+  adjacent timer start action remains a separate non-overlapping target.
+
 ## Secondary guidance formatting
 
 - **GUIDANCE-001** — Stored secondary guidance (color-correction notation,

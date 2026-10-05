@@ -10,8 +10,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * FILTER-PLUS-001/003: tap, stationary long press, and source browsing
- * never compete on one touch.
+ * FILTER-PLUS-001/003: tap and source browsing never compete on one
+ * touch; a touch that leaves the stationary tolerance without browsing is
+ * neither.
  */
 class FilterSourcePlusGestureArbiterTest {
 
@@ -24,27 +25,17 @@ class FilterSourcePlusGestureArbiterTest {
     }
 
     @Test
-    fun `a stationary hold opens management and the release adds nothing`() {
-        val gesture = arbiter()
-        assertTrue(gesture.deadlineElapsed())
-        assertEquals(ReleaseOutcome.Managed, gesture.released())
-    }
-
-    @Test
-    fun `movement past the stationary tolerance cancels the long press`() {
+    fun `movement past the stationary tolerance is no tap`() {
         val gesture = arbiter()
         gesture.moved(dx = 0f, dy = -5f)
         assertEquals(FilterSourcePlusGestureArbiter.Phase.unsettled, gesture.phase)
-        assertFalse(gesture.deadlineElapsed())
         assertEquals(ReleaseOutcome.None, gesture.released())
     }
 
     @Test
-    fun `browsing wins past the drag threshold and management never opens`() {
+    fun `browsing wins past the drag threshold`() {
         val gesture = arbiter()
         gesture.moved(dx = 0f, dy = -9f)
-        assertEquals(FilterSourcePlusGestureArbiter.Phase.browsing, gesture.phase)
-        assertFalse(gesture.deadlineElapsed())
         assertEquals(FilterSourcePlusGestureArbiter.Phase.browsing, gesture.phase)
     }
 
@@ -74,13 +65,5 @@ class FilterSourcePlusGestureArbiterTest {
         gesture.moved(dx = 0f, dy = -260f)
         assertEquals(1, gesture.candidateIndex)
         assertEquals(ReleaseOutcome.None, gesture.released())
-    }
-
-    @Test
-    fun `an opened long press ignores later movement`() {
-        val gesture = arbiter()
-        assertTrue(gesture.deadlineElapsed())
-        assertFalse(gesture.moved(dx = 0f, dy = -52f))
-        assertEquals(ReleaseOutcome.Managed, gesture.released())
     }
 }

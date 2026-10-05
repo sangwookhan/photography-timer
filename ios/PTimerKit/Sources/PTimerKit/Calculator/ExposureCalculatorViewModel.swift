@@ -189,7 +189,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Source of truth for the user's Filter Sets and physical filter
     /// items (Filter Set contract). The +FilterSets extension writes
     /// through it; stack reconciliation runs here on every change.
-    public let filterInventoryModel: FilterInventoryModel
+    /// Internal: this view model is its only writer, and the app reads
+    /// `filterInventory`.
+    let filterInventoryModel: FilterInventoryModel
     /// App-global display-settings store (ND notation mode). Display
     /// preferences only; never participates in calculation.
     private let displaySettingStore: DisplaySettingStoring

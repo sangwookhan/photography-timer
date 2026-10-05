@@ -257,6 +257,7 @@ class FilterStatusRegionLayoutTest {
                         onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
                         onOverscrollRemove = {},
                         onManageFilterSets = {},
+                        onOpenShootingFilters = {},
                         modifier = Modifier.padding(horizontal = cardPadding, vertical = cardVerticalPadding),
                     ) { wheels ->
                         Row(
@@ -358,6 +359,7 @@ class FilterStatusRegionLayoutTest {
                         onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
                         onOverscrollRemove = {},
                         onManageFilterSets = {},
+                        onOpenShootingFilters = {},
                         modifier = Modifier.padding(horizontal = cardPadding, vertical = cardVerticalPadding),
                     ) { wheels ->
                         Row(

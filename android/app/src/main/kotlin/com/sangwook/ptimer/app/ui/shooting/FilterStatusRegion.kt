@@ -35,9 +35,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,15 +81,15 @@ internal val FilterStatusRegionHeight = 20.dp
  * in this row.
  */
 @Composable
-internal fun filterStatusRegionHeight(): Dp {
+internal fun filterStatusRegionHeight(totalValueStyle: TextStyle = MaterialTheme.typography.labelSmall): Dp {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val line = measurer.measure(
-        StatusRowProbe,
-        MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        softWrap = false,
-    ).size.height
+    // The row's tallest glyphs: the caption probe, or the Total's
+    // numerals drawn at the ND value size (FILTER-STACK-008).
+    val line = maxOf(
+        measurer.measure(StatusRowProbe, MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false).size.height,
+        measurer.measure("0123456789.", totalValueStyle, maxLines = 1, softWrap = false).size.height,
+    )
     return maxOf(FilterStatusRegionHeight, with(density) { line.toDp() })
 }
 
@@ -123,6 +127,11 @@ internal fun FilterStatusRegion(
     wheelCount: Int,
     notationMode: NDNotationMode,
     modifier: Modifier = Modifier,
+    /** The Total's numeric stops value (`13.2`), drawn at [totalValueStyle]
+     *  inside the localized total so the numerals read at least at the
+     *  ND value size of the same layout (FILTER-STACK-008). */
+    totalValueText: String? = null,
+    totalValueStyle: TextStyle = MaterialTheme.typography.labelSmall,
 ) {
     var visible by remember { mutableStateOf(content) }
     var lastWheelCount by remember { mutableIntStateOf(wheelCount) }
@@ -152,7 +161,7 @@ internal fun FilterStatusRegion(
     }
 
     val shown = visible
-    Box(modifier = modifier.fillMaxWidth().height(filterStatusRegionHeight())) {
+    Box(modifier = modifier.fillMaxWidth().height(filterStatusRegionHeight(totalValueStyle))) {
         if (shown == null) return@Box
         val leading = leadingContent(shown.leading, notationMode)
         Row(
@@ -180,12 +189,32 @@ internal fun FilterStatusRegion(
                 Spacer(Modifier.weight(1f))
             }
             Text(
-                text = shown.total,
+                text = prominentTotal(shown.total, totalValueText, totalValueStyle),
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
+                softWrap = false,
             )
         }
+    }
+}
+
+/**
+ * The localized total with its numeric value set in [valueStyle] and the
+ * primary color: `Total` and `stops` stay caption words around a value
+ * that reads directly in the field (FILTER-STACK-008).
+ */
+@Composable
+private fun prominentTotal(total: String, value: String?, valueStyle: TextStyle): AnnotatedString {
+    val start = value?.let { total.indexOf(it) } ?: -1
+    if (value == null || start < 0) return AnnotatedString(total)
+    val color = MaterialTheme.colorScheme.onSurface
+    return buildAnnotatedString {
+        append(total.substring(0, start))
+        withStyle(SpanStyle(fontSize = valueStyle.fontSize, fontWeight = FontWeight.SemiBold, color = color)) {
+            append(value)
+        }
+        append(total.substring(start + value.length))
     }
 }
 

@@ -67,7 +67,7 @@ class DataStoreFilterInventoryStoreTest {
             listOf(
                 FilterSet(
                     name = "Lee holder",
-                    color = FilterSetColor.indigo,
+                    color = FilterSetColor.blue,
                     items = listOf(
                         FilterItem(
                             "Big Stopper",

@@ -240,6 +240,7 @@ internal fun ShootingScreenHarness(state: CalculatorUiState) {
         onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
         onRemoveNdWheelOverscroll = {},
         onManageFilterSets = {},
+        onOpenShootingFilters = {},
         onSelectNotation = {},
         onSelectFilm = {},
         onSelectProfile = {},

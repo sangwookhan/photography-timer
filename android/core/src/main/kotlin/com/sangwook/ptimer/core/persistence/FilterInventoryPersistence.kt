@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.core.persistence
 
 import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
+import com.sangwook.ptimer.core.exposure.FilterExposureLoss
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemBehavior
@@ -144,10 +145,17 @@ data class PersistentFilterItemRecord(
     val unit: String? = null,
     /** The three CPL fields; `null` entries are empty fields. */
     val cplChoices: List<Double?>? = null,
+    /**
+     * [FilterSetColor] token of a Color item's color. Additive: Color and
+     * Effect items store their loss in [value] (always stops, so [unit]
+     * stays `null`) and pre-Color records omit this key.
+     */
+    val opticalColor: String? = null,
 ) {
     /**
      * `null` when the record cannot restore as a well-formed item
-     * (unknown kind, missing or invalid value, no valid CPL choice).
+     * (unknown kind, missing or invalid value, no valid CPL choice, a
+     * Color item without a known optical color).
      */
     val restoredItem: FilterItem?
         get() {
@@ -169,6 +177,13 @@ data class PersistentFilterItemRecord(
 
                 FilterItemKind.cpl ->
                     FilterItemBehavior.Cpl(CplExposureLossChoices(cplChoices ?: return null))
+
+                FilterItemKind.color -> FilterItemBehavior.Color(
+                    FilterExposureLoss(value ?: return null),
+                    FilterSetColor.restoredToken(opticalColor) ?: return null,
+                )
+
+                FilterItemKind.effect -> FilterItemBehavior.Effect(FilterExposureLoss(value ?: return null))
             }
             val item = FilterItem(
                 name = trimmedName,
@@ -187,6 +202,21 @@ data class PersistentFilterItemRecord(
                 name = item.name,
                 kind = item.behavior.kind.name,
                 cplChoices = behavior.choices.fields,
+            )
+
+            is FilterItemBehavior.Color -> PersistentFilterItemRecord(
+                id = item.id.rawValue,
+                name = item.name,
+                kind = item.behavior.kind.name,
+                value = behavior.loss.stops,
+                opticalColor = behavior.color.name,
+            )
+
+            is FilterItemBehavior.Effect -> PersistentFilterItemRecord(
+                id = item.id.rawValue,
+                name = item.name,
+                kind = item.behavior.kind.name,
+                value = behavior.loss.stops,
             )
         }
 

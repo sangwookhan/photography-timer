@@ -53,6 +53,7 @@ final class ExposureCalculatorFilterFallbackTests: XCTestCase {
             inventory.addItem(item, to: set.id)
         }
         let viewModel = makeViewModel(inventoryModel: inventory)
+        viewModel.assignAllFilterSetsAsCandidates()
         viewModel.ndWheelReshapeDuration = 0
         viewModel.setNDFilterStep(NDStep(stops: standardStops), at: 0)
         viewModel.selectFilterSource(.filterSet(set.id))

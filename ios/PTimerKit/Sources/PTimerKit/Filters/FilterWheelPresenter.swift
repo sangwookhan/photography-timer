@@ -310,6 +310,8 @@ public enum FilterWheelPresenter {
             return String(localized: "Already mounted on this camera")
         case .unresolvedSelection:
             return String(localized: "Filter not available")
+        case .tooManyNDWheels:
+            return String(localized: "Reduce the ND wheels to three or fewer")
         }
     }
 
@@ -394,9 +396,45 @@ public enum FilterWheelPresenter {
 
     public static func kindName(_ kind: FilterItemKind) -> String {
         switch kind {
-        case .fixed: return String(localized: "Fixed")
+        // A fixed-value item is an ND filter; users never see "Fixed".
+        case .fixed: return String(localized: "ND")
         case .cpl: return String(localized: "CPL")
         case .gnd: return String(localized: "GND")
+        case .color: return String(localized: "Color")
+        case .effect: return String(localized: "Effect")
+        }
+    }
+
+    /// Localized name of a palette color — a Filter Set's color or a
+    /// Color filter's color (FILTER-COLOR-001, FILTER-SET-005). Color is
+    /// never the only cue, so the name is shown or spoken beside it.
+    public static func opticalColorName(_ color: FilterSetColor) -> String {
+        switch color {
+        case .red: return String(localized: "Red")
+        case .redOrange: return String(localized: "Red-orange")
+        case .orange: return String(localized: "Orange")
+        case .yellowOrange: return String(localized: "Yellow-orange")
+        case .yellow: return String(localized: "Yellow")
+        case .yellowGreen: return String(localized: "Yellow-green")
+        case .green: return String(localized: "Green")
+        case .teal: return String(localized: "Teal")
+        case .blue: return String(localized: "Blue")
+        case .purple: return String(localized: "Purple")
+        case .pink: return String(localized: "Pink")
+        }
+    }
+
+    /// `Red · 2 stops` / `0.5 stops` — the registered detail of a
+    /// Color or Effect item: the optical color by name (Color only)
+    /// and its explicit loss. `nil` for the other kinds.
+    public static func auxiliaryLossDetailText(for behavior: FilterItemBehavior) -> String? {
+        switch behavior {
+        case .color(let loss, let color):
+            return "\(opticalColorName(color)) · \(stopsText(loss.stops))"
+        case .effect(let loss):
+            return stopsText(loss.stops)
+        case .fixed, .cpl, .gnd:
+            return nil
         }
     }
 

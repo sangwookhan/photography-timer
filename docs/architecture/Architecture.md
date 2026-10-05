@@ -127,11 +127,20 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
 `@Observable` feature models, each owning one slice of state:
 
 - **`CalculatorModel`** — calculator inputs and pure ND calculation.
-  Owns the mixed `FilterStack` (Standard and Filter Set wheels), the
-  per-camera last successfully added Filter Source, and a read-only
+  Owns the `FilterStack` — the ND-only wheels (Standard and Filter Set
+  ND items) together with the mounted auxiliary filters (CPL, GND,
+  Color, Effect) — the per-camera candidate Filter Sets, the
+  per-camera last successfully added ND Filter Source, and a read-only
   mirror of the filter inventory used to resolve Filter Set rows; the
   facade refreshes that mirror whenever `FilterInventoryModel`
-  publishes a change. A successful wheel commit receives an explicit
+  publishes a change. The wheel limit follows the auxiliary state
+  (four wheels without auxiliary filters, three with them), the
+  30-stop cap and item exclusivity span both halves, and mounting
+  replaces the complete auxiliary selection atomically
+  (`setAuxiliaryFilters`), rejecting rather than clamping and never
+  removing a wheel. A set the stack references is always a candidate,
+  and the Plus sources are Standard plus the candidates holding ND
+  items. A successful wheel commit receives an explicit
   ordering policy: normal interaction applies the value-based
   `FilterStack` commit order, while screen-reader touch exploration
   preserves the current complete order. The model also exposes the
@@ -142,6 +151,32 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   `FilterInventoryStoring`. Stack reconciliation after an inventory
   edit runs on the facade, which is the one place that reads both the
   inventory and the calculator / camera-slot state.
+- **Mounted auxiliary filters and the shooting popup** — the facade
+  exposes the mounted selection (`mountedAuxiliaryFilters`), the
+  atomic `applyAuxiliaryFilters(_:)` commit, a non-committing
+  `auxiliaryFiltersPreview(_:)` for the popup's live total and
+  rejection, and candidate assignment (`setCandidateFilterSetIDs`,
+  blocked with set names while the camera still references a set).
+  `Filters/AuxiliaryFilterSummaryPresenter` turns the resolved mounts
+  into the Main summary display state (identity, contribution, and the
+  detail that keeps a GND's registered density or a Color filter's
+  optical color distinct from the contribution); the app's
+  `AuxiliaryFilterSummaryView` renders it as one button in the wheel
+  row, present only while something is mounted. Shooting Filters is
+  one per-camera working session: `Filters/ShootingFiltersSession` is a
+  value held as view state by the app's `ShootingFilterSelectionView`,
+  initialized from the camera's selected Filter Sets (in selection
+  order) and mounts, committed together by Apply
+  (`applyShootingFilters`), and dropped by Cancel. Inventory edits made
+  from a Set editor opened there stay immediate: the session follows a
+  changed committed mount item by item (`rebase`) and drops working
+  picks that no longer resolve (`reconcile`), keeping every unrelated
+  draft pick. ND values and wheels stay on Main; Shooting Filters has
+  no ND tab. Standard is a built-in, read-only source listed first,
+  not a Filter Set. Global Filter Set management opens from the
+  Settings menu (`FilterManagementView`) and holds no camera state.
+  `FilterPlusChoice` names what Plus can settle on: an ND source, or
+  the Shooting filters action that opens the popup.
 - **Filter Set editor session** — the registered-value notation a
   Filter Set editing session remembers between consecutive new items
   (Stops, OD, or ND; the kind always starts Fixed) is the pure value
@@ -152,19 +187,21 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
 - **Plus wheel gestures** — `Filters/FilterSourcePlusGestureArbiter`
   classifies one touch on the Plus wheel (tap, stationary long press,
   browse) and decides the release outcome; the app's
-  `FilterSourcePlusControl` renders it. A tap, a browse that settled
-  on a different source, or an assistive activation calls the
-  facade's `addFilterWheel(from:)`, which adds exactly one wheel
-  inside the commit barrier, shows a refused add as the one-row status
-  reason, and moves the camera's remembered Filter Source only after a
-  successful addition. Browsing never mutates the stack or the memory
-  on its own. With a screen reader the Plus control is one focusable
+  `FilterSourcePlusControl` renders it over the `FilterPlusChoice`
+  list. A tap, a browse that settled on a different ND source, or an
+  assistive activation calls the facade's `addFilterWheel(from:)`,
+  which adds exactly one wheel inside the commit barrier, shows a
+  refused add as the one-row status reason, and moves the camera's
+  remembered Filter Source only after a successful addition; settling
+  on the Auxiliary filters choice opens the shooting popup instead and
+  changes nothing. Browsing never mutates the stack or the memory on
+  its own. With a screen reader the Plus control is one focusable
   element: its adjustable value steps a transient displayed candidate
   held as view state (nothing is persisted until an add succeeds), its
   enabled state and spoken reason are asked of the facade for the
   source it displays (`filterAddUnavailabilityText(for:)`), and Add
-  and Manage Filter Sets are its named actions; the wheel-group
-  container carries no actions of its own.
+  filter and Open shooting filters are its named actions; the
+  wheel-group container carries no actions of its own.
 - **Automatic cleanup announcement** — the facade publishes
   `Filters/EmptyFilterWheelRemoval` only when idle cleanup actually
   removed at least one Standard 0 or Filter Set Empty wheel — the idle
@@ -336,10 +373,11 @@ the app's `ExposureCalculator/CameraSlot/`).
   supplied label set through the rename surface; it lives on the
   session model and is merged into the identity on read.
 - `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
-  calculator working state (base shutter, the mixed Filter Stack's
-  wheels with their per-wheel contributions, the last Filter Source,
-  scale mode, selected film, profile override, optional
-  `targetShutterSeconds`).
+  calculator working state (base shutter, the Filter Stack's ND
+  wheels with their per-wheel contributions, the mounted auxiliary
+  filters with their contributions, the candidate Filter Sets, the
+  last ND Filter Source, scale mode, selected film, profile override,
+  optional `targetShutterSeconds`).
   Live-preview overlays (`CalculatorModel.liveBaseShutter` /
   `liveNDStep`) deliberately stay out of the snapshot — a preview
   only exists while a wheel drag is in flight on the active slot.
@@ -352,9 +390,15 @@ the app's `ExposureCalculator/CameraSlot/`).
   `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
   session. Stores raw `CameraSlotID` raw values, film/profile ids,
   an Optional photographer-supplied `customDisplayName` per slot,
-  and — additively — the mixed `filterStack` plus last Filter
-  Source. `ndStack` and the legacy scalar keep describing Standard
-  wheels only so an older build degrades to a valid Standard stack. The runtime resolves ids back through the preset catalog
+  and — additively — the `filterStack` (ND wheels), the last Filter
+  Source, the mounted `auxiliaryFilters`, and the
+  `candidateFilterSetIDs`. `ndStack` and the legacy scalar keep
+  describing Standard wheels only so an older build degrades to a
+  valid Standard stack. A snapshot written before auxiliary filters
+  existed restores through `FilterStack.migratingLegacyWheels`: its
+  CPL and GND wheel rows become auxiliary filters with the same item,
+  choice, and mode, and the sets they reference become candidates.
+  The runtime resolves ids back through the preset catalog
   and falls back to "No film" for any id no longer in the catalog.
   The `customDisplayName` field is additive; pre-PTIMER-123
   snapshots decode unchanged and the schema version stays at `1`.
@@ -419,7 +463,7 @@ maintain a parallel copy.
 
 | State | Owner |
 |---|---|
-| Calculator inputs (base shutter, mixed Filter Stack, last successfully added Filter Source) | `CalculatorModel` |
+| Calculator inputs (base shutter, Filter Stack of ND wheels plus mounted auxiliary filters, candidate Filter Sets, last successfully added ND Filter Source) | `CalculatorModel` |
 | Filter inventory (Filter Sets, physical items, order, colors) | `FilterInventoryModel` |
 | Filter summary captured on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.filterSummary` and `PersistentTimerMetadataSnapshot.filterSummary`) |
 | Selected film + profile override | `FilmSelectionModel` |

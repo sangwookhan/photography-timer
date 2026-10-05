@@ -237,6 +237,7 @@ struct FilterSetEditorSheet: View {
 struct FilterSetColorGrid: View {
     @Binding var selection: FilterSetColor
 
+    // Eleven palette colors read in hue order over two rows.
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 6)
 
     var body: some View {
@@ -269,10 +270,19 @@ struct FilterSetColorGrid: View {
 }
 
 /// One Filter Set: rename, recolor, and manage its physical items.
+/// The items are shown in two tabs — auxiliary (CPL, GND, Color,
+/// Effect) and ND — without splitting the physical set or duplicating
+/// an item (FILTER-SET-001).
 struct FilterSetDetailView: View {
+    enum ItemTab: Hashable {
+        case auxiliary
+        case nd
+    }
+
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let filterSetID: FilterSetID
 
+    @State private var itemTab: ItemTab = .auxiliary
     @State private var nameDraft: String = ""
     @FocusState private var isNameFieldFocused: Bool
     @State private var editingItem: FilterItemEditorContext?
@@ -310,11 +320,20 @@ struct FilterSetDetailView: View {
                 }
 
                 Section {
-                    if filterSet.items.isEmpty {
-                        Text("No filters registered yet.")
+                    Picker("Filters", selection: $itemTab) {
+                        Text(AuxiliaryFilterSummaryPresenter.title).tag(ItemTab.auxiliary)
+                        Text("ND").tag(ItemTab.nd)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("filter-set-item-tab")
+                    let visibleItems = itemTab == .auxiliary ? filterSet.auxiliaryItems : filterSet.ndItems
+                    if visibleItems.isEmpty {
+                        Text(itemTab == .auxiliary
+                            ? "No auxiliary filters registered yet."
+                            : "No ND filters registered yet.")
                             .foregroundStyle(.secondary)
                     }
-                    ForEach(filterSet.items) { item in
+                    ForEach(visibleItems) { item in
                         Button {
                             editingItem = FilterItemEditorContext(filterSetID: filterSetID, item: item)
                         } label: {
@@ -324,22 +343,29 @@ struct FilterSetDetailView: View {
                         .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
                     }
                     .onMove { source, destination in
-                        viewModel.moveFilterItems(in: filterSetID, fromOffsets: source, toOffset: destination)
+                        // The tab lists a filtered view of the one item
+                        // list; map the move back onto the full list so
+                        // the physical set is never split.
+                        guard let move = Self.fullListMove(visible: visibleItems, all: filterSet.items, fromOffsets: source, toOffset: destination) else { return }
+                        viewModel.moveFilterItems(in: filterSetID, fromOffsets: IndexSet(integer: move.from), toOffset: move.to)
                     }
                     .onDelete { offsets in
                         // One row per delete gesture; see the set list.
                         guard offsets.count == 1, let index = offsets.first,
-                              filterSet.items.indices.contains(index) else { return }
-                        pendingItemDeletion = filterSet.items[index]
+                              visibleItems.indices.contains(index) else { return }
+                        pendingItemDeletion = visibleItems[index]
                     }
+                    // Each tab adds only its own kinds: auxiliary filters
+                    // from the Auxiliary tab, ND filters from the ND tab.
                     Button {
                         editingItem = FilterItemEditorContext(
                             filterSetID: filterSetID,
                             item: nil,
+                            category: itemTab == .auxiliary ? .auxiliary : .nd,
                             initialUnit: editorSession.initialUnit
                         )
                     } label: {
-                        Label("Add filter", systemImage: "plus.circle")
+                        Label(itemTab == .auxiliary ? "Add auxiliary filter" : "Add ND filter", systemImage: "plus.circle")
                     }
                     .accessibilityIdentifier("filter-item-add-button")
                 } header: {
@@ -416,6 +442,26 @@ struct FilterSetDetailView: View {
         }
     }
 
+    /// Maps a move inside the tab's filtered list onto the full item
+    /// list: the moved item's full index, and the full index it lands
+    /// before (or the end). `nil` for a multi-row or out-of-range move.
+    static func fullListMove(visible: [FilterItem], all: [FilterItem], fromOffsets source: IndexSet, toOffset destination: Int) -> (from: Int, to: Int)? {
+        guard source.count == 1, let visibleFrom = source.first,
+              visible.indices.contains(visibleFrom),
+              let from = all.firstIndex(where: { $0.id == visible[visibleFrom].id }) else {
+            return nil
+        }
+        let to: Int
+        if destination >= visible.count {
+            guard let last = visible.last, let lastIndex = all.firstIndex(where: { $0.id == last.id }) else { return nil }
+            to = lastIndex + 1
+        } else {
+            guard let index = all.firstIndex(where: { $0.id == visible[destination].id }) else { return nil }
+            to = index
+        }
+        return (from, to)
+    }
+
     private func commitRename() {
         switch FilterSetRenameCommit.decide(draft: nameDraft, currentName: filterSet?.name) {
         case .rename(let name):
@@ -442,8 +488,18 @@ private struct FilterItemRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                    .foregroundStyle(.primary)
+                HStack(spacing: 5) {
+                    // A Color filter shows its actual color beside its
+                    // name (FILTER-COLOR-001); the name is spoken.
+                    if let color = item.behavior.opticalColor {
+                        Circle()
+                            .fill(Color.filterSet(color))
+                            .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
+                    }
+                    Text(item.name)
+                        .foregroundStyle(.primary)
+                }
                 Text(detailText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -469,6 +525,9 @@ private struct FilterItemRow: View {
             return "\(FilterWheelPresenter.kindName(.cpl)) · \(list) \(String(localized: "stops"))"
         case .gnd(let value):
             return "\(FilterWheelPresenter.kindName(.gnd)) · \(registeredText(value))"
+        case .color, .effect:
+            let detail = FilterWheelPresenter.auxiliaryLossDetailText(for: item.behavior) ?? ""
+            return "\(FilterWheelPresenter.kindName(item.behavior.kind)) · \(detail)"
         }
     }
 

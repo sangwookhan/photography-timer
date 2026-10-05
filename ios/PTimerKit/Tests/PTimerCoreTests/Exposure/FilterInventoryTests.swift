@@ -134,6 +134,48 @@ final class FilterInventoryTests: XCTestCase {
         }
     }
 
+    // MARK: FILTER-COLOR-001/002 — Color and Effect kinds
+
+    func testColorAndEffectLossIsStopsFromZeroToThirty() {
+        XCTAssertTrue(FilterExposureLoss(stops: 0).isValid, "Zero loss is allowed for Color and Effect filters.")
+        XCTAssertTrue(FilterExposureLoss(stops: 2).isValid)
+        XCTAssertTrue(FilterExposureLoss(stops: 30).isValid)
+        XCTAssertFalse(FilterExposureLoss(stops: -0.5).isValid)
+        XCTAssertFalse(FilterExposureLoss(stops: 30.5).isValid)
+        XCTAssertFalse(FilterExposureLoss(stops: .nan).isValid)
+
+        let red = FilterItemBehavior.color(FilterExposureLoss(stops: 2), .red)
+        XCTAssertEqual(red.kind, .color)
+        XCTAssertEqual(red.opticalColor, .red)
+        XCTAssertEqual(red.exposureLoss?.stops, 2)
+        XCTAssertNil(red.registeredValue, "A Color filter has no registered ND value; its loss is explicit.")
+        XCTAssertTrue(red.isValid)
+        XCTAssertFalse(FilterItemBehavior.color(FilterExposureLoss(stops: 31), .green).isValid)
+
+        let night = FilterItemBehavior.effect(FilterExposureLoss(stops: 0))
+        XCTAssertEqual(night.kind, .effect)
+        XCTAssertNil(night.opticalColor)
+        XCTAssertTrue(night.isValid)
+    }
+
+    func testAuxiliaryKindsNeverAppearOnAnNDWheel() {
+        let nd = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
+        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 2, unit: .stops)))
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 2), .red))
+        let night = FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 0.5)))
+        let set = FilterSet(name: "52mm", color: .blue, items: [nd, cpl, gnd, red, night])
+
+        XCTAssertEqual(set.ndItems.map(\.id), [nd.id])
+        XCTAssertEqual(set.auxiliaryItems.map(\.id), [cpl.id, gnd.id, red.id, night.id])
+        XCTAssertFalse(FilterItemKind.fixed.isAuxiliary)
+        for kind in [FilterItemKind.cpl, .gnd, .color, .effect] {
+            XCTAssertTrue(kind.isAuxiliary, "\(kind)")
+        }
+        XCTAssertTrue(FilterStack.rows(for: red).isEmpty, "A Color filter offers no wheel row.")
+        XCTAssertTrue(FilterStack.rows(for: night).isEmpty, "An Effect filter offers no wheel row.")
+    }
+
     // MARK: FILTER-ITEM-002 — duplicates are distinct items
 
     func testEqualItemsRemainDistinctByID() {
@@ -143,5 +185,17 @@ final class FilterInventoryTests: XCTestCase {
         XCTAssertNotEqual(first.id, second.id)
         let inventory = FilterInventory(filterSets: [FilterSet(name: "Holder", color: .red, items: [first, second])])
         XCTAssertEqual(inventory.item(withID: second.id)?.item, second)
+    }
+
+    /// The shared palette reads in hue order and holds the required
+    /// Red, Yellow, Yellow-green, Green, and Blue, with Red-orange,
+    /// Orange, and Yellow-orange between Red and Yellow and no
+    /// near-duplicates (FILTER-COLOR-004). Existing tokens keep their
+    /// stored values.
+    func testPaletteIsInHueOrderWithTheRequiredColors() {
+        XCTAssertEqual(FilterSetColor.allCases, [.red, .redOrange, .orange, .yellowOrange, .yellow, .yellowGreen, .green, .teal, .blue, .purple, .pink])
+        XCTAssertEqual(FilterSetColor.yellowGreen.rawValue, "yellowGreen")
+        XCTAssertEqual(FilterSetColor.redOrange.rawValue, "redOrange")
+        XCTAssertEqual(FilterSetColor.yellowOrange.rawValue, "yellowOrange")
     }
 }

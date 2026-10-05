@@ -19,6 +19,7 @@ import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -104,14 +105,19 @@ class ShootingAppViewModel(
 
     /**
      * The user's Filter Sets and physical items (PTIMER-221). Retained here
-     * so every UI generation shares one owner; the calculator is the facade
-     * that mutates it and reconciles every camera stack afterwards.
+     * so every UI generation shares one owner. It stays private: the
+     * calculator is the only writer, the facade that mutates it and
+     * reconciles every camera stack afterwards, and the UI reads
+     * [filterInventory].
      */
-    val filterInventory = FilterInventoryModel(
+    private val filterInventoryModel = FilterInventoryModel(
         store = inventoryStore,
         initial = initialInventory,
         persistenceWriter = persistence,
     )
+
+    /** The inventory, read-only, for the composition. */
+    val filterInventory: StateFlow<FilterInventory> = filterInventoryModel.inventory
 
     /** Calculator state holder across camera slots (unchanged pure Kotlin type). */
     val calculator = CalculatorController(
@@ -120,7 +126,7 @@ class ShootingAppViewModel(
             timers.onEvent(ShootingIntent.StartTimer(duration, identity))
         },
         initialSession = initialSession,
-        inventoryModel = filterInventory,
+        inventoryModel = filterInventoryModel,
         // The ND cleanup timer lives with the state it judges
         // (PTIMER-199 M3 follow-up, PTIMER-223's remaining scope):
         // owned here, it keeps running across configuration changes

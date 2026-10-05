@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:21:54.690Z" hostname="AL03230922ui-MacBookPro.local" time="0.006">
+  <properties/>
+  <testcase name="anAbsentItemsFieldIsAnEmptySetNotDamage" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.002"/>
+  <testcase name="aNonArrayItemsFieldDropsTheSetAndDegrades" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="unknownSchemaVersionAndMalformedRootAreRejected" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="blankIdsAndNamesAreSkippedOnRestore" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="anUnknownColorRestoresAsTheDefault" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="inventoryRoundTripsThroughTheCodec" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.002"/>
+  <testcase name="retiredPaletteTokensMapToTheirNearestColor" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="duplicateItemIdsCollapseFirstWins" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="aMalformedItemIsSkippedWhileItsFilterSetSurvives" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="duplicateFilterSetIdsCollapseFirstWins" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="aStringItemsFieldDropsTheSetAndDegrades" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="aFilterSetThatParsesButCannotBeRestoredDegradesTheOutcome" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="duplicateItemIdsDegradeTheOutcome" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="aMalformedFilterSetIsDroppedAndTheOutcomeDegrades" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.001"/>
+  <testcase name="anIntactInventoryStaysLoaded" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <testcase name="colorAndEffectItemsRoundTripWithTheirLossAndColor" classname="com.sangwook.ptimer.core.persistence.FilterInventoryCodecTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

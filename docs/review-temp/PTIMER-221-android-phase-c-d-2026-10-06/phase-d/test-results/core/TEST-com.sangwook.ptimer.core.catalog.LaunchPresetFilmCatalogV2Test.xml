@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:21:54.493Z" hostname="AL03230922ui-MacBookPro.local" time="0.125">
+  <properties/>
+  <testcase name="rejectsExplicitNullSourceTitle" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.028"/>
+  <testcase name="rejectsLimitedGuidanceProfileWithSourceEvidenceCarrier" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.024"/>
+  <testcase name="rejectsPromotedUnofficialPrimaryWithEmptyReferencePoints" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.003"/>
+  <testcase name="rejectsTableProfileWithReferenceRangesCarrier" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.003"/>
+  <testcase name="rejectsTableProfileWithReferencePointsCarrier" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.002"/>
+  <testcase name="sourceLinksAreDroppedFromAdaptedOutput" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.005"/>
+  <testcase name="rejectsExplicitNullCorrectedReferencePoint" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.001"/>
+  <testcase name="rejectsPromotedUnofficialPrimaryBackedByOfficialManufacturerSource" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="rejectsTableCalculationWithFormulaOnlyFamilyKey" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.002"/>
+  <testcase name="rejectsFormulaCalculationWithTableOnlyAnchorsKey" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.001"/>
+  <testcase name="rejectsTableCalculationWithLimitedGuidanceOnlyGuidanceKey" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="bundledPromotedRolleiRetro400SPrimaryLoads" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.019"/>
+  <testcase name="rejectsPromotedUnofficialPrimaryWithNonFormulaModel" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="rejectsCalculationKindDiscriminator" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.001"/>
+  <testcase name="rejectsExplicitNullSourceLink" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="rejectsFormulaCalculationWithLimitedGuidanceOnlyNoCorrectionRangeKey" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="rejectsPromotedUnofficialPrimaryWithHighConfidenceSource" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="rejectsLimitedGuidanceCalculationWithFormulaOnlyExponentKey" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.001"/>
+  <testcase name="rejectsLimitedGuidanceCalculationWithTableOnlyAnchorsKey" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="userSelectableFilmsRequireOfficialSourceLinks" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.007"/>
+  <testcase name="bundledV2CatalogPrimaryProfileExposureGolden" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.018"/>
+  <testcase name="rejectsFormulaProfileWithTableEvidenceCarrier" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.001"/>
+  <testcase name="bundledV2CatalogDeclaresExpectedLaunchInvariants" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.009"/>
+  <testcase name="providesUserVisibleOfficialSourceTreatsBlankUrlsAsMissing" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <testcase name="rejectsPromotedUnofficialPrimaryWithoutPracticalCommunityBasis" classname="com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2Test" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

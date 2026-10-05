@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:21:54.724Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="legacyPayloadWithoutNdStopsRestoresWholeStop" classname="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" time="0.0"/>
+  <testcase name="unsupportedNdStopsIsIgnoredAfterDecode" classname="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" time="0.0"/>
+  <testcase name="roundTripsActiveSlotSnapshotsAndNames" classname="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" time="0.001"/>
+  <testcase name="commercialPresetNdStopsSurvivesJsonRoundTrip" classname="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" time="0.0"/>
+  <testcase name="malformedPayloadDecodesToNull" classname="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" time="0.0"/>
+  <testcase name="unknownSchemaVersionDecodesToNull" classname="com.sangwook.ptimer.core.persistence.SlotSessionCodecTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

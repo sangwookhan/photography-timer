@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:21:54.671Z" hostname="AL03230922ui-MacBookPro.local" time="0.003">
+  <properties/>
+  <testcase name="formatterLabelsAgreeWithTheMapping" classname="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" time="0.003"/>
+  <testcase name="offLadderValuesHaveNoLabel" classname="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" time="0.0"/>
+  <testcase name="knownFactorsRecoverTheirLadderValue" classname="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" time="0.0"/>
+  <testcase name="ladderFactorsMatchTheStandardLabels" classname="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" time="0.0"/>
+  <testcase name="unlabeledFactorsFallThrough" classname="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" time="0.0"/>
+  <testcase name="commercialMappingRoundTripsEveryLadderValue" classname="com.sangwook.ptimer.core.exposure.NDCommercialFactorMappingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

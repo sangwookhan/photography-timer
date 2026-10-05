@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:22:01.251Z" hostname="AL03230922ui-MacBookPro.local" time="0.011">
+  <properties/>
+  <testcase name="stagesAdvanceThroughEachRepresentativeAsTimersComplete" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.009"/>
+  <testcase name="preAlertsDoNotAffectOngoingOrStageSequence" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.0"/>
+  <testcase name="mediumTimerSchedulesPre1FiveSecondsBeforeCompletion" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.0"/>
+  <testcase name="shortTimerSchedulesCompletionOnly" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.001"/>
+  <testcase name="longTimerSchedulesPre1AtTenAndPre2AtFiveBeforeCompletion" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.0"/>
+  <testcase name="noRunningTimersProducesNoAlarmsAndNoOngoing" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.0"/>
+  <testcase name="completionAlarmsCarryCameraIdentityAndSourceLine" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.001"/>
+  <testcase name="runningTimersYieldAlarmsAndOngoingSummaryFromSoonest" classname="com.sangwook.ptimer.app.notify.TimerAlertPlannerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

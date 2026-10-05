@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.notify.ExactAlarmPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:22:01.246Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="ungatedOsSchedulesExactAndNeverWarns" classname="com.sangwook.ptimer.app.notify.ExactAlarmPolicyTest" time="0.0"/>
+  <testcase name="allowedSchedulesExactAndDoesNotWarn" classname="com.sangwook.ptimer.app.notify.ExactAlarmPolicyTest" time="0.0"/>
+  <testcase name="deniedFallsBackToInexactAndWarns" classname="com.sangwook.ptimer.app.notify.ExactAlarmPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

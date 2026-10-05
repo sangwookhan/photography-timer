@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:22:02.272Z" hostname="AL03230922ui-MacBookPro.local" time="0.035">
+  <properties/>
+  <testcase name="initRestoresPersistedTimersExactlyOnce" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.012"/>
+  <testcase name="completionWhileNoUiIsAttachedNotifiesExactlyOnce" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.002"/>
+  <testcase name="aNewOwnerRestoresFromTheHandedPersistedSessionOnly" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.004"/>
+  <testcase name="calculatorChangePersistsOnlyAfterTheDebounceWindow" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.001"/>
+  <testcase name="notifierFailureDoesNotKillTheCollectorAndRetriesOnTheNextEmission" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.002"/>
+  <testcase name="rapidCalculatorChangesCoalesceIntoOneLatestWrite" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.001"/>
+  <testcase name="tickLoopAdvancesAndAutoCompletesRunningTimers" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.002"/>
+  <testcase name="restoredCompletedTimersDoNotNotifyOnLaunch" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.002"/>
+  <testcase name="nearExpiryRestoredTimerStillNotifiesOnItsFirstTickCompletion" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.001"/>
+  <testcase name="secondActivityGenerationReceivesTheRetainedOwnerAndSlotState" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.004"/>
+  <testcase name="clearingTheOwnerFlushesAPendingDebouncedSlotSessionWrite" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.002"/>
+  <testcase name="freshLaunchWithoutCalculatorChangesWritesNoSlotSession" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.001"/>
+  <testcase name="anAbsentInventoryTheBootstrapReadIsNotReadAgain" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.0"/>
+  <testcase name="theRetainedFilterInventoryIsTheOneTheCalculatorReconcilesAndItPersistsThroughTheWriter" classname="com.sangwook.ptimer.app.vm.ShootingAppViewModelTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

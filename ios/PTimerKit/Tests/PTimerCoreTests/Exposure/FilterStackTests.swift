@@ -600,4 +600,17 @@ final class FilterStackTests: XCTestCase {
         let withBag = FilterStack.reassigningRoles(wheels: [.standard(NDStep(stops: 0))], auxiliaryFilters: mounts, selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
         XCTAssertEqual(withBag.auxiliaryFilters, [MountedAuxiliaryFilter(filterSetID: bagID, itemID: red.id, choice: .registeredLoss)], "Bag is selected, so the Red follows; Pouch is not, so the CPL is unmounted.")
     }
+
+    /// ND-001 / ND-PERSIST-005: Standard offers whole stops only, but a
+    /// wheel holding a fractional value saved before keeps that value as
+    /// its own row; other wheels never offer it.
+    func testASavedFractionalStandardValueStaysOnlyOnItsOwnWheel() {
+        let stack = FilterStack(standardSteps: [NDStep(stops: 6.6), NDStep(stops: 2)])
+        let own = stack.rowOptions(forWheelAt: 0, inventory: .empty, scale: .default).map(\.row.contributionStops)
+        let other = stack.rowOptions(forWheelAt: 1, inventory: .empty, scale: .default).map(\.row.contributionStops)
+        XCTAssertEqual(own.filter { $0 != $0.rounded() }, [6.6], "The saved value stays selectable on its wheel.")
+        XCTAssertEqual(Array(own.prefix(8)), [0, 1, 2, 3, 4, 5, 6, 6.6], "In numeric order among the whole stops.")
+        XCTAssertTrue(other.allSatisfy { $0 == $0.rounded() }, "Never offered as a new Standard choice.")
+        XCTAssertEqual(stack.effectiveStep.stops, 8.6, accuracy: 1e-9, "Its contribution is unchanged.")
+    }
 }

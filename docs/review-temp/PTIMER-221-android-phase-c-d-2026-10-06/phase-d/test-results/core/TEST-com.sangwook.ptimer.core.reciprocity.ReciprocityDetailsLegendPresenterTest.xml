@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:34.031Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="cautionWarningDoesNotProduceStopLine" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" time="0.001"/>
+  <testcase name="developmentProducesDevelopmentLine" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" time="0.0"/>
+  <testcase name="notRecommendedWarningProducesStopLine" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" time="0.0"/>
+  <testcase name="ccFilterProducesKodakColorCorrectionLine" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" time="0.0"/>
+  <testcase name="noAdjustmentsYieldEmpty" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" time="0.0"/>
+  <testcase name="nonKodakSingleChannelFilterUsesBareLetterLine" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsLegendPresenterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStoreTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:38.090Z" hostname="AL03230922ui-MacBookPro.local" time="0.079">
+  <properties/>
+  <testcase name="loadDelegatesToTheInnerStoreInline" classname="com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStoreTest" time="0.002"/>
+  <testcase name="writesFromTwoGenerationsSharingOneWriterArriveInSubmissionOrder" classname="com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStoreTest" time="0.001"/>
+  <testcase name="savesAreDeferredUntilTheWriterRuns" classname="com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStoreTest" time="0.0"/>
+  <testcase name="clearIsDeferredThenReachesTheInnerStore" classname="com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStoreTest" time="0.0"/>
+  <testcase name="aFreshBootstrapReadObservesAPendingLibraryWrite" classname="com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStoreTest" time="0.076"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

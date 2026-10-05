@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.persistence.FilterRestoreReconciliationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:33.990Z" hostname="AL03230922ui-MacBookPro.local" time="0.006">
+  <properties/>
+  <testcase name="aMovedNdWheelFollowsAndAMovedAuxiliaryItemIsJudgedAgainstTheStoredSelection" classname="com.sangwook.ptimer.core.persistence.FilterRestoreReconciliationTest" time="0.004"/>
+  <testcase name="aDeletedItemKeepsTheDeletionRules" classname="com.sangwook.ptimer.core.persistence.FilterRestoreReconciliationTest" time="0.0"/>
+  <testcase name="aKindChangeMovesTheSelectionIntoTheItemsNewRole" classname="com.sangwook.ptimer.core.persistence.FilterRestoreReconciliationTest" time="0.001"/>
+  <testcase name="aMovedAuxiliaryItemRestoresOnlyUnderASelectedSet" classname="com.sangwook.ptimer.core.persistence.FilterRestoreReconciliationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.exposure.FilterStackTest" tests="24" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:33.948Z" hostname="AL03230922ui-MacBookPro.local" time="0.01">
+  <properties/>
+  <testcase name="auxiliaryChangesNeverMoveTheNdWheels" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.004"/>
+  <testcase name="addingAWheelNeverChangesTheEffectiveValue" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.001"/>
+  <testcase name="theCapRefusesAuxiliaryAfterNdAndNdAfterAuxiliary" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="auxiliaryFiltersKeepTheirDisplayOrderWhateverTheMountOrder" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="sourceGroupsSortByRegisteredSubtotalAndStayContiguous" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="validatedRejectsOverCapDuplicateAndUnresolvedWheels" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="standardRowsAreTruncatedToTheRemainingBudget" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="equalSubtotalsPutStandardFirstThenFilterSetUserOrder" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="gndRecordOnlyContributesZeroAndApplyFullContributesRegisteredValue" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.001"/>
+  <testcase name="recordOnlyRemainsMountableAtCapAndEnablingContributionIsRejected" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="legacyCplAndGndWheelsMigrateIntoAuxiliaryFilters" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.001"/>
+  <testcase name="twoEqualItemsSumWhileASecondSelectionOfEitherIsUnavailable" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="emptyAndRecordOnlyAreDistinctStates" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="addUnavailabilityReasons" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="nd1000ContributesExactlyTenStopsThroughSumSortAndCap" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.001"/>
+  <testcase name="aKindChangeMovesTheSelectionIntoTheNewRole" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="auxiliaryItemsNeverAppearOnAnNdWheelAndMountOnce" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="aMovedAuxiliaryItemFollowsOnlyIntoASelectedSet" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="anyNumberOfAuxiliaryFiltersMountWithinTheCap" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="withinSourceSortIsDescendingWithEmptyLast" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="standardSelectionCanReorderGroupsOnlyThroughItsSubtotal" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="fourNdWheelsRefuseAnAuxiliaryMountAndThreeKeepPlusAway" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="normalizationRestoresAVanishedCplChoiceAsEmptyNeverAnotherChoice" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <testcase name="normalizationDropsUnknownSetsEmptiesUnknownItemsAndFallsBackToStandardZero" classname="com.sangwook.ptimer.core.exposure.FilterStackTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.persistence.PersistenceWriterTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:38.482Z" hostname="AL03230922ui-MacBookPro.local" time="0.124">
+  <properties/>
+  <testcase name="submitDefersTheWriteInsteadOfRunningItInline" classname="com.sangwook.ptimer.app.persistence.PersistenceWriterTest" time="0.001"/>
+  <testcase name="readOrderedRunsAfterAPendingWriteAndObservesItsEffect" classname="com.sangwook.ptimer.app.persistence.PersistenceWriterTest" time="0.056"/>
+  <testcase name="writersSharingOneWorkerStaySerialAcrossAGenerationSwap" classname="com.sangwook.ptimer.app.persistence.PersistenceWriterTest" time="0.007"/>
+  <testcase name="writesRunOneAtATimeInSubmissionOrder" classname="com.sangwook.ptimer.app.persistence.PersistenceWriterTest" time="0.06"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

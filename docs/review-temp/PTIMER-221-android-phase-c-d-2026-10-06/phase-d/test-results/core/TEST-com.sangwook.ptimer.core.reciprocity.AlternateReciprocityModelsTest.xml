@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:34.028Z" hostname="AL03230922ui-MacBookPro.local" time="0.003">
+  <properties/>
+  <testcase name="appDerivedModelsAreFlagged" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.001"/>
+  <testcase name="profileResolvesById" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.0"/>
+  <testcase name="fomapanExposesOhzartThenAppFormula" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.0"/>
+  <testcase name="triX400PickerOrderLeadsWithOfficialTableThenPrimary" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.0"/>
+  <testcase name="portraUnofficialProfileIsResolvable" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.0"/>
+  <testcase name="filmsWithoutAlternatesReturnEmpty" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.0"/>
+  <testcase name="ohzartTableReproducesPublishedAnchors" classname="com.sangwook.ptimer.core.reciprocity.AlternateReciprocityModelsTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

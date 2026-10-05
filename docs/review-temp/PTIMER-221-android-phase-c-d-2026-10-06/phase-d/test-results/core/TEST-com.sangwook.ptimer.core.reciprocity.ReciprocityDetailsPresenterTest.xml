@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:34.033Z" hostname="AL03230922ui-MacBookPro.local" time="0.013">
+  <properties/>
+  <testcase name="customFilmSurfacesNotesReferenceUrlAndSourceType" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.005"/>
+  <testcase name="presetFilmHasNoUserProvenanceRows" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.001"/>
+  <testcase name="tableSourcedGuardedFormulaReadsAppDerived" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.002"/>
+  <testcase name="fp4PlusShowsCompactHalfSecondNoCorrectionBoundary" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="guidanceAndLegendSurfaceFromProfileAdjustments" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="presetWithoutAdjustmentsHasNoReferenceTableOrLegend" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.001"/>
+  <testcase name="correctedTextReflectsQuantifiedConfidence" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="delta3200ShowsCompactBoundaryAndAmbiguityNote" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="formulaFilmRendersEquationModelAndResult" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.001"/>
+  <testcase name="limitedGuidanceWithoutColorFilterKeepsGuidanceMessageWithoutColorCorrectionRow" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="beyondRangeStatusLeadsWithManufacturerStopSignal" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="ektachromeLimitedGuidanceSurfacesNoCorrectionAndColorCorrectionReferenceRows" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.001"/>
+  <testcase name="officialSourceLinksSurfaceOnDisplayState" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="officialSheetWithoutReciprocityDataShowsNote" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.001"/>
+  <testcase name="phoenixFilmsShowCompactOneSecondNoCorrectionBoundary" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.0"/>
+  <testcase name="pancro400KeepsEvidenceBackedSourceReferenceAndSourceNote" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenterTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

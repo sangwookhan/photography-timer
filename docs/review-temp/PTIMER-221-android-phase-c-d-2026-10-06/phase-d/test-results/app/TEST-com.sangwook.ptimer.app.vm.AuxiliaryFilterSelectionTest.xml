@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-05T20:26:38.627Z" hostname="AL03230922ui-MacBookPro.local" time="0.054">
+  <properties/>
+  <testcase name="aSingleCplShowsItsTypeWhileAGndAlwaysShowsItsName" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.022"/>
+  <testcase name="theSubtotalCountsOnlyAuxiliaryFilters" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.008"/>
+  <testcase name="anNdChangeAfterAuxiliaryFiltersIsHeldToTheRemainingBudget" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.006"/>
+  <testcase name="anAuxiliaryFilterCannotJoinFourNdWheels" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.004"/>
+  <testcase name="moreThanThreeMountInDisplayOrderWhateverTheMountOrder" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.004"/>
+  <testcase name="mainShowsTheFirstThreeAndCountsTheRest" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.004"/>
+  <testcase name="leavingAUsedSetOutTakesItsFiltersOff" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.002"/>
+  <testcase name="anAuxiliaryFilterAfterNdIsRefusedPastThirtyStops" classname="com.sangwook.ptimer.app.vm.AuxiliaryFilterSelectionTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -10,9 +10,46 @@ import SwiftUI
 /// the notation the editing session remembers from the last saved
 /// Fixed or GND item (FILTER-ITEM-007). The kind always starts Fixed.
 struct FilterItemEditorContext: Identifiable {
+    /// Which editing path opened the editor: the Filter Set's Auxiliary
+    /// tab (CPL, GND, Color, Effect) or its ND tab (ND items only). An
+    /// existing item's own kind decides it.
+    enum Category {
+        case auxiliary
+        case nd
+
+        init(kind: FilterItemKind) {
+            self = kind.isAuxiliary ? .auxiliary : .nd
+        }
+
+        /// The kinds a new item on this path may take.
+        var kinds: [FilterItemKind] {
+            switch self {
+            case .auxiliary:
+                return FilterItemKind.allCases.filter(\.isAuxiliary)
+            case .nd:
+                return [.fixed]
+            }
+        }
+    }
+
+    /// Kinds the editor offers: a new item stays within its tab's
+    /// kinds; an existing item may be corrected to any kind (for
+    /// example an ND item entered by mistake becomes a Color filter).
+    var selectableKinds: [FilterItemKind] {
+        item == nil ? category.kinds : FilterItemKind.allCases
+    }
+
     let filterSetID: FilterSetID
     let item: FilterItem?
+    var category: Category
     var initialUnit: FilterValueUnit = .stops
+
+    init(filterSetID: FilterSetID, item: FilterItem?, category: Category? = nil, initialUnit: FilterValueUnit = .stops) {
+        self.filterSetID = filterSetID
+        self.item = item
+        self.category = item.map { Category(kind: $0.behavior.kind) } ?? category ?? .nd
+        self.initialUnit = initialUnit
+    }
 
     var id: String {
         "\(filterSetID.rawValue)-\(item?.id.rawValue ?? "new")"
@@ -20,12 +57,14 @@ struct FilterItemEditorContext: Identifiable {
 }
 
 /// Registers or edits one physical filter (FILTER-ITEM-002/003/004,
-/// FILTER-CPL-001…004, FILTER-GND-001/003). The kind is chosen
-/// explicitly; Fixed and GND take a decimal value in Stops, OD, or ND
-/// factor and show the canonical conversion; a CPL exposes its three
-/// exposure-loss fields on a decimal-capable numeric keyboard. Saving
-/// is blocked with the affected cameras when any stack would exceed
-/// 30 stops (FILTER-ITEM-005).
+/// FILTER-CPL-001…004, FILTER-GND-001/003, FILTER-COLOR-001/002). The
+/// kind is chosen explicitly; Fixed and GND take a decimal value in
+/// Stops, OD, or ND factor and show the canonical conversion; a CPL
+/// exposes its three exposure-loss fields on a decimal-capable numeric
+/// keyboard; a Color filter records its optical color beside an
+/// explicit loss in stops, and an Effect filter its explicit loss.
+/// Saving is blocked with the affected cameras when any stack would
+/// exceed 30 stops (FILTER-ITEM-005).
 struct FilterItemEditorView: View {
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let context: FilterItemEditorContext
@@ -39,6 +78,9 @@ struct FilterItemEditorView: View {
     @State private var valueText: String
     @State private var unit: FilterValueUnit
     @State private var cplFields: [String]
+    /// Optical color of a Color filter (FILTER-COLOR-001); kept even
+    /// while another kind is selected so switching back restores it.
+    @State private var opticalColor: FilterSetColor
     @State private var blockedSave: BlockedSave?
 
     private struct BlockedSave: Identifiable {
@@ -66,9 +108,11 @@ struct FilterItemEditorView: View {
         self.onDismiss = onDismiss
         let item = context.item
         _name = State(initialValue: item?.name ?? "")
-        // The kind never inherits from the previous item: every new
-        // item starts Fixed (FILTER-ITEM-007).
-        _kind = State(initialValue: item?.behavior.kind ?? .fixed)
+        // The kind never inherits from the previous item: a new ND item
+        // is ND, and a new auxiliary item starts at the first
+        // auxiliary kind (FILTER-ITEM-007, FILTER-SET-001).
+        _kind = State(initialValue: item?.behavior.kind ?? context.category.kinds[0])
+        _opticalColor = State(initialValue: item?.behavior.opticalColor ?? .red)
         switch item?.behavior {
         case .fixed(let value), .gnd(let value):
             _valueText = State(initialValue: FilterWheelPresenter.trimmedNumber(value.value))
@@ -78,6 +122,12 @@ struct FilterItemEditorView: View {
             _valueText = State(initialValue: "")
             _unit = State(initialValue: .stops)
             _cplFields = State(initialValue: Self.fieldTexts(choices))
+        case .color(let loss, _), .effect(let loss):
+            // Color / Effect loss is always stops; the notation picker
+            // is not shown for these kinds.
+            _valueText = State(initialValue: FilterWheelPresenter.trimmedNumber(loss.stops))
+            _unit = State(initialValue: .stops)
+            _cplFields = State(initialValue: Self.fieldTexts(CPLExposureLossChoices.defaults))
         case nil:
             // A new item starts in the session's remembered notation
             // (Stops until a Fixed or GND item was saved in this
@@ -104,9 +154,24 @@ struct FilterItemEditorView: View {
         return registered.isValid ? registered : nil
     }
 
+    /// Explicit loss of a Color or Effect item (FILTER-COLOR-001/002):
+    /// stops as entered, zero allowed, at most 30.
+    private var exposureLoss: FilterExposureLoss? {
+        guard let value = FilterDecimalInput.parseDecimal(valueText) else { return nil }
+        let loss = FilterExposureLoss(stops: value)
+        return loss.isValid ? loss : nil
+    }
+
     private var valueErrorText: String? {
-        guard kind != .cpl, !valueText.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
-        return registeredValue == nil ? String(localized: "Enter a value above 0 and at most 30 stops.") : nil
+        guard !valueText.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        switch kind {
+        case .fixed, .gnd:
+            return registeredValue == nil ? String(localized: "Enter a value above 0 and at most 30 stops.") : nil
+        case .color, .effect:
+            return exposureLoss == nil ? String(localized: "Enter a value from 0 to 30 stops.") : nil
+        case .cpl:
+            return nil
+        }
     }
 
     private var cplParses: [FilterDecimalInput.CPLFieldParse] {
@@ -134,6 +199,10 @@ struct FilterItemEditorView: View {
             return registeredValue.map(FilterItemBehavior.gnd)
         case .cpl:
             return cplChoices.map(FilterItemBehavior.cpl)
+        case .color:
+            return exposureLoss.map { FilterItemBehavior.color($0, opticalColor) }
+        case .effect:
+            return exposureLoss.map(FilterItemBehavior.effect)
         }
     }
 
@@ -149,17 +218,23 @@ struct FilterItemEditorView: View {
                         .textInputAutocapitalization(.words)
                         .focused($focusedField, equals: .name)
                         .accessibilityIdentifier("filter-item-name-field")
-                    Picker("Kind", selection: $kind) {
-                        ForEach(FilterItemKind.allCases, id: \.self) { kind in
-                            Text(FilterWheelPresenter.kindName(kind)).tag(kind)
+                    // The auxiliary path offers only auxiliary kinds; the
+                    // ND path has one kind and shows no picker.
+                    if context.selectableKinds.count > 1 {
+                        Picker("Kind", selection: $kind) {
+                            ForEach(context.selectableKinds, id: \.self) { kind in
+                                Text(FilterWheelPresenter.kindName(kind)).tag(kind)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("filter-item-kind-picker")
                     }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("filter-item-kind-picker")
                 } header: {
-                    Text("Filter")
+                    Text(context.item == nil ? (context.category == .auxiliary ? "Auxiliary filter" : "ND filter") : "Filter")
                 } footer: {
-                    Text("The kind is your choice; the app never guesses it from the name.")
+                    if context.selectableKinds.count > 1 {
+                        Text("The kind is your choice; the app never guesses it from the name.")
+                    }
                 }
 
                 switch kind {
@@ -167,6 +242,11 @@ struct FilterItemEditorView: View {
                     valueSection
                 case .cpl:
                     cplSection
+                case .color:
+                    opticalColorSection
+                    lossSection
+                case .effect:
+                    lossSection
                 }
 
                 if kind == .gnd {
@@ -207,6 +287,8 @@ struct FilterItemEditorView: View {
                     Text("This value would push the filter stack past 30 stops on \(blocked.cameras.joined(separator: ", ")). Change the mounted filters there first, or use a smaller value.")
                 case .removesSelectedChoice:
                     Text("A choice of this filter is currently selected on \(blocked.cameras.joined(separator: ", ")). Keep that choice, or change the wheel selection on those cameras first.")
+                case .tooManyNDWheels:
+                    Text("This filter is mounted on \(blocked.cameras.joined(separator: ", ")), where the ND wheels are already full. Remove an ND wheel there first, or keep this filter's kind.")
                 }
             }
             .onAppear {
@@ -248,6 +330,53 @@ struct FilterItemEditorView: View {
             Text(kind == .gnd ? "Full density" : "Exposure loss")
         } footer: {
             Text("Stops are kept as entered; OD divides by 0.3; an ND factor converts as log2. The value is never snapped to the Standard ladder.")
+        }
+    }
+
+    /// Color of a Color filter (FILTER-COLOR-001): chosen from the same
+    /// palette as Filter Sets, each choice drawn in its actual color,
+    /// with the selected color's name, separate from the loss.
+    private var opticalColorSection: some View {
+        Section {
+            FilterSetColorGrid(selection: $opticalColor)
+                .accessibilityIdentifier("filter-item-optical-color-picker")
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.filterSet(opticalColor))
+                    .frame(width: 12, height: 12)
+                    .accessibilityHidden(true)
+                Text(FilterWheelPresenter.opticalColorName(opticalColor))
+            }
+            .accessibilityElement(children: .combine)
+        } header: {
+            Text("Optical color")
+        } footer: {
+            Text("The optical color identifies the filter. It never sets the exposure loss.")
+        }
+    }
+
+    /// Explicit loss of a Color or Effect filter in stops
+    /// (FILTER-COLOR-001/002): user-supplied, zero allowed, never
+    /// inferred from the color or the name.
+    private var lossSection: some View {
+        Section {
+            HStack {
+                TextField("Value", text: $valueText)
+                    .keyboardType(.decimalPad)
+                    .focused($focusedField, equals: .value)
+                    .accessibilityIdentifier("filter-item-loss-field")
+                Text("stops")
+                    .foregroundStyle(.secondary)
+            }
+            if let valueErrorText {
+                Text(valueErrorText)
+                    .foregroundStyle(.red)
+                    .font(.footnote)
+            }
+        } header: {
+            Text("Exposure loss")
+        } footer: {
+            Text("Enter the loss in stops from the maker's data or your own metering. Zero is allowed for a filter with no measurable loss.")
         }
     }
 

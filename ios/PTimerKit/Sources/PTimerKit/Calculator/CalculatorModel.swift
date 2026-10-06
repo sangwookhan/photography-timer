@@ -65,16 +65,18 @@ public final class CalculatorModel {
                 guard let step = wheel.standardStep else { return wheel }
                 return .standard(sanitizedNDStep(step, for: scaleMode))
             }
-            if FilterStack.validated(wheels: snapped, inventory: filterInventory) == nil {
+            // The mounted auxiliary filters stay and count toward the cap.
+            let auxiliary = filterStack.auxiliaryFilters
+            if FilterStack.validated(wheels: snapped, auxiliaryFilters: auxiliary, inventory: filterInventory) == nil {
                 for index in snapped.indices.reversed() {
-                    guard FilterStack.validated(wheels: snapped, inventory: filterInventory) == nil,
+                    guard FilterStack.validated(wheels: snapped, auxiliaryFilters: auxiliary, inventory: filterInventory) == nil,
                           let original = originals[index].standardStep else {
                         continue
                     }
                     snapped[index] = .standard(sanitizedNDStepRoundingDown(original, for: scaleMode))
                 }
             }
-            if let restacked = FilterStack.validated(wheels: snapped, inventory: filterInventory) {
+            if let restacked = FilterStack.validated(wheels: snapped, auxiliaryFilters: auxiliary, inventory: filterInventory) {
                 filterStack = restacked
             }
             liveSelections = liveSelections.mapValues { selection in
@@ -143,6 +145,11 @@ public final class CalculatorModel {
     /// snapshots.
     public private(set) var lastFilterSource: FilterSource = .standard
 
+    /// The active slot's candidate Filter Sets (FILTER-CAMERA-001), in
+    /// user-defined set order. Assignment never mounts anything; every
+    /// set the stack references is always a candidate.
+    public private(set) var candidateFilterSetIDs: [FilterSetID] = []
+
     /// Stable per-wheel identity (PTIMER-199 §4.3): `ndFilterWheelIDs[i]`
     /// names the wheel at `filterWheels[i]` and follows it through
     /// the commit sort, so the UI can render a reorder as wheels
@@ -201,21 +208,34 @@ public final class CalculatorModel {
 
     /// Replaces the resolution inventory and re-resolves the committed
     /// stack against it: a wheel whose Filter Set vanished is dropped
-    /// (its identity with it), an item that vanished reads Empty, a
-    /// stale last source falls back to Standard. Should the resolved
-    /// contributions no longer fit the cap — the facade blocks such
-    /// edits up front — every mounted item reads Empty instead of
-    /// clamping any value.
+    /// (its identity with it), an item that vanished reads Empty, an
+    /// auxiliary filter that no longer resolves is unmounted, the
+    /// candidates follow the inventory, and a stale last source falls
+    /// back to Standard. Should the resolved contributions no longer
+    /// fit the cap — the facade blocks such edits up front — every
+    /// mounted wheel item reads Empty and, failing that, the auxiliary
+    /// filters are unmounted, instead of clamping any value.
     public func applyFilterInventory(_ inventory: FilterInventory) {
         filterInventory = inventory
+        // A kind change moves the selection into the item's new role
+        // first (FILTER-ITEM-005); surviving wheels keep their ids.
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: filterStack.wheels,
+            auxiliaryFilters: filterStack.auxiliaryFilters,
+            inventory: inventory
+        )
         var wheels: [FilterWheel] = []
         var ids: [Int] = []
-        for (index, wheel) in filterStack.wheels.enumerated() {
+        for (wheel, origin) in zip(reassigned.wheels, reassigned.wheelOrigins) {
             guard let normalized = FilterStack.normalizedWheel(wheel, inventory: inventory) else {
                 continue
             }
             wheels.append(normalized)
-            ids.append(ndFilterWheelIDs.indices.contains(index) ? ndFilterWheelIDs[index] : makeNDFilterWheelID())
+            if let origin, ndFilterWheelIDs.indices.contains(origin) {
+                ids.append(ndFilterWheelIDs[origin])
+            } else {
+                ids.append(makeNDFilterWheelID())
+            }
         }
         if wheels.isEmpty {
             wheels = [.standard(NDStep(stops: 0))]
@@ -226,13 +246,16 @@ public final class CalculatorModel {
             guard let itemID = wheel.mountedItemID, !mounted.insert(itemID).inserted else { return wheel }
             return FilterWheel(source: wheel.source, selection: .empty)
         }
-        if let stack = FilterStack.validated(wheels: wheels, inventory: inventory) {
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, inventory: inventory)
+            .filter { !mounted.contains($0.itemID) }
+        if let stack = FilterStack.validated(wheels: wheels, auxiliaryFilters: auxiliary, inventory: inventory) {
             filterStack = stack
         } else {
             let emptied = wheels.map { wheel -> FilterWheel in
                 wheel.isStandard ? wheel : FilterWheel(source: wheel.source, selection: .empty)
             }
-            filterStack = FilterStack.validated(wheels: emptied, inventory: inventory)
+            filterStack = FilterStack.validated(wheels: emptied, auxiliaryFilters: auxiliary, inventory: inventory)
+                ?? FilterStack.validated(wheels: emptied, inventory: inventory)
                 ?? FilterStack(single: CalculatorDefaults.ndStep)
             if filterStack.wheels.count != ids.count {
                 ids = filterStack.wheels.map { _ in makeNDFilterWheelID() }
@@ -240,15 +263,14 @@ public final class CalculatorModel {
         }
         ndFilterWheelIDs = ids
         liveSelections = liveSelections.filter { ndFilterWheelIDs.contains($0.key) }
-        if !inventory.contains(lastFilterSource) {
-            lastFilterSource = .standard
-        }
+        normalizeCandidatesAndLastSource()
     }
 
-    /// Settles the Plus wheel on `source`. Unknown Filter Sets are
-    /// refused; merely changing the source never touches the stack.
+    /// Settles the Plus wheel on `source`. Sources the camera does not
+    /// offer (an unknown or non-candidate Filter Set) are refused;
+    /// merely changing the source never touches the stack.
     public func selectFilterSource(_ source: FilterSource) {
-        guard filterInventory.contains(source) else {
+        guard filterSources.contains(source) else {
             return
         }
         lastFilterSource = source
@@ -348,6 +370,8 @@ public final class CalculatorModel {
         }
         filterStack = filterStack.addingWheel(for: source, inventory: filterInventory)
         ndFilterWheelIDs.append(makeNDFilterWheelID())
+        // A set the stack references is always a candidate.
+        normalizeCandidatesAndLastSource()
     }
 
     /// A2 cleanup (PTIMER-199 §4.2.2): removes every CLEANABLE wheel
@@ -426,23 +450,32 @@ public final class CalculatorModel {
         restoreFilterWheels(steps.map(FilterWheel.standard), lastFilterSource: .standard)
     }
 
-    /// Restores a mixed wheel stack from persistence or a slot switch.
-    /// The caller supplies pre-validated wheels; this guard is the
-    /// last defensive shield so corrupted input can never trip the
-    /// domain type's programmer-error preconditions — a violating
-    /// stack restores as the default single wheel instead (reject,
-    /// never clamp). A last source the inventory no longer knows
-    /// falls back to Standard.
-    public func restoreFilterWheels(_ wheels: [FilterWheel], lastFilterSource source: FilterSource) {
+    /// Restores a slot's stack — wheels, mounted auxiliary filters,
+    /// and candidate sets — from persistence or a slot switch. The
+    /// caller supplies pre-validated state; this guard is the last
+    /// defensive shield so corrupted input can never trip the domain
+    /// type's programmer-error preconditions — a violating stack
+    /// restores as the default single wheel instead (reject, never
+    /// clamp). A last source the camera no longer offers falls back to
+    /// Standard.
+    public func restoreFilterWheels(
+        _ wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter] = [],
+        candidateFilterSetIDs candidates: [FilterSetID] = [],
+        lastFilterSource source: FilterSource
+    ) {
         clearLiveNDStopPreview()
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: filterInventory)
         if let normalized = FilterStack.normalizedWheels(wheels, inventory: filterInventory),
-           let stack = FilterStack.validated(wheels: normalized, inventory: filterInventory) {
+           let stack = FilterStack.validated(wheels: normalized, auxiliaryFilters: auxiliary, inventory: filterInventory) {
             filterStack = stack
         } else {
             filterStack = FilterStack(single: CalculatorDefaults.ndStep)
         }
         regenerateNDFilterWheelIDs()
-        lastFilterSource = filterInventory.contains(source) ? source : .standard
+        candidateFilterSetIDs = candidates
+        lastFilterSource = source
+        normalizeCandidatesAndLastSource()
     }
 
     /// Picker rows for one wheel — the single source for what a wheel
@@ -583,7 +616,7 @@ public final class CalculatorModel {
             let live = liveSelections[wheelID].flatMap { liveContribution(of: $0, forWheelID: wheelID) }
             return sum + (live ?? entry.element.contributionStops)
         }
-        return NDStep(stops: total)
+        return NDStep(stops: total + filterStack.auxiliaryContributions.reduce(0, +))
     }
 
     /// The stack the calculator is showing right now — the committed
@@ -604,7 +637,7 @@ public final class CalculatorModel {
             }
             return FilterWheel(source: wheel.source, selection: live)
         }
-        return FilterStack.validated(wheels: wheels, inventory: filterInventory)
+        return FilterStack.validated(wheels: wheels, auxiliaryFilters: filterStack.auxiliaryFilters, inventory: filterInventory)
     }
 
     /// Whole-stop view of `effectiveNDStep`, kept for callers still
@@ -857,5 +890,64 @@ public final class CalculatorModel {
             return seconds
         }
         return nearest.seconds
+    }
+}
+
+// MARK: - Candidate Filter Sets and auxiliary filters (FILTER-CAMERA, FILTER-AUX)
+
+extension CalculatorModel {
+    /// The Filter Sources the Plus wheel and the popup's ND tab offer
+    /// (FILTER-PLUS-001): Standard, then this camera's candidate sets
+    /// that hold at least one ND item.
+    public var filterSources: [FilterSource] {
+        [.standard] + candidateFilterSetIDs.compactMap { id in
+            guard let filterSet = filterInventory.filterSet(withID: id), !filterSet.ndItems.isEmpty else {
+                return nil
+            }
+            return .filterSet(id)
+        }
+    }
+
+    /// The mounted auxiliary filters, resolved (FILTER-AUX-001).
+    public var mountedAuxiliaryFilters: [ResolvedAuxiliaryFilter] {
+        filterStack.auxiliaryRows
+    }
+
+    /// Keeps the candidates consistent with the inventory and the
+    /// stack, and the remembered source among the offered sources.
+    private func normalizeCandidatesAndLastSource() {
+        candidateFilterSetIDs = filterInventory.normalizedCandidateFilterSetIDs(
+            candidateFilterSetIDs,
+            referencedBy: filterStack.wheels,
+            auxiliaryFilters: filterStack.auxiliaryFilters
+        )
+        if !filterSources.contains(lastFilterSource) {
+            lastFilterSource = .standard
+        }
+    }
+
+    /// Replaces this camera's candidate Filter Sets (FILTER-CAMERA-001).
+    /// Sets the stack still references stay candidates regardless —
+    /// the facade blocks such an exclusion up front — and a remembered
+    /// source that is no longer offered falls back to Standard.
+    public func setCandidateFilterSetIDs(_ ids: [FilterSetID]) {
+        candidateFilterSetIDs = ids
+        normalizeCandidatesAndLastSource()
+    }
+
+    /// Commits the complete mounted auxiliary selection at once
+    /// (FILTER-AUX-003 Apply). Returns the rejection — leaving the
+    /// stack unchanged — when the domain refuses it; on success the
+    /// sets of the mounted items join the candidates.
+    @discardableResult
+    public func setAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter]) -> FilterStackRejection? {
+        switch filterStack.replacingAuxiliaryFilters(with: mounts, inventory: filterInventory) {
+        case .success(let replaced):
+            filterStack = replaced
+            normalizeCandidatesAndLastSource()
+            return nil
+        case .failure(let rejection):
+            return rejection
+        }
     }
 }

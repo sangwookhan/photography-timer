@@ -3,6 +3,7 @@
 
 package com.sangwook.ptimer.core.persistence
 
+import com.sangwook.ptimer.core.exposure.AuxiliaryFilterChoice
 import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
@@ -20,14 +21,17 @@ import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.exposure.FilterWheel
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
 import com.sangwook.ptimer.core.exposure.GndCalculationMode
+import com.sangwook.ptimer.core.exposure.MountedAuxiliaryFilter
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.PersistentFilterWheel
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
-import com.sangwook.ptimer.core.slots.restoredFilterWheels
+import com.sangwook.ptimer.core.slots.restoredCandidateFilterSetIds
+import com.sangwook.ptimer.core.slots.restoredFilterStack
 import com.sangwook.ptimer.core.slots.restoredLastFilterSource
 import com.sangwook.ptimer.core.slots.writingFilterStack
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -81,25 +85,49 @@ class FilterStackPersistenceTest {
         return decoded.snapshots.getValue(CameraSlotId.camera1)
     }
 
-    @Test fun mixedStackAndLastSourceSurviveRelaunch() {
+    @Test fun mixedStackAuxiliaryFiltersCandidatesAndLastSourceSurviveRelaunch() {
         val stack = FilterStack.validated(
+            listOf(itemWheel(nd1000), FilterWheel.standard(6.6)),
             listOf(
-                itemWheel(nd1000),
-                itemWheel(gnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-                FilterWheel.standard(6.6),
+                MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly)),
+                MountedAuxiliaryFilter(set.id, cpl.id, AuxiliaryFilterChoice.CplLoss(2.0)),
             ),
             inventory,
         )!!
-        val restored = roundTrip(base.writingFilterStack(stack, setSource))
+        val restored = roundTrip(base.writingFilterStack(stack, setSource, listOf(set.id)))
 
-        assertEquals(stack.wheels, restored.restoredFilterWheels(inventory))
+        assertEquals(stack, restored.restoredFilterStack(inventory))
+        assertEquals(stack.auxiliaryFilters, restored.restoredFilterStack(inventory).auxiliaryFilters)
+        assertEquals(listOf(set.id), restored.restoredCandidateFilterSetIds(inventory))
         assertEquals(setSource, restored.restoredLastFilterSource(inventory))
         assertEquals(
-            "ND1000 restores as exactly 10 stops.",
-            16.6,
-            FilterStack.validated(restored.restoredFilterWheels(inventory), inventory)!!.effectiveStops,
+            "ND1000 restores as exactly 10 stops; the CPL adds 2.",
+            18.6,
+            restored.restoredFilterStack(inventory).effectiveStops,
             1e-9,
         )
+    }
+
+    @Test fun legacyCplAndGndWheelRowsRestoreAsAuxiliaryFilters() {
+        val legacy = base.copy(
+            filterStack = listOf(
+                PersistentFilterWheel.from(itemWheel(nd1000)),
+                PersistentFilterWheel.from(itemWheel(gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue))),
+                PersistentFilterWheel.from(itemWheel(cpl, FilterRowChoice.CplLoss(1.0))),
+            ),
+        )
+        val restored = roundTrip(legacy).restoredFilterStack(inventory)
+        assertEquals(listOf(itemWheel(nd1000)), restored.wheels)
+        assertEquals(
+            "Display order: CPL before GND; the choices and modes are kept.",
+            listOf(
+                MountedAuxiliaryFilter(set.id, cpl.id, AuxiliaryFilterChoice.CplLoss(1.0)),
+                MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)),
+            ),
+            restored.auxiliaryFilters,
+        )
+        assertEquals("The effective total is preserved.", 14.0, restored.effectiveStops, 1e-9)
+        assertEquals("The referenced set becomes a candidate.", listOf(set.id), roundTrip(legacy).restoredCandidateFilterSetIds(inventory))
     }
 
     @Test fun downgradeFieldsCarryStandardWheelsOnly() {
@@ -151,7 +179,7 @@ class FilterStackPersistenceTest {
 
         assertEquals(
             listOf(FilterWheel.standard(2.0), FilterWheel.empty(set.id)),
-            restored.restoredFilterWheels(inventory),
+            restored.restoredFilterStack(inventory).wheels,
         )
         assertEquals(
             "A vanished last source falls back to Standard.",
@@ -160,9 +188,10 @@ class FilterStackPersistenceTest {
         )
     }
 
-    @Test fun aRemovedCplChoiceRestoresAsEmptyNeverAnotherChoice() {
+    @Test fun aRemovedCplChoiceUnmountsTheCplNeverAnotherChoice() {
         val stack = FilterStack.validated(
-            listOf(itemWheel(cpl, FilterRowChoice.CplLoss(2.0))),
+            listOf(FilterWheel.standard(0.0)),
+            listOf(MountedAuxiliaryFilter(set.id, cpl.id, AuxiliaryFilterChoice.CplLoss(2.0))),
             inventory,
         )!!
         val restored = roundTrip(base.writingFilterStack(stack, setSource))
@@ -175,10 +204,9 @@ class FilterStackPersistenceTest {
         val edited = FilterInventory(
             listOf(FilterSet("Lee", FilterSetColor.red, listOf(editedCpl), set.id)),
         )
-        assertEquals(
-            listOf(FilterWheel.empty(set.id)),
-            restored.restoredFilterWheels(edited),
-        )
+        val resolved = restored.restoredFilterStack(edited)
+        assertEquals(listOf(FilterWheel.standard(0.0)), resolved.wheels)
+        assertTrue(resolved.auxiliaryFilters.isEmpty())
     }
 
     @Test fun aCorruptedMixedStackFallsBackToTheLegacyStandardPath() {
@@ -192,7 +220,7 @@ class FilterStackPersistenceTest {
         )
         assertEquals(
             listOf(FilterWheel.standard(4.0)),
-            roundTrip(tooMany).restoredFilterWheels(inventory),
+            roundTrip(tooMany).restoredFilterStack(inventory).wheels,
         )
 
         // An off-ladder Standard wheel is structurally corrupted too.
@@ -205,7 +233,7 @@ class FilterStackPersistenceTest {
         )
         assertEquals(
             listOf(FilterWheel.standard(4.0)),
-            roundTrip(offLadder).restoredFilterWheels(inventory),
+            roundTrip(offLadder).restoredFilterStack(inventory).wheels,
         )
     }
 
@@ -220,7 +248,7 @@ class FilterStackPersistenceTest {
         assertNull(snapshot.filterStack)
         assertEquals(
             listOf(FilterWheel.standard(10.0), FilterWheel.standard(6.6)),
-            snapshot.restoredFilterWheels(inventory),
+            snapshot.restoredFilterStack(inventory).wheels,
         )
         assertEquals(FilterSource.Standard, snapshot.restoredLastFilterSource(inventory))
     }
@@ -229,7 +257,7 @@ class FilterStackPersistenceTest {
         val snapshot = base.copy(ndIndex = 5)
         assertEquals(
             listOf(FilterWheel.standard(5.0)),
-            snapshot.restoredFilterWheels(FilterInventory.empty),
+            snapshot.restoredFilterStack(FilterInventory.empty).wheels,
         )
     }
 }

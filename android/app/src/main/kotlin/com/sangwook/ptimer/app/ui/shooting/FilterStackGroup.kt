@@ -18,14 +18,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -37,8 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.vm.CalculatorUiState
+import com.sangwook.ptimer.app.vm.FilterPlusChoice
 import com.sangwook.ptimer.app.vm.FilterRowTypeCategory
-import com.sangwook.ptimer.app.vm.FilterSourceUiOption
 import com.sangwook.ptimer.app.vm.FilterStatusLeading
 import com.sangwook.ptimer.app.vm.FilterStatusRegionPresenter
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
@@ -100,6 +103,13 @@ internal fun filterWheelWidth(available: Dp, wheelCount: Int, plusVisible: Boole
     return (available - plusSlot - FilterWheelRowSpacing * (wheelCount - 1)) / wheelCount
 }
 
+/** A fixed [width] read when the column is measured, not composed. */
+private fun Modifier.measuredWidth(width: State<Dp>): Modifier = layout { measurable, constraints ->
+    val px = width.value.roundToPx()
+    val placeable = measurable.measure(constraints.copy(minWidth = px, maxWidth = px))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+}
+
 /** Three wheels or more render their values a style step smaller. */
 internal fun isDenseFilterWheelRow(wheelCount: Int) = wheelCount >= 3
 
@@ -133,6 +143,7 @@ internal fun FilterStackGroup(
     onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
     onOverscrollRemove: (Int) -> Unit,
     onManageFilterSets: () -> Unit,
+    onOpenShootingFilters: () -> Unit,
     modifier: Modifier = Modifier,
     wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
 ) {
@@ -145,7 +156,8 @@ internal fun FilterStackGroup(
 
     // The Plus browsing candidate is pure presentation: it exists only
     // between touch-down and release and never reaches the controller.
-    var browsing by remember { mutableStateOf<FilterSourceUiOption?>(null) }
+    var browsing by remember { mutableStateOf<FilterPlusChoice?>(null) }
+    val auxiliaryTitle = stringResource(R.string.filter_auxiliary_title)
 
     // A refusal holds the status region for a fixed time and then yields
     // (FILTER-STACK-004). The controller keeps it only as "the current
@@ -163,26 +175,47 @@ internal fun FilterStackGroup(
     Column(modifier = modifier.fillMaxWidth()) {
         wheelRow {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val wheelWidth = filterWheelWidth(maxWidth, wheels.size, state.plus.isVisible)
+                val spaces = state.occupiedFilterSpaces
+                val wheelWidth = filterWheelWidth(maxWidth, spaces, state.plus.isVisible)
+                // Read at measure time, so a width that settles one pass
+                // later — the card re-splits after the stack changes —
+                // remeasures the columns. A width fixed at composition
+                // left them at the old size and pushed Plus out of the
+                // row until the next wheel gesture (FILTER-PLUS-001).
+                val columnWidth = rememberUpdatedState(wheelWidth)
+                val viewportHeight = snapWheelItemHeight(WheelItemHeight) * WheelVisibleCount
 
                 LazyRow(
                     userScrollEnabled = false,
                     horizontalArrangement = Arrangement.spacedBy(FilterWheelRowSpacing),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    // The auxiliary summary stays immediately after Base
+                    // Shutter (FILTER-AUX-001, FILTER-STACK-005).
+                    state.auxiliarySummary?.let { summary ->
+                        item(key = "auxiliary-summary") {
+                            AuxiliaryFilterSummaryColumn(
+                                summary = summary,
+                                viewportHeight = viewportHeight,
+                                enabled = true,
+                                onOpen = onOpenShootingFilters,
+                                modifier = Modifier.measuredWidth(columnWidth).animateItem(),
+                            )
+                        }
+                    }
                     itemsIndexed(wheels, key = { _, wheel -> wheel.id }) { index, wheel ->
                         FilterWheelColumn(
                             wheel = wheel,
                             position = index + 1,
                             wheelCount = wheels.size,
                             palette = palette,
-                            dense = isDenseFilterWheelRow(wheels.size),
+                            dense = isDenseFilterWheelRow(spaces),
                             totalText = totalText,
                             onActiveChange = { onWheelActive(wheel.id, it) },
                             onSelectedIndexChange = { onWheelValue(wheel.id, it) },
                             onOverscrollRemove = { onOverscrollRemove(wheel.id) },
                             onAdjust = { direction -> onAdjustFilterWheel(wheel.id, direction) },
-                            modifier = Modifier.width(wheelWidth).animateItem(),
+                            modifier = Modifier.measuredWidth(columnWidth).animateItem(),
                         )
                     }
                     if (state.plus.isVisible) {
@@ -194,10 +227,10 @@ internal fun FilterStackGroup(
                                     // Through the same resolver as the wheels,
                                     // so a raised font scale does not leave the
                                     // Plus control short of the viewport.
-                                    height = snapWheelItemHeight(WheelItemHeight) *
-                                        WheelVisibleCount,
+                                    height = viewportHeight,
                                     onAdd = onAddFilterWheel,
                                     onManage = onManageFilterSets,
+                                    onOpenAuxiliaryFilters = onOpenShootingFilters,
                                     browsing = browsing,
                                     onBrowsingChanged = { browsing = it },
                                 )
@@ -215,7 +248,11 @@ internal fun FilterStackGroup(
                         FilterStatusLeading.MovingRow(row = row, sourceName = wheel.sourceName)
                     }
                 },
-                browsing = browsing?.let { FilterStatusLeading.BrowsingSource(it.name, it.color) },
+                browsing = when (val choice = browsing) {
+                    is FilterPlusChoice.Source -> FilterStatusLeading.BrowsingSource(choice.option.name, choice.option.color)
+                    FilterPlusChoice.AuxiliaryFilters -> FilterStatusLeading.BrowsingSource(auxiliaryTitle, null)
+                    null -> null
+                },
                 rejection = shownRejection,
                 totalText = totalText,
                 idleSourceSummary = state.filterStatus.idleSourceSummary,
@@ -225,6 +262,13 @@ internal fun FilterStackGroup(
             ),
             wheelCount = wheels.size,
             notationMode = state.ndNotationMode,
+            totalValueText = state.filterStatus.totalStopsText,
+            // The centered ND value style of the same row (SnapWheel).
+            totalValueStyle = if (isDenseFilterWheelRow(state.occupiedFilterSpaces)) {
+                MaterialTheme.typography.bodyMedium
+            } else {
+                MaterialTheme.typography.titleMedium
+            },
         )
     }
 }

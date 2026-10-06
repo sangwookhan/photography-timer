@@ -23,6 +23,7 @@ import com.sangwook.ptimer.core.exposure.FilterStackRejection
 import com.sangwook.ptimer.core.exposure.FilterSummaryEntry
 import com.sangwook.ptimer.core.exposure.FilterWheel
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
+import com.sangwook.ptimer.core.exposure.MountedAuxiliaryFilter
 import com.sangwook.ptimer.core.exposure.NDNotationFormatter
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.exposure.NdFilterStack
@@ -39,8 +40,12 @@ import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 import com.sangwook.ptimer.core.slots.CameraSlotSession
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
-import com.sangwook.ptimer.core.slots.restoredFilterWheels
+import com.sangwook.ptimer.core.slots.offeredFilterSources
+import com.sangwook.ptimer.core.slots.restoredCandidateFilterSetIds
+import com.sangwook.ptimer.core.slots.restoredFilterStack
 import com.sangwook.ptimer.core.slots.restoredLastFilterSource
+import com.sangwook.ptimer.core.slots.storedCandidateFilterSetIds
+import com.sangwook.ptimer.core.slots.storedFilterReferences
 import com.sangwook.ptimer.core.slots.writingFilterStack
 import kotlin.math.abs
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
@@ -85,6 +90,14 @@ data class CalculatorUiState(
     val plus: FilterPlusUiState = FilterPlusUiState(false, emptyList(), 0, isQuiet = false),
     /** One-row status region: idle summary, moving row, rejection, total. */
     val filterStatus: FilterStatusUiState = FilterStatusUiState(null, null, null, "0", false),
+    /** Main summary of the mounted auxiliary filters; `null` hides the
+     *  space (FILTER-AUX-001). */
+    val auxiliarySummary: AuxiliaryFilterSummaryDisplayState? = null,
+    /** The mounted auxiliary filters in display order — the shooting
+     *  popup's initial working selection (FILTER-AUX-003). */
+    val mountedAuxiliaryFilters: List<MountedAuxiliaryFilter> = emptyList(),
+    /** The camera's candidate Filter Sets in set order (FILTER-CAMERA-001). */
+    val candidateFilterSetIds: List<FilterSetId> = emptyList(),
     /** Stack total in stops ("18", "13.2"); null below two wheels. */
     val ndTotalStopsText: String? = null,
     /** True when the LIVE total (pending selections included, the
@@ -128,6 +141,12 @@ data class CalculatorUiState(
      *  reorder can never point it at a different wheel; `null` at rest. */
     val movingFilterWheel: FilterWheelUiState?
         get() = filterStatus.movingWheelId?.let { id -> filterWheels.firstOrNull { it.id == id } }
+
+    /** Filter spaces the row lays out: the ND wheels plus the auxiliary
+     *  summary, which occupies one space whatever its item count
+     *  (FILTER-STACK-001/007). */
+    val occupiedFilterSpaces: Int
+        get() = filterWheels.size + if (auxiliarySummary != null) 1 else 0
 }
 
 /**
@@ -274,15 +293,21 @@ class CalculatorController(
     private fun activeFilterStack(): FilterStack = filterStackOf(session.activeSnapshot)
 
     /**
-     * Any slot's committed stack, re-resolved against the live inventory.
-     * Validation cannot fail after normalization; the single Standard 0
-     * wheel is the defensive floor.
+     * Any slot's committed stack — ND wheels and mounted auxiliary
+     * filters — re-resolved against the live inventory. Restore falls
+     * back to a valid Standard-only stack, so this never fails.
      */
-    private fun filterStackOf(snapshot: SlotCalculatorSnapshot): FilterStack {
-        val current = inventory
-        return FilterStack.validated(snapshot.restoredFilterWheels(current), current)
-            ?: FilterStack.single(0.0)
-    }
+    private fun filterStackOf(snapshot: SlotCalculatorSnapshot): FilterStack =
+        snapshot.restoredFilterStack(inventory)
+
+    /** The active camera's candidate Filter Sets (FILTER-CAMERA-001). */
+    private val candidateFilterSetIds: List<FilterSetId>
+        get() = session.activeSnapshot.restoredCandidateFilterSetIds(inventory)
+
+    /** Standard, then the active camera's candidate sets that hold ND
+     *  items (FILTER-PLUS-001). */
+    private val filterSources: List<FilterSource>
+        get() = inventory.offeredFilterSources(candidateFilterSetIds)
 
     /** The active camera's remembered Filter Source (FILTER-PLUS-004). */
     private val lastFilterSource: FilterSource
@@ -358,7 +383,8 @@ class CalculatorController(
      * (FILTER-PERSIST-001).
      */
     private fun writeFilterStack(stack: FilterStack, lastSource: FilterSource = lastFilterSource) {
-        session.updateActiveSnapshot { it.writingFilterStack(stack, lastSource) }
+        val current = inventory
+        session.updateActiveSnapshot { it.writingFilterStack(stack, lastSource, candidatesFor(it, stack, current)) }
         publish()
         rearmNdCleanupTimer()
     }
@@ -545,7 +571,9 @@ class CalculatorController(
     fun addFilterWheel(source: FilterSource = lastFilterSource) {
         if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty()) return
         val current = inventory
-        if (!current.contains(source)) return
+        // Only a source this camera offers: Standard or an ND-holding
+        // candidate set (FILTER-PLUS-001).
+        if (source !in filterSources) return
         val stack = activeFilterStack()
         val unavailability = stack.addUnavailability(source, current)
         if (unavailability != null) {
@@ -765,18 +793,23 @@ class CalculatorController(
 
     /**
      * Saves a new or edited item into [setId] (FILTER-ITEM-005). Blocked
-     * — and nothing changes — when any camera stack would exceed 30 stops
-     * or would lose a row it currently mounts. A selected CPL choice is
-     * never silently replaced with another configured value.
+     * — and nothing changes — when any camera stack would exceed 30 stops,
+     * would lose a row it currently mounts, or would need more ND wheels
+     * than its limit after a kind change. A selected CPL choice is never
+     * silently replaced with another configured value; a kind change
+     * within the limits moves the selection into the item's new role.
      */
     fun saveFilterItem(item: FilterItem, setId: FilterSetId): FilterItemSaveOutcome {
         val conflicts = filterItemSaveConflicts(item, setId)
         if (conflicts.isNotEmpty()) {
-            val reason = if (conflicts.any { it.second == FilterItemSaveBlockReason.removesSelectedChoice }) {
-                FilterItemSaveBlockReason.removesSelectedChoice
-            } else {
-                FilterItemSaveBlockReason.exceedsTotalLimit
-            }
+            // One reason is shown: a removed selection first, then a full
+            // role, then the cap.
+            val priority = listOf(
+                FilterItemSaveBlockReason.removesSelectedChoice,
+                FilterItemSaveBlockReason.tooManyNDWheels,
+                FilterItemSaveBlockReason.exceedsTotalLimit,
+            )
+            val reason = priority.first { candidate -> conflicts.any { it.second == candidate } }
             return FilterItemSaveOutcome.Blocked(conflicts.map { it.first }, reason)
         }
         if (inventory.item(item.id) != null) {
@@ -788,37 +821,43 @@ class CalculatorController(
         return FilterItemSaveOutcome.Saved
     }
 
-    /** Cameras whose stack currently mounts [itemId] — shown before a
-     *  delete is confirmed (FILTER-ITEM-006). */
+    /** Cameras whose stack currently mounts [itemId] — on a wheel or as
+     *  an auxiliary filter — shown before a delete is confirmed
+     *  (FILTER-ITEM-006). */
     fun camerasAffectedByDeletingItem(itemId: FilterItemId): List<CameraSlotIdentity> =
-        cameraIdentities { wheels -> wheels.any { it.mountedItemId == itemId } }
+        cameraIdentities { stack ->
+            stack.wheels.any { it.mountedItemId == itemId } || stack.auxiliaryFilters.any { it.itemId == itemId }
+        }
 
-    /** Cameras whose stack holds a wheel of the Filter Set. */
+    /** Cameras whose stack holds a wheel or a mounted auxiliary filter of
+     *  the Filter Set. */
     fun camerasAffectedByDeletingFilterSet(setId: FilterSetId): List<CameraSlotIdentity> =
-        cameraIdentities { wheels -> wheels.any { it.source == FilterSource.FilterSet(setId) } }
+        cameraIdentities { stack ->
+            stack.wheels.any { it.source == FilterSource.FilterSet(setId) } ||
+                stack.auxiliaryFilters.any { it.filterSetId == setId }
+        }
 
-    /** Every camera's wheels: the live stack for the active slot, each
+    /** Every camera's stack: the live stack for the active slot, each
      *  inactive slot's stored stack re-resolved against the inventory. */
-    private fun wheelsForSlot(slotId: CameraSlotId): List<FilterWheel> =
+    private fun stackForSlot(slotId: CameraSlotId): FilterStack? =
         if (slotId == session.activeSlotId) {
-            activeFilterStack().wheels
+            activeFilterStack()
         } else {
-            session.snapshot(slotId)?.restoredFilterWheels(inventory).orEmpty()
+            session.snapshot(slotId)?.let { filterStackOf(it) }
         }
 
     /** Identities, not resolved names: only the display boundary knows
      *  the user's language, and a default slot label has to be spoken in
      *  it (FILTER-A11Y-003). A photographer-supplied name passes through
      *  untouched. */
-    private fun cameraIdentities(predicate: (List<FilterWheel>) -> Boolean): List<CameraSlotIdentity> =
+    private fun cameraIdentities(predicate: (FilterStack) -> Boolean): List<CameraSlotIdentity> =
         session.availableSlots
-            .filter { predicate(wheelsForSlot(it)) }
+            .filter { slotId -> stackForSlot(slotId)?.let(predicate) == true }
             .map { session.identity(it) }
 
     /**
      * Cameras whose stack would become invalid if [item] were saved as
-     * given, each with its reason: a mounted row of this item that the
-     * edit removes outranks a total that would exceed the cap.
+     * given, each with its reason.
      */
     private fun filterItemSaveConflicts(
         item: FilterItem,
@@ -839,26 +878,42 @@ class CalculatorController(
             current.filterSets.toMutableList().also { it[setIndex] = filterSet.copy(items = items) },
         )
         return session.availableSlots.mapNotNull { slotId ->
-            val reason = stackConflict(wheelsForSlot(slotId), item.id, candidate) ?: return@mapNotNull null
+            val stack = stackForSlot(slotId) ?: return@mapNotNull null
+            val reason = stackConflict(stack, item.id, candidate) ?: return@mapNotNull null
             session.identity(slotId) to reason
         }
     }
 
-    /** A stack conflicts with the candidate inventory when a wheel
-     *  mounting [itemId] no longer resolves (its selected row is gone) or
-     *  when the re-resolved stack would exceed the cap. */
+    /**
+     * A camera's stack conflicts with the candidate inventory when a kind
+     * change would move the mounted item into a role that is already
+     * full, when a wheel or auxiliary filter mounting [itemId] no longer
+     * resolves (its selected CPL choice is gone), or when the re-resolved
+     * stack would exceed the cap. A kind change within the limits moves
+     * the selection into the new role and does not conflict
+     * (FILTER-ITEM-005).
+     */
     private fun stackConflict(
-        wheels: List<FilterWheel>,
+        stack: FilterStack,
         itemId: FilterItemId,
         candidate: FilterInventory,
     ): FilterItemSaveBlockReason? {
+        val reassigned = FilterStack.reassigningRoles(stack.wheels, stack.auxiliaryFilters, candidate)
+        val wheels = reassigned.wheels
+        val auxiliaryFilters = reassigned.auxiliaryFilters
+        if (wheels.size > FilterStack.wheelLimit(auxiliaryFilters.isNotEmpty())) {
+            return FilterItemSaveBlockReason.tooManyNDWheels
+        }
         val selectedRowVanishes = wheels.any { wheel ->
             wheel.mountedItemId == itemId && FilterStack.resolvedRow(wheel, candidate) == null
+        } || auxiliaryFilters.any { mount ->
+            mount.itemId == itemId && FilterStack.resolvedAuxiliaryFilter(mount, candidate) == null
         }
         if (selectedRowVanishes) return FilterItemSaveBlockReason.removesSelectedChoice
         val normalized = FilterStack.normalizedWheels(wheels, candidate)
             ?: return FilterItemSaveBlockReason.exceedsTotalLimit
-        if (FilterStack.validated(normalized, candidate) == null) {
+        val auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, candidate)
+        if (FilterStack.validated(normalized, auxiliary, candidate) == null) {
             return FilterItemSaveBlockReason.exceedsTotalLimit
         }
         return null
@@ -868,23 +923,50 @@ class CalculatorController(
      * Applies an inventory mutation to every camera stack
      * (FILTER-ITEM-005/006, FILTER-PERSIST-002): in-flight wheel
      * interaction is discarded first — the edit came from the management
-     * surface, never mid-gesture — the active stack re-resolves wheel by
-     * wheel (so surviving wheels keep their identity), every inactive slot
-     * snapshot re-resolves in place, a vanished last source falls back to
-     * Standard, the stale rejection reason is dropped, and the cleanup
-     * timer re-arms against the new shape.
+     * surface, never mid-gesture — a kind change moves each selection into
+     * its item's new role, the active stack re-resolves wheel by wheel (so
+     * surviving wheels keep their identity), an auxiliary filter that no
+     * longer resolves is unmounted, every inactive slot snapshot
+     * re-resolves in place, candidates follow the inventory, a vanished
+     * last source falls back to Standard, the stale rejection reason is
+     * dropped, and the cleanup timer re-arms against the new shape.
      */
     private fun applyFilterInventoryChange() {
         val current = inventory
         clearNdInteraction()
         clearFilterRejectionNotice()
 
+        val (stack, ids) = reresolvedActiveStack(current)
+        ndWheelIds = ids
+        val source = session.activeSnapshot.restoredLastFilterSource(current)
+        session.updateActiveSnapshot { it.writingFilterStack(stack, source, candidatesFor(it, stack, current)) }
+
+        for (slotId in session.availableSlots) {
+            if (slotId == session.activeSlotId) continue
+            session.updateSnapshot(slotId) { snapshot ->
+                val resolved = reresolvedStack(storedReferences(snapshot), current)
+                snapshot.writingFilterStack(
+                    resolved,
+                    snapshot.restoredLastFilterSource(current),
+                    candidatesFor(snapshot, resolved, current),
+                )
+            }
+        }
+        publish()
+        rearmNdCleanupTimer()
+    }
+
+    /** The active stack after an inventory edit, with each surviving
+     *  wheel's stable identity carried through the role move. */
+    private fun reresolvedActiveStack(current: FilterInventory): Pair<FilterStack, List<Int>> {
+        val (storedWheels, storedMounts) = storedReferences(session.activeSnapshot)
+        val reassigned = FilterStack.reassigningRoles(storedWheels, storedMounts, current)
         val wheels = ArrayList<FilterWheel>()
         val ids = ArrayList<Int>()
-        session.activeSnapshot.restoredFilterWheels(current).forEachIndexed { index, wheel ->
-            val normalized = FilterStack.normalizedWheel(wheel, current) ?: return@forEachIndexed
+        reassigned.wheels.zip(reassigned.wheelOrigins).forEach { (wheel, origin) ->
+            val normalized = FilterStack.normalizedWheel(wheel, current) ?: return@forEach
             wheels.add(normalized)
-            ids.add(ndWheelIds.getOrNull(index) ?: makeNdWheelId())
+            ids.add(origin?.let { ndWheelIds.getOrNull(it) } ?: makeNdWheelId())
         }
         if (wheels.isEmpty()) {
             wheels.add(FilterWheel.standard(0.0))
@@ -898,41 +980,129 @@ class CalculatorController(
                 wheels[index] = FilterWheel(wheels[index].source, FilterWheelSelection.Empty)
             }
         }
-        var stack = FilterStack.validated(wheels, current)
-        if (stack == null) {
-            // The save path blocks edits that would break the cap; this is
-            // the defensive floor — empty every mounted item rather than
-            // clamp any value.
-            val emptied = wheels.map {
-                if (it.isStandard) it else FilterWheel(it.source, FilterWheelSelection.Empty)
-            }
-            stack = FilterStack.validated(emptied, current) ?: FilterStack.single(0.0)
-            if (stack.wheels.size != ids.size) {
-                ids.clear()
-                repeat(stack.wheels.size) { ids.add(makeNdWheelId()) }
-            }
-        }
-        ndWheelIds = ids
-        val source = session.activeSnapshot.restoredLastFilterSource(current)
-        session.updateActiveSnapshot { it.writingFilterStack(stack, source) }
+        val auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, current)
+            .filter { it.itemId !in mounted }
+        FilterStack.validated(wheels, auxiliary, current)?.let { return it to ids }
+        // The save path blocks edits that would break the cap or the
+        // limits; this is the defensive floor — empty every mounted wheel
+        // item and, failing that, unmount the auxiliary filters, rather
+        // than clamp any value.
+        val emptied = wheels.map { if (it.isStandard) it else FilterWheel(it.source, FilterWheelSelection.Empty) }
+        val stack = FilterStack.validated(emptied, auxiliary, current)
+            ?: FilterStack.validated(emptied, current)
+            ?: FilterStack.single(0.0)
+        val stackIds = if (stack.wheels.size == ids.size) ids else List(stack.wheels.size) { makeNdWheelId() }
+        return stack to stackIds
+    }
 
-        for (slotId in session.availableSlots) {
-            if (slotId == session.activeSlotId) continue
-            session.updateSnapshot(slotId) { snapshot ->
-                val restored = snapshot.restoredFilterWheels(current)
-                val resolved = FilterStack.validated(restored, current)
-                    ?: FilterStack.validated(
-                        restored.map {
-                            if (it.isStandard) it else FilterWheel(it.source, FilterWheelSelection.Empty)
-                        },
-                        current,
-                    )
-                    ?: FilterStack.single(0.0)
-                snapshot.writingFilterStack(resolved, snapshot.restoredLastFilterSource(current))
+    /** An inactive slot's stack after an inventory edit; same rules as
+     *  [reresolvedActiveStack] without wheel identities. */
+    private fun reresolvedStack(
+        references: Pair<List<FilterWheel>, List<MountedAuxiliaryFilter>>,
+        current: FilterInventory,
+    ): FilterStack {
+        val reassigned = FilterStack.reassigningRoles(references.first, references.second, current)
+        val wheels = FilterStack.normalizedWheels(reassigned.wheels, current) ?: listOf(FilterWheel.standard(0.0))
+        val onWheels = wheels.mapNotNull { it.mountedItemId }.toSet()
+        val auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, current)
+            .filter { it.itemId !in onWheels }
+        val emptied = wheels.map { if (it.isStandard) it else FilterWheel(it.source, FilterWheelSelection.Empty) }
+        return FilterStack.validated(wheels, auxiliary, current)
+            ?: FilterStack.validated(emptied, auxiliary, current)
+            ?: FilterStack.validated(emptied, current)
+            ?: FilterStack.single(0.0)
+    }
+
+    /** A slot's stored wheel and auxiliary references, unresolved, so a
+     *  kind change can still be followed; the legacy Standard-only shape
+     *  when the mixed-stack field is absent. */
+    private fun storedReferences(snapshot: SlotCalculatorSnapshot): Pair<List<FilterWheel>, List<MountedAuxiliaryFilter>> =
+        snapshot.storedFilterReferences()
+            ?: filterStackOf(snapshot).let { it.wheels to it.auxiliaryFilters }
+
+    /** A snapshot's candidates made consistent with [stack]: every set it
+     *  references stays a candidate (FILTER-CAMERA-001). */
+    private fun candidatesFor(
+        snapshot: SlotCalculatorSnapshot,
+        stack: FilterStack,
+        current: FilterInventory,
+    ): List<FilterSetId> =
+        current.normalizedCandidateFilterSetIds(snapshot.storedCandidateFilterSetIds, stack.wheels, stack.auxiliaryFilters)
+
+    // --- Mounted auxiliary filters (FILTER-AUX) ---
+
+    /**
+     * What the shooting popup's working selection would yield if applied
+     * now (FILTER-AUX-003): `null` when Apply would succeed, otherwise the
+     * rejection it would report. Nothing is committed.
+     */
+    fun auxiliaryFiltersRejection(mounts: List<MountedAuxiliaryFilter>): FilterStackRejection? =
+        (activeFilterStack().replacingAuxiliaryFilters(mounts, inventory) as? FilterStackChange.Rejected)?.reason
+
+    /**
+     * The shooting popup's live auxiliary subtotal in stops: only the
+     * working selection's auxiliary contributions, never the ND wheels,
+     * which that tab does not show (FILTER-AUX-003). The 30-stop guard
+     * still uses the complete stack ([auxiliaryFiltersRejection]).
+     */
+    fun auxiliaryFiltersSubtotal(mounts: List<MountedAuxiliaryFilter>): Double {
+        val current = inventory
+        return mounts.sumOf { FilterStack.resolvedAuxiliaryFilter(it, current)?.contributionStops ?: 0.0 }
+    }
+
+    /**
+     * Commits the complete mounted auxiliary selection at once
+     * (FILTER-AUX-003 Apply). Returns the rejection — leaving everything
+     * unchanged — when the domain refuses it: an unresolvable or
+     * duplicated item, four ND wheels, or a total over 30 stops. Existing
+     * ND wheels are never removed or merged to make room.
+     */
+    fun applyAuxiliaryFilters(mounts: List<MountedAuxiliaryFilter>): FilterStackRejection? =
+        when (val change = activeFilterStack().replacingAuxiliaryFilters(mounts, inventory)) {
+            is FilterStackChange.Accepted -> {
+                writeFilterStack(change.stack)
+                null
             }
+
+            is FilterStackChange.Rejected -> change.reason
         }
+
+    // --- Camera candidate Filter Sets (FILTER-CAMERA) ---
+
+    /** Sets the active camera's stack still references — through an ND
+     *  wheel (Empty included) or a mounted auxiliary filter. They cannot
+     *  leave the candidates until those selections are cleared. */
+    private val filterSetIdsReferencedByActiveCamera: Set<FilterSetId>
+        get() {
+            val stack = activeFilterStack()
+            return stack.wheels.mapNotNull { it.source.filterSetId }.toSet() +
+                stack.auxiliaryFilters.map { it.filterSetId }
+        }
+
+    /**
+     * Replaces the active camera's candidate Filter Sets
+     * (FILTER-CAMERA-001). Assignment saves immediately and mounts
+     * nothing. Excluding a set this camera still references is blocked
+     * with the set ids, so a candidate change can never alter the
+     * exposure calculation implicitly; a remembered ND source that is no
+     * longer a candidate falls back to Standard.
+     */
+    fun setCandidateFilterSets(ids: List<FilterSetId>): CandidateFilterSetAssignmentOutcome {
+        val excludedReferenced = filterSetIdsReferencedByActiveCamera - ids.toSet()
+        if (excludedReferenced.isNotEmpty()) {
+            return CandidateFilterSetAssignmentOutcome.Blocked(
+                inventory.filterSets.filter { it.id in excludedReferenced },
+            )
+        }
+        val stack = activeFilterStack()
+        val candidates = inventory.normalizedCandidateFilterSetIds(ids, stack.wheels, stack.auxiliaryFilters)
+        session.updateActiveSnapshot { it.writingFilterStack(stack, lastFilterSource, candidates) }
+        // Re-read against the new candidates: a remembered source that is
+        // no longer offered is stored as Standard.
+        val source = lastFilterSource
+        session.updateActiveSnapshot { it.writingFilterStack(stack, source, candidates) }
         publish()
-        rearmNdCleanupTimer()
+        return CandidateFilterSetAssignmentOutcome.Assigned
     }
 
     private val defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null)
@@ -1069,7 +1239,9 @@ class CalculatorController(
     }
 
     private fun resetActiveSlotSettingsFields() {
-        session.updateActiveSnapshot { defaultSnapshot }
+        // The camera's candidate Filter Sets are an assignment, not a
+        // shooting setting: a reset unmounts everything but keeps them.
+        session.updateActiveSnapshot { defaultSnapshot.copy(candidateFilterSetIds = it.candidateFilterSetIds) }
         clearNdInteraction()
         clearFilterRejectionNotice()
         ndWheelIds = emptyList()
@@ -1318,7 +1490,7 @@ class CalculatorController(
             FilterStack.resolvedRow(FilterWheel(wheel.source, displaySelections[i]), current)
                 ?: committedStack.rows[i]
         }
-        val effectiveStops = displayRows.sumOf { it.contributionStops }
+        val effectiveStops = displayRows.sumOf { it.contributionStops } + committedStack.auxiliaryContributions.sum()
         val result = calculator.result(snapshot.shutterIndex, effectiveStops, profile)
 
         val filterWheels = committedStack.wheels.mapIndexed { i, wheel ->
@@ -1343,11 +1515,16 @@ class CalculatorController(
 
         val isQuiet = !isActiveSlot || (activeNdWheelIds.isEmpty() && pendingNdCommits.isEmpty())
         val slotLastSource = snapshot.restoredLastFilterSource(current)
-        val plusVisible = committedStack.wheels.size < FilterStack.MAX_WHEEL_COUNT
+        val candidates = snapshot.restoredCandidateFilterSetIds(current)
+        // Four ND wheels without auxiliary filters, three with them
+        // (FILTER-STACK-001).
+        val plusVisible = committedStack.canAddWheel
         // Per source, against THIS slot's stack: the Plus control shows
         // whichever source is displayed, and an inactive page must not
-        // judge its sources against the active camera's wheels.
-        val sources = current.sources.map {
+        // judge its sources against the active camera's wheels. Only
+        // Standard and the camera's ND-holding candidate sets are offered
+        // (FILTER-PLUS-001).
+        val sources = current.offeredFilterSources(candidates).map {
             FilterSourceUiOption(
                 source = it,
                 name = FilterWheelPresenter.sourceName(it, current),
@@ -1380,6 +1557,7 @@ class CalculatorController(
 
         val canReset = snapshot.shutterIndex != defaultShutterIndex ||
             committedStack.wheels != listOf(FilterWheel.standard(0.0)) ||
+            committedStack.hasAuxiliaryFilters ||
             film != null ||
             snapshot.targetSeconds != null ||
             slotId in session.currentCustomNames()
@@ -1396,6 +1574,9 @@ class CalculatorController(
             filterWheels = filterWheels,
             plus = plus,
             filterStatus = filterStatus,
+            auxiliarySummary = AuxiliaryFilterSummaryPresenter.displayState(committedStack.auxiliaryRows),
+            mountedAuxiliaryFilters = committedStack.auxiliaryFilters,
+            candidateFilterSetIds = candidates,
             ndTotalStopsText = if (committedStack.wheels.size >= 2) filterStatus.totalStopsText else null,
             // Same live basis as the total text, so the badge never
             // shows "30" without its Maximum marker mid-scroll.
@@ -1431,18 +1612,20 @@ class CalculatorController(
         source.filterSetId?.let { inventory.filterSet(it)?.color }
 
     /**
-     * Idle source identity for a stack containing any Filter Set wheel
-     * (FILTER-STACK-008): each source once, in the wheels' settled
-     * left-to-right order, with its wheel count and — for a Filter Set —
-     * its user-selected source color. `null` for a Standard-only stack,
-     * which keeps the existing ND status behavior.
+     * Idle source identity for a stack containing any Filter Set wheel or
+     * mounted auxiliary filter (FILTER-STACK-008): each source once in
+     * main-row order — the auxiliary filters' sets first, then the wheels'
+     * settled left-to-right order — with its ND-wheel count and, for a
+     * Filter Set, its user-selected source color. `null` for a
+     * Standard-only stack, which keeps the existing ND status behavior.
      */
     private fun sourceSummary(
         stack: FilterStack,
         inventory: FilterInventory,
     ): List<FilterSourceSummaryItem>? {
-        if (stack.wheels.none { it.source != FilterSource.Standard }) return null
+        if (stack.wheels.none { it.source != FilterSource.Standard } && !stack.hasAuxiliaryFilters) return null
         val counts = LinkedHashMap<FilterSource, Int>()
+        for (mount in stack.auxiliaryFilters) counts.getOrPut(FilterSource.FilterSet(mount.filterSetId)) { 0 }
         for (wheel in stack.wheels) counts[wheel.source] = (counts[wheel.source] ?: 0) + 1
         return counts.map { (source, count) ->
             FilterSourceSummaryItem(

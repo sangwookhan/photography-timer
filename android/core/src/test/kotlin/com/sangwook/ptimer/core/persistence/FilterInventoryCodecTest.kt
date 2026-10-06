@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.core.persistence
 
 import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
+import com.sangwook.ptimer.core.exposure.FilterExposureLoss
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemBehavior
@@ -53,6 +54,42 @@ class FilterInventoryCodecTest {
         val decoded = FilterInventoryCodec.decode(FilterInventoryCodec.encode(snapshot))
         assertEquals(snapshot, decoded)
         assertEquals(inventory, decoded!!.restoredInventory)
+    }
+
+    @Test fun colorAndEffectItemsRoundTripWithTheirLossAndColor() {
+        val red = FilterItem(
+            "Red 25A",
+            FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.yellowGreen),
+            FilterItemId("i-red"),
+        )
+        val night = FilterItem("Night", FilterItemBehavior.Effect(FilterExposureLoss(0.0)), FilterItemId("i-night"))
+        val withAuxiliary = FilterInventory(
+            listOf(FilterSet("Color", FilterSetColor.purple, listOf(red, night), FilterSetId("s-color"))),
+        )
+        val snapshot = PersistentFilterInventorySnapshot.from(withAuxiliary)
+        val decoded = FilterInventoryCodec.decode(FilterInventoryCodec.encode(snapshot))!!
+        assertEquals("Zero loss is a valid Effect.", withAuxiliary, decoded.restoredInventory)
+        assertEquals("yellowGreen", decoded.filterSets.single().items.first().opticalColor)
+    }
+
+    @Test fun retiredPaletteTokensMapToTheirNearestColor() {
+        val json = """
+            {"schemaVersion":1,"filterSets":[
+              {"id":"s-1","name":"Mint","color":"mint","items":[
+                {"id":"i-1","name":"Old","kind":"color","value":1.0,"opticalColor":"indigo"}]},
+              {"id":"s-2","name":"Cyan","color":"cyan"},
+              {"id":"s-3","name":"Indigo","color":"indigo"},
+              {"id":"s-4","name":"Brown","color":"brown"}]}
+        """.trimIndent()
+        val restored = FilterInventoryCodec.decode(json)!!.restoredInventory
+        assertEquals(
+            listOf(FilterSetColor.teal, FilterSetColor.teal, FilterSetColor.blue, FilterSetColor.orange),
+            restored.filterSets.map { it.color },
+        )
+        assertEquals(
+            FilterItemBehavior.Color(FilterExposureLoss(1.0), FilterSetColor.blue),
+            restored.filterSets.first().items.single().behavior,
+        )
     }
 
     @Test fun aMalformedItemIsSkippedWhileItsFilterSetSurvives() {

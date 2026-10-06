@@ -89,7 +89,11 @@ compact presence, not folded into the shooting screen itself.
   permitted to also have a cramped hit area. On Android this is enforced
   as a minimum 48dp interactive target. Visual size may stay smaller than
   the interactive area; this requirement concerns usable interactive area,
-  not identical visual size across platforms.
+  not identical visual size across platforms. The approved compact Android
+  Main header is an exception for the Stops / OD / ND notation selector:
+  retain its accepted layout, including approximately 42.7dp-wide segments
+  in English at a 360dp viewport. This exception does not reduce the minimum
+  target for other controls or claim that the selector satisfies 48dp.
 
 ### Accessibility semantics
 

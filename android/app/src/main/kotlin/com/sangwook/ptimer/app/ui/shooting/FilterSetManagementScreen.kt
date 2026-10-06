@@ -780,8 +780,9 @@ internal fun ConfirmDeleteDialog(
     )
 }
 
-/** Nine-token color grid in hue order; each swatch carries its color
- *  name. Shared by Filter Sets and Color filters (FILTER-COLOR-001). */
+/** Eleven-token color grid in hue order over two rows; each swatch
+ *  carries its color name. Shared by Filter Sets and Color filters
+ *  (FILTER-COLOR-001/004). */
 @Composable
 internal fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetColor) -> Unit, rowSpacing: Dp = 8.dp) {
     val tokens = FilterSetColor.entries
@@ -851,5 +852,5 @@ private fun filterCountText(count: Int): String =
         stringResource(R.string.filter_set_filter_count, count)
     }
 
-// Nine palette colors read in hue order over two rows.
-private const val COLOR_GRID_COLUMNS = 5
+// Eleven palette colors read in hue order over two rows.
+private const val COLOR_GRID_COLUMNS = 6

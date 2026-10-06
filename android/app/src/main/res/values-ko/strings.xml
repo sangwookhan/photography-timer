@@ -82,7 +82,9 @@
     <string name="filter_summary_count">%1$s ×%2$d</string>
     <!-- Filter Set 소스 색상 이름: 색만으로 식별하지 않음 -->
     <string name="filter_color_red">빨강</string>
+    <string name="filter_color_red_orange">주홍</string>
     <string name="filter_color_orange">주황</string>
+    <string name="filter_color_yellow_orange">귤색</string>
     <string name="filter_color_yellow">노랑</string>
     <string name="filter_color_yellow_green">황록</string>
     <string name="filter_color_green">초록</string>

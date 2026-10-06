@@ -36,7 +36,7 @@ final class ExposureScaleModeUITests: XCTestCase {
     // MARK: - Default scale is one-third-stop without any UI flip
 
     @MainActor
-    func testDefaultViewModelExposesOneThirdStopShutterAndPresetND() {
+    func testDefaultViewModelExposesOneThirdStopShutterAndWholeStopND() {
         let viewModel = makeViewModel()
 
         XCTAssertEqual(viewModel.scaleMode, .oneThirdStop)
@@ -48,28 +48,21 @@ final class ExposureScaleModeUITests: XCTestCase {
             ExposureScale.oneThirdStop.shutterSteps.count
         )
 
-        // ND picker is whole stops 0…30 plus the three PTIMER-209
-        // commercial fractional presets (per docs/specs/Calculator.md
-        // §2.2). One-third-stop applies to the shutter ladder only; the
-        // ND ladder is not densified to 1/3-stop entries.
-        XCTAssertEqual(viewModel.pickerNDSteps.count, 34)
-        XCTAssertEqual(
-            viewModel.pickerNDSteps.map(\.stops),
-            ((0...30).map(Double.init) + ExposureScale.commercialFractionalNDStops).sorted()
-        )
-        // The only non-whole entries are the three commercial presets.
-        let fractional = viewModel.pickerNDSteps.filter { !$0.isWholeStop }.map(\.stops)
-        XCTAssertEqual(fractional, ExposureScale.commercialFractionalNDStops)
+        // ND picker is whole stops 0…30 (ND-001). One-third-stop applies
+        // to the shutter ladder only; the ND ladder is not densified, and
+        // products such as ND100 are registered Filter Items instead.
+        XCTAssertEqual(viewModel.pickerNDSteps.count, 31)
+        XCTAssertEqual(viewModel.pickerNDSteps.map(\.stops), (0...30).map(Double.init))
         // The legacy whole-stop surface still exposes 0…30 unchanged.
         XCTAssertEqual(viewModel.pickerWholeNDStops, Array(0...30))
     }
 
     @MainActor
-    func testShippingNDPickerOptionsAroundSevenUsePresetsNotThirdStops() {
+    func testShippingNDPickerOptionsAroundSevenAreWholeStops() {
         // The ND wheel never enumerates third-stop rows (`7 1/3`,
-        // `7 2/3`). PTIMER-209 does add the decimal presets 6.6 and 7.6
-        // around the 7-stop row, so the neighbours read `6, 6.6, 7,
-        // 7.6, 8`. Asserted by canonical stops and by picker labels.
+        // `7 2/3`) or the former decimal presets: the neighbours of the
+        // 7-stop row read `6, 7, 8` (ND-001). Asserted by canonical stops
+        // and by picker labels.
         let viewModel = makeViewModel()
 
         let labels = viewModel.pickerNDSteps.map { viewModel.formatNDStop($0) }
@@ -81,9 +74,8 @@ final class ExposureScaleModeUITests: XCTestCase {
                 "shipping ND picker label \(label) must not contain a fraction"
             )
         }
-        // The commercial presets are present as decimals.
-        XCTAssertTrue(labels.contains("6.6"))
-        XCTAssertTrue(labels.contains("7.6"))
+        XCTAssertFalse(labels.contains("6.6"))
+        XCTAssertFalse(labels.contains("7.6"))
 
         guard let sevenIndex = viewModel.pickerNDSteps.firstIndex(where: { $0.wholeStops == 7 }) else {
             XCTFail("shipping ND ladder must include the 7-stop entry")
@@ -91,12 +83,10 @@ final class ExposureScaleModeUITests: XCTestCase {
         }
         XCTAssertGreaterThan(sevenIndex, 0)
         XCTAssertLessThan(sevenIndex + 1, viewModel.pickerNDSteps.count)
-        // 6 → 6.6 → 7 → 7.6 → 8 around the 7-stop row.
-        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex - 2].wholeStops, 6)
-        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex - 1].stops, 6.6, accuracy: 1e-9)
+        // 6 → 7 → 8 around the 7-stop row.
+        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex - 1].wholeStops, 6)
         XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex].wholeStops, 7)
-        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex + 1].stops, 7.6, accuracy: 1e-9)
-        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex + 2].wholeStops, 8)
+        XCTAssertEqual(viewModel.pickerNDSteps[sevenIndex + 1].wholeStops, 8)
     }
 
     // MARK: - Snap policy: the shipping scale never snaps

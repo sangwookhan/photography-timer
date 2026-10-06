@@ -227,6 +227,16 @@ could be confused.
   selected on an affected camera shall show the affected cameras and remain
   uncommitted until the conflict is resolved. The system shall not silently
   replace a selected CPL choice with another configured value.
+  Saving an ND item's move shall reconcile each referencing camera against
+  that camera's selected Filter Sets before the move. If the destination Set
+  is selected, the same wheel may retain the item under its new Set. If the
+  destination is Available (not selected), the existing wheel shall become
+  Empty under its original Filter Source, retaining its wheel identity until
+  ordinary empty-wheel cleanup. The move shall not add, remove, or reorder
+  selected Filter Sets and shall not automatically select the destination.
+  Inventory saving and this camera reconciliation are immediate and independent
+  of Shooting Filters Apply/Cancel; unrelated selections and captured timers
+  remain unchanged.
 - **FILTER-ITEM-006** — Deleting an item shall first identify affected cameras.
   After confirmation, each referencing ND wheel shall become Empty and each
   referencing mounted auxiliary item shall be removed. Deleting a Filter Set
@@ -854,7 +864,11 @@ could be confused.
   auxiliary selections. Candidate sets shall include the referenced legacy
   sets so restored mounted items remain reachable. A legacy stack containing
   only auxiliary items shall receive one Standard 0 ND wheel. Existing timer
-  records shall not be rewritten.
+  records shall not be rewritten. When a saved ND reference points to an
+  item whose current owner differs from its saved Filter Source, reconcile
+  that move under FILTER-ITEM-005 using the stored selected Sets before
+  adding any referenced legacy Set. Restore shall not select an Available
+  destination merely because it now owns the item.
 - **FILTER-PERSIST-003** — Starting a timer shall capture an immutable
   calculation record containing the effective canonical total in stops and
   each ND wheel's and mounted auxiliary item's actual contributed stops and selected calculation mode. The Timer
@@ -1192,3 +1206,21 @@ Additional regression checks:
 - Verify fresh installation and upgrade with no previously saved inventory:
   Samples appear once and remain unselected. A saved empty inventory, deleted
   Samples, malformed payload or read failure shall not seed or overwrite them.
+
+### ND item movement verification
+
+- Start with zero auxiliary filters. Mount an ND item from selected Set A,
+  leave Set B Available, and save the item's move to B. Its existing wheel
+  becomes A's Empty wheel with the same identity; B remains Available and the
+  selected Set list and order remain unchanged. Ordinary empty-wheel cleanup
+  still follows ND-CLEANUP-001–006.
+- Repeat with B already selected: the wheel retains the same physical item
+  under B. Repeat across two cameras whose selected Sets differ and verify
+  each camera independently follows the corresponding rule.
+- Move the item while Shooting Filters has unrelated working changes.
+  Inventory save takes effect immediately; Apply or Cancel shall not undo
+  the move or restore the cleared ND item, and unrelated working choices
+  shall remain intact.
+- Relaunch after the move, including a saved camera snapshot that still uses
+  the original owner, and verify the same per-camera outcome without
+  automatically selecting the destination. Captured timer records stay unchanged.

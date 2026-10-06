@@ -41,8 +41,9 @@ class ShootingAppBootstrap(
     val library: CustomFilmLibrary,
     val initialSession: PersistentSlotSession?,
     val slotStore: DataStoreSlotSessionStore,
-    /** The user's Filter Sets and physical items, read during [load]. */
-    val initialInventory: FilterInventory,
+    /** The user's Filter Sets and physical items, read during [load];
+     *  `null` when nothing is saved yet (a fresh installation). */
+    val initialInventory: FilterInventory?,
     val inventoryStore: DataStoreFilterInventoryStore,
     val displaySettingsStore: DataStoreDisplaySettingsStore,
     val initialNdNotationMode: NDNotationMode,
@@ -72,8 +73,7 @@ class ShootingAppBootstrap(
                     library = CustomFilmLibrary(store = libraryStore),
                     initialSession = slotStore.loadSession(),
                     slotStore = slotStore,
-                    initialInventory = inventoryStore.loadSnapshot()?.restoredInventory
-                        ?: FilterInventory.empty,
+                    initialInventory = inventoryStore.loadSnapshot()?.restoredInventory,
                     inventoryStore = inventoryStore,
                     displaySettingsStore = displaySettingsStore,
                     initialNdNotationMode = displaySettingsStore.loadNdNotationMode(),

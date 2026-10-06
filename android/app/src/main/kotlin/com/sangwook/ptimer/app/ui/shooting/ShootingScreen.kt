@@ -3,41 +3,60 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,30 +66,32 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.draw.clip
+import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.ui.localizedCoreText
+import com.sangwook.ptimer.app.ui.localizedFilmName
+import com.sangwook.ptimer.app.vm.CalculatorUiState
+import com.sangwook.ptimer.app.vm.CustomFilmDraft
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
+import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
 import com.sangwook.ptimer.core.customfilm.CustomFilmCheckpointRow
 import com.sangwook.ptimer.core.customfilm.CustomFilmReferencePointRow
 import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
@@ -83,15 +104,6 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
-import com.sangwook.ptimer.app.vm.CalculatorUiState
-import com.sangwook.ptimer.app.vm.CustomFilmDraft
-import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
-import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
-import androidx.compose.ui.res.stringResource
-import com.sangwook.ptimer.R
-import com.sangwook.ptimer.app.ui.CappedFontScale
-import com.sangwook.ptimer.app.ui.localizedCoreText
-import com.sangwook.ptimer.app.ui.localizedFilmName
 
 
 /**
@@ -112,8 +124,8 @@ fun ShootingScreen(
     onAddFilterWheel: (FilterSource) -> Unit,
     onAdjustFilterWheel: (Int, FilterWheelAdjustmentDirection) -> FilterWheelAdjustmentOutcome,
     onRemoveNdWheelOverscroll: (Int) -> Unit,
-    onManageFilterSets: () -> Unit,
-    /** Opens the shooting popup (FILTER-FLOW-002). */
+    /** Opens Shooting Filters — from the Select Filters button, the Plus
+     *  Shooting filters action, or the mounted summary (FILTER-FLOW-002). */
     onOpenShootingFilters: () -> Unit,
     onSelectNotation: (NDNotationMode) -> Unit,
     onSelectFilm: (String?) -> Unit,
@@ -140,6 +152,7 @@ fun ShootingScreen(
     onCreateFormulaFromTable: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onReferencePoints: (CustomFormulaFilmInput, List<Pair<Double, Double>>) -> List<CustomFilmReferencePointRow>,
     onOpenAbout: () -> Unit,
+    onOpenFilterManagement: () -> Unit,
     showExactAlarmSettingsAction: Boolean,
     onOpenExactAlarmSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -251,7 +264,13 @@ fun ShootingScreen(
                             // callbacks target the active slot, so gating on the
                             // active page also avoids resetting from a peeked page.
                             if (writesActiveSlot && pageState.canReset) {
-                                TextButton(onClick = { showResetConfirm = true }) { Text(stringResource(R.string.action_reset)) }
+                                // A visible button surface beside the Settings
+                                // menu, with an ordinary gap (RESET-005).
+                                OutlinedButton(
+                                    onClick = { showResetConfirm = true },
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
+                                    modifier = Modifier.testTag("shooting-reset"),
+                                ) { Text(stringResource(R.string.action_reset)) }
                             }
                             // Exact alarms are off (PTIMER-219): keep a
                             // persistent status icon next to the existing
@@ -266,13 +285,10 @@ fun ShootingScreen(
                                     )
                                 }
                             }
-                            IconButton(onClick = onOpenAbout) {
-                                Icon(
-                                    Icons.Outlined.Info,
-                                    contentDescription = stringResource(R.string.shooting_about_cd),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            SettingsMenuButton(
+                                onOpenFilterManagement = onOpenFilterManagement,
+                                onOpenAbout = onOpenAbout,
+                            )
                         }
                     }
 
@@ -355,7 +371,6 @@ fun ShootingScreen(
                                 { _, _ -> FilterWheelAdjustmentOutcome.Boundary }
                             },
                             onOverscrollRemove = if (writesActiveSlot) onRemoveNdWheelOverscroll else { _ -> },
-                            onManageFilterSets = if (writesActiveSlot) onManageFilterSets else fun() {},
                             onOpenShootingFilters = if (writesActiveSlot) onOpenShootingFilters else fun() {},
                             // Narrower sides than the other cards so the
                             // one-row header gives each notation option
@@ -366,11 +381,9 @@ fun ShootingScreen(
                             ),
                         ) { wheels ->
                             val baseShutterCaption = stringResource(R.string.shooting_base_shutter)
-                            val ndFilterTitle = stringResource(R.string.shooting_nd_filter)
                             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                                 val split = ndCardColumnSplit(
                                     available = maxWidth - NdColumnGutter,
-                                    ndTitle = ndFilterTitle,
                                     baseShutterCaption = baseShutterCaption,
                                     shutterLabels = pageState.shutterLabels,
                                     wheelCount = pageState.occupiedFilterSpaces,
@@ -384,7 +397,6 @@ fun ShootingScreen(
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     NdFilterHeaderRow(
                                         baseShutterCaption = baseShutterCaption,
-                                        ndFilterTitle = ndFilterTitle,
                                         mode = pageState.ndNotationMode,
                                         enabled = writesActiveSlot,
                                         onSelectNotation = onSelectNotation,
@@ -549,8 +561,48 @@ private val CardRowPadding = 8.dp
 /** The ND card's left and right content padding. */
 private val NdCardHorizontalPadding = 2.dp
 
-/** Gap between `Base Shutter` and `ND Filter` in the ND card header. */
-private val NdHeaderGutter = 4.dp
+/**
+ * The global Settings menu beside Reset: Filter management, the shared
+ * Filter Set inventory, and About. It holds nothing camera-specific.
+ */
+@Composable
+private fun SettingsMenuButton(onOpenFilterManagement: () -> Unit, onOpenAbout: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }, modifier = Modifier.testTag("shooting-settings-menu")) {
+            Icon(
+                Icons.Outlined.Settings,
+                contentDescription = stringResource(R.string.shooting_settings_cd),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.filter_management_title)) },
+                onClick = {
+                    expanded = false
+                    onOpenFilterManagement()
+                },
+                modifier = Modifier.testTag("shooting-settings-filter-management"),
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.about_title)) },
+                onClick = {
+                    expanded = false
+                    onOpenAbout()
+                },
+                modifier = Modifier.testTag("shooting-settings-about"),
+            )
+        }
+    }
+}
+
+/** Least visible gap between `Base Shutter` and the header's trailing
+ *  group; the caption's unused width adds to it. */
+private val NdHeaderCaptionGroupGap = 12.dp
+
+/** Gap between the Select Filters button and the notation control. */
+private val NdHeaderButtonNotationGap = 8.dp
 
 /**
  * Gutter between the Base Shutter column and the ND column. Without
@@ -689,14 +741,14 @@ private val FilterWheelWantedWidth = 48.dp
  * ([NdFilterHeaderRow]), which is what lets every notation option own
  * a 48dp target (SHELL-030) without the ND column having to reserve
  * 150dp of chrome it then cannot give to the wheels. What the ND column
- * now has to hold is its title and the wheels beside it.
+ * now has to hold is the wheels.
  *
  * Precedence, in order:
  *
  *  1. The base-shutter VALUE never clips. Its rows are
  *     `maxLines = 1, softWrap = false` with no overflow, so a column a
  *     pixel too narrow cuts a digit off in silence.
- *  2. The ND column keeps its title whole and every wheel at
+ *  2. The ND column keeps every wheel at
  *     [FilterWheelWantedWidth] — FILTER-STACK-007's persistent label,
  *     numeric value, source cue and type rail all live in that width.
  *  3. The base-shutter CAPTION gets its own line's width. It is a
@@ -709,7 +761,6 @@ private val FilterWheelWantedWidth = 48.dp
 @Composable
 private fun ndCardColumnSplit(
     available: Dp,
-    ndTitle: String,
     baseShutterCaption: String,
     shutterLabels: List<String>,
     wheelCount: Int,
@@ -738,7 +789,6 @@ private fun ndCardColumnSplit(
         shutterLabels.maxOfOrNull { textWidth(it, valueStyle) } ?: 0.dp
     }
     val captionNeed = textWidth(baseShutterCaption, labelStyle)
-    val titleNeed = textWidth(ndTitle, labelStyle)
 
     val shutterNeed = maxOf(valueNeed, captionNeed)
     // What the wheel row is laid out from, mirrored from FilterStackGroup
@@ -746,7 +796,7 @@ private fun ndCardColumnSplit(
     val wheelsNeed = FilterWheelWantedWidth * wheelCount +
         FilterWheelRowSpacing * (wheelCount - 1) +
         (if (plusVisible) FilterPlusControlWidth + FilterWheelRowSpacing else 0.dp)
-    val ndNeed = maxOf(titleNeed, wheelsNeed)
+    val ndNeed = wheelsNeed
 
     val shutterWidth = if (shutterNeed + ndNeed <= available) {
         shutterNeed + (available - shutterNeed - ndNeed) / 2
@@ -758,71 +808,118 @@ private fun ndCardColumnSplit(
 }
 
 /**
- * The ND card's header, as one row (`ND-012`, `FILTER-SET-001`): the
- * `Base Shutter` caption, then the `ND Filter` title with the Filter Set
- * entry between it and the three-way notation selector, which takes the
- * rest of the row — the arrangement iOS uses.
- *
- * The row is 48dp tall. The Filter Set entry is a 48dp square and each
- * notation option is at least 48 x 48dp: at 360dp the captions, the
- * 4dp gap and the card's 2dp side padding leave the selector about
- * 145dp for its three contiguous options. The track drawn inside stays
- * 26dp.
+ * The wheel card's one header row (FILTER-FLOW-002): the passive Base
+ * Shutter caption at the leading edge, a flexible gap of at least 12 dp,
+ * then one trailing group at the trailing edge: the Select Filters
+ * button, which opens the current camera's Shooting Filters, and the
+ * Stops / OD / ND control last. Base Shutter keeps its full size; the
+ * notation control gets three 48 dp targets when the row has room for
+ * them and otherwise what is left, and whatever width the group leaves
+ * unused widens the gap before it.
  */
 @Composable
 private fun NdFilterHeaderRow(
     baseShutterCaption: String,
-    ndFilterTitle: String,
     mode: NDNotationMode,
     enabled: Boolean,
     onSelectNotation: (NDNotationMode) -> Unit,
     onOpenShootingFilters: () -> Unit,
 ) {
-    Row(
+    val captionStyle = MaterialTheme.typography.labelMedium
+    val measurer = rememberTextMeasurer()
+    val captionNatural = remember(baseShutterCaption, captionStyle) {
+        measurer.measure(baseShutterCaption, captionStyle, maxLines = 1, softWrap = false).size.width
+    }
+    Layout(
+        content = {
+            Text(
+                baseShutterCaption,
+                style = captionStyle,
+                maxLines = 1,
+                softWrap = false,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = captionStyle.fontSize * NdHeaderCaptionMinScale,
+                    maxFontSize = captionStyle.fontSize,
+                ),
+            )
+            ShootingFiltersHeaderButton(enabled = enabled, onClick = onOpenShootingFilters)
+            NotationToggle(mode = mode, enabled = enabled, onSelect = onSelectNotation)
+        },
         modifier = Modifier.fillMaxWidth().height(MinTouchTargetSize),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            baseShutterCaption,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val button = measurables[1].measure(loose)
+        val fixed = button.width + NdHeaderButtonNotationGap.roundToPx() +
+            NdHeaderCaptionGroupGap.roundToPx()
+        val notationWidth = (width - fixed - captionNatural)
+            .coerceAtMost(MinTouchTargetSize.roundToPx() * NotationOptionModes.size)
+            .coerceAtLeast(0)
+        val notation = measurables[2].measure(Constraints.fixed(notationWidth, height))
+        val caption = measurables[0].measure(
+            loose.copy(maxWidth = (width - fixed - notationWidth).coerceIn(0, captionNatural)),
         )
-        Spacer(Modifier.width(NdHeaderGutter))
-        Text(ndFilterTitle, style = MaterialTheme.typography.labelMedium, maxLines = 1)
-        FilterSetsEntry(enabled = enabled, onClick = onOpenShootingFilters)
-        NotationToggle(
-            mode = mode,
-            enabled = enabled,
-            onSelect = onSelectNotation,
-            modifier = Modifier.weight(1f),
-        )
+        layout(width, height) {
+            val notationX = width - notationWidth
+            val buttonX = notationX - NdHeaderButtonNotationGap.roundToPx() - button.width
+            caption.placeRelative(0, (height - caption.height) / 2)
+            button.placeRelative(buttonX, (height - button.height) / 2)
+            notation.placeRelative(notationX, 0)
+        }
     }
 }
 
+/** The smallest the Base Shutter caption is drawn, as a share of its size,
+ *  only when the row cannot hold it whole at all. */
+private const val NdHeaderCaptionMinScale = 0.75f
+
 /**
- * The persistent ND-header entry (FILTER-SET-001, FILTER-FLOW-002): opens
- * the shooting popup, with Filter Set management reachable from there
- * even at the maximum wheel count. A layers mark, not a general settings
- * gear.
- *
- * A real [MinTouchTargetSize] target around a mark drawn smaller
- * (SHELL-030: interactive area independent of drawn size).
+ * The Select Filters header button (FILTER-FLOW-002): a tinted,
+ * outlined button whose title and downward chevron are one target,
+ * 48 dp tall; it stays available when the wheel limit hides Plus. Its
+ * description says the camera's Filter Set selection, auxiliary filter
+ * selection, and filter editing open there while ND values are chosen on
+ * Main.
  */
 @Composable
-private fun FilterSetsEntry(enabled: Boolean, onClick: () -> Unit) {
+private fun ShootingFiltersHeaderButton(enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
     Box(
         modifier = Modifier
-            .requiredSize(MinTouchTargetSize)
-            .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
+            .height(MinTouchTargetSize)
+            .clickable(
+                enabled = enabled,
+                onClickLabel = stringResource(R.string.filter_shooting_entry_hint),
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .testTag("shooting-filters-header-button"),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            FilterSetsMark,
-            contentDescription = stringResource(R.string.filter_shooting_title),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
+        Row(
+            modifier = Modifier
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f), shape)
+                .padding(start = 6.dp, end = 2.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.filter_aux_header_title),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                softWrap = false,
+            )
+            Icon(
+                Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
     }
 }
 
@@ -887,7 +984,7 @@ internal fun NotationToggle(
                             // width rather than its label's (SHELL-030).
                             .weight(1f)
                             .fillMaxHeight()
-                            .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
+                            .sizeIn(minHeight = MinTouchTargetSize)
                             // selectable (not clickable) so TalkBack announces the
                             // segment as a button with its selected state (PTIMER-182).
                             .selectable(selected = selected, enabled = enabled, role = Role.Button) {
@@ -909,7 +1006,7 @@ internal fun NotationToggle(
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            // Compact selector labels, a step smaller than the "ND Filter"
+                            // Compact selector labels, a step smaller than the "Select Filters"
                             // title so the control stays subordinate. Both selected and
                             // unselected labels use full-contrast on-container/on-surface
                             // colors so every option stays clearly legible; the selected
@@ -1008,15 +1105,26 @@ private fun ResultCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // The value and its (i) are one details target
+                    // (DETAILS-014), apart from the timer start buttons.
+                    val detailsLabel = stringResource(R.string.shooting_reciprocity_details_cd)
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(onClickLabel = detailsLabel, role = Role.Button, onClick = onOpenDetails)
+                            .heightIn(min = MinTouchTargetSize)
+                            .padding(start = 8.dp, end = 12.dp)
+                            .semantics(mergeDescendants = true) {}
+                            .testTag("reciprocity-details-entry"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         state.confidenceLabel?.let { Pill(localizedCoreText(it)) }
-                        IconButton(onClick = onOpenDetails) {
-                            Icon(
-                                Icons.Outlined.Info,
-                                contentDescription = stringResource(R.string.shooting_reciprocity_details_cd),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = detailsLabel,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))

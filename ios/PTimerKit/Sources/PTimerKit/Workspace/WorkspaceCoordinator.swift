@@ -25,7 +25,8 @@ public final class WorkspaceCoordinator: ObservableObject {
     public let cameraSlotSessionModel: CameraSlotSessionModel
     public let targetShutterModel: TargetShutterModel
     public let customFilmLibrary: CustomFilmLibrary
-    public let filterInventoryModel: FilterInventoryModel
+    /// Internal: the view model is the only writer of the inventory.
+    let filterInventoryModel: FilterInventoryModel
     public let viewModel: ExposureCalculatorViewModel
 
     public init(

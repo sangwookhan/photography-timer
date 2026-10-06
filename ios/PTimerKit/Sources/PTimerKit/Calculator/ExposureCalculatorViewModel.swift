@@ -1142,6 +1142,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         CameraSlotCalculatorSnapshot(
             baseShutterSeconds: calculatorModel.baseShutterSeconds,
             filterStack: calculatorModel.filterStack,
+            candidateFilterSetIDs: calculatorModel.candidateFilterSetIDs,
             lastFilterSource: calculatorModel.lastFilterSource,
             scaleMode: calculatorModel.scaleMode,
             selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
@@ -1186,9 +1187,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // shooting context. The published `ndStep` mirror refreshes
         // from the model afterwards.
         if calculatorModel.filterWheels != snapshot.filterWheels
+            || calculatorModel.filterStack.auxiliaryFilters != snapshot.auxiliaryFilters
+            || calculatorModel.candidateFilterSetIDs != snapshot.candidateFilterSetIDs
             || calculatorModel.lastFilterSource != snapshot.lastFilterSource {
             calculatorModel.restoreFilterWheels(
                 snapshot.filterWheels,
+                auxiliaryFilters: snapshot.auxiliaryFilters,
+                candidateFilterSetIDs: snapshot.candidateFilterSetIDs,
                 lastFilterSource: snapshot.lastFilterSource
             )
             syncNDStepMirrorFromModel()
@@ -1796,12 +1801,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     /// LAYOUT presence of the Plus wheel, deliberately separate from
     /// whether adding is possible: the Plus wheel stays at the end
-    /// while fewer than four actual wheels exist (FILTER-PLUS-001) so
-    /// source browsing remains possible even when adding is currently
-    /// disabled (FILTER-PLUS-005); the presence never flickers under
-    /// a moving finger because it depends on the committed count only.
+    /// while the applicable ND-wheel limit permits another wheel —
+    /// four without auxiliary filters, three with them
+    /// (FILTER-PLUS-001) — so source browsing remains possible even
+    /// when adding is currently disabled (FILTER-PLUS-005); the
+    /// presence never flickers under a moving finger because it
+    /// depends on the committed state only.
     public var showsAddFilterWheelControl: Bool {
-        calculatorModel.filterWheels.count < FilterStack.maximumWheelCount
+        calculatorModel.filterWheels.count < calculatorModel.filterStack.wheelLimit
     }
 
     /// Why the settled source cannot add a wheel right now, or `nil`
@@ -1862,6 +1869,37 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             objectWillChange.send()
         }
         persistCalculatorContext()
+    }
+
+    /// Commits the shooting popup's complete auxiliary selection at
+    /// once (FILTER-AUX-003 Apply): mounting, CPL choices, and GND
+    /// modes validate together and either all take effect or nothing
+    /// changes. Returns the rejection to show — item mounted twice,
+    /// too many items, four ND wheels still present, or the combined
+    /// total over 30 stops. Existing ND wheels are never removed or
+    /// merged. A successful commit reshapes the wheel row (the summary
+    /// appears or disappears and the wheel limit changes), persists,
+    /// and re-examines cleanup because the shared budget moved.
+    @discardableResult
+    public func applyAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter]) -> FilterStackRejection? {
+        exitNDWheelReshapingForCommand()
+        defer { attemptFilterStackOrderReconciliation() }
+        let before = calculatorModel.filterStack.auxiliaryFilters
+        if let rejection = calculatorModel.setAuxiliaryFilters(mounts) {
+            return rejection
+        }
+        guard calculatorModel.filterStack.auxiliaryFilters != before else {
+            return nil
+        }
+        clearFilterRejectionNotice()
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+        reexamineNDWheelCleanup()
+        return nil
     }
 
     /// Updates the platform-neutral screen-reader ordering policy
@@ -2007,6 +2045,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     var filterSourceSummary: [FilterStatusSourceSummaryItem]? {
         FilterStatusRegionPresenter.sourceSummary(
             wheels: calculatorModel.filterWheels,
+            auxiliaryFilters: calculatorModel.filterStack.auxiliaryFilters,
             sourceName: filterSourceName,
             sourceColor: filterSetColor(for:)
         )
@@ -2627,6 +2666,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         }
         return FilterStatusRegionPresenter.sourceSummary(
             wheels: filterWheels(forPage: pageState),
+            auxiliaryFilters: cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.auxiliaryFilters ?? [],
             sourceName: filterSourceName,
             sourceColor: filterSetColor(for:)
         )
@@ -2665,8 +2705,16 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     public var ndStackTotalDisplayState: NDStackTotalDisplayState {
         NDStackTotalDisplayState(
             effectiveStep: calculatorModel.effectiveNDStep,
-            wheelCount: calculatorModel.ndFilterSteps.count
+            wheelCount: occupiedFilterSpaceCount
         )
+    }
+
+    /// Occupied filter spaces in the main row (FILTER-STACK-007): the
+    /// ND wheels plus one for the auxiliary summary while any
+    /// auxiliary filter is mounted. Drives the shared numeric size and
+    /// the Total's visibility precondition.
+    public var occupiedFilterSpaceCount: Int {
+        calculatorModel.ndFilterSteps.count + (calculatorModel.filterStack.hasAuxiliaryFilters ? 1 : 0)
     }
 
     /// Refreshes the published `ndStep` mirror from the model's

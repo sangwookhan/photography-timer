@@ -207,6 +207,11 @@ public struct CameraSlotSessionPersistenceController {
         return CameraSlotCalculatorSnapshot(
             baseShutterSeconds: entry.baseShutterSeconds ?? CalculatorDefaults.baseShutterSeconds,
             filterStack: stack,
+            candidateFilterSetIDs: inventory.normalizedCandidateFilterSetIDs(
+                (entry.candidateFilterSetIDs ?? []).map(FilterSetID.init(rawValue:)),
+                referencedBy: stack.wheels,
+                auxiliaryFilters: stack.auxiliaryFilters
+            ),
             lastFilterSource: restoredLastFilterSource(from: entry, inventory: inventory),
             scaleMode: entry.restoredScaleMode,
             selectedPresetFilm: film,
@@ -215,30 +220,37 @@ public struct CameraSlotSessionPersistenceController {
         )
     }
 
-    /// Restores the mixed Filter Stack (Filter Set contract). A present
-    /// `filterStack` that validates wins; otherwise the Standard-only
-    /// `ndStack` / legacy scalar path applies unchanged.
+    /// Restores the Filter Stack (Filter Set contract): the ND wheels
+    /// plus the mounted auxiliary filters. A present `filterStack` that
+    /// validates wins; otherwise the Standard-only `ndStack` / legacy
+    /// scalar path applies unchanged.
     private func restoredFilterStack(
         from entry: PersistentCameraSlotCalculatorSnapshot,
         inventory: FilterInventory
     ) -> FilterStack {
         if let persisted = entry.filterStack,
-           let stack = Self.validatedFilterStack(persisted, inventory: inventory) {
+           let stack = Self.validatedFilterStack(persisted, auxiliaryFilters: entry.auxiliaryFilters ?? [], inventory: inventory) {
             return stack
         }
         return FilterStack(standardSteps: restoredNDFilterSteps(from: entry))
     }
 
-    /// Validates persisted mixed wheels BEFORE any `FilterStack`
-    /// construction. Whole-stack rejection (`nil`) for structural
-    /// corruption: wheel count outside 1–4, a Standard wheel that
-    /// does not resolve to a ladder value, or a resolved total over
-    /// the 30-stop cap. Filter Set references are normalized
-    /// individually instead — an unknown set drops its wheel, an
-    /// unknown item becomes Empty — so the stack still ends in a valid
-    /// one-to-four-wheel state.
+    /// Validates persisted wheels and auxiliary filters BEFORE any
+    /// `FilterStack` construction. Whole-stack rejection (`nil`) for
+    /// structural corruption: wheel count outside 1–4, a Standard
+    /// wheel that does not resolve to a ladder value, a corrupted
+    /// auxiliary entry, more wheels than the limit that applies with
+    /// auxiliary filters, or a resolved total over the 30-stop cap.
+    /// Filter Set references are normalized individually instead — an
+    /// unknown set drops its wheel, an unknown item becomes Empty, an
+    /// unresolvable auxiliary filter is unmounted — so the stack still
+    /// ends in a valid state. A legacy wheel that mounted a CPL or GND
+    /// row migrates into an auxiliary filter with the same item,
+    /// choice, and mode (FILTER-PERSIST-002); a stack that held only
+    /// such rows receives one Standard 0 wheel.
     static func validatedFilterStack(
         _ wheels: [PersistentFilterWheelSnapshot],
+        auxiliaryFilters: [PersistentAuxiliaryFilterSnapshot] = [],
         inventory: FilterInventory
     ) -> FilterStack? {
         guard (1...FilterStack.maximumWheelCount).contains(wheels.count) else {
@@ -258,10 +270,19 @@ public struct CameraSlotSessionPersistenceController {
             }
             restored.append(restoredWheel)
         }
-        guard let normalized = FilterStack.normalizedWheels(restored, inventory: inventory) else {
+        var mounts: [MountedAuxiliaryFilter] = []
+        for entry in auxiliaryFilters {
+            guard let mount = entry.restoredMount else {
+                return nil
+            }
+            mounts.append(mount)
+        }
+        let migrated = FilterStack.migratingLegacyWheels(restored)
+        guard let normalized = FilterStack.normalizedWheels(migrated.wheels, inventory: inventory) else {
             return nil
         }
-        return FilterStack.validated(wheels: normalized, inventory: inventory)
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(mounts + migrated.auxiliaryFilters, inventory: inventory)
+        return FilterStack.validated(wheels: normalized, auxiliaryFilters: auxiliary, inventory: inventory)
     }
 
     /// Restores the slot's last Filter Source; a missing kind, an
@@ -393,7 +414,26 @@ public struct CameraSlotSessionPersistenceController {
             lastFilterSourceKind: snapshot.lastFilterSource == .standard
                 ? PersistentFilterWheelSnapshot.standardSourceKind
                 : PersistentFilterWheelSnapshot.filterSetSourceKind,
-            lastFilterSetID: snapshot.lastFilterSource.filterSetID?.rawValue
+            lastFilterSetID: snapshot.lastFilterSource.filterSetID?.rawValue,
+            // Auxiliary filters and candidates are additive: written
+            // whenever present, omitted otherwise so a slot that never
+            // used them keeps the pre-auxiliary shape.
+            auxiliaryFilters: snapshot.auxiliaryFilters.isEmpty ? nil : persistentAuxiliaryFilters(snapshot.auxiliaryFilters),
+            candidateFilterSetIDs: snapshot.candidateFilterSetIDs.isEmpty ? nil : snapshot.candidateFilterSetIDs.map(\.rawValue)
         )
+    }
+
+    /// The mounted auxiliary filters with each item's kind read from
+    /// the live inventory; a mount whose item vanished between the
+    /// snapshot and the save is dropped (restore would unmount it
+    /// anyway).
+    private func persistentAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter]) -> [PersistentAuxiliaryFilterSnapshot] {
+        let inventory = currentFilterInventory()
+        return mounts.compactMap { mount in
+            guard let kind = inventory.item(withID: mount.itemID)?.item.behavior.kind else {
+                return nil
+            }
+            return PersistentAuxiliaryFilterSnapshot(mount: mount, kind: kind)
+        }
     }
 }

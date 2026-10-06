@@ -5,20 +5,24 @@ import XCTest
 import PTimerCore
 @testable import PTimerKit
 
-/// FILTER-STACK-007 (spec revisions `b46c9102` and `7f727082`): every
-/// wheel viewport is numeric-only with a persistent type / mode label
-/// above it and a per-row type category behind each row's color rail;
-/// Fixed
-/// and GND values follow the app-global notation through the shared
-/// Standard formatter, CPL values stay exposure loss in stops, Empty is
-/// blank, and the original registered representation survives for the
-/// status region. FILTER-PERSIST-003: the start-time reference string.
+/// FILTER-STACK-007: every ND wheel viewport is numeric-only with a
+/// persistent ND / EMPTY label above it and a per-row type category
+/// behind each row's color rail; ND values follow the app-global
+/// notation through the shared Standard formatter, Empty renders
+/// canonical zero, and the original registered representation survives
+/// for the status region. CPL, GND, Color, and Effect items are
+/// auxiliary filters and never wheel rows (FILTER-STACK-003).
+/// FILTER-PERSIST-003: the start-time reference string.
 final class FilterWheelPresenterTests: XCTestCase {
-    private func row(_ item: FilterItem, _ choice: FilterRowChoice) throws -> ResolvedFilterRow {
-        try XCTUnwrap(FilterStack.resolvedRow(
+    private func wheelRow(_ item: FilterItem, _ choice: FilterRowChoice) -> ResolvedFilterRow? {
+        FilterStack.resolvedRow(
             for: FilterWheel(source: .filterSet(FilterSetID(rawValue: "s")), selection: .item(FilterRowSelection(itemID: item.id, choice: choice))),
             inventory: FilterInventory(filterSets: [FilterSet(id: FilterSetID(rawValue: "s"), name: "Lee", color: .red, items: [item])])
-        ))
+        )
+    }
+
+    private func row(_ item: FilterItem, _ choice: FilterRowChoice) throws -> ResolvedFilterRow {
+        try XCTUnwrap(wheelRow(item, choice))
     }
 
     private func display(_ item: FilterItem, _ choice: FilterRowChoice, _ mode: NDNotationMode) throws -> FilterWheelRowDisplay {
@@ -36,10 +40,10 @@ final class FilterWheelPresenterTests: XCTestCase {
             sourceName: "Lee"
         )
         XCTAssertEqual(label, "Filter 2 of 3, Lee")
-        XCTAssertEqual(fixedDisplay.accessibilityValueText, "Big Stopper, Fixed, 10 stops")
+        XCTAssertEqual(fixedDisplay.accessibilityValueText, "Big Stopper, ND, 10 stops")
 
-        let cpl = FilterItem(name: "Lee CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, nil])))
-        let changedValue = try display(cpl, .cplLoss(1), .stops).accessibilityValueText
+        let nd8 = FilterItem(name: "Lee ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let changedValue = try display(nd8, .fixed, .stops).accessibilityValueText
         XCTAssertNotEqual(fixedDisplay.accessibilityValueText, changedValue)
         XCTAssertEqual(
             FilterWheelPresenter.wheelAccessibilityLabel(
@@ -54,19 +58,7 @@ final class FilterWheelPresenterTests: XCTestCase {
 
     func testWheelAccessibilityValuesCoverEveryRowKindAndUnavailableState() throws {
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
-        let cpl = FilterItem(name: "Lee CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        let cplDisplay = try display(cpl, .cplLoss(1.5), .opticalDensity)
-        XCTAssertEqual(cplDisplay.accessibilityValueText, "Lee CPL, CPL, 1.5 stops")
-
-        let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        XCTAssertEqual(
-            try display(gnd, .gnd(.recordOnly), .stops).accessibilityValueText,
-            "Lee GND 0.9, GND Record only, 0 stops"
-        )
-        XCTAssertEqual(
-            try display(gnd, .gnd(.applyFullValue), .stops).accessibilityValueText,
-            "Lee GND 0.9, GND Apply full value, 3 stops"
-        )
+        XCTAssertEqual(try display(nd1000, .fixed, .opticalDensity).accessibilityValueText, "Big Stopper, ND, 10 stops")
 
         let emptyDisplay = FilterWheelPresenter.rowDisplay(
             for: ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil),
@@ -91,20 +83,26 @@ final class FilterWheelPresenterTests: XCTestCase {
         )
         XCTAssertEqual(
             unavailable.accessibilityValueText,
-            "Big Stopper, Fixed, 10 stops, Exceeds 30 stops"
+            "Big Stopper, ND, 10 stops, Exceeds 30 stops"
         )
+
+        // Auxiliary kinds never resolve as wheel rows (FILTER-STACK-003).
+        let cpl = FilterItem(name: "Lee CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        XCTAssertNil(wheelRow(cpl, .cplLoss(1.5)))
+        let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
+        XCTAssertNil(wheelRow(gnd, .gnd(.recordOnly)))
     }
 
     // MARK: FILTER-A11Y-005 — a successful adjustment speaks the value then the Total
 
     func testWheelAccessibilityValueAppendsTheCurrentTotalOnceAfterTheCommittedValue() throws {
-        let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
+        let nd8 = FilterItem(name: "Lee ND8", behavior: .fixed(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
         let total = NDStackTotalDisplayState(totalStopsText: "21.6", isAtMaximum: false, wheelCount: 3)
         let spoken = FilterWheelPresenter.wheelAccessibilityValue(
-            committed: try display(gnd, .gnd(.applyFullValue), .stops),
+            committed: try display(nd8, .fixed, .stops),
             total: total
         )
-        XCTAssertEqual(spoken, "Lee GND 0.9, GND Apply full value, 3 stops, Total 21.6 stops")
+        XCTAssertEqual(spoken, "Lee ND8, ND, 3 stops, Total 21.6 stops")
         XCTAssertEqual(spoken.components(separatedBy: "Total").count - 1, 1, "The Total is spoken exactly once.")
 
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
@@ -113,7 +111,7 @@ final class FilterWheelPresenterTests: XCTestCase {
                 committed: try display(nd1000, .fixed, .opticalDensity),
                 total: NDStackTotalDisplayState(totalStopsText: "13", isAtMaximum: false, wheelCount: 2)
             ),
-            "Big Stopper, Fixed, 10 stops, Total 13 stops",
+            "Big Stopper, ND, 10 stops, Total 13 stops",
             "The value stays canonical stops in every notation; the Total follows it."
         )
 
@@ -169,44 +167,11 @@ final class FilterWheelPresenterTests: XCTestCase {
         XCTAssertEqual(big.expandedLabelText, "Big Stopper · ND1000 · 10 stops")
     }
 
-    func testGNDShowsRegisteredDensityInBothModesWithRecOrFullLabels() throws {
-        let od = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        let rec = try display(od, .gnd(.recordOnly), .stops)
-        XCTAssertEqual(rec.compactValueText, "3", "Record only still shows the registered full density.")
-        XCTAssertEqual(rec.typeLabel, "GND")
-        XCTAssertEqual(rec.modeLabel, "REC")
-        XCTAssertEqual(rec.expandedLabelText, "Lee GND 0.9 · OD 0.9 · Record only · 0 stops")
-
-        let full = try display(od, .gnd(.applyFullValue), .opticalDensity)
-        XCTAssertEqual(full.compactValueText, "0.9")
-        XCTAssertEqual(full.modeLabel, "FULL")
-        XCTAssertEqual(full.expandedLabelText, "Lee GND 0.9 · OD 0.9 · Apply full value · 3 stops")
-        XCTAssertEqual(try display(od, .gnd(.applyFullValue), .filterFactor).compactValueText, "8")
-    }
-
-    func testCPLValuesStayInStopsInEveryNotation() throws {
-        let cpl = FilterItem(name: "Lee CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        for mode in NDNotationMode.allCases {
-            let display = try display(cpl, .cplLoss(1.5), mode)
-            XCTAssertEqual(display.compactValueText, "1.5", "\(mode)")
-            XCTAssertEqual(display.typeLabel, "CPL")
-            XCTAssertNil(display.modeLabel)
-        }
-        let display = try display(cpl, .cplLoss(1.5), .stops)
-        XCTAssertEqual(display.registeredText, "CPL 1.5")
-        XCTAssertEqual(display.expandedLabelText, "Lee CPL · CPL 1.5 · 1.5 stops")
-    }
-
     // MARK: Per-row type category behind the color rail (spec revision 7f727082)
 
     func testEveryRowCarriesItsTypeCategoryWithFullAccessibleNamesAndNoTypeWords() throws {
         let nd = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
         XCTAssertEqual(try display(nd, .fixed, .stops).typeCategory, .nd)
-        XCTAssertEqual(try display(cpl, .cplLoss(1.5), .filterFactor).typeCategory, .cpl)
-        XCTAssertEqual(try display(gnd, .gnd(.recordOnly), .stops).typeCategory, .gnd)
-        XCTAssertEqual(try display(gnd, .gnd(.applyFullValue), .stops).typeCategory, .gnd, "Both GND modes share one category (one teal); the label carries the mode.")
         let empty = FilterWheelPresenter.rowDisplay(
             for: ResolvedFilterRow(selection: .empty, contributionStops: 0, registeredStops: 0, item: nil),
             notationMode: .stops
@@ -220,19 +185,19 @@ final class FilterWheelPresenterTests: XCTestCase {
 
         // Visual rows are numeric-only: the value text carries no type
         // words; the accessible text keeps the full names.
-        for display in [try display(nd, .fixed, .stops), try display(cpl, .cplLoss(1.5), .stops), try display(gnd, .gnd(.recordOnly), .stops), empty, standard] {
+        for display in [try display(nd, .fixed, .stops), empty, standard] {
             XCTAssertNil(display.compactValueText.rangeOfCharacter(from: .letters), "\(display.compactValueText) must stay numeric-only.")
         }
-        XCTAssertEqual(try display(gnd, .gnd(.recordOnly), .stops).expandedLabelText, "GND · OD 0.9 · Record only · 0 stops")
-        XCTAssertEqual(try display(gnd, .gnd(.applyFullValue), .stops).expandedLabelText, "GND · OD 0.9 · Apply full value · 3 stops")
+        XCTAssertEqual(try display(nd, .fixed, .stops).expandedLabelText, "ND8 · 3 stops")
         XCTAssertEqual(empty.expandedLabelText, "Empty · no filter mounted")
     }
 
     func testRowCategoriesFollowEachCandidateRegardlessOfTheCenteredRow() throws {
         let nd = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let nd2 = FilterItem(name: "ND2", behavior: .fixed(FilterRegisteredValue(value: 1, unit: .stops)))
         let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, nil])))
         let gnd = FilterItem(name: "GND", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        let set = FilterSet(name: "Lee", color: .teal, items: [nd, cpl, gnd])
+        let set = FilterSet(name: "Lee", color: .teal, items: [nd, cpl, gnd, nd2])
         let inventory = FilterInventory(filterSets: [set])
         let stack = try XCTUnwrap(FilterStack.validated(
             wheels: [
@@ -241,18 +206,18 @@ final class FilterWheelPresenterTests: XCTestCase {
             ],
             inventory: inventory
         ))
-        // Rows of the second wheel in picker order; ND8 is disabled here
+        // Rows of the second wheel in picker order: Empty plus the
+        // set's ND items only (FILTER-STACK-003); ND8 is disabled here
         // (mounted on wheel 0) yet keeps its category.
         let options = stack.rowOptions(forWheelAt: 1, inventory: inventory, scale: .oneThirdStop)
         let displays = options.map { FilterWheelPresenter.rowDisplay(for: $0, notationMode: .opticalDensity) }
-        XCTAssertEqual(displays.map(\.typeCategory), [.empty, .nd, .cpl, .gnd, .gnd])
-        XCTAssertEqual(displays.map(\.compactValueText), ["0.0", "0.9", "1", "0.9", "0.9"])
+        XCTAssertEqual(displays.map(\.typeCategory), [.empty, .nd, .nd])
+        XCTAssertEqual(displays.map(\.compactValueText), ["0.0", "0.9", "0.3"])
         XCTAssertEqual(displays[1].isAvailable, false)
         XCTAssertEqual(displays[1].typeCategory, .nd)
-        // The set's own color (teal, which resembles the GND hue) is not
-        // part of the row display at all: categories come from the row.
+        // The set's own color (teal) is not part of the row display at
+        // all: categories come from the row.
         XCTAssertEqual(set.color, .teal)
-        XCTAssertEqual(displays.filter { $0.typeCategory == .gnd }.count, 2)
 
         // A Standard ladder is all ND.
         let standardStack = FilterStack(standardSteps: [NDStep(stops: 2), NDStep(stops: 0)])
@@ -306,9 +271,10 @@ final class FilterWheelPresenterTests: XCTestCase {
     }
 
     func testUnavailableRowsCarryTheirReason() throws {
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
-        let option = FilterWheelRowOption(row: try row(cpl, .cplLoss(1)), unavailability: .itemAlreadyMounted)
+        let nd = FilterItem(name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let option = FilterWheelRowOption(row: try row(nd, .fixed), unavailability: .itemAlreadyMounted)
         XCTAssertEqual(FilterWheelPresenter.rowDisplay(for: option, notationMode: .stops).unavailabilityText, "Already mounted on this camera")
+        XCTAssertEqual(FilterWheelPresenter.rejectionText(for: .tooManyNDWheels), "Reduce the ND wheels to three or fewer")
     }
 
     // MARK: FILTER-PERSIST-003 — reference string

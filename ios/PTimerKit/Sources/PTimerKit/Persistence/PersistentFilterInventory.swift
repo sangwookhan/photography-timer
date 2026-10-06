@@ -109,7 +109,7 @@ public struct PersistentFilterSetRecord: Codable, Equatable {
         return FilterSet(
             id: FilterSetID(rawValue: trimmedID),
             name: trimmedName,
-            color: FilterSetColor(rawValue: color) ?? .blue,
+            color: PersistentFilterItemRecord.restoredColor(color) ?? .blue,
             items: restoredItems
         )
     }
@@ -126,14 +126,19 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
     public let unit: String?
     /// The three CPL fields; `null` entries are empty fields.
     public let cplChoices: [Double?]?
+    /// `FilterSetColor.rawValue` of a Color item's color. Additive: Color
+    /// and Effect items store their loss in `value` (always stops, so
+    /// `unit` stays `nil`) and pre-Color records omit this key.
+    public let opticalColor: String?
 
-    public init(id: String, name: String, kind: String, value: Double?, unit: String?, cplChoices: [Double?]?) {
+    public init(id: String, name: String, kind: String, value: Double?, unit: String?, cplChoices: [Double?]?, opticalColor: String? = nil) {
         self.id = id
         self.name = name
         self.kind = kind
         self.value = value
         self.unit = unit
         self.cplChoices = cplChoices
+        self.opticalColor = opticalColor
     }
 
     public init(item: FilterItem) {
@@ -142,11 +147,16 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
             self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: value.value, unit: value.unit.rawValue, cplChoices: nil)
         case .cpl(let choices):
             self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: nil, unit: nil, cplChoices: choices.fields)
+        case .color(let loss, let color):
+            self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: loss.stops, unit: nil, cplChoices: nil, opticalColor: color.rawValue)
+        case .effect(let loss):
+            self.init(id: item.id.rawValue, name: item.name, kind: item.behavior.kind.rawValue, value: loss.stops, unit: nil, cplChoices: nil)
         }
     }
 
     /// `nil` when the record cannot restore as a well-formed item
-    /// (unknown kind, missing or invalid value, no valid CPL choice).
+    /// (unknown kind, missing or invalid value, no valid CPL choice,
+    /// a Color item without a known optical color).
     public var restoredItem: FilterItem? {
         let trimmedID = id.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -167,9 +177,37 @@ public struct PersistentFilterItemRecord: Codable, Equatable {
                 return nil
             }
             behavior = .cpl(CPLExposureLossChoices(fields: cplChoices))
+        case .color:
+            guard let value, let colorRaw = opticalColor, let color = Self.restoredColor(colorRaw) else {
+                return nil
+            }
+            behavior = .color(FilterExposureLoss(stops: value), color)
+        case .effect:
+            guard let value else {
+                return nil
+            }
+            behavior = .effect(FilterExposureLoss(stops: value))
         }
         let item = FilterItem(id: FilterItemID(rawValue: trimmedID), name: trimmedName, behavior: behavior)
         return item.isWellFormed ? item : nil
+    }
+
+    /// A persisted palette token — a Filter Set's color or a Color
+    /// item's color. Tokens retired from the earlier twelve-color
+    /// palette map to their nearest remaining hue (mint and cyan to
+    /// teal, indigo to blue, brown to orange) so no set or item loses
+    /// its color; the next save writes the current token. `nil` for an
+    /// unknown token.
+    static func restoredColor(_ raw: String) -> FilterSetColor? {
+        if let color = FilterSetColor(rawValue: raw) {
+            return color
+        }
+        switch raw {
+        case "mint", "cyan": return .teal
+        case "indigo": return .blue
+        case "brown": return .orange
+        default: return nil
+        }
     }
 }
 

@@ -30,6 +30,27 @@ final class ExposureWorkspaceMainLayoutStyleTests: XCTestCase {
         XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.dense.wheelRowValuePointSize(forNDWheelCount: 4), 14, "Four wheels in Dense render 14-point values.")
     }
 
+    /// FILTER-AUX-002: in the four-space layout (summary plus three ND
+    /// wheels) the summary column is wider than an equal share so whole
+    /// registered names fit, and the narrower column gaps pay for it:
+    /// on a 402 pt phone each ND column keeps its previous width.
+    func testFourSpaceSummaryWidensWithoutNarrowingTheNDColumns() throws {
+        for style in [ExposureWorkspaceMainLayoutStyle.compact, .dense] {
+            let content: CGFloat = 402 - 2 * style.horizontalPadding - 2 * style.sectionCardPadding
+            let base = try XCTUnwrap(style.baseShutterColumnMaxWidth(forNDWheelCount: 4))
+            let equalShare = (content - base - style.inputColumnSpacing - 3 * style.filterWheelSpacing) / 4
+            let summary = try XCTUnwrap(style.auxiliarySummaryWidth(forOccupiedSpaceCount: 4))
+            let gaps = style.inputColumnSpacing(forOccupiedSpaceCount: 4, hasAuxiliarySummary: true)
+                + 3 * style.filterWheelSpacing(forOccupiedSpaceCount: 4, hasAuxiliarySummary: true)
+            let ndColumn = (content - base - gaps - summary) / 3
+            XCTAssertGreaterThan(summary, equalShare, "\(style)")
+            XCTAssertGreaterThanOrEqual(ndColumn, equalShare - 0.1, "\(style): ND columns keep their width.")
+            XCTAssertNil(style.auxiliarySummaryWidth(forOccupiedSpaceCount: 3), "\(style): fewer spaces keep the equal split.")
+            XCTAssertEqual(style.inputColumnSpacing(forOccupiedSpaceCount: 4, hasAuxiliarySummary: false), style.inputColumnSpacing)
+            XCTAssertEqual(style.filterWheelSpacing(forOccupiedSpaceCount: 4, hasAuxiliarySummary: false), style.filterWheelSpacing)
+        }
+    }
+
     func testSingleWheelKeepsTheFullWidthPickerSize() {
         XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.regular.wheelRowValuePointSize(forNDWheelCount: 1), 32)
         XCTAssertEqual(ExposureWorkspaceMainLayoutStyle.compact.wheelRowValuePointSize(forNDWheelCount: 1), 26)

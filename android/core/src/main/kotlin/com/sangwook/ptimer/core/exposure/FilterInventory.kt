@@ -399,7 +399,7 @@ data class FilterSet(
 /**
  * The complete user inventory: Filter Sets in user-defined display
  * order. Standard is a fixed built-in source that always precedes every
- * Filter Set (FILTER-SET-004). (iOS: `FilterInventory`.)
+ * Filter Set. (iOS: `FilterInventory`.)
  */
 data class FilterInventory(val filterSets: List<FilterSet> = emptyList()) {
 
@@ -435,20 +435,21 @@ data class FilterInventory(val filterSets: List<FilterSet> = emptyList()) {
 
     /**
      * A camera's candidate Filter Sets made consistent with this inventory
-     * and its stack (FILTER-CAMERA-001, FILTER-PERSIST-002): unknown sets
-     * are dropped, every set a wheel or a mounted auxiliary filter still
-     * references is included so the restored selections stay reachable,
-     * and the result follows the user-defined set order.
+     * and its stack (FILTER-CAMERA-001, FILTER-SET-004, FILTER-PERSIST-002):
+     * unknown and repeated sets are dropped, the candidates keep their
+     * selection order, and every other set a wheel or a mounted auxiliary
+     * filter still references is appended, in inventory order, so the
+     * restored selections stay reachable.
      */
     fun normalizedCandidateFilterSetIds(
         candidates: List<FilterSetId>,
         wheels: List<FilterWheel>,
         auxiliaryFilters: List<MountedAuxiliaryFilter>,
     ): List<FilterSetId> {
-        val referenced = candidates.toSet() +
-            wheels.mapNotNull { it.source.filterSetId } +
-            auxiliaryFilters.map { it.filterSetId }
-        return filterSets.map { it.id }.filter { it in referenced }
+        val existing = filterSets.map { it.id }.toSet()
+        val kept = candidates.filter { it in existing }.distinct()
+        val referenced = wheels.mapNotNull { it.source.filterSetId }.toSet() + auxiliaryFilters.map { it.filterSetId }
+        return kept + filterSets.map { it.id }.filter { it in referenced && it !in kept }
     }
 
     companion object {

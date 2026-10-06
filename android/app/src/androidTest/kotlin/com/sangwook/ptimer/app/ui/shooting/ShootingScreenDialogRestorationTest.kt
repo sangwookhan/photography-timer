@@ -71,7 +71,6 @@ class ShootingScreenDialogRestorationTest {
                     onAddFilterWheel = {},
                     onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
                     onRemoveNdWheelOverscroll = {},
-                    onManageFilterSets = {},
                     onOpenShootingFilters = {},
                     onSelectNotation = {},
                     onSelectFilm = {},
@@ -98,6 +97,7 @@ class ShootingScreenDialogRestorationTest {
                     onCreateFormulaFromTable = { _, _ -> true },
                     onReferencePoints = { _, _ -> emptyList() },
                     onOpenAbout = {},
+                    onOpenFilterManagement = {},
                     showExactAlarmSettingsAction = false,
                     onOpenExactAlarmSettings = {},
                 )

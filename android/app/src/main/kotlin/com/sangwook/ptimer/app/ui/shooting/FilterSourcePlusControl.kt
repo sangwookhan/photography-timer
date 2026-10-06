@@ -54,9 +54,6 @@ import com.sangwook.ptimer.app.vm.FilterPlusUiState
 import com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiter
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.ui.theme.filterSetColor
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** Slim trailing-edge Plus control width (iOS uses a 26 pt ghost column). */
 internal val FilterPlusControlWidth = 26.dp
@@ -70,21 +67,21 @@ internal val FilterPlusControlWidth = 26.dp
  * - a tap adds a Standard 0 or Filter Set Empty wheel for the displayed
  *   source, exactly once (FILTER-PLUS-003);
  * - a vertical drag browses Standard / the camera's candidate Filter
- *   Sets in selection order and then the Auxiliary filters action,
+ *   Sets in selection order and then the Shooting filters action,
  *   reporting the candidate so the status region can show it; releasing
  *   on a different source adds exactly one wheel from that final source,
- *   releasing on the Auxiliary filters action opens the shooting popup
+ *   releasing on the Shooting filters action opens Shooting Filters
  *   without adding anything, and a return to the starting source adds
  *   nothing;
- * - a stationary long press opens Filter Set management; movement past
- *   the stationary tolerance cancels it, and once the drag threshold is
- *   crossed browsing has won for the rest of the touch (FILTER-PLUS-001).
+ * - once the drag threshold is crossed browsing has won for the rest of
+ *   the touch. Plus has no long press; Filter Sets are managed from
+ *   Shooting Filters and the Settings menu (FILTER-FLOW-005/006).
  *
  * At rest the compact control shows the candidate source's color as a
  * secondary cue. TalkBack sees ONE focusable element (FILTER-A11Y-001,
  * FILTER-PLUS-004): its adjustable value steps a transient displayed
  * candidate through the sources without adding or touching the camera's
- * remembered source, Manage Filter Sets is always a named action, and
+ * remembered source, Open shooting filters is always a named action, and
  * Add — activation and the named action — exists only while the
  * DISPLAYED source can add right now; otherwise the state description
  * carries the reason and the element stays adjustable so the user can
@@ -95,8 +92,7 @@ internal fun FilterSourcePlusControl(
     plus: FilterPlusUiState,
     height: Dp,
     onAdd: (FilterSource) -> Unit,
-    onManage: () -> Unit,
-    /** Opens the shooting popup — the Auxiliary filters action. */
+    /** Opens Shooting Filters — the Shooting filters action. */
     onOpenAuxiliaryFilters: () -> Unit,
     /** The choice a touch is browsing right now, owned by the caller;
      *  `null` when no drag is browsing. */
@@ -128,9 +124,10 @@ internal fun FilterSourcePlusControl(
     val isBrowsing = browsing != null
 
     val addLabel = stringResource(R.string.nd_add_filter)
-    val manageLabel = stringResource(R.string.filter_manage_sets)
-    val auxiliaryLabel = stringResource(R.string.filter_auxiliary_open)
-    val auxiliaryTitle = stringResource(R.string.filter_auxiliary_title)
+    // Plus names its destination Shooting filters (FILTER-FLOW-002,
+    // FILTER-A11Y-001); Main's summary keeps the Auxiliary filters title.
+    val auxiliaryLabel = stringResource(R.string.filter_shooting_open)
+    val auxiliaryTitle = stringResource(R.string.filter_shooting_title)
     val displayedName = when (displayed) {
         is FilterPlusChoice.Source -> localizedSourceName(displayed.option.name)
         FilterPlusChoice.AuxiliaryFilters -> auxiliaryTitle
@@ -140,9 +137,7 @@ internal fun FilterSourcePlusControl(
     val currentOnOpenAuxiliary by rememberUpdatedState(onOpenAuxiliaryFilters)
 
     val haptics = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
     val currentOnAdd by rememberUpdatedState(onAdd)
-    val currentOnManage by rememberUpdatedState(onManage)
     val currentOnBrowsingChanged by rememberUpdatedState(onBrowsingChanged)
 
     Box(
@@ -152,47 +147,34 @@ internal fun FilterSourcePlusControl(
             .clip(RoundedCornerShape(10.dp))
             .background(tint.copy(alpha = if (isBrowsing) 0.22f else 0.12f))
             .border(1.5.dp, tint.copy(alpha = if (isBrowsing) 0.9f else 0.55f), RoundedCornerShape(10.dp))
-            // One gesture decides tap / long press / browse from the
-            // touch's travel and duration, so the three never compete.
+            // One gesture decides tap or browse from the touch's travel,
+            // so the two never compete.
             .pointerInput(sources, settledIndex) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val arbiter = FilterSourcePlusGestureArbiter(settledIndex, choices.size)
-                    var longPress: Job? = scope.launch {
-                        delay(FilterSourcePlusGestureArbiter.LONG_PRESS_MILLIS)
-                        if (arbiter.deadlineElapsed()) currentOnManage()
-                    }
-                    try {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) {
-                                change.consume()
-                                break
-                            }
-                            val dx = (change.position.x - down.position.x).toDp().value
-                            val dy = (change.position.y - down.position.y).toDp().value
-                            val moved = arbiter.moved(dx, dy)
-                            if (arbiter.phase != FilterSourcePlusGestureArbiter.Phase.pressing) {
-                                longPress?.cancel()
-                                longPress = null
-                            }
-                            if (moved) {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                currentOnBrowsingChanged(arbiter.candidateIndex?.let { choices.getOrNull(it) })
-                            }
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
                             change.consume()
+                            break
                         }
-                    } finally {
-                        longPress?.cancel()
+                        val dx = (change.position.x - down.position.x).toDp().value
+                        val dy = (change.position.y - down.position.y).toDp().value
+                        if (arbiter.moved(dx, dy)) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            currentOnBrowsingChanged(arbiter.candidateIndex?.let { choices.getOrNull(it) })
+                        }
+                        change.consume()
                     }
                     val outcome = arbiter.released()
                     currentOnBrowsingChanged(null)
                     when (outcome) {
                         // The controller refuses and reports when the
                         // source cannot add, so the view never gates it.
-                        // Settling on the Auxiliary filters action opens the
-                        // popup and adds no wheel (FILTER-PLUS-003).
+                        // Settling on the Shooting filters action opens
+                        // Shooting Filters and adds no wheel (FILTER-PLUS-003).
                         is FilterSourcePlusGestureArbiter.ReleaseOutcome.AddBrowsed ->
                             when (val choice = choices.getOrNull(outcome.index)) {
                                 is FilterPlusChoice.Source -> currentOnAdd(choice.option.source)
@@ -203,9 +185,7 @@ internal fun FilterSourcePlusControl(
                         FilterSourcePlusGestureArbiter.ReleaseOutcome.Add ->
                             displayedSource?.let { currentOnAdd(it.source) }
 
-                        FilterSourcePlusGestureArbiter.ReleaseOutcome.Managed,
-                        FilterSourcePlusGestureArbiter.ReleaseOutcome.None,
-                        -> Unit
+                        FilterSourcePlusGestureArbiter.ReleaseOutcome.None -> Unit
                     }
                 }
             }
@@ -254,7 +234,7 @@ internal fun FilterSourcePlusControl(
                     if (isAddEnabled && displayedSource != null) {
                         add(CustomAccessibilityAction(addLabel) { onAdd(displayedSource.source); true })
                     }
-                    // A distinct Open auxiliary filters action (FILTER-A11Y-001).
+                    // A distinct Open shooting filters action (FILTER-A11Y-001).
                     add(
                         CustomAccessibilityAction(auxiliaryLabel) {
                             assistiveCandidate = null
@@ -262,7 +242,6 @@ internal fun FilterSourcePlusControl(
                             true
                         },
                     )
-                    add(CustomAccessibilityAction(manageLabel) { onManage(); true })
                 }
             },
         contentAlignment = Alignment.Center,

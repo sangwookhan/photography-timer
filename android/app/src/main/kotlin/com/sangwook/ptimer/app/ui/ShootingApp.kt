@@ -263,7 +263,7 @@ fun ShootingApp(
     // header entry and the Plus wheel's management long press. It reads the
     // inventory live so an edit inside it redraws the list it was made from.
     var manageFilterSets by remember { mutableStateOf(false) }
-    val filterInventory by holder.filterInventory.inventory.collectAsStateWithLifecycle()
+    val filterInventory by holder.filterInventory.collectAsStateWithLifecycle()
     var showExactAlarmInfo by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()

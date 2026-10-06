@@ -381,6 +381,14 @@ takes an injected `ndCleanupScope`, wired to `viewModelScope` in
 change and is neither duplicated nor silently dropped across
 recreation, slot switch, reset, or restoration.
 
+The filter inventory (PTIMER-221) follows the same rule.
+`ShootingAppViewModel` builds one `FilterInventoryModel` from the
+bootstrap and keeps it private. The composition reads only its
+`StateFlow<FilterInventory>` (`filterInventory`). `CalculatorController`
+receives the model and is its only writer: every Filter Set and item
+command goes through the controller, which changes the inventory and
+then reconciles every camera's stack.
+
 The detailed migration note (before/after ownership diagrams, the
 problem-to-change mapping, lifecycle sequence diagrams, the committed
 vs interaction-transient state table, and the verification matrix)

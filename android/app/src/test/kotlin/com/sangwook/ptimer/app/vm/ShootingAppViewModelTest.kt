@@ -441,12 +441,12 @@ class ShootingAppViewModelTest {
         val sut = holder(inventoryStore = inventoryStore, initialInventory = bootstrapped)
         scheduler.advanceUntilIdle()
 
-        assertEquals(bootstrapped, sut.filterInventory.inventory.value)
+        assertEquals(bootstrapped, sut.filterInventory.value)
 
         sut.calculator.createFilterSet("NiSi kit", FilterSetColor.red)
         assertEquals(
             listOf("Bootstrap kit", "NiSi kit"),
-            sut.filterInventory.inventory.value.filterSets.map { it.name },
+            sut.filterInventory.value.filterSets.map { it.name },
         )
         assertTrue("The store write is submitted, not run inline.", inventoryStore.saved.isEmpty())
 

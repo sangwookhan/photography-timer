@@ -1,13 +1,32 @@
 # iOS Reference Screen Captures
 
 These are screenshots of the **shipped iOS app**, used as the visual / layout
-reference for the Android (PTIMER-146) reimplementation. They replace a written
-UI spec: where a capture exists, it is the source of truth for layout and
-information architecture (see fidelity tiers below).
+reference for the Android (PTIMER-146) reimplementation. Where a capture exists
+and no approved spec covers the surface, it is the reference for layout and
+information architecture (see fidelity tiers below). An approved spec always
+takes precedence (see Precedence).
 
 > The repository will be open-sourced. Committed images stay in git history
 > permanently and become public when the repo flips to public. These are the
 > author's own app screens; do not place anything sensitive here.
+
+## Precedence
+
+These captures were taken on 2026-06-25, before the Filter Set field
+workflow (PTIMER-221). They are historical layout references. They do
+not override the approved living specification
+(`docs/requirements/Requirements.md` and `docs/specs/**`): where a
+capture and an approved spec disagree, the spec wins.
+
+The Main wheel row and every filter surface changed after these captures
+were taken. That covers the Main header with Select Filters, the mounted
+auxiliary summary, Shooting Filters, Filter management, and the item
+editor. `main-shooting/wheel-base-nd-*.png` and the filter parts of the
+other `main-shooting/` captures therefore show the earlier layout. Their
+current behavior and presentation are defined by
+`docs/specs/calculator/filter-sets.md`, `docs/specs/calculator/nd-filters.md`,
+and `docs/specs/cross-cutting/presentation.md`. No newer captures are
+stored here.
 
 ## Fidelity tiers
 

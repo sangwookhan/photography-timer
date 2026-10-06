@@ -251,7 +251,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             cameraSlotSessionModel: cameraSlotSessionModel,
             targetShutterModel: TargetShutterModel(),
             customFilmLibrary: dependencies.customFilmLibrary,
-            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore),
+            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory),
             isFilterStackOrderingSuspended: isFilterStackOrderingSuspended
         )
     }
@@ -275,7 +275,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         let resolvedCustomLibrary = customFilmLibrary ?? dependencies.customFilmLibrary
         let resolvedInventory = filterInventoryModel
-            ?? FilterInventoryModel(store: dependencies.filterInventoryStore)
+            ?? FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
@@ -286,7 +286,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
             presetFilms: dependencies.presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
-            currentFilterInventory: { resolvedInventory.inventory }
+            // The calculator's mirror, not the inventory model: an
+            // inventory change reaches the facade before the model stores
+            // it, and the session it saves must read the new kinds.
+            currentFilterInventory: { calculatorModel.filterInventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
         self.filterInventoryModel = resolvedInventory
@@ -365,7 +368,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             sessionStore: cameraSlotSessionPersistenceStore,
             presetFilms: presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
-            currentFilterInventory: { resolvedInventory.inventory }
+            // The calculator's mirror, not the inventory model: an
+            // inventory change reaches the facade before the model stores
+            // it, and the session it saves must read the new kinds.
+            currentFilterInventory: { calculatorModel.filterInventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
         self.filterInventoryModel = resolvedInventory
@@ -495,6 +501,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             // whole stops and the three commercial presets, but this
             // guard must still cover the reserved third-stop path).
             || abs(ndStep.stops - Double(defaultFilmModeNDStop)) > ExposureCalculator.stabilityEpsilon
+            // Any mounted auxiliary filter, zero-contribution ones
+            // included. Selected Filter Sets alone do not count, nor do
+            // the Empty or Standard 0 wheels an Apply leaves (RESET-004).
+            || !calculatorModel.filterStack.auxiliaryFilters.isEmpty
             || scaleMode != .oneThirdStop
             || targetShutterModel.isActive
     }
@@ -866,13 +876,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // calc model and refreshes SwiftUI observers.
         scaleMode = .oneThirdStop
         baseShutter = defaultFilmModeBaseShutter
-        // Reset the canonical fractional `ndStep` directly. Routing
-        // through `ndStop = defaultFilmModeNDStop` would no-op when
-        // `ndStop` already equals `0` (e.g., after the user dragged
-        // ND to a fractional value, leaving the integer wrapper
-        // unchanged), so a fractional drift would survive the reset.
-        ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
+        // The whole Filter Stack returns to one Standard 0 wheel with
+        // no auxiliary filter (RESET-011), even when its total is
+        // already 0 — Empty Set wheels and a Record-only GND included.
+        // The camera's selected Filter Sets and its remembered Plus
+        // source stay (FILTER-PLUS-004). Writing the model directly also
+        // resets a fractional `ndStep` the integer wrapper would miss.
+        calculatorModel.ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
+        syncNDStepMirrorFromModel()
         ndStop = defaultFilmModeNDStop
+        objectWillChange.send()
+        persistCalculatorContext()
         // Target Shutter is part of the slot's shooting context, so
         // the workspace reset also drops it. Tap-to-reset returns the
         // entire slot to a clean shooting setup, not just the
@@ -1871,24 +1885,36 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         persistCalculatorContext()
     }
 
-    /// Commits the shooting popup's complete auxiliary selection at
-    /// once (FILTER-AUX-003 Apply): mounting, CPL choices, and GND
-    /// modes validate together and either all take effect or nothing
-    /// changes. Returns the rejection to show — item mounted twice,
-    /// too many items, four ND wheels still present, or the combined
-    /// total over 30 stops. Existing ND wheels are never removed or
-    /// merged. A successful commit reshapes the wheel row (the summary
-    /// appears or disappears and the wheel limit changes), persists,
-    /// and re-examines cleanup because the shared budget moved.
+    /// Commits a Shooting Filters session at once (FILTER-AUX-003,
+    /// FILTER-CAMERA-003): the working Filter Set selection and the
+    /// working mounts of the selected sets. Sets left unselected lose
+    /// this camera's auxiliary mounts and ND wheels; one Standard 0-stop
+    /// wheel remains when no ND wheel is left. The sets stay in the
+    /// inventory. Returns the rejection — committing nothing — when the
+    /// result would be invalid.
     @discardableResult
-    public func applyAuxiliaryFilters(_ mounts: [MountedAuxiliaryFilter]) -> FilterStackRejection? {
+    public func applyShootingFilters(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter]
+    ) -> FilterStackRejection? {
         exitNDWheelReshapingForCommand()
         defer { attemptFilterStackOrderReconciliation() }
-        let before = calculatorModel.filterStack.auxiliaryFilters
-        if let rejection = calculatorModel.setAuxiliaryFilters(mounts) {
+        let stackBefore = calculatorModel.filterStack
+        let candidatesBefore = calculatorModel.candidateFilterSetIDs
+        // The same ordering rule as the set commit: positions stay while
+        // the screen reader orders the wheels or a reorder is queued.
+        let orderingPolicy: FilterStackCommitOrderingPolicy =
+            isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
+            ? .preserveCurrentOrder
+            : .automatic
+        if let rejection = calculatorModel.applyShootingFilters(
+            selectedFilterSetIDs: selected,
+            mounts: mounts.filter { selected.contains($0.filterSetID) },
+            orderingPolicy: orderingPolicy
+        ) {
             return rejection
         }
-        guard calculatorModel.filterStack.auxiliaryFilters != before else {
+        guard calculatorModel.filterStack != stackBefore || calculatorModel.candidateFilterSetIDs != candidatesBefore else {
             return nil
         }
         clearFilterRejectionNotice()

@@ -553,7 +553,7 @@ final class FilterStackTests: XCTestCase {
         let mountedRed = FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: ndID, choice: .fixed)))
         let mountedCPL = MountedAuxiliaryFilter(filterSetID: setID, itemID: auxID, choice: .cplLoss(1))
 
-        let result = FilterStack.reassigningRoles(wheels: [standard, mountedRed], auxiliaryFilters: [mountedCPL], inventory: inventory)
+        let result = FilterStack.reassigningRoles(wheels: [standard, mountedRed], auxiliaryFilters: [mountedCPL], selectedFilterSetIDs: [setID], inventory: inventory)
 
         XCTAssertEqual(result.wheels, [
             standard,
@@ -570,10 +570,87 @@ final class FilterStackTests: XCTestCase {
         let wheel = FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: nd.id, choice: .fixed)))
         let unknown = MountedAuxiliaryFilter(filterSetID: setID, itemID: FilterItemID(rawValue: "gone"), choice: .registeredLoss)
 
-        let result = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [unknown], inventory: inventory)
+        let result = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [unknown], selectedFilterSetIDs: [setID], inventory: inventory)
 
         XCTAssertEqual(result.wheels, [wheel])
         XCTAssertEqual(result.wheelOrigins, [0])
         XCTAssertEqual(result.auxiliaryFilters, [unknown], "Unknown items are left to normal re-resolution.")
+    }
+
+    /// FILTER-ITEM-005: an ND item moved into a selected Filter Set stays
+    /// on the same wheel under its new Set; moved into a Set the camera
+    /// does not select, the wheel becomes Empty under its original source
+    /// in the same position. An auxiliary item that becomes ND while it
+    /// moves to an unselected Set gets no wheel there.
+    func testAMovedNDItemStaysOnlyUnderASelectedSetAndOtherwiseLeavesItsWheelEmpty() {
+        let kitID = FilterSetID(rawValue: "kit"), bagID = FilterSetID(rawValue: "bag")
+        let nd8 = FilterItem(id: FilterItemID(rawValue: "nd8"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let red = FilterItem(id: FilterItemID(rawValue: "red"), name: "Red", behavior: .fixed(FilterRegisteredValue(value: 2, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [
+            FilterSet(id: kitID, name: "Kit", color: .blue, items: []),
+            FilterSet(id: bagID, name: "Bag", color: .green, items: [nd8, red]),
+        ])
+        let wheels = [FilterWheel.standard(NDStep(stops: 2)), FilterWheel(source: .filterSet(kitID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))]
+        let redMount = MountedAuxiliaryFilter(filterSetID: kitID, itemID: red.id, choice: .registeredLoss)
+
+        let unselected = FilterStack.reassigningRoles(wheels: wheels, auxiliaryFilters: [redMount], selectedFilterSetIDs: [kitID], inventory: inventory)
+        XCTAssertEqual(unselected.wheels, [.standard(NDStep(stops: 2)), .empty(in: kitID)])
+        XCTAssertEqual(unselected.wheelOrigins, [0, 1])
+        XCTAssertTrue(unselected.auxiliaryFilters.isEmpty, "The Red, now ND and in Bag, gets no wheel in a Set the camera does not select.")
+
+        let selected = FilterStack.reassigningRoles(wheels: wheels, auxiliaryFilters: [], selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
+        XCTAssertEqual(selected.wheels, [.standard(NDStep(stops: 2)), FilterWheel(source: .filterSet(bagID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))])
+        XCTAssertEqual(selected.wheelOrigins, [0, 1])
+    }
+
+    /// One save that moves an ND wheel's item to an unselected Set and
+    /// makes it auxiliary: unchecked like any moved auxiliary item, so the
+    /// destination is not selected (FILTER-ITEM-009).
+    func testAWheelItemMadeAuxiliaryAndMovedToAnUnselectedSetIsUnchecked() {
+        let kitID = FilterSetID(rawValue: "kit"), bagID = FilterSetID(rawValue: "bag")
+        let nd8 = FilterItem(id: FilterItemID(rawValue: "nd8"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let nowCPL = FilterItem(id: nd8.id, name: "ND8", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let wheel = FilterWheel(source: .filterSet(kitID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))
+        let inventory = FilterInventory(filterSets: [
+            FilterSet(id: kitID, name: "Kit", color: .blue, items: []),
+            FilterSet(id: bagID, name: "Bag", color: .green, items: [nowCPL]),
+        ])
+
+        let unselected = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [], selectedFilterSetIDs: [kitID], inventory: inventory)
+        XCTAssertEqual(unselected.wheels, [.standard(NDStep(stops: 0))])
+        XCTAssertTrue(unselected.auxiliaryFilters.isEmpty, "Not mounted under Bag, which the camera does not select.")
+
+        let selected = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [], selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
+        XCTAssertEqual(selected.auxiliaryFilters.map(\.itemID), [nd8.id], "Bag is selected: it stays picked there.")
+    }
+
+    /// FILTER-ITEM-005/009: a moved item is judged against the camera's
+    /// selected Filter Sets before the move. Into a Set the camera does not
+    /// select, an ND wheel becomes Empty under its original source at the
+    /// same position and an auxiliary item is unmounted; nothing selects
+    /// the destination.
+    func testAMovedAuxiliaryItemFollowsOnlyIntoASelectedSet() {
+        let kitID = FilterSetID(rawValue: "kit"), pouchID = FilterSetID(rawValue: "pouch"), bagID = FilterSetID(rawValue: "bag")
+        let cpl = FilterItem(id: FilterItemID(rawValue: "cpl"), name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let red = FilterItem(id: FilterItemID(rawValue: "red"), name: "Red", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let nd8 = FilterItem(id: FilterItemID(rawValue: "nd8"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [
+            FilterSet(id: kitID, name: "Kit", color: .blue, items: []),
+            FilterSet(id: pouchID, name: "Pouch", color: .orange, items: [cpl, nd8]),
+            FilterSet(id: bagID, name: "Bag", color: .green, items: [red]),
+        ])
+        let wheel = FilterWheel(source: .filterSet(kitID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))
+        let mounts = [
+            MountedAuxiliaryFilter(filterSetID: kitID, itemID: cpl.id, choice: .cplLoss(1.5)),
+            MountedAuxiliaryFilter(filterSetID: kitID, itemID: red.id, choice: .registeredLoss),
+        ]
+
+        let onlyKit = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: mounts, selectedFilterSetIDs: [kitID], inventory: inventory)
+        XCTAssertEqual(onlyKit.wheels, [.empty(in: kitID)], "Pouch is not selected: the ND wheel stays Kit's, now Empty.")
+        XCTAssertEqual(onlyKit.wheelOrigins, [0], "The same wheel, so it keeps its identity.")
+        XCTAssertTrue(onlyKit.auxiliaryFilters.isEmpty, "Neither Pouch nor Bag is selected: the CPL and the Red are unmounted.")
+
+        let withBag = FilterStack.reassigningRoles(wheels: [.standard(NDStep(stops: 0))], auxiliaryFilters: mounts, selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
+        XCTAssertEqual(withBag.auxiliaryFilters, [MountedAuxiliaryFilter(filterSetID: bagID, itemID: red.id, choice: .registeredLoss)], "Bag is selected, so the Red follows; Pouch is not, so the CPL is unmounted.")
     }
 }

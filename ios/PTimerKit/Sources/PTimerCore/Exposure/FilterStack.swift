@@ -474,8 +474,8 @@ public struct FilterStack: Equatable, Sendable {
 
     /// The stable display order of mounted auxiliary filters
     /// (FILTER-AUX-002): Color, Effect, CPL, GND; within one kind the
-    /// Filter Set order (the camera's candidate sets follow it), then
-    /// the item order inside the set. Mount order never matters.
+    /// inventory's Filter Set order, then the item order inside the
+    /// set. Mount order never matters.
     public static func displayOrdered(_ rows: [ResolvedAuxiliaryFilter], inventory: FilterInventory) -> [ResolvedAuxiliaryFilter] {
         func kindRank(_ kind: FilterItemKind) -> Int {
             switch kind {
@@ -945,28 +945,62 @@ extension FilterStack {
     /// CPL / GND wheel row keeps its choice); an auxiliary mount whose
     /// item is now ND becomes a Filter Set ND wheel at the end of the
     /// row; an auxiliary mount whose item changed to another auxiliary
-    /// kind takes that kind's default choice. Mounts of unknown sets or
-    /// items are left for normal re-resolution. A result with no wheel
-    /// gets one Standard 0 wheel. `wheelOrigins` gives, per returned
-    /// wheel, the index of the input wheel it came from (`nil` for a
-    /// new wheel). Limits are not checked here; callers validate.
+    /// kind takes that kind's default choice. A moved item is judged
+    /// against the camera's selected Filter Sets (`selectedFilterSetIDs`)
+    /// before the move: into a selected Set, a wheel keeps the item under
+    /// that Set and an auxiliary mount follows it; into a Set the camera
+    /// does not select, the ND wheel becomes Empty under its original
+    /// source in the same position and the auxiliary mount is unmounted,
+    /// so the move never selects the destination (FILTER-ITEM-005/009). Mounts of unknown sets or items
+    /// are left for normal re-resolution. A result with no wheel gets
+    /// one Standard 0 wheel. `wheelOrigins` gives, per returned wheel,
+    /// the index of the input wheel it came from (`nil` for a new
+    /// wheel). Limits are not checked here; callers validate.
     public static func reassigningRoles(
-        wheels: [FilterWheel],
-        auxiliaryFilters: [MountedAuxiliaryFilter],
+        wheels inputWheels: [FilterWheel],
+        auxiliaryFilters inputAuxiliaryFilters: [MountedAuxiliaryFilter],
+        selectedFilterSetIDs: [FilterSetID],
         inventory: FilterInventory
     ) -> RoleReassignment {
         func item(_ itemID: FilterItemID, in filterSetID: FilterSetID) -> FilterItem? {
             inventory.filterSet(withID: filterSetID)?.item(withID: itemID)
         }
+        let wheels = inputWheels.map { rehomed($0, inventory: inventory) }
+        let selected = Set(selectedFilterSetIDs)
+        // A mount whose item moved to a Set the camera does not select is
+        // unchecked, whatever its kind is now; the Set is not selected.
+        let auxiliaryFilters = inputAuxiliaryFilters.compactMap { input -> MountedAuxiliaryFilter? in
+            let mount = rehomed(input, inventory: inventory)
+            guard mount.filterSetID != input.filterSetID, !selected.contains(mount.filterSetID) else {
+                return mount
+            }
+            return nil
+        }
         var keptWheels: [FilterWheel] = []
         var origins: [Int?] = []
         var mounts = auxiliaryFilters
         for (index, wheel) in wheels.enumerated() {
+            let moved = inputWheels[index].source != wheel.source
+            // An ND item moved to a Set the camera does not select leaves
+            // its wheel Empty under the original source, with the same
+            // identity; the destination is not selected (FILTER-ITEM-005).
+            if moved,
+               let destination = wheel.source.filterSetID,
+               !selected.contains(destination),
+               case .item(let selection) = wheel.selection,
+               item(selection.itemID, in: destination)?.behavior.kind.isAuxiliary == false {
+                keptWheels.append(FilterWheel(source: inputWheels[index].source, selection: .empty))
+                origins.append(index)
+                continue
+            }
             if case .item(let selection) = wheel.selection,
                let filterSetID = wheel.source.filterSetID,
                let mountedItem = item(selection.itemID, in: filterSetID),
                mountedItem.behavior.kind.isAuxiliary {
-                if !mounts.contains(where: { $0.itemID == selection.itemID }),
+                // Now auxiliary and moved to a Set the camera does not select:
+                // unchecked like any moved auxiliary item (FILTER-ITEM-009).
+                if !(moved && !selected.contains(filterSetID)),
+                   !mounts.contains(where: { $0.itemID == selection.itemID }),
                    let choice = carriedChoice(selection.choice, for: mountedItem) ?? MountedAuxiliaryFilter.initialChoice(for: mountedItem) {
                     mounts.append(MountedAuxiliaryFilter(filterSetID: filterSetID, itemID: selection.itemID, choice: choice))
                 }
@@ -999,6 +1033,28 @@ extension FilterStack {
             origins = [nil]
         }
         return RoleReassignment(wheels: keptWheels, auxiliaryFilters: keptMounts, wheelOrigins: origins)
+    }
+
+    /// A wheel mounting an item that now lives in another Filter Set,
+    /// moved to that set with the same selection (FILTER-ITEM-009).
+    private static func rehomed(_ wheel: FilterWheel, inventory: FilterInventory) -> FilterWheel {
+        guard case .item(let selection) = wheel.selection,
+              let filterSetID = wheel.source.filterSetID,
+              inventory.filterSet(withID: filterSetID)?.item(withID: selection.itemID) == nil,
+              let owner = inventory.item(withID: selection.itemID)?.filterSet else {
+            return wheel
+        }
+        return FilterWheel(source: .filterSet(owner.id), selection: wheel.selection)
+    }
+
+    /// A mount of an item that now lives in another Filter Set, moved
+    /// to that set with the same choice (FILTER-ITEM-009).
+    private static func rehomed(_ mount: MountedAuxiliaryFilter, inventory: FilterInventory) -> MountedAuxiliaryFilter {
+        guard inventory.filterSet(withID: mount.filterSetID)?.item(withID: mount.itemID) == nil,
+              let owner = inventory.item(withID: mount.itemID)?.filterSet else {
+            return mount
+        }
+        return MountedAuxiliaryFilter(filterSetID: owner.id, itemID: mount.itemID, choice: mount.choice)
     }
 
     /// A legacy wheel row's CPL or GND choice, when it matches the

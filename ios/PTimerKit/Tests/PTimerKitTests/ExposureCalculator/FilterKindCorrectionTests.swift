@@ -82,7 +82,7 @@ final class FilterKindCorrectionTests: XCTestCase {
         viewModel.selectFilterSource(.filterSet(set.id))
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(nd), at: 1)
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: set), .mount(gnd, in: set), .mount(red, in: set)]))
+        XCTAssertNil(viewModel.applyMounts([.mount(cpl, in: set), .mount(gnd, in: set), .mount(red, in: set)]))
 
         // Three auxiliary filters already mounted: the corrected ND item
         // becomes the fourth, in display order (Color first, set order).

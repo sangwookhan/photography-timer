@@ -432,19 +432,22 @@ public struct FilterInventory: Hashable, Sendable {
     }
 
     /// A camera's candidate Filter Sets made consistent with this
-    /// inventory and its stack (FILTER-CAMERA-001, FILTER-PERSIST-002):
-    /// unknown sets are dropped, every set a wheel or a mounted
-    /// auxiliary filter still references is included so the restored
-    /// selections stay reachable, and the result follows the
-    /// user-defined set order.
+    /// inventory and its stack (FILTER-CAMERA-001, FILTER-SET-004,
+    /// FILTER-PERSIST-002): unknown and repeated sets are dropped, the
+    /// candidates keep their selection order, and every other set a
+    /// wheel or a mounted auxiliary filter still references is
+    /// appended, in inventory order, so the restored selections stay
+    /// reachable.
     public func normalizedCandidateFilterSetIDs(
         _ candidates: [FilterSetID],
         referencedBy wheels: [FilterWheel],
         auxiliaryFilters: [MountedAuxiliaryFilter]
     ) -> [FilterSetID] {
-        let referenced = Set(candidates)
-            .union(wheels.compactMap { $0.source.filterSetID })
+        let existing = Set(filterSets.map(\.id))
+        var seen: Set<FilterSetID> = []
+        let kept = candidates.filter { existing.contains($0) && seen.insert($0).inserted }
+        let referenced = Set(wheels.compactMap { $0.source.filterSetID })
             .union(auxiliaryFilters.map(\.filterSetID))
-        return filterSets.map(\.id).filter(referenced.contains)
+        return kept + filterSets.map(\.id).filter { referenced.contains($0) && !seen.contains($0) }
     }
 }

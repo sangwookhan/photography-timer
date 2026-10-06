@@ -6,7 +6,7 @@ import PTimerCore
 
 /// Semantic type of a filter wheel candidate (FILTER-STACK-007): the
 /// category behind the row's type-color rail. GND Record only and
-/// Apply full value share one category; the persistent label carries
+/// Apply to exposure share one category; the persistent label carries
 /// the mode. Independent of the user-selected Filter Set color.
 public enum FilterRowTypeCategory: Hashable, Sendable, CaseIterable {
     case nd
@@ -366,7 +366,7 @@ public enum FilterWheelPresenter {
     /// the committed row's concise value — item or Empty, type or
     /// mode, canonical contribution — followed by the current complete
     /// Total, so a successful adjustment is heard as, for example,
-    /// `Lee GND 0.9, GND Apply full value, 3 stops, Total 21.6 stops`.
+    /// `Lee GND 0.9, GND Apply to exposure, 3 stops, Total 21.6 stops`.
     /// Rejected and boundary adjustments never reach this value; they
     /// announce their reason alone.
     public static func wheelAccessibilityValue(
@@ -400,7 +400,9 @@ public enum FilterWheelPresenter {
         case .fixed: return String(localized: "ND")
         case .cpl: return String(localized: "CPL")
         case .gnd: return String(localized: "GND")
-        case .color: return String(localized: "Color")
+        // Its own key: the kind reads "컬러" in Korean while a Filter
+        // Set's color field stays "색상" (L10N-015).
+        case .color: return String(localized: "filter-kind-color", defaultValue: "Color")
         case .effect: return String(localized: "Effect")
         }
     }
@@ -441,7 +443,7 @@ public enum FilterWheelPresenter {
     public static func gndModeName(_ mode: GNDCalculationMode) -> String {
         switch mode {
         case .recordOnly: return String(localized: "Record only")
-        case .applyFullValue: return String(localized: "Apply full value")
+        case .applyFullValue: return String(localized: "Apply to exposure")
         }
     }
 

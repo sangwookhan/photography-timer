@@ -635,7 +635,9 @@ public struct FilterStack: Equatable, Sendable {
 
     /// Picker rows for the wheel at `index`. Standard wheels get the
     /// active scale's ladder truncated from the top to the remaining
-    /// budget (every row selectable); Filter Set wheels get Empty plus
+    /// budget (every row selectable), plus the wheel's own value when it
+    /// is a fractional value saved before the ladder became whole stops
+    /// (ND-PERSIST-005); Filter Set wheels get Empty plus
     /// the set's ND items (FILTER-STACK-003), each marked unavailable
     /// when its item is mounted elsewhere on this camera — on another
     /// wheel or as an auxiliary filter — or its contribution would
@@ -648,7 +650,13 @@ public struct FilterStack: Equatable, Sendable {
         let wheel = wheels[index]
         switch wheel.source {
         case .standard:
-            return scale.ndSteps(upToStops: remainingBudget(excludingWheelAt: index)).map { step in
+            var steps = scale.ndSteps(upToStops: remainingBudget(excludingWheelAt: index))
+            if let current = wheel.standardStep,
+               !steps.contains(where: { abs($0.stops - current.stops) <= ExposureCalculator.stabilityEpsilon }) {
+                steps.append(current)
+                steps.sort { $0.stops < $1.stops }
+            }
+            return steps.map { step in
                 FilterWheelRowOption(
                     row: ResolvedFilterRow(selection: .standard(step), contributionStops: step.stops, registeredStops: step.stops, item: nil),
                     unavailability: nil

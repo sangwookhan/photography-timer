@@ -41,12 +41,13 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
             addUnavailabilityText: { $0 == .standard ? nil : self.leeReason },
             onAdd: added,
             onOpenAuxiliaryFilters: {},
-            onManage: {},
             onBrowsingChanged: { _ in }
         )
     }
 
-    func testPlusElementExposesAddAdjustableValueAndManageActions() throws {
+    /// Filter Sets are managed from Shooting Filters, so Plus offers no
+    /// management action (FILTER-FLOW-005).
+    func testPlusElementExposesAddAdjustableValueAndNoManageAction() throws {
         let host = try hosted(makeControl())
         defer { host.window.isHidden = true }
         let plus = try XCTUnwrap(accessibilityElements(in: host).first { $0.label == "Add filter" }, "One focusable element labelled Add filter")
@@ -54,16 +55,17 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
         XCTAssertFalse(plus.hint?.contains(leeReason) ?? false, "The remembered source can add; the hint is the usage hint.")
         XCTAssertTrue(plus.traits.contains(.adjustable), "Source stepping is the adjustable value.")
         XCTAssertTrue(plus.traits.contains(.button), "An addable source is activatable.")
-        XCTAssertTrue(plus.customActionNames.contains("Manage Filter Sets"), "Manage must be in the Actions rotor: \(plus.customActionNames)")
+        XCTAssertFalse(plus.customActionNames.contains("Manage Filter Sets"), "Plus no longer opens management: \(plus.customActionNames)")
         XCTAssertTrue(plus.customActionNames.contains("Add filter"), plus.customActionNames.description)
-        XCTAssertTrue(plus.customActionNames.contains("Open auxiliary filters"), "The distinct auxiliary action (FILTER-A11Y-001): \(plus.customActionNames)")
+        XCTAssertTrue(plus.customActionNames.contains("Open shooting filters"), "The distinct auxiliary action (FILTER-A11Y-001): \(plus.customActionNames)")
     }
 
     /// FILTER-PLUS-004/005 with ND-A11Y-002: an assistive increment
     /// browses a transient candidate; the element's value AND its
     /// hint/reason follow that candidate together. While the candidate
     /// cannot add, the Add operation is neither offered nor executed —
-    /// activation does nothing and the Actions rotor keeps only Manage —
+    /// activation does nothing and the Actions rotor keeps only the
+    /// auxiliary action —
     /// yet the element stays adjustable so the user can step back, at
     /// which point Add returns and activation adds the remembered source.
     func testUnavailableTransientCandidateWithdrawsAddUntilTheUserStepsBack() throws {
@@ -80,7 +82,7 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
         XCTAssertEqual(after.value, "Lee", "The spoken value is the browsed candidate.")
         XCTAssertEqual(after.hint, leeReason, "The reason follows the candidate, not the remembered source.")
         XCTAssertFalse(after.customActionNames.contains("Add filter"), "An unavailable candidate offers no Add: \(after.customActionNames)")
-        XCTAssertTrue(after.customActionNames.contains("Manage Filter Sets"), "Manage stays available.")
+        XCTAssertTrue(after.customActionNames.contains("Open shooting filters"), "The auxiliary action stays available.")
         XCTAssertFalse(after.traits.contains(.button), "The element is not presented as activatable.")
         XCTAssertTrue(after.traits.contains(.adjustable), "Stepping away from the unavailable source stays possible.")
 
@@ -110,7 +112,7 @@ final class FilterSourcePlusAccessibilityTests: XCTestCase {
         XCTAssertEqual(start.value, "Lee")
         XCTAssertEqual(start.hint, leeReason)
         XCTAssertFalse(start.customActionNames.contains("Add filter"), start.customActionNames.description)
-        XCTAssertTrue(start.customActionNames.contains("Manage Filter Sets"))
+        XCTAssertTrue(start.customActionNames.contains("Open shooting filters"))
         XCTAssertFalse(start.traits.contains(.button), "Not presented as activatable while the remembered source cannot add.")
         start.element.accessibilityActivate()
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))

@@ -28,7 +28,19 @@ public final class FilterInventoryModel: ObservableObject {
         initial: FilterInventory = .empty
     ) {
         self.store = store
-        self.inventory = store.loadSnapshot()?.restoredInventory ?? initial
+        if let stored = store.loadSnapshot()?.restoredInventory {
+            // A saved inventory, even an empty one, is restored as it is:
+            // a former Default Set is ordinary inventory, and Samples the
+            // user deleted stay deleted (FILTER-SET-008/009).
+            self.inventory = stored
+        } else {
+            // Nothing saved yet: a fresh installation. `initial` is
+            // written at once so it is offered only once.
+            self.inventory = initial
+            if !initial.filterSets.isEmpty {
+                persist()
+            }
+        }
     }
 
     public var filterSets: [FilterSet] {
@@ -53,14 +65,31 @@ public final class FilterInventoryModel: ObservableObject {
         return suggestion
     }
 
-    /// Appends a new Filter Set to the user-defined order. Returns
-    /// `nil` (and changes nothing) for a blank name.
+    /// Adds a new Filter Set to the inventory. Returns `nil` (and
+    /// changes nothing) for a blank name.
     @discardableResult
     public func createFilterSet(name: String, color: FilterSetColor) -> FilterSet? {
         guard let trimmed = Self.trimmed(name) else {
             return nil
         }
         let filterSet = FilterSet(name: trimmed, color: color)
+        inventory.filterSets.append(filterSet)
+        persist()
+        return filterSet
+    }
+
+    /// Adds a new Filter Set already holding `item`, in one change and
+    /// one saved snapshot, so no Set-only state is ever published or
+    /// saved (FILTER-ITEM-009). Returns `nil` (and changes nothing) for a
+    /// blank name, an ill-formed item, or an item id already in use.
+    @discardableResult
+    public func createFilterSet(name: String, color: FilterSetColor, holding item: FilterItem) -> FilterSet? {
+        guard let trimmed = Self.trimmed(name),
+              item.isWellFormed,
+              inventory.item(withID: item.id) == nil else {
+            return nil
+        }
+        let filterSet = FilterSet(name: trimmed, color: color, items: [item])
         inventory.filterSets.append(filterSet)
         persist()
         return filterSet
@@ -82,14 +111,6 @@ public final class FilterInventoryModel: ObservableObject {
             return
         }
         inventory.filterSets[index].color = color
-        persist()
-    }
-
-    /// Reorders Filter Sets with `Array.move` semantics (the SwiftUI
-    /// `onMove` shape). Ids never change.
-    public func moveFilterSets(fromOffsets source: IndexSet, toOffset destination: Int) {
-        guard !source.isEmpty else { return }
-        inventory.filterSets.move(fromOffsets: source, toOffset: destination)
         persist()
     }
 
@@ -120,8 +141,27 @@ public final class FilterInventoryModel: ObservableObject {
         persist()
     }
 
+    /// Moves an existing item, with its edits, into `filterSetID` in one
+    /// change, keeping its id (FILTER-ITEM-009). Cameras that reference
+    /// it follow it through the inventory-change reconciliation.
+    public func moveItem(_ item: FilterItem, to filterSetID: FilterSetID) {
+        guard item.isWellFormed,
+              let destination = inventory.filterSets.firstIndex(where: { $0.id == filterSetID }),
+              inventory.item(withID: item.id) != nil,
+              !inventory.filterSets[destination].items.contains(where: { $0.id == item.id }) else {
+            return
+        }
+        var moved = inventory
+        for setIndex in moved.filterSets.indices {
+            moved.filterSets[setIndex].items.removeAll { $0.id == item.id }
+        }
+        moved.filterSets[destination].items.append(item)
+        inventory = moved
+        persist()
+    }
+
     /// Replaces the item matching `item.id` wherever it lives. Item
-    /// identity and position are preserved.
+    /// identity and set are preserved.
     public func updateItem(_ item: FilterItem) {
         guard item.isWellFormed else { return }
         for setIndex in inventory.filterSets.indices {
@@ -132,15 +172,6 @@ public final class FilterInventoryModel: ObservableObject {
                 return
             }
         }
-    }
-
-    public func moveItems(in filterSetID: FilterSetID, fromOffsets source: IndexSet, toOffset destination: Int) {
-        guard !source.isEmpty,
-              let index = inventory.filterSets.firstIndex(where: { $0.id == filterSetID }) else {
-            return
-        }
-        inventory.filterSets[index].items.move(fromOffsets: source, toOffset: destination)
-        persist()
     }
 
     public func deleteItem(id: FilterItemID) {

@@ -203,12 +203,17 @@ public struct CameraSlotSessionPersistenceController {
         }()
 
         let inventory = currentFilterInventory()
-        let stack = restoredFilterStack(from: entry, inventory: inventory)
+        // A slot stored before it had any selection starts with a fresh
+        // camera's (FILTER-CAMERA-001); an emptied selection is stored as
+        // an empty list.
+        let storedCandidates = entry.candidateFilterSetIDs.map { $0.map(FilterSetID.init(rawValue:)) }
+            ?? CalculatorDefaults.candidateFilterSetIDs
+        let stack = restoredFilterStack(from: entry, selectedFilterSetIDs: storedCandidates, inventory: inventory)
         return CameraSlotCalculatorSnapshot(
             baseShutterSeconds: entry.baseShutterSeconds ?? CalculatorDefaults.baseShutterSeconds,
             filterStack: stack,
             candidateFilterSetIDs: inventory.normalizedCandidateFilterSetIDs(
-                (entry.candidateFilterSetIDs ?? []).map(FilterSetID.init(rawValue:)),
+                storedCandidates,
                 referencedBy: stack.wheels,
                 auxiliaryFilters: stack.auxiliaryFilters
             ),
@@ -226,10 +231,16 @@ public struct CameraSlotSessionPersistenceController {
     /// scalar path applies unchanged.
     private func restoredFilterStack(
         from entry: PersistentCameraSlotCalculatorSnapshot,
+        selectedFilterSetIDs: [FilterSetID],
         inventory: FilterInventory
     ) -> FilterStack {
         if let persisted = entry.filterStack,
-           let stack = Self.validatedFilterStack(persisted, auxiliaryFilters: entry.auxiliaryFilters ?? [], inventory: inventory) {
+           let stack = Self.validatedFilterStack(
+               persisted,
+               auxiliaryFilters: entry.auxiliaryFilters ?? [],
+               selectedFilterSetIDs: selectedFilterSetIDs,
+               inventory: inventory
+           ) {
             return stack
         }
         return FilterStack(standardSteps: restoredNDFilterSteps(from: entry))
@@ -251,6 +262,7 @@ public struct CameraSlotSessionPersistenceController {
     static func validatedFilterStack(
         _ wheels: [PersistentFilterWheelSnapshot],
         auxiliaryFilters: [PersistentAuxiliaryFilterSnapshot] = [],
+        selectedFilterSetIDs: [FilterSetID],
         inventory: FilterInventory
     ) -> FilterStack? {
         guard (1...FilterStack.maximumWheelCount).contains(wheels.count) else {
@@ -278,10 +290,33 @@ public struct CameraSlotSessionPersistenceController {
             mounts.append(mount)
         }
         let migrated = FilterStack.migratingLegacyWheels(restored)
-        guard let normalized = FilterStack.normalizedWheels(migrated.wheels, inventory: inventory) else {
+        // The inventory and this snapshot are saved separately, so the
+        // inventory may hold an edit the snapshot has not seen: an item
+        // moved to another Set or a kind corrected. It is applied the way
+        // the live reconciliation applies it (FILTER-ITEM-005/009) before
+        // the references are normalized; if that no longer fits the
+        // limits, the references normalize as they are.
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: migrated.wheels,
+            auxiliaryFilters: mounts + migrated.auxiliaryFilters,
+            selectedFilterSetIDs: selectedFilterSetIDs,
+            inventory: inventory
+        )
+        if let stack = normalizedStack(wheels: reassigned.wheels, auxiliaryFilters: reassigned.auxiliaryFilters, inventory: inventory) {
+            return stack
+        }
+        return normalizedStack(wheels: migrated.wheels, auxiliaryFilters: mounts + migrated.auxiliaryFilters, inventory: inventory)
+    }
+
+    private static func normalizedStack(
+        wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter],
+        inventory: FilterInventory
+    ) -> FilterStack? {
+        guard let normalized = FilterStack.normalizedWheels(wheels, inventory: inventory) else {
             return nil
         }
-        let auxiliary = FilterStack.normalizedAuxiliaryFilters(mounts + migrated.auxiliaryFilters, inventory: inventory)
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: inventory)
         return FilterStack.validated(wheels: normalized, auxiliaryFilters: auxiliary, inventory: inventory)
     }
 
@@ -415,11 +450,13 @@ public struct CameraSlotSessionPersistenceController {
                 ? PersistentFilterWheelSnapshot.standardSourceKind
                 : PersistentFilterWheelSnapshot.filterSetSourceKind,
             lastFilterSetID: snapshot.lastFilterSource.filterSetID?.rawValue,
-            // Auxiliary filters and candidates are additive: written
-            // whenever present, omitted otherwise so a slot that never
-            // used them keeps the pre-auxiliary shape.
+            // Auxiliary filters are additive: written whenever present,
+            // omitted otherwise so a slot that never used them keeps the
+            // pre-auxiliary shape. Candidates are always written, an
+            // empty list included, so an explicit empty selection is
+            // kept as it is.
             auxiliaryFilters: snapshot.auxiliaryFilters.isEmpty ? nil : persistentAuxiliaryFilters(snapshot.auxiliaryFilters),
-            candidateFilterSetIDs: snapshot.candidateFilterSetIDs.isEmpty ? nil : snapshot.candidateFilterSetIDs.map(\.rawValue)
+            candidateFilterSetIDs: snapshot.candidateFilterSetIDs.map(\.rawValue)
         )
     }
 

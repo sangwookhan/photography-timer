@@ -195,8 +195,7 @@ class CalculatorController(
 
     /**
      * Ordered ND stop values shown on the legacy single wheel: whole stops
-     * 0…30 plus the three commercial presets (PTIMER-209), in numeric
-     * order. The wheel index is a position into this list, decoupled from
+     * 0…30. The wheel index is a position into this list, decoupled from
      * the stop value it carries.
      */
     private val ndStopValues: List<Double> = ExposureScale.shippingNDLadder.map { it.stops }

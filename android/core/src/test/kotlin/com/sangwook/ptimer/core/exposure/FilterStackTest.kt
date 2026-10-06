@@ -637,16 +637,83 @@ class FilterStackTest {
         val asColor = FilterInventory(
             listOf(set.copy(items = listOf(item.copy(behavior = FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))))),
         )
-        val moved = FilterStack.reassigningRoles(listOf(FilterWheel.standard(1.0), wheel(set, item)), emptyList(), asColor)
+        val moved = FilterStack.reassigningRoles(listOf(FilterWheel.standard(1.0), wheel(set, item)), emptyList(), listOf(set.id), asColor)
         assertEquals(listOf(FilterWheel.standard(1.0)), moved.wheels)
         assertEquals(listOf(0), moved.wheelOrigins)
         assertEquals(listOf(MountedAuxiliaryFilter(set.id, item.id, AuxiliaryFilterChoice.RegisteredLoss)), moved.auxiliaryFilters)
 
         // Back to ND: the mount becomes a Filter Set ND wheel at the end.
-        val back = FilterStack.reassigningRoles(moved.wheels, moved.auxiliaryFilters, FilterInventory(listOf(set)))
+        val back = FilterStack.reassigningRoles(moved.wheels, moved.auxiliaryFilters, listOf(set.id), FilterInventory(listOf(set)))
         assertEquals(listOf(FilterWheel.standard(1.0), wheel(set, item)), back.wheels)
         assertEquals(listOf(0, null), back.wheelOrigins)
         assertTrue(back.auxiliaryFilters.isEmpty())
+    }
+
+    /** FILTER-ITEM-005/009: a moved item is judged against the camera's
+     *  selected Filter Sets before the move. Into a Set the camera does not
+     *  select, an ND wheel becomes Empty under its original source at the
+     *  same position and an auxiliary item is unmounted; nothing selects the
+     *  destination. (iOS: `testAMovedAuxiliaryItemFollowsOnlyIntoASelectedSet`.) */
+    @Test fun aMovedAuxiliaryItemFollowsOnlyIntoASelectedSet() {
+        val cpl = FilterItem("CPL", FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))))
+        val red = FilterItem("Red", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        val nd8 = fixed("ND8", 3.0)
+        val kit = FilterSet("Kit", FilterSetColor.blue, emptyList())
+        val pouch = FilterSet("Pouch", FilterSetColor.orange, listOf(cpl, nd8))
+        val bag = FilterSet("Bag", FilterSetColor.green, listOf(red))
+        val inventory = FilterInventory(listOf(kit, pouch, bag))
+        val mounts = listOf(
+            MountedAuxiliaryFilter(kit.id, cpl.id, AuxiliaryFilterChoice.CplLoss(1.5)),
+            MountedAuxiliaryFilter(kit.id, red.id, AuxiliaryFilterChoice.RegisteredLoss),
+        )
+
+        val onlyKit = FilterStack.reassigningRoles(listOf(wheel(kit, nd8)), mounts, listOf(kit.id), inventory)
+        assertEquals("Pouch is not selected: the ND wheel stays Kit's, now Empty.", listOf(FilterWheel.empty(kit.id)), onlyKit.wheels)
+        assertEquals("The same wheel, so it keeps its identity.", listOf<Int?>(0), onlyKit.wheelOrigins)
+        assertTrue("Neither Pouch nor Bag is selected: the CPL and the Red are unmounted.", onlyKit.auxiliaryFilters.isEmpty())
+
+        val withBag = FilterStack.reassigningRoles(listOf(FilterWheel.standard(0.0)), mounts, listOf(kit.id, bag.id), inventory)
+        val wheelMadeCpl = FilterStack.reassigningRoles(
+            listOf(wheel(kit, nd8)),
+            emptyList(),
+            listOf(kit.id),
+            FilterInventory(listOf(kit, pouch.copy(items = listOf(nd8.copy(behavior = cpl.behavior))), bag)),
+        )
+        assertEquals(
+            "A wheel item made auxiliary and moved to an unselected Set is unchecked, not mounted there.",
+            Pair(listOf(FilterWheel.standard(0.0)), emptyList<MountedAuxiliaryFilter>()),
+            wheelMadeCpl.wheels to wheelMadeCpl.auxiliaryFilters,
+        )
+        assertEquals(
+            "Bag is selected, so the Red follows; Pouch is not, so the CPL is unmounted.",
+            listOf(MountedAuxiliaryFilter(bag.id, red.id, AuxiliaryFilterChoice.RegisteredLoss)),
+            withBag.auxiliaryFilters,
+        )
+    }
+
+    /** FILTER-ITEM-005: an ND item moved into a selected Filter Set stays on
+     *  the same wheel under its new Set; moved into a Set the camera does not
+     *  select, the wheel becomes Empty under its original source in the same
+     *  position. An auxiliary item that becomes ND while it moves to an
+     *  unselected Set gets no wheel there.
+     *  (iOS: `testAMovedNDItemStaysOnlyUnderASelectedSetAndOtherwiseLeavesItsWheelEmpty`.) */
+    @Test fun aMovedNdItemStaysOnlyUnderASelectedSetAndOtherwiseLeavesItsWheelEmpty() {
+        val nd8 = fixed("ND8", 3.0)
+        val red = fixed("Red", 2.0)
+        val kit = FilterSet("Kit", FilterSetColor.blue, emptyList())
+        val bag = FilterSet("Bag", FilterSetColor.green, listOf(nd8, red))
+        val inventory = FilterInventory(listOf(kit, bag))
+        val wheels = listOf(FilterWheel.standard(2.0), wheel(kit, nd8))
+        val redMount = MountedAuxiliaryFilter(kit.id, red.id, AuxiliaryFilterChoice.RegisteredLoss)
+
+        val unselected = FilterStack.reassigningRoles(wheels, listOf(redMount), listOf(kit.id), inventory)
+        assertEquals(listOf(FilterWheel.standard(2.0), FilterWheel.empty(kit.id)), unselected.wheels)
+        assertEquals(listOf<Int?>(0, 1), unselected.wheelOrigins)
+        assertTrue("The Red, now ND and in Bag, gets no wheel in a Set the camera does not select.", unselected.auxiliaryFilters.isEmpty())
+
+        val selected = FilterStack.reassigningRoles(wheels, emptyList(), listOf(kit.id, bag.id), inventory)
+        assertEquals(listOf(FilterWheel.standard(2.0), wheel(bag, nd8)), selected.wheels)
+        assertEquals(listOf<Int?>(0, 1), selected.wheelOrigins)
     }
 
     @Test fun validatedRejectsOverCapDuplicateAndUnresolvedWheels() {

@@ -23,7 +23,6 @@
     <!-- Shooting flow -->
     <string name="shooting_film">Film</string>
     <string name="shooting_base_shutter">Base Shutter</string>
-    <string name="shooting_nd_filter">ND Filter</string>
     <string name="shooting_reciprocity">Reciprocity</string>
     <string name="shooting_reciprocity_details_cd">Reciprocity details</string>
     <string name="shooting_adjusted_shutter">Adjusted Shutter</string>
@@ -55,7 +54,7 @@
     <string name="filter_kind_color">Color</string>
     <string name="filter_kind_effect">Effect</string>
     <string name="filter_mode_record_only">Record only</string>
-    <string name="filter_mode_apply_full_value">Apply full value</string>
+    <string name="filter_mode_apply_full_value">Apply to exposure</string>
     <!-- Persistent type/mode labels above each wheel viewport. Deliberately
          short so they stay complete at four wheels; identical in every locale -->
     <string name="filter_type_nd">ND</string>
@@ -89,7 +88,6 @@
     <string name="filter_wheel_cd">Filter %1$d of %2$d, %3$s</string>
     <!-- Idle source summary entry owning more than one wheel -->
     <string name="filter_summary_count">%1$s ×%2$d</string>
-    <string name="filter_manage_sets">Manage Filter Sets</string>
     <!-- Filter Set source-color names: color is never the only cue -->
     <string name="filter_color_red">Red</string>
     <string name="filter_color_orange">Orange</string>
@@ -102,8 +100,6 @@
     <string name="filter_color_pink">Pink</string>
 
     <!-- Filter Set management surface (FILTER-SET-001..005) -->
-    <string name="filter_sets_title">Filter Sets</string>
-    <string name="filter_sets_empty">No Filter Sets yet. Create one to register the physical filters you carry.</string>
     <string name="filter_sets_finish_editing">Finish Editing</string>
     <string name="filter_set_new">New Filter Set</string>
     <string name="filter_set_name">Filter Set name</string>
@@ -114,16 +110,11 @@
     <string name="filter_set_identity_footer">Renaming or recoloring never changes the set\'s identity or any camera\'s stack.</string>
     <string name="filter_set_one_filter">1 filter</string>
     <string name="filter_set_filter_count">%1$d filters</string>
-    <string name="filter_set_missing">This Filter Set no longer exists.</string>
-    <string name="filter_set_delete_title">Delete Filter Set?</string>
     <string name="filter_delete_named">Delete %1$s</string>
-    <string name="filter_set_delete_message">Its filters are removed from the inventory. Timers already started keep their captured summary.</string>
-    <string name="filter_set_delete_message_cameras">Filter wheels from this set are removed on %1$s. Timers already started keep their captured summary.</string>
-    <string name="filter_action_move_up">Move up</string>
-    <string name="filter_action_move_down">Move down</string>
 
     <!-- Physical filter inventory (FILTER-ITEM-001..007) -->
     <string name="filter_set_section_filters">Filters</string>
+    <string name="filter_items_empty">No filters registered yet.</string>
     <string name="filter_items_footer">Register each physical filter separately, even two filters of the same strength, so both can be mounted together.</string>
     <string name="filter_item_delete_title">Delete filter?</string>
     <string name="filter_item_delete_message">No camera currently mounts this filter. Timers already started keep their captured summary.</string>
@@ -132,7 +123,6 @@
     <string name="filter_item_edit">Edit filter</string>
     <string name="filter_item_name">Filter name</string>
     <string name="filter_item_kind">Kind</string>
-    <string name="filter_item_kind_footer">The kind is your choice; the app never guesses it from the name.</string>
     <string name="filter_kind_cpl" translatable="false">CPL</string>
     <string name="filter_kind_gnd" translatable="false">GND</string>
     <!-- Fixed / GND registered value -->
@@ -141,32 +131,22 @@
     <string name="filter_item_value">Value</string>
     <string name="filter_item_conversion">= %1$s</string>
     <string name="filter_item_value_error">Enter a value above 0 and at most 30 stops.</string>
-    <string name="filter_item_value_footer">Stops are kept as entered; OD divides by 0.3; an ND factor converts as log2. The value is never snapped to the Standard ladder.</string>
     <!-- CPL exposure-loss choices (FILTER-CPL-001..004) -->
     <string name="filter_cpl_section">Exposure loss choices</string>
-    <string name="filter_cpl_choice">Choice %1$d</string>
     <string name="filter_cpl_choice_cd">Exposure loss choice %1$d</string>
-    <string name="filter_cpl_footer">Exposure loss choices (stops) available from the wheel while shooting. Empty fields are skipped; duplicate values appear once.</string>
+    <string name="filter_cpl_footer">Register up to three exposure-loss values to choose from while shooting.</string>
     <string name="filter_cpl_required">At least one choice is required.</string>
     <string name="filter_cpl_field_error">Use 0.1 to 9.9 with at most one decimal digit.</string>
     <!-- GND calculation modes (FILTER-GND-003) -->
-    <string name="filter_gnd_modes">Calculation modes</string>
-    <string name="filter_gnd_modes_body">While shooting, a GND wheel offers Record only (0 stops) and Apply full value (its full registered density). Record only is the default.</string>
-    <string name="filter_gnd_modes_warning">Apply full value suits a composition where the dark region covers nearly the entire metered frame. A base shutter metered through the mounted GND may already include its attenuation.</string>
+    <string name="filter_gnd_modes_body">While shooting, Record only uses 0 stops; Apply to exposure uses the registered value.</string>
     <!-- Refused item save (FILTER-ITEM-005) -->
     <string name="filter_item_save_blocked_title">Cannot save</string>
     <string name="filter_item_save_blocked_limit">This value would push the filter stack past 30 stops on %1$s. Change the mounted filters there first, or use a smaller value.</string>
     <string name="filter_item_save_blocked_choice">A choice of this filter is currently selected on %1$s. Keep that choice, or change the wheel selection on those cameras first.</string>
-    <string name="filter_item_optical_color">Optical color</string>
-    <string name="filter_item_optical_color_footer">The optical color identifies the filter. It never sets the exposure loss.</string>
+    <string name="filter_item_display_color">Display color</string>
     <string name="filter_item_loss_error">Enter a value from 0 to 30 stops.</string>
-    <string name="filter_item_loss_footer">Enter the loss in stops from the maker\'s data or your own metering. Zero is allowed for a filter with no measurable loss.</string>
+    <string name="filter_item_loss_footer">The entered exposure loss is added to the exposure calculation.</string>
     <string name="filter_item_save_blocked_nd_wheels">This filter is mounted on %1$s, where the ND wheels are already full. Remove an ND wheel there first, or keep this filter\'s kind.</string>
-    <string name="filter_set_tab_nd">ND</string>
-    <string name="filter_items_empty_auxiliary">No auxiliary filters registered yet.</string>
-    <string name="filter_items_empty_nd">No ND filters registered yet.</string>
-    <string name="filter_add_auxiliary">Add auxiliary filter</string>
-    <string name="filter_add_nd">Add ND filter</string>
     <string name="reset_shooting_title">Reset shooting setup?</string>
     <string name="reset_settings">Reset settings</string>
     <string name="reset_settings_and_name">Reset settings and name</string>
@@ -174,7 +154,6 @@
     <!-- Default slot label when the photographer has not named the camera -->
     <string name="camera_default_name">Camera %1$d</string>
     <string name="camera_name">Camera name</string>
-    <string name="shooting_about_cd">About PTIMER</string>
     <string name="shooting_choose_film_cd">Choose film</string>
     <!-- Pager position under the camera-slot dots (%1$s = 1-based current, %2$s = total) -->
     <string name="pager_position_format">%1$d of %2$d</string>
@@ -416,24 +395,38 @@
          leading "+" to match the reference/reciprocity-row stop format) -->
     <string name="cf_checkpoint_stops_format">+%1$.1f stops</string>
 
-    <!-- Mounted auxiliary filters and the shooting popup (FILTER-AUX / FILTER-CAMERA) -->
+    <!-- Mounted auxiliary filters and Shooting Filters (FILTER-AUX / FILTER-CAMERA) -->
     <string name="filter_auxiliary_title">Auxiliary filters</string>
     <string name="filter_auxiliary_more">+ %1$d more</string>
-    <string name="filter_auxiliary_subtotal">Auxiliary subtotal</string>
-    <string name="filter_auxiliary_subtotal_cd">Auxiliary subtotal %1$s</string>
-    <string name="filter_auxiliary_open">Open auxiliary filters</string>
     <string name="filter_shooting_title">Shooting filters</string>
     <string name="filter_shooting_apply">Apply</string>
     <string name="filter_shooting_cannot_apply">Cannot apply</string>
-    <string name="filter_shooting_apply_footer">Apply mounts the selected filters together for this camera\'s current shot. Cancel keeps the current shot unchanged.</string>
-    <string name="filter_shooting_no_auxiliary">No auxiliary filters are available on this camera. Choose the camera\'s Filter Sets, or register CPL, GND, Color, or Effect filters first.</string>
-    <string name="filter_shooting_nd_sources">ND sources</string>
-    <string name="filter_shooting_add_nd_wheel">Add ND wheel</string>
-    <string name="filter_shooting_nd_footer">Adding an ND wheel takes effect immediately and becomes the source Plus adds next. Only a candidate Filter Set with ND filters is listed.</string>
-    <string name="filter_camera_sets_title">Camera Filter Sets</string>
-    <string name="filter_camera_sets_footer">Assigned Filter Sets are available on this camera for auxiliary filters and ND wheels. Assigning mounts nothing and does not check size or holder compatibility. Standard is always available.</string>
-    <string name="filter_camera_sets_empty">No Filter Sets yet. Register the physical filters you carry in Manage Filter Sets first.</string>
-    <string name="filter_camera_sets_counts">%1$d auxiliary · %2$d ND</string>
-    <string name="filter_camera_sets_in_use_title">Filter Set in use</string>
-    <string name="filter_camera_sets_in_use_message">Clear the filters and ND wheels mounted from %1$s on this camera before excluding it.</string>
+    <string name="filter_add_filter_set">Add Filter Set</string>
+    <string name="filter_add_example_filter_sets">Add Example Filter Sets</string>
+    <string name="filter_exposure_reduction_cd">Exposure reduction %1$s</string>
+    <string name="filter_auxiliary_none">No auxiliary filters selected</string>
+    <plurals name="filter_auxiliary_count">
+        <item quantity="one">%1$d auxiliary filter</item>
+        <item quantity="other">%1$d auxiliary filters</item>
+    </plurals>
+    <string name="filter_nd_on_main_instruction">Select ND filters on the main screen.</string>
+    <string name="filter_shooting_open">Open shooting filters</string>
+    <string name="filter_shooting_entry_hint">Opens this camera\'s Filter Set selection, auxiliary filter selection, and filter editing. ND values are selected on Main.</string>
+    <string name="filter_aux_header_title">Select Filters</string>
+    <string name="filter_management_title">Filter management</string>
+    <string name="shooting_settings_cd">Settings</string>
+    <string name="filter_proposed_set_name">New Filter Set</string>
+    <string name="filter_set_choose">Choose</string>
+    <string name="filter_standard_built_in">Built-in · Always available</string>
+    <string name="filter_in_use">In use</string>
+    <string name="filter_selected_sets">Selected Filter Sets</string>
+    <string name="filter_available_sets">Available Filter Sets</string>
+    <string name="filter_set_remove_named">Remove %1$s</string>
+    <string name="filter_add_filter_to_named">Add filter to %1$s</string>
+    <string name="filter_set_add_to_selected_named">Add %1$s to Selected Filter Sets</string>
+    <string name="filter_set_edit_named">Edit %1$s</string>
+    <string name="filter_set_delete">Delete Filter Set</string>
+    <string name="filter_set_delete_named_title">Delete %1$s?</string>
+    <string name="filter_set_delete_global_message">This removes %1$s and its filters from your inventory. No camera currently mounts from it. Timers already started keep their captured summary.</string>
+    <string name="filter_set_delete_global_message_cameras">This removes %1$s and its filters from your inventory, and removes its filters and ND wheels on %2$s. Timers already started keep their captured summary.</string>
 </resources>

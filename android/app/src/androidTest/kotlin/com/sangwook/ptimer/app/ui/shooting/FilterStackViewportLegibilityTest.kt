@@ -288,7 +288,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     }
 
     private val baseShutterTitle: String = strings.getString(R.string.shooting_base_shutter)
-    private val manageFilterSets: String = strings.getString(R.string.filter_manage_sets)
+    private val manageFilterSets: String = strings.getString(R.string.filter_shooting_title)
 
     /** Stops / OD / ND — every option the notation toggle offers. */
     private val notationOptions: List<String> = listOf(

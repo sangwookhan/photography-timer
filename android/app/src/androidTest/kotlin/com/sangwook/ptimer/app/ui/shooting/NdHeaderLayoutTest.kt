@@ -50,8 +50,8 @@ import java.util.Locale
 
 /**
  * PTIMER-221 ND card header, as the owner approved it: one row reading
- * `Base Shutter`, `ND Filter`, the Filter Set entry, then the
- * `Stops | OD | ND` selector (`ND-012`, `FILTER-SET-001`), with every
+ * `Base Shutter`, the Select Filters button, then the
+ * `Stops | OD | ND` selector (`ND-012`, `FILTER-FLOW-002`), with every
  * control a real 48dp target (`SHELL-030`) and every required label
  * whole (`FILTER-A11Y-002`). The shooting screen is laid out at 1.0x
  * whatever the system font setting, so that is the size rendered.
@@ -60,14 +60,15 @@ import java.util.Locale
  * one (locale, wheel count, viewport) and asserts on the MERGED semantics
  * tree — the one TalkBack consumes — that everything in the header row
  * carries a name and a usable target. The rest holds the other side of
- * the trade: the labels read whole, the two captions keep their gap, and
+ * the trade: the labels read whole, the caption and the button keep their
+ * gap, the button and the notation keep theirs, and
  * neither the base-shutter value nor its caption is clipped to pay for
  * the header's room.
  *
  * The locale is imposed with a `LocalContext` / `LocalConfiguration`
  * provider. That does not reach into a Compose `Dialog`, which hosts
  * its own `AndroidComposeView` (see `AffectedCameraNameTest`), but the
- * shooting screen is not a dialog — [ndFilterTitle] resolving to the
+ * shooting screen is not a dialog — [selectFilters] resolving to the
  * Korean string in the rendered tree is this suite's own proof that the
  * provider took.
  *
@@ -99,23 +100,19 @@ class NdHeaderLayoutTest(private val case: Case) {
         private val MinTouchTarget = 48.dp
 
         /**
-         * The header `Row` leaves a constant ~2dp between each child —
-         * present before this fix too, and not something the title can
-         * claim. Assertion (d) allows for it rather than chasing it.
-         */
-        private val RowChildGapSlack = 3.dp
-
-        /**
          * The two phone widths pinned: 411dp (1080px at 420dpi) and the
          * common narrow 360dp phone, the owner's Samsung SM-G981N.
          */
         private val Viewports = listOf(360.dp, 411.dp)
 
         /**
-         * The gap the header keeps between the `Base Shutter` caption
-         * and the `ND Filter` title, so the two never read as one word.
+         * The visible gap the header keeps between the `Base Shutter`
+         * caption and the Select Filters button (FILTER-FLOW-002).
          */
-        private val MinHeaderGutter = 4.dp
+        private val MinHeaderGutter = 12.dp
+
+        /** The gap between the Select Filters button and the notation. */
+        private val MinButtonNotationGap = 8.dp
 
         /** Items of one row share a vertical centre, within rounding. */
         private val RowCentreSlack = 2.dp
@@ -147,9 +144,8 @@ class NdHeaderLayoutTest(private val case: Case) {
     }
 
     private val strings = resources(case.locale)
-    private val ndFilterTitle: String = strings.getString(R.string.shooting_nd_filter)
+    private val selectFilters: String = strings.getString(R.string.filter_aux_header_title)
     private val baseShutterTitle: String = strings.getString(R.string.shooting_base_shutter)
-    private val manageFilterSets: String = strings.getString(R.string.filter_manage_sets)
 
     /** Stops / OD / ND — every option the notation toggle offers. */
     private val notationOptions: List<String> = listOf(
@@ -259,8 +255,8 @@ class NdHeaderLayoutTest(private val case: Case) {
             1,
             captions.size,
         )
-        val titles = mergedNodes().filter { ndFilterTitle in it.texts() }
-        assertEquals("$case: no `$ndFilterTitle` title to anchor the header band.", 1, titles.size)
+        val titles = mergedNodes().filter { selectFilters in it.texts() }
+        assertEquals("$case: no `$selectFilters` button to anchor the header band.", 1, titles.size)
         val top = minOf(captions.single().boundsInRoot.top, titles.single().boundsInRoot.top)
         return top..(baseShutterWheel().boundsInRoot.top - FilterWheelLabelRowHeight.px())
     }
@@ -317,23 +313,24 @@ class NdHeaderLayoutTest(private val case: Case) {
         val geometry = "Viewport ${viewportBounds.width.toDp()}, header band " +
             "${(band.endInclusive - band.start).toDp()} tall. Header nodes were: $visible"
 
-        // (a) The management entry: one named, clickable node with a
-        //     touch target a finger can actually hit.
-        val entries = inHeader.filter { manageFilterSets in it.descriptions() }
+        // (a) The Select Filters button: one named, clickable node with a
+        //     touch target a finger can actually hit; its title and
+        //     chevron are that one node.
+        val entries = inHeader.filter { selectFilters in it.texts() }
         assertEquals(
-            "$case: the `$manageFilterSets` entry is not in the ND header's merged " +
+            "$case: the `$selectFilters` button is not in the ND header's merged " +
                 "semantics tree. $geometry",
             1,
             entries.size,
         )
         val entry = entries.single()
         assertTrue(
-            "$case: the `$manageFilterSets` node carries no click action.",
+            "$case: the `$selectFilters` node carries no click action.",
             entry.config.contains(SemanticsActions.OnClick),
         )
         val touch = entry.touchBoundsInRoot
         assertTrue(
-            "$case: the `$manageFilterSets` touch target is " +
+            "$case: the `$selectFilters` touch target is " +
                 "${touch.width.toDp()} x ${touch.height.toDp()}, under $MinTouchTarget.",
             touch.width.toDp() >= MinTouchTarget && touch.height.toDp() >= MinTouchTarget,
         )
@@ -369,7 +366,7 @@ class NdHeaderLayoutTest(private val case: Case) {
         //      options and the management entry are asserted disjoint:
         //      overlapping expanded targets are exactly how a control
         //      can report 48dp it does not own.
-        val targets = optionNodes + (manageFilterSets to entry)
+        val targets = optionNodes + (selectFilters to entry)
         targets.indices.forEach { i ->
             (i + 1 until targets.size).forEach { j ->
                 val (leftName, leftNode) = targets[i]
@@ -397,36 +394,13 @@ class NdHeaderLayoutTest(private val case: Case) {
             anonymous.isEmpty(),
         )
 
-        // (d) The title yields — but only as far as it must. It has to
-        //     keep every pixel the controls do not need, so it is never
-        //     ellipsized while the row still has slack. Sharing the
-        //     remainder with a weighted Spacer, for instance, halves it.
-        val titles = inHeader.filter { ndFilterTitle in it.texts() }
-        assertEquals("$case: no `$ndFilterTitle` title in the header.", 1, titles.size)
-        val title = titles.single()
-        val titleLeft = title.positionInRoot.x
-        // Everything the header places after the title: the toggle track,
-        // its options, and the management entry. The nearest one marks
-        // where the title's share of the row ends.
-        val available = inHeader
-            .filter { it !== title && it.positionInRoot.x > titleLeft }
-            .minOf { it.positionInRoot.x } - titleLeft
-        val intrinsic = widthOf(ndFilterTitle, titleStyle)
-        val deserved = minOf(intrinsic.toFloat(), available)
+        // (e) The button's title is a required label, so it reads whole
+        //     at every width and wheel count.
+        val title = entry
+        val intrinsic = widthOf(selectFilters, titleStyle)
         assertTrue(
-            "$case: the title is laid out ${title.size.width}px wide; the row leaves " +
-                "${available}px before the first control and the text needs ${intrinsic}px, " +
-                "so it should have had ${deserved}px. It is ellipsized harder than the " +
-                "layout requires. $geometry",
-            title.size.width >= deserved - RowChildGapSlack.px(),
-        )
-
-        // (e) The other half of the contract, and the reviewer's
-        //     "complete required labels": the heading is a required
-        //     label, so it reads whole at every width and wheel count.
-        assertTrue(
-            "$case: the title only gets ${title.size.width}px but needs ${intrinsic}px, so " +
-                "`$ndFilterTitle` renders ellipsized. $geometry",
+            "$case: the button only gets ${title.size.width}px but its title needs " +
+                "${intrinsic}px, so `$selectFilters` renders ellipsized. $geometry",
             title.size.width >= intrinsic,
         )
 
@@ -468,13 +442,21 @@ class NdHeaderLayoutTest(private val case: Case) {
                 caption.height >= captionNeeds.height - RoundingSlackPx,
         )
 
-        // (g2) …and it stays a separate word from the ND title: without
-        //      a gap the two read as one string, `Base ShutterND Filter`.
+        // (g2) …with at least the visible central gap before the button
+        //      (FILTER-FLOW-002)…
         assertTrue(
-            "$case: `$baseShutterTitle` ends at ${caption.right}px and `$ndFilterTitle` " +
-                "starts at ${title.boundsInRoot.left}px — the two captions run together. " +
+            "$case: `$baseShutterTitle` ends at ${caption.right}px and `$selectFilters` " +
+                "starts at ${title.boundsInRoot.left}px, under $MinHeaderGutter apart. " +
                 geometry,
             title.boundsInRoot.left - caption.right >= MinHeaderGutter.px() - RoundingSlackPx,
+        )
+
+        // (g3) …and the button stays apart from the notation, which is last.
+        val firstOption = optionNodes.minOf { it.second.boundsInRoot.left }
+        assertTrue(
+            "$case: `$selectFilters` ends at ${title.boundsInRoot.right}px and the notation " +
+                "starts at ${firstOption}px, under $MinButtonNotationGap apart. $geometry",
+            firstOption - title.boundsInRoot.right >= MinButtonNotationGap.px() - RoundingSlackPx,
         )
 
         // (h) Nothing in the header may be laid out outside the
@@ -512,13 +494,12 @@ class NdHeaderLayoutTest(private val case: Case) {
             )
         }
 
-        // (j) One row: the caption, the title, the entry and every
+        // (j) One row: the caption, the button and every
         //     notation option share one vertical centre, so nothing has
         //     wrapped onto a second line of the header.
         val rowItems = listOf(
             baseShutterTitle to caption,
-            ndFilterTitle to title.boundsInRoot,
-            manageFilterSets to entry.boundsInRoot,
+            selectFilters to entry.boundsInRoot,
         ) + optionNodes.map { (name, node) -> name to node.boundsInRoot }
         val centres = rowItems.map { (name, bounds) -> name to bounds.center.y }
         val spread = centres.maxOf { it.second } - centres.minOf { it.second }

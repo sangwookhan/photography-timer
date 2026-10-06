@@ -311,7 +311,9 @@ class FilterStack private constructor(
     /**
      * Picker rows for the wheel at [wheelIndex]. Standard wheels get the
      * shipping ladder truncated from the top to the remaining budget
-     * (every row selectable); Filter Set wheels get Empty plus the set's
+     * (every row selectable), plus the wheel's own value when it is a
+     * fractional value saved before the ladder became whole stops
+     * (ND-PERSIST-005); Filter Set wheels get Empty plus the set's
      * ND items (FILTER-STACK-003), each marked unavailable when its item
      * is mounted elsewhere on this camera — on another wheel or as an
      * auxiliary filter — or its contribution would exceed the cap. The wheel's own current row is always available
@@ -326,10 +328,16 @@ class FilterStack private constructor(
         val wheel = wheels[wheelIndex]
         val budget = remainingBudget(excludingWheelAt = wheelIndex)
         return when (val source = wheel.source) {
-            is FilterSource.Standard ->
-                ladderStops.filter { it <= budget + STABILITY_EPSILON }.map { stops ->
-                    FilterWheelRowOption(standardRow(stops), unavailability = null)
+            is FilterSource.Standard -> {
+                val offered = ladderStops.filter { it <= budget + STABILITY_EPSILON }
+                val current = wheel.standardStops
+                val stops = if (current != null && offered.none { abs(it - current) <= STABILITY_EPSILON }) {
+                    (offered + current).sorted()
+                } else {
+                    offered
                 }
+                stops.map { FilterWheelRowOption(standardRow(it), unavailability = null) }
+            }
 
             is FilterSource.FilterSet -> {
                 val filterSet = inventory.filterSet(source.id) ?: return emptyList()

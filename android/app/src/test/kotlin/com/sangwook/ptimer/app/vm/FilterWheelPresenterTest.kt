@@ -75,7 +75,7 @@ class FilterWheelPresenterTest {
     @Test
     fun auxiliaryItemsAreNeverWheelRows() {
         // FILTER-STACK-003: the set's CPL and GND are mounted from the
-        // shooting popup, so the ND wheel offers Empty and its ND item.
+        // Shooting Filters, so the ND wheel offers Empty and its ND item.
         for (mode in NDNotationMode.entries) {
             assertEquals(listOf(null, "Big Stopper"), rows(mode).map { it.itemName })
         }

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.persistence.FilterInventoryCodec
 import com.sangwook.ptimer.core.persistence.FilterInventoryStoring
 import com.sangwook.ptimer.core.persistence.PersistenceLoadOutcome
@@ -49,7 +50,9 @@ class DataStoreFilterInventoryStore(
 ) : FilterInventoryStoring {
 
     // IO wrapped so a DataStore read/write failure degrades safely (read ->
-    // null = empty inventory, write/clear -> no-op) instead of crashing.
+    // null only when nothing is saved, an unreadable payload or a failed
+    // read -> a saved empty inventory; write/clear -> no-op) instead of
+    // crashing.
     override fun loadSnapshot(): PersistentFilterInventorySnapshot? = runCatching {
         runBlocking {
             val prefs = dataStore.data.firstOrNull()
@@ -68,19 +71,38 @@ class DataStoreFilterInventoryStore(
                 runCatching { dataStore.edit { it[QUARANTINE_KEY] = json } }
                     .onFailure { Log.e("ptimer.persistence", "Failed to quarantine degraded payload.", it) }
             }
-            // A whole-payload failure reads as an empty inventory (null); a
-            // partial failure returns the recovered Filter Sets.
+            // A whole-payload failure reads as a saved, empty inventory —
+            // never as "nothing saved", which would seed the Samples over
+            // the user's data (FILTER-SET-008); a partial failure returns
+            // the recovered Filter Sets.
             when (result.outcome) {
-                PersistenceLoadOutcome.malformed, PersistenceLoadOutcome.versionRejected -> null
+                PersistenceLoadOutcome.malformed, PersistenceLoadOutcome.versionRejected -> unreadable
                 else -> result.snapshot
             }
         }
-    }.getOrNull()
+    }.getOrElse {
+        // A failed read is not a fresh installation either.
+        Log.e("ptimer.persistence", "Filter inventory read failed; keeping the saved data untouched.", it)
+        readFailed = true
+        unreadable
+    }
+
+    /** Set when a read failed, so the stored bytes were never seen; the
+     *  next save copies them to the quarantine key before writing over
+     *  them (PERSIST-QUARANTINE-003, filter-inventory exception). */
+    @Volatile private var readFailed = false
+
+    private val unreadable: PersistentFilterInventorySnapshot
+        get() = PersistentFilterInventorySnapshot.from(FilterInventory())
 
     override fun saveSnapshot(snapshot: PersistentFilterInventorySnapshot) {
         runCatching {
             runBlocking {
-                dataStore.edit { it[INVENTORY_KEY] = FilterInventoryCodec.encode(snapshot) }
+                dataStore.edit { prefs ->
+                    if (readFailed) prefs[INVENTORY_KEY]?.let { prefs[QUARANTINE_KEY] = it }
+                    prefs[INVENTORY_KEY] = FilterInventoryCodec.encode(snapshot)
+                }
+                readFailed = false
             }
         }
     }

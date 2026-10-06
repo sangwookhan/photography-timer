@@ -4,7 +4,6 @@
 package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.core.exposure.FilterAddUnavailability
-import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterStackRejection
@@ -42,8 +41,8 @@ data class FilterSourceUiOption(
 
 /**
  * What the Plus wheel can settle on (FILTER-PLUS-001): an ND Filter
- * Source that adds a wheel, or the Auxiliary filters action — last, after
- * every source — that opens the shooting popup without adding anything.
+ * Source that adds a wheel, or the Shooting filters action — last, after
+ * every source — that opens Shooting Filters without adding anything.
  * (iOS: `FilterPlusChoice`.)
  */
 sealed class FilterPlusChoice {
@@ -58,8 +57,9 @@ sealed class FilterPlusChoice {
 }
 
 /**
- * The Plus wheel (FILTER-PLUS-001/003/004/005): present while fewer than
- * four actual wheels exist, browsing every source in selection order,
+ * The Plus wheel (FILTER-PLUS-001/003/004/005): present while the Filter
+ * Stack is under its cap, browsing Standard and the selected Filter Sets in
+ * display order,
  * showing the camera's remembered source, and disabled with a reason when
  * that source cannot currently add a usable row.
  */
@@ -130,14 +130,6 @@ data class FilterRejectionNotice(
     /** Why the Plus addition was refused; `null` for a wheel change. */
     val addUnavailability: FilterAddUnavailability? = null,
 )
-
-/** Outcome of a camera candidate assignment (FILTER-CAMERA-001). */
-sealed class CandidateFilterSetAssignmentOutcome {
-    data object Assigned : CandidateFilterSetAssignmentOutcome()
-
-    /** The excluded sets this camera still references; nothing changed. */
-    data class Blocked(val referencedFilterSets: List<FilterSet>) : CandidateFilterSetAssignmentOutcome()
-}
 
 /** Why an item save is blocked (FILTER-ITEM-005). */
 enum class FilterItemSaveBlockReason {

@@ -35,15 +35,35 @@ class FilterInventoryModel(
     /**
      * Bootstrap-loaded inventory (the restored snapshot read off the main
      * thread). `null` falls back to reading [store] here, which is what
-     * pure unit tests and the no-op default do.
+     * pure unit tests and the no-op default do, unless [initialIsStoreRead].
      */
     initial: FilterInventory? = null,
+    /**
+     * Whether [initial] is the result of a store read already made: `null`
+     * then means nothing is saved, and the store is not read again on the
+     * main thread.
+     */
+    initialIsStoreRead: Boolean = initial != null,
     private val persistenceWriter: PersistenceWriter = AppPersistenceWriter,
+    /**
+     * Inventory a fresh installation starts with, used only when nothing
+     * is saved yet (FILTER-SET-008). Empty by default.
+     */
+    firstLaunchInventory: FilterInventory = FilterInventory.empty,
 ) {
-    private val _inventory = MutableStateFlow(
-        initial ?: store.loadSnapshot()?.restoredInventory ?: FilterInventory.empty,
-    )
+    // A saved inventory, even an empty one, is restored as it is: a former
+    // Default Set is ordinary inventory, and examples the user deleted stay
+    // deleted (FILTER-SET-008/009).
+    private val restored: FilterInventory? =
+        if (initialIsStoreRead) initial else store.loadSnapshot()?.restoredInventory
+    private val _inventory = MutableStateFlow(restored ?: firstLaunchInventory)
     val inventory: StateFlow<FilterInventory> = _inventory.asStateFlow()
+
+    init {
+        // Nothing saved yet: a fresh installation. The first-launch
+        // inventory is written at once so it is offered only once.
+        if (restored == null && firstLaunchInventory.filterSets.isNotEmpty()) persist()
+    }
 
     /** Color suggested on the most recent creation opening — the next
      *  suggestion must differ from it (FILTER-SET-003). Session state. */
@@ -74,6 +94,37 @@ class FilterInventoryModel(
         return filterSet
     }
 
+    /**
+     * Appends a new Filter Set already holding [holding], in one change and
+     * one saved snapshot, so no Set-only state is ever published or saved
+     * (FILTER-ITEM-009). Returns `null` (and changes nothing) for a blank
+     * name, an ill-formed item, or an item id already in use.
+     */
+    fun createFilterSet(name: String, color: FilterSetColor, holding: FilterItem): FilterSet? {
+        val trimmed = trimmed(name) ?: return null
+        if (!holding.isWellFormed || _inventory.value.item(holding.id) != null) return null
+        val filterSet = FilterSet(name = trimmed, color = color, items = listOf(holding))
+        mutate { it + filterSet }
+        return filterSet
+    }
+
+    /**
+     * Appends fresh copies of the example Filter Sets (FILTER-SET-008): new
+     * Set and item ids, selected by no camera, with existing Sets unchanged.
+     * A base name already in use takes the next free numeric suffix
+     * ("Digital Magnetic Filters 2"). Repeated runs are allowed.
+     */
+    fun addExampleFilterSets(): List<FilterSet> {
+        val names = filterSets.mapTo(mutableSetOf()) { it.name }
+        val copies = FilterInventorySamples.inventory().filterSets.map { example ->
+            val name = availableName(example.name, names)
+            names += name
+            example.copy(name = name)
+        }
+        mutate { it + copies }
+        return copies
+    }
+
     fun renameFilterSet(id: FilterSetId, name: String) {
         val trimmed = trimmed(name) ?: return
         val index = indexOfSet(id) ?: return
@@ -85,16 +136,6 @@ class FilterInventoryModel(
         val index = indexOfSet(id) ?: return
         if (filterSets[index].color == color) return
         mutate { sets -> sets.replacing(index, sets[index].copy(color = color)) }
-    }
-
-    /**
-     * Reorders Filter Sets: the set at [fromIndex] is removed and
-     * re-inserted at [toIndex] of the resulting list. Ids never change.
-     */
-    fun moveFilterSet(fromIndex: Int, toIndex: Int) {
-        val sets = filterSets
-        if (fromIndex !in sets.indices || toIndex !in sets.indices || fromIndex == toIndex) return
-        mutate { it.moving(fromIndex, toIndex) }
     }
 
     /**
@@ -129,7 +170,7 @@ class FilterInventoryModel(
 
     /**
      * Replaces the item matching `item.id` wherever it lives. Item
-     * identity and position are preserved.
+     * identity and set are preserved.
      */
     fun updateItem(item: FilterItem) {
         if (!item.isWellFormed) return
@@ -148,13 +189,18 @@ class FilterInventoryModel(
         }
     }
 
-    /** Reorders one Filter Set's items; see [moveFilterSet] for the index rule. */
-    fun moveItem(setId: FilterSetId, fromIndex: Int, toIndex: Int) {
-        val setIndex = indexOfSet(setId) ?: return
-        val items = filterSets[setIndex].items
-        if (fromIndex !in items.indices || toIndex !in items.indices || fromIndex == toIndex) return
+    /**
+     * Moves an existing item, with its edits, into [toSetId] in one
+     * change, keeping its id (FILTER-ITEM-009). Cameras that reference it
+     * follow it through the controller's inventory-change reconciliation.
+     */
+    fun relocateItem(item: FilterItem, toSetId: FilterSetId) {
+        if (!item.isWellFormed) return
+        val destination = indexOfSet(toSetId) ?: return
+        if (inventory.value.item(item.id) == null || filterSets[destination].items.any { it.id == item.id }) return
         mutate { sets ->
-            sets.replacing(setIndex, sets[setIndex].copy(items = sets[setIndex].items.moving(fromIndex, toIndex)))
+            sets.map { set -> set.copy(items = set.items.filterNot { it.id == item.id }) }
+                .let { stripped -> stripped.replacing(destination, stripped[destination].copy(items = stripped[destination].items + item)) }
         }
     }
 
@@ -179,6 +225,13 @@ class FilterInventoryModel(
 
     private fun trimmed(name: String): String? = name.trim().takeIf { it.isNotEmpty() }
 
+    private fun availableName(base: String, names: Set<String>): String {
+        if (base !in names) return base
+        var suffix = 2
+        while ("$base $suffix" in names) suffix += 1
+        return "$base $suffix"
+    }
+
     private fun mutate(transform: (List<FilterSet>) -> List<FilterSet>) {
         _inventory.value = FilterInventory(transform(_inventory.value.filterSets))
         persist()
@@ -195,6 +248,3 @@ class FilterInventoryModel(
 
 private fun <T> List<T>.replacing(index: Int, element: T): List<T> =
     toMutableList().also { it[index] = element }
-
-private fun <T> List<T>.moving(fromIndex: Int, toIndex: Int): List<T> =
-    toMutableList().also { it.add(toIndex, it.removeAt(fromIndex)) }

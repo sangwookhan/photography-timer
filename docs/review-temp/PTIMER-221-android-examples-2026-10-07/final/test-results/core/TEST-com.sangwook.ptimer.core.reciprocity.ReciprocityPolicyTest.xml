@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-06T17:24:09.166Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="tableBeyondRangeIsUnsupported" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="thresholdProfileWithinRangeIsNoCorrection" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="formulaBelowThresholdIsNoCorrection" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="limitedGuidanceProfileIsNoQuantifiedPrediction" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.001"/>
+  <testcase name="formulaWithinRangeIsQuantifiedFormulaDerived" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="formulaWinsOverTableWhenBothPresent" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="formulaBeyondSourceRangeIsUnsupportedWithPrediction" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="emptyRulesAreUnsupported" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="officialTableWithinRangeIsTableDerivedHighConfidence" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <testcase name="userDefinedSourceLowersConfidenceAndPrefixesLabel" classname="com.sangwook.ptimer.core.reciprocity.ReciprocityPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

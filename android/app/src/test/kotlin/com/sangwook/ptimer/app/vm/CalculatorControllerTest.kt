@@ -8,6 +8,7 @@ import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
+import com.sangwook.ptimer.core.slots.canonicalNdStackStops
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
@@ -144,22 +145,29 @@ class CalculatorControllerTest {
         ExposureScale.shippingNDLadder.indexOfFirst { abs(it.stops - stops) < 1e-9 }
 
     @Test
-    fun commercialPresetSelectionRoundTripsThroughPersistence() {
-        val nd100kIndex = ladderIndexOf(16.6)
-        val c = controller()
-        c.setNdIndex(nd100kIndex)
-
-        // The wheel keeps the preset selected (position round-trips).
-        assertEquals(nd100kIndex, c.state.value.ndIndex)
-
-        // Exported snapshot: exact value in ndStops, nearest whole in ndIndex.
+    fun aSavedCommercialPresetRestoresExactlyThoughNoLongerAStandardChoice() {
+        // ND-001 / ND-PERSIST-005: 16.6 is no longer on the Standard
+        // ladder, but a value saved before keeps its exact contribution
+        // through a relaunch.
+        assertEquals(-1, ladderIndexOf(16.6))
+        val session = PersistentSlotSession(
+            activeSlotId = CameraSlotId.camera1,
+            snapshots = mapOf(
+                CameraSlotId.camera1 to SlotCalculatorSnapshot(
+                    shutterIndex = 0,
+                    ndIndex = 17,
+                    selectedFilmId = null,
+                    selectedProfileId = null,
+                    ndStops = 16.6,
+                ),
+            ),
+        )
+        val c = CalculatorController(films = films, initialSession = session)
         val exported = c.exportSession().snapshots.getValue(CameraSlotId.camera1)
-        assertEquals(16.6, exported.ndStops!!, 1e-9)
-        assertEquals(17, exported.ndIndex)
+        assertEquals(16.6, exported.canonicalNdStackStops().single(), 1e-9)
 
-        // Relaunch: a fresh controller restores the preset exactly.
         val relaunched = CalculatorController(films = films, initialSession = c.exportSession())
-        assertEquals(nd100kIndex, relaunched.state.value.ndIndex)
+        assertEquals(16.6, relaunched.exportSession().snapshots.getValue(CameraSlotId.camera1).canonicalNdStackStops().single(), 1e-9)
     }
 
     @Test

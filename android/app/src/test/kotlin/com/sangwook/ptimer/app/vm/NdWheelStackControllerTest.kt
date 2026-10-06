@@ -213,15 +213,26 @@ class NdWheelStackControllerTest {
 
     @Test
     fun addRefusedWhenNewWheelCouldHoldNoValue() {
-        // 16.6 + 13 = 29.6 leaves 0.4 stop — below every ladder value
-        // above 0, so C1 refuses the add even though budget remains.
-        // PTIMER-221: Plus stays PRESENT (source browsing is always
-        // available below four wheels); only adding is disabled, with a
-        // reason (FILTER-PLUS-005).
-        val c = controller()
-        c.addFilterWheel()
-        commitStops(c, 0, "16.6")
-        commitStops(c, 1, "13")
+        // A saved 16.6 (ND-PERSIST-005) + 13 = 29.6 leaves 0.4 stop —
+        // below every whole-stop ladder value above 0, so C1 refuses the
+        // add even though budget remains. PTIMER-221: Plus stays PRESENT
+        // (source browsing is always available below four wheels); only
+        // adding is disabled, with a reason (FILTER-PLUS-005).
+        val saved = PersistentSlotSession(
+            activeSlotId = CameraSlotId.camera1,
+            snapshots = mapOf(
+                CameraSlotId.camera1 to SlotCalculatorSnapshot(
+                    shutterIndex = 10,
+                    ndIndex = 17,
+                    selectedFilmId = null,
+                    selectedProfileId = null,
+                    ndStack = listOf(16.6, 13.0),
+                ),
+            ),
+            customNames = emptyMap(),
+        )
+        val c = controller(initial = saved)
+        assertEquals(listOf(16.6, 13.0), wheelStops(c))
         assertTrue(c.state.value.plus.isVisible)
         assertFalse(c.state.value.plus.canAdd)
         assertEquals(FilterAddUnavailability.noSelectableValue, c.state.value.plus.addUnavailability)

@@ -10,23 +10,20 @@ import org.junit.Test
 import kotlin.math.pow
 
 /**
- * PTIMER-209: the shipping ND ladder carries whole stops 0…30 plus the three
- * commercial fractional presets, and those presets feed the exposure engine as
- * their configured fractional stop value. Parity with iOS ExposureScaleTests /
- * ExposureCalculationAccuracyTests.
+ * ND-001 / ND-011 / ND-PERSIST-005: the shipping ND ladder is whole stops
+ * 0…30; the three commercial fractional values are no longer new Standard
+ * choices but keep their mappings, still restore as saved values, and feed
+ * the exposure engine as their configured fractional stop value. Parity
+ * with iOS ExposureScaleTests / ExposureCalculationAccuracyTests.
  */
 class NDPresetLadderTest {
     private val eps = ExposureCalculator.STABILITY_EPSILON
 
-    @Test fun shippingLadderInsertsPresetsInNumericOrder() {
-        val expected = listOf(
-            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 6.6, 7.0, 7.6, 8.0, 9.0, 10.0, 11.0,
-            12.0, 13.0, 14.0, 15.0, 16.0, 16.6, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0,
-            23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0,
-        )
+    @Test fun shippingLadderIsWholeStopsOnly() {
         val stops = ExposureScale.shippingNDLadder.map { it.stops }
-        assertEquals(34, stops.size)
-        assertEquals(expected, stops)
+        assertEquals(31, stops.size)
+        assertEquals((0..30).map { it.toDouble() }, stops)
+        assertEquals(listOf(6.6, 7.6, 16.6), ExposureScale.commercialFractionalNDStops)
         // Both scales share the ladder.
         assertEquals(stops, ExposureScale.fullStop.ndSteps.map { it.stops })
         assertEquals(stops, ExposureScale.oneThirdStop.ndSteps.map { it.stops })
@@ -63,5 +60,24 @@ class NDPresetLadderTest {
             assertTrue(result > base * 2.0.pow(kotlin.math.floor(stops)))
             assertTrue(result < base * 2.0.pow(kotlin.math.ceil(stops)))
         }
+    }
+
+    /** ND-PERSIST-005: a saved commercial Standard value still restores,
+     *  and a wheel holding one offers it as its own row only. */
+    @Test fun aSavedFractionalStandardValueRestoresAndStaysOnItsOwnWheel() {
+        assertTrue(NdFilterStack.isValidRestoredStack(listOf(6.6, 2.0)))
+        assertTrue(NdFilterStack.isValidRestoredStack(listOf(16.6)))
+        assertTrue("Other off-ladder values are still rejected.", !NdFilterStack.isValidRestoredStack(listOf(6.5)))
+
+        val stack = FilterStack.validated(
+            listOf(FilterWheel.standard(6.6), FilterWheel.standard(2.0)),
+            FilterInventory.empty,
+        )!!
+        val own = stack.rowOptions(0, FilterInventory.empty).map { it.row.contributionStops }
+        val other = stack.rowOptions(1, FilterInventory.empty).map { it.row.contributionStops }
+        assertEquals("The saved value stays selectable on its wheel.", listOf(6.6), own.filter { it != kotlin.math.floor(it) })
+        assertEquals("In numeric order among the whole stops.", listOf(0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 6.6), own.take(8))
+        assertTrue("Never offered as a new Standard choice.", other.all { it == kotlin.math.floor(it) })
+        assertEquals("Its contribution is unchanged.", 8.6, stack.effectiveStops, eps)
     }
 }

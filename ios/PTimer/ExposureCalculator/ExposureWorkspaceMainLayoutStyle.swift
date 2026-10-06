@@ -843,9 +843,8 @@ struct VariableSectionView: View {
     /// the source the Plus displays.
     let selectedFilterSource: FilterSource
     let addUnavailabilityText: (FilterSource) -> String?
-    let onManageFilterSets: () -> Void
-    /// Opens the shooting popup on the auxiliary tab (FILTER-FLOW-002):
-    /// from the ND header, the Plus auxiliary action, or the summary.
+    /// Opens Shooting Filters (FILTER-FLOW-002): from the Select
+    /// Filters button, the Plus Shooting filters action, or the summary.
     let onOpenShootingFilters: () -> Void
     /// The mounted auxiliary filters' summary; `nil` hides the space
     /// (FILTER-AUX-001).
@@ -876,7 +875,7 @@ struct VariableSectionView: View {
         case .source(let source):
             return filterSourceName(source)
         case .auxiliaryFilters:
-            return AuxiliaryFilterSummaryPresenter.title
+            return String(localized: "Shooting filters")
         case nil:
             return nil
         }
@@ -884,6 +883,28 @@ struct VariableSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.filterStatusRegionTopSpacing) {
+            VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
+            // One title row across the card (FILTER-FLOW-002): the passive
+            // Base Shutter caption, a flexible gap of at least 12 points,
+            // then the Select Filters button and, last, its Stops / OD / ND
+            // control.
+            HStack(spacing: 0) {
+                Text("Base Shutter")
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: headerCaptionGroupGap)
+                ShootingFiltersHeaderButton(onOpen: onOpenShootingFilters)
+                    .layoutPriority(1)
+                Color.clear
+                    .frame(width: headerButtonNotationGap, height: 1)
+                    .accessibilityHidden(true)
+                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
+                    .layoutPriority(1)
+                    .accessibilityIdentifier("nd-notation-mode-control")
+            }
+            .frame(height: pickerHeaderHeight)
+
             HStack(alignment: .top, spacing: style.inputColumnSpacing(forOccupiedSpaceCount: occupiedSpaceCount, hasAuxiliarySummary: auxiliarySummary != nil)) {
                 ShutterSelectionRow(
                     baseShutter: $baseShutter,
@@ -916,7 +937,6 @@ struct VariableSectionView: View {
                     filterSetColor: filterSetColor,
                     filterSourceName: filterSourceName,
                     ndNotationMode: ndNotationMode,
-                    onSelectNotationMode: onSelectNotationMode,
                     onWheelRowObserved: onNDWheelRowObserved,
                     onWheelSelected: onNDWheelSelected,
                     onWheelTouchBegan: onNDWheelTouchBegan,
@@ -930,7 +950,6 @@ struct VariableSectionView: View {
                     onAddFilterWheel: onAddFilterWheel,
                     selectedFilterSource: selectedFilterSource,
                     addUnavailabilityText: addUnavailabilityText,
-                    onManageFilterSets: onManageFilterSets,
                     onOpenShootingFilters: onOpenShootingFilters,
                     auxiliarySummary: auxiliarySummary,
                     occupiedSpaceCount: occupiedSpaceCount,
@@ -940,6 +959,7 @@ struct VariableSectionView: View {
                     pickerHeight: style.pickerHeight,
                     style: style
                 )
+            }
             }
 
             // The ONE stable status region (FILTER-STACK-008): below
@@ -1160,7 +1180,6 @@ private struct NDFilterGroupView: View {
     let filterSetColor: (FilterSource) -> FilterSetColor?
     let filterSourceName: (FilterSource) -> String
     let ndNotationMode: NDNotationMode
-    let onSelectNotationMode: (NDNotationMode) -> Void
     let onWheelRowObserved: (Int, FilterWheelSelection, Int) -> Void
     let onWheelSelected: (Int, FilterWheelSelection, Int) -> Void
     let onWheelTouchBegan: (Int, Int) -> Void
@@ -1175,10 +1194,9 @@ private struct NDFilterGroupView: View {
     let onAddFilterWheel: (FilterSource) -> Void
     let selectedFilterSource: FilterSource
     let addUnavailabilityText: (FilterSource) -> String?
-    let onManageFilterSets: () -> Void
-    /// Opens the shooting popup (FILTER-FLOW-002): the header entry,
-    /// the Plus auxiliary action, and the mounted summary all lead
-    /// here.
+    /// Opens Shooting Filters (FILTER-FLOW-002): the Select Filters
+    /// button, the Plus Shooting filters action, and the mounted
+    /// summary all lead here.
     let onOpenShootingFilters: () -> Void
     /// The mounted auxiliary filters' summary column, shown
     /// immediately after Base Shutter only while something is mounted
@@ -1213,61 +1231,29 @@ private struct NDFilterGroupView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
-            HStack(spacing: 4) {
-                // Title carries the group's weight; the selector labels
-                // are intentionally smaller and compact so the control
-                // does not dominate the header (PTIMER-187). The native
-                // segmented control clips "Stops" in this half-width
-                // area, so a compact custom toggle is used to match the
-                // Android placement and keep all three labels readable.
-                //
-                // No long-press menus anywhere in the group (user
-                // product decision, PTIMER-199 §4.2.5): removal is
-                // handled by the self-cleaning rules and the
-                // accessibility custom actions below.
-                Text("ND Filter")
-                    .font(.footnote.weight(.semibold))
-                    .fixedSize()
-
-                // Persistent shooting-filter entry (FILTER-SET-001,
-                // FILTER-FLOW-002): opens the shooting popup, from which
-                // candidate sets and management are reachable, so it
-                // stays available when the wheel limit hides Plus.
-                // Compact glyph, 44 pt hit area.
-                Button(action: onOpenShootingFilters) {
-                    Image(systemName: "camera.filters")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .frame(width: 18, height: 22)
-                        // 18 × 22 glyph, 44 × 48 hit shape.
-                        .contentShape(Rectangle().inset(by: -13))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Shooting filters"))
-                .accessibilityHint(Text("Choose the auxiliary filters and ND sources for this camera"))
-                .accessibilityIdentifier("shooting-filters-button")
-
-                Spacer(minLength: 4)
-
-                NDNotationToggle(mode: ndNotationMode, onSelect: onSelectNotationMode)
-                    .accessibilityIdentifier("nd-notation-mode-control")
-            }
-            .frame(height: pickerHeaderHeight)
-
+        // No long-press menus anywhere in the group (user product
+        // decision, PTIMER-199 §4.2.5): removal is handled by the
+        // self-cleaning rules and the accessibility custom actions below.
+        // The group's header lives in the card's one header row.
+        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: style.filterWheelSpacing(forOccupiedSpaceCount: occupiedSpaceCount, hasAuxiliarySummary: auxiliarySummary != nil)) {
                 // The mounted auxiliary filters occupy one space right
-                // after Base Shutter (FILTER-AUX-001), spanning the
-                // label row and the viewport; it is absent, not blank,
+                // after Base Shutter (FILTER-AUX-001): below the wheels'
+                // label row, with the same top and bottom as the picker
+                // viewports (FILTER-AUX-005); it is absent, not blank,
                 // while nothing is mounted.
                 if let auxiliarySummary {
-                    AuxiliaryFilterSummaryView(
-                        summary: auxiliarySummary,
-                        height: style.filterWheelLabelRowHeight + pickerHeight,
-                        isInteractive: areWheelsInteractive,
-                        style: style,
-                        onOpen: onOpenShootingFilters
-                    )
+                    VStack(spacing: 0) {
+                        Color.clear
+                            .frame(height: style.filterWheelLabelRowHeight)
+                        AuxiliaryFilterSummaryView(
+                            summary: auxiliarySummary,
+                            height: pickerHeight,
+                            isInteractive: areWheelsInteractive,
+                            style: style,
+                            onOpen: onOpenShootingFilters
+                        )
+                    }
                     .frame(width: style.auxiliarySummaryWidth(forOccupiedSpaceCount: occupiedSpaceCount))
                     .transition(.ndWheelCollapse)
                 }
@@ -1323,7 +1309,6 @@ private struct NDFilterGroupView: View {
                         addUnavailabilityText: addUnavailabilityText,
                         onAdd: onAddFilterWheel,
                         onOpenAuxiliaryFilters: onOpenShootingFilters,
-                        onManage: onManageFilterSets,
                         onBrowsingChanged: onBrowsingChoiceChanged
                     )
                     .padding(.top, style.filterWheelLabelRowHeight)
@@ -1680,6 +1665,13 @@ private extension Double {
 /// shutter wheel (PTIMER-187).
 private let pickerHeaderHeight: CGFloat = 30
 
+/// The least gap between the Base Shutter caption and the trailing title
+/// group (FILTER-FLOW-002).
+private let headerCaptionGroupGap: CGFloat = 12
+
+/// The gap between the Select Filters button and the notation control.
+private let headerButtonNotationGap: CGFloat = 8
+
 /// One wheel column's vertical geometry (FILTER-STACK-007), in points
 /// from the top of the header row. Base Shutter and every filter wheel
 /// share it for a density and wheel count.
@@ -1795,10 +1787,49 @@ extension ExposureWorkspaceMainLayoutStyle {
     }
 }
 
-/// Compact 3-state ND notation toggle (Stops / OD / ND) for the ND
-/// Filter header. Reads as one cohesive segmented control — a subtle
-/// rounded track with a raised, filled selected segment — so the two
-/// platforms share the same horizontal `ND Filter [Stops | OD | ND]`
+/// The Select Filters header button (FILTER-FLOW-002): the whole title
+/// and its downward chevron are one tap target that opens the current
+/// camera's Shooting Filters; a tinted rounded background and border mark
+/// it as the only action among the titles. It stays available when the
+/// wheel limit hides Plus.
+private struct ShootingFiltersHeaderButton: View {
+    let onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            HStack(spacing: 3) {
+                Text("Select Filters")
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 0.5)
+            )
+            // A 44-point-tall hit shape around the 26-point button.
+            .contentShape(Rectangle().inset(by: -9))
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .accessibilityLabel(Text("Select Filters"))
+        .accessibilityHint(Text("Opens this camera's Filter Set selection, auxiliary filter selection, and filter editing. ND values are selected on Main."))
+        .accessibilityIdentifier("shooting-filters-button")
+    }
+}
+
+/// Compact 3-state ND notation toggle (Stops / OD / ND), last in the
+/// wheel card's title row. Reads as one cohesive segmented control — a
+/// subtle rounded track with a raised, filled selected segment — so the
+/// two platforms share the same `[Select Filters] [Stops | OD | ND]`
 /// placement while fitting the half-width column where a native
 /// segmented control clips "Stops" (PTIMER-187). Labels stay one step
 /// smaller than the title so the control stays subordinate.
@@ -1835,7 +1866,7 @@ private struct NDNotationToggle: View {
             .lineLimit(1)
             .fixedSize()
             .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .background {
                 if isSelected {
@@ -1884,13 +1915,8 @@ private struct ShutterSelectionRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: style.pickerLabelSpacing) {
-            Text("Base Shutter")
-                .font(.footnote.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .frame(height: pickerHeaderHeight, alignment: .leading)
-
+        // The Base Shutter caption lives in the card's one header row.
+        VStack(alignment: .leading, spacing: 0) {
             // The blank label row and the viewport form one
             // zero-spacing stack, exactly like a filter column's label
             // and wheel, so both columns share the same viewport top,

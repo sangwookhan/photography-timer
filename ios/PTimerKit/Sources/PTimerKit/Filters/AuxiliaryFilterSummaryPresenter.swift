@@ -4,6 +4,23 @@
 import Foundation
 import PTimerCore
 
+/// One selected filter in the Selected filters panel of Shooting
+/// Filters (FILTER-FLOW-003): the whole name, the type apart from it,
+/// and the current contribution or GND mode. Pure value.
+public struct SelectedFilterRowDisplayState: Equatable, Sendable, Identifiable {
+    public let itemID: FilterItemID
+    /// The item's registered name, never shortened.
+    public let name: String
+    /// Behavior type as text (`Color`, `Effect`, `CPL`, `GND`).
+    public let kindLabel: String
+    /// Swatch for a Color filter's optical color; `nil` otherwise.
+    public let opticalColor: FilterSetColor?
+    /// `1.5 stops`, or a GND's `Record only · 0 stops`.
+    public let valueText: String
+
+    public var id: FilterItemID { itemID }
+}
+
 /// One mounted auxiliary filter as the Main summary shows it
 /// (FILTER-AUX-002): one compact row with a short identifier and the
 /// current contribution. Modes, registered densities, and other
@@ -81,7 +98,7 @@ public struct AuxiliaryFilterSummaryDisplayState: Equatable, Sendable {
 /// the ND notation (ND-004): they are labeled contributions, not
 /// notation displays.
 public enum AuxiliaryFilterSummaryPresenter {
-    /// `Auxiliary filters` — the summary's title and the popup tab.
+    /// `Auxiliary filters` — the Main summary's title.
     public static var title: String {
         String(localized: "Auxiliary filters")
     }
@@ -93,6 +110,30 @@ public enum AuxiliaryFilterSummaryPresenter {
         let items = rows.map { itemDisplay(for: $0, among: rows) }
         let spoken = ([title] + items.map(\.accessibilityText)).joined(separator: ", ")
         return AuxiliaryFilterSummaryDisplayState(items: items, accessibilityLabel: spoken)
+    }
+
+    /// The Selected filters panel of Shooting Filters (FILTER-FLOW-003,
+    /// FILTER-GND-003): every selected filter in Main's order, each with
+    /// its whole user-defined name, its type, and its contribution — a
+    /// GND also its mode. Names are never shortened here; only the view
+    /// may truncate one that does not fit.
+    public static func selectedFilterRows(for rows: [ResolvedAuxiliaryFilter]) -> [SelectedFilterRowDisplayState] {
+        rows.map { row in
+            let contribution = FilterWheelPresenter.stopsText(row.contributionStops)
+            let valueText: String
+            if case .gnd(let mode) = row.mount.choice {
+                valueText = "\(FilterWheelPresenter.gndModeName(mode)) · \(contribution)"
+            } else {
+                valueText = contribution
+            }
+            return SelectedFilterRowDisplayState(
+                itemID: row.item.id,
+                name: row.item.name,
+                kindLabel: FilterWheelPresenter.kindName(row.item.behavior.kind),
+                opticalColor: row.item.behavior.opticalColor,
+                valueText: valueText
+            )
+        }
     }
 
     /// One row of the summary. `rows` are all mounted items, so the
@@ -173,8 +214,8 @@ public enum AuxiliaryFilterSummaryPresenter {
 }
 
 /// What the Plus wheel can settle on (FILTER-PLUS-001): an ND Filter
-/// Source that adds a wheel, or the Auxiliary filters action that opens
-/// the shooting popup without adding anything.
+/// Source that adds a wheel, or the Shooting filters action that opens
+/// Shooting Filters without adding anything.
 public enum FilterPlusChoice: Hashable, Sendable {
     case source(FilterSource)
     case auxiliaryFilters

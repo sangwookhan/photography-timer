@@ -14,14 +14,20 @@ final class FilterSetLocalizationTests: XCTestCase {
         "%lld empty filter wheels removed",
         "No more filters in this direction",
         "Add filter",
-        "Manage Filter Sets",
-        "Filter Sets",
+        "Selected Filter Sets",
+        "Available Filter Sets",
+        "Open shooting filters",
+        "%lld auxiliary filters",
+        "1 auxiliary filter",
+        "Select ND filters on the main screen.",
+        "Apply to exposure",
+        "Red-orange",
+        "Yellow-orange",
         "Filter not available",
         "Already mounted on this camera",
         "Exceeds 30 stops",
         "Empty · no filter mounted",
         "Filter Set name",
-        "Finish Editing",
     ]
 
     func testFilterSetStringsHaveEnglishAndKoreanValues() throws {

@@ -323,7 +323,7 @@ final class FilterStatusRegionTests: XCTestCase {
         XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · Standard", "The summary follows the settled order.")
         // A mounted auxiliary filter names its set first (main-row
         // order); an ND-wheel count appears only for actual wheels.
-        XCTAssertNil(viewModel.applyAuxiliaryFilters([.mount(cpl, in: leeSet, .cplLoss(1))]))
+        XCTAssertNil(viewModel.applyMounts([.mount(cpl, in: leeSet, .cplLoss(1))]))
         XCTAssertEqual(viewModel.filterSourceSummaryText, "Lee holder · Standard")
 
         viewModel.selectFilterSource(.filterSet(nisiSet.id))

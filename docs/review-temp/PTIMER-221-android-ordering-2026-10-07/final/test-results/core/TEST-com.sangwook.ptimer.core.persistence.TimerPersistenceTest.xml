@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-06T18:22:39.738Z" hostname="AL03230922ui-MacBookPro.local" time="0.004">
+  <properties/>
+  <testcase name="runningRestoresAsCompletedWhenElapsed" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.001"/>
+  <testcase name="collectionRoundTripsThroughCodec" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.001"/>
+  <testcase name="corruptPausedSnapshotRestoresAsCompleted" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="pausedRestoresFrozenRegardlessOfWallClock" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="malformedAndFutureSchemaFailSafeToNull" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="unknownStatusTokenDropsOnlyThatTimer" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.001"/>
+  <testcase name="missingTimersKeyReportsMalformed" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="duplicateTimerIdsAreDeduplicated" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="explicitEmptyTimersArrayIsLoadedEmpty" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="canceledRestoresRemainingAtCancel" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.001"/>
+  <testcase name="legacyStoppedStatusDecodesAsPaused" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <testcase name="runningRestoresWhenStillCounting" classname="com.sangwook.ptimer.core.persistence.TimerPersistenceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

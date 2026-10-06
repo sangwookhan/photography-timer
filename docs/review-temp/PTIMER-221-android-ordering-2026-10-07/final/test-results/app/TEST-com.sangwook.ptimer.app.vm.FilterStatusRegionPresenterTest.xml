@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-06T18:22:44.640Z" hostname="AL03230922ui-MacBookPro.local" time="0.001">
+  <properties/>
+  <testcase name="a rejection outranks browsing and movement and holds as a warning" classname="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" time="0.001"/>
+  <testcase name="a single Standard wheel at rest shows nothing" classname="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" time="0.0"/>
+  <testcase name="a moving wheel outranks the idle summary" classname="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" time="0.0"/>
+  <testcase name="the idle summary is held at secondary emphasis" classname="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" time="0.0"/>
+  <testcase name="a Standard-only stack shows the total alone and lets it fade" classname="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" time="0.0"/>
+  <testcase name="browsing outranks movement and the idle summary" classname="com.sangwook.ptimer.app.vm.FilterStatusRegionPresenterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

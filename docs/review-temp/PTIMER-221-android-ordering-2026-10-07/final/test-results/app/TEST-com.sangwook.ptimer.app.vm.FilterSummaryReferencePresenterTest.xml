@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-06T18:22:44.642Z" hostname="AL03230922ui-MacBookPro.local" time="0.0">
+  <properties/>
+  <testcase name="aStandardOnlyZeroStackHasNoReferenceText" classname="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" time="0.0"/>
+  <testcase name="interleavedSourcesFlushEachGroupInStackOrder" classname="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" time="0.0"/>
+  <testcase name="applyFullValueIsNamedAndAStandardZeroIsOmitted" classname="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" time="0.0"/>
+  <testcase name="groupsItemsBySetWithRepresentationAndMode" classname="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" time="0.0"/>
+  <testcase name="missingNamesFallBackToTheSuppliedFallbackTokens" classname="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" time="0.0"/>
+  <testcase name="theSuppliedVocabularyIsTheOneWritten" classname="com.sangwook.ptimer.app.vm.FilterSummaryReferencePresenterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

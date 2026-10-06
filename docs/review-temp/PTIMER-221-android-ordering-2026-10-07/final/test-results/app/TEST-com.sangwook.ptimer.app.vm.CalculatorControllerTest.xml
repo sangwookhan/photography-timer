@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sangwook.ptimer.app.vm.CalculatorControllerTest" tests="37" skipped="0" failures="0" errors="0" timestamp="2026-10-06T18:22:44.450Z" hostname="AL03230922ui-MacBookPro.local" time="0.051">
+  <properties/>
+  <testcase name="selectingFormulaFilmProducesCorrectedExposure" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.004"/>
+  <testcase name="switchingToASlotWithStaleStoredStateNormalizesUiAndPersistence" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="outsideGuidanceShowsTheComputedCorrectedValue" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.005"/>
+  <testcase name="digitalWorkflowTargetComparesAgainstAdjustedShutter" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.003"/>
+  <testcase name="startFromCorrectedIsNoOpWithoutQuantifiedCorrection" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="canResetIsTrueWhenOnlyCustomNameSet" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="customCameraNamesArePreservedPerSlotAcrossSwitches" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.003"/>
+  <testcase name="setFilmsExposesACustomFilmThatComputesCorrectedExposure" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.004"/>
+  <testcase name="formulaFromTableLinksBackAndReferencePointsTrackTableEdits" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.003"/>
+  <testcase name="startedTimerKeepsCameraIdentityWhenSlotStateChangesLater" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.004"/>
+  <testcase name="unsupportedExactValueIgnoredOnRestore" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="aSavedCommercialPresetRestoresExactlyThoughNoLongerAStandardChoice" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="startDelegatesDurationAndIdentity" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="filmWorkflowLimitedGuidanceTargetComparisonIsUnavailable" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="restoreNormalizesStaleFilmSelectionWhenFilmNoLongerExists" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.002"/>
+  <testcase name="defaultsToDigitalWithStartableAdjustedShutter" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="targetShutterIsPerSlotAndStartsFromTargetDuration" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.002"/>
+  <testcase name="selectingHiddenCommunityModelNormalizesToOfficialPrimary" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="switchingSlotCapturesAndRestoresPerSlotInputs" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="renameActiveSlotFlowsIntoStateAndTimerIdentity" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="filmWorkflowQuantifiedTargetComparesAgainstCorrectedExposure" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="startFromAdjustedAndCorrectedUseTheirOwnDurations" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="resetActiveSlotSettingsKeepsCustomName" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="exportedSessionRestoresPerSlotStateAndNames" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.002"/>
+  <testcase name="previewTableFitAndFormulaFromTableInputDeriveFromTheForm" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="communityPracticalModelsAreHiddenFromPicker" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="resetActiveSlotSettingsAndNameClearsFilmInputsAndName" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="presetFilmOptionsAreGroupedAndSortedLikeIos" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="canResetIsFalseAtDefaultsAndTrueAfterChanges" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="filmWithAlternatesExposesModelOptions" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="slotStatesCarryEachSlotsOwnContentForThePager" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="ndIndexChangesAdjustedShutter" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="wholeStopSelectionLeavesExactFieldNull" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="twoSlotsKeepIndependentCalculatorAndFilmStateAcrossSwitches" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.002"/>
+  <testcase name="customFilmDraftRoundTripsTableAnchorsForEditing" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <testcase name="customFilmDraftRoundTripsFormulaFieldsForEditing" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.0"/>
+  <testcase name="customFilmDraftRoundTripsDetailsMetadataForEditing" classname="com.sangwook.ptimer.app.vm.CalculatorControllerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

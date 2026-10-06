@@ -1,0 +1,35 @@
+== S1 camera 3: Film Square selected, 2-stop ND on the wheel, zero auxiliary filters  active=camera3
+  selected Filter Sets: ['Film Square ND/GND']
+  wheels: [('Film Square ND/GND', ('2-stop ND', 'Film Square ND/GND'))]
+  mounted auxiliary filters: []
+  remembered Plus source: filterSet Film Square ND/GND
+  inventory Pouch ['3']
+  inventory Film Square ND/GND ['ND400', '2-stop ND', '3-stop ND', '4-stop ND', '3-stop Soft GND']
+== S2 after Save: 2-stop ND moved from Film Square ND/GND to Pouch (Available on camera 3)  active=camera3
+  selected Filter Sets: ['Film Square ND/GND']
+  wheels: [('Film Square ND/GND', 'Empty')]
+  mounted auxiliary filters: []
+  remembered Plus source: filterSet Film Square ND/GND
+  inventory Pouch ['3', '2-stop ND']
+  inventory Film Square ND/GND ['ND400', '3-stop ND', '4-stop ND', '3-stop Soft GND']
+== S3 after Apply: only a Record-only GND mounted (contribution 0)  active=camera3
+  selected Filter Sets: ['Film Square ND/GND']
+  wheels: [('Film Square ND/GND', 'Empty')]
+  mounted auxiliary filters: [(('3-stop Soft GND', 'Film Square ND/GND'), 'recordOnly', 'gnd')]
+  remembered Plus source: filterSet Film Square ND/GND
+  inventory Pouch ['3', '2-stop ND']
+  inventory Film Square ND/GND ['ND400', '3-stop ND', '4-stop ND', '3-stop Soft GND']
+== S4a after tapping Reset, confirmation shown, nothing changed yet  active=camera3
+  selected Filter Sets: ['Film Square ND/GND']
+  wheels: [('Film Square ND/GND', 'Empty')]
+  mounted auxiliary filters: [(('3-stop Soft GND', 'Film Square ND/GND'), 'recordOnly', 'gnd')]
+  remembered Plus source: filterSet Film Square ND/GND
+  inventory Pouch ['3', '2-stop ND']
+  inventory Film Square ND/GND ['ND400', '3-stop ND', '4-stop ND', '3-stop Soft GND']
+== S4 after confirming Reset (settings only)  active=camera3
+  selected Filter Sets: ['Film Square ND/GND']
+  wheels: [('Standard', {'ndStop': 0, 'sourceKind': 'standard'})]
+  mounted auxiliary filters: []
+  remembered Plus source: filterSet Film Square ND/GND
+  inventory Pouch ['3', '2-stop ND']
+  inventory Film Square ND/GND ['ND400', '3-stop ND', '4-stop ND', '3-stop Soft GND']

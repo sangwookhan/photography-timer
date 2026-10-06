@@ -49,9 +49,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
+import com.sangwook.ptimer.app.vm.FilterPlusChoice
 import com.sangwook.ptimer.app.vm.FilterPlusUiState
 import com.sangwook.ptimer.app.vm.FilterSourcePlusGestureArbiter
-import com.sangwook.ptimer.app.vm.FilterSourceUiOption
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.ui.theme.filterSetColor
 import kotlinx.coroutines.Job
@@ -69,10 +69,13 @@ internal val FilterPlusControlWidth = 26.dp
  *
  * - a tap adds a Standard 0 or Filter Set Empty wheel for the displayed
  *   source, exactly once (FILTER-PLUS-003);
- * - a vertical drag browses Standard / Filter Sets in selection order,
+ * - a vertical drag browses Standard / the camera's candidate Filter
+ *   Sets in selection order and then the Auxiliary filters action,
  *   reporting the candidate so the status region can show it; releasing
  *   on a different source adds exactly one wheel from that final source,
- *   while a return to the starting source adds nothing;
+ *   releasing on the Auxiliary filters action opens the shooting popup
+ *   without adding anything, and a return to the starting source adds
+ *   nothing;
  * - a stationary long press opens Filter Set management; movement past
  *   the stationary tolerance cancels it, and once the drag threshold is
  *   crossed browsing has won for the rest of the touch (FILTER-PLUS-001).
@@ -93,34 +96,48 @@ internal fun FilterSourcePlusControl(
     height: Dp,
     onAdd: (FilterSource) -> Unit,
     onManage: () -> Unit,
-    /** The source a touch is browsing right now, owned by the caller;
+    /** Opens the shooting popup — the Auxiliary filters action. */
+    onOpenAuxiliaryFilters: () -> Unit,
+    /** The choice a touch is browsing right now, owned by the caller;
      *  `null` when no drag is browsing. */
-    browsing: FilterSourceUiOption?,
-    onBrowsingChanged: (FilterSourceUiOption?) -> Unit,
+    browsing: FilterPlusChoice?,
+    onBrowsingChanged: (FilterPlusChoice?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sources = plus.sources
+    // Standard, the candidate ND sources, then the Auxiliary filters
+    // action (FILTER-PLUS-001).
+    val choices = FilterPlusChoice.choices(sources)
     val settledIndex = plus.selectedIndex.coerceIn(0, (sources.size - 1).coerceAtLeast(0))
 
-    // The source an assistive increment / decrement is browsing —
+    // The choice an assistive increment / decrement is browsing —
     // displayed and announced, never persisted. Cleared when the
     // camera's settled source changes (a successful add) so the element
     // follows the remembered source again.
-    var assistiveCandidate by remember { mutableStateOf<FilterSourceUiOption?>(null) }
+    var assistiveCandidate by remember { mutableStateOf<FilterPlusChoice?>(null) }
     LaunchedEffect(settledIndex, sources) { assistiveCandidate = null }
 
-    val displayed = assistiveCandidate ?: sources.getOrNull(settledIndex)
+    val displayed: FilterPlusChoice? = assistiveCandidate ?: sources.getOrNull(settledIndex)?.let { FilterPlusChoice.Source(it) }
+    val displayedSource = (displayed as? FilterPlusChoice.Source)?.option
     val candidate = browsing ?: displayed
-    val unavailability = displayed?.addUnavailability
-    val isAddEnabled = displayed?.let(plus::canAdd) ?: false
+    val unavailability = displayedSource?.addUnavailability
+    val isAddEnabled = displayedSource?.let(plus::canAdd) ?: false
 
-    val tint = candidate?.color?.let { filterSetColor(it) } ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val tint = (candidate as? FilterPlusChoice.Source)?.option?.color?.let { filterSetColor(it) }
+        ?: MaterialTheme.colorScheme.onSurfaceVariant
     val isBrowsing = browsing != null
 
     val addLabel = stringResource(R.string.nd_add_filter)
     val manageLabel = stringResource(R.string.filter_manage_sets)
-    val displayedName = displayed?.name?.let { localizedSourceName(it) }.orEmpty()
+    val auxiliaryLabel = stringResource(R.string.filter_auxiliary_open)
+    val auxiliaryTitle = stringResource(R.string.filter_auxiliary_title)
+    val displayedName = when (displayed) {
+        is FilterPlusChoice.Source -> localizedSourceName(displayed.option.name)
+        FilterPlusChoice.AuxiliaryFilters -> auxiliaryTitle
+        null -> ""
+    }
     val unavailabilityText = unavailability?.let { filterAddUnavailabilityText(it) }
+    val currentOnOpenAuxiliary by rememberUpdatedState(onOpenAuxiliaryFilters)
 
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -140,7 +157,7 @@ internal fun FilterSourcePlusControl(
             .pointerInput(sources, settledIndex) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val arbiter = FilterSourcePlusGestureArbiter(settledIndex, sources.size)
+                    val arbiter = FilterSourcePlusGestureArbiter(settledIndex, choices.size)
                     var longPress: Job? = scope.launch {
                         delay(FilterSourcePlusGestureArbiter.LONG_PRESS_MILLIS)
                         if (arbiter.deadlineElapsed()) currentOnManage()
@@ -162,7 +179,7 @@ internal fun FilterSourcePlusControl(
                             }
                             if (moved) {
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                currentOnBrowsingChanged(arbiter.candidateIndex?.let { sources.getOrNull(it) })
+                                currentOnBrowsingChanged(arbiter.candidateIndex?.let { choices.getOrNull(it) })
                             }
                             change.consume()
                         }
@@ -174,11 +191,17 @@ internal fun FilterSourcePlusControl(
                     when (outcome) {
                         // The controller refuses and reports when the
                         // source cannot add, so the view never gates it.
+                        // Settling on the Auxiliary filters action opens the
+                        // popup and adds no wheel (FILTER-PLUS-003).
                         is FilterSourcePlusGestureArbiter.ReleaseOutcome.AddBrowsed ->
-                            sources.getOrNull(outcome.index)?.let { currentOnAdd(it.source) }
+                            when (val choice = choices.getOrNull(outcome.index)) {
+                                is FilterPlusChoice.Source -> currentOnAdd(choice.option.source)
+                                FilterPlusChoice.AuxiliaryFilters -> currentOnOpenAuxiliary()
+                                null -> Unit
+                            }
 
                         FilterSourcePlusGestureArbiter.ReleaseOutcome.Add ->
-                            displayed?.let { currentOnAdd(it.source) }
+                            displayedSource?.let { currentOnAdd(it.source) }
 
                         FilterSourcePlusGestureArbiter.ReleaseOutcome.Managed,
                         FilterSourcePlusGestureArbiter.ReleaseOutcome.None,
@@ -195,34 +218,50 @@ internal fun FilterSourcePlusControl(
                 // candidate; nothing is added and the camera's remembered
                 // source does not change until an add succeeds.
                 progressBarRangeInfo = ProgressBarRangeInfo(
-                    current = sources.indexOf(displayed).coerceAtLeast(0).toFloat(),
-                    range = 0f..(sources.size - 1).coerceAtLeast(0).toFloat(),
-                    steps = (sources.size - 2).coerceAtLeast(0),
+                    current = choices.indexOf(displayed).coerceAtLeast(0).toFloat(),
+                    range = 0f..(choices.size - 1).coerceAtLeast(0).toFloat(),
+                    steps = (choices.size - 2).coerceAtLeast(0),
                 )
                 setProgress { target ->
-                    val current = sources.indexOf(displayed).coerceAtLeast(0)
+                    val current = choices.indexOf(displayed).coerceAtLeast(0)
                     val next = when {
                         target > current -> current + 1
                         target < current -> current - 1
                         else -> return@setProgress false
                     }
-                    val option = sources.getOrNull(next) ?: return@setProgress false
+                    val option = choices.getOrNull(next) ?: return@setProgress false
                     assistiveCandidate = option
                     true
                 }
-                onClick(addLabel) {
-                    val source = displayed?.source
-                    if (!isAddEnabled || source == null) {
-                        false
-                    } else {
-                        onAdd(source)
+                if (displayed == FilterPlusChoice.AuxiliaryFilters) {
+                    onClick(auxiliaryLabel) {
+                        assistiveCandidate = null
+                        onOpenAuxiliaryFilters()
                         true
+                    }
+                } else {
+                    onClick(addLabel) {
+                        val source = displayedSource?.source
+                        if (!isAddEnabled || source == null) {
+                            false
+                        } else {
+                            onAdd(source)
+                            true
+                        }
                     }
                 }
                 customActions = buildList {
-                    if (isAddEnabled && displayed != null) {
-                        add(CustomAccessibilityAction(addLabel) { onAdd(displayed.source); true })
+                    if (isAddEnabled && displayedSource != null) {
+                        add(CustomAccessibilityAction(addLabel) { onAdd(displayedSource.source); true })
                     }
+                    // A distinct Open auxiliary filters action (FILTER-A11Y-001).
+                    add(
+                        CustomAccessibilityAction(auxiliaryLabel) {
+                            assistiveCandidate = null
+                            onOpenAuxiliaryFilters()
+                            true
+                        },
+                    )
                     add(CustomAccessibilityAction(manageLabel) { onManage(); true })
                 }
             },

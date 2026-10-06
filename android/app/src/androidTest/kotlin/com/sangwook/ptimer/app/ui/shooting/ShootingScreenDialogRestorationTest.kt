@@ -72,6 +72,7 @@ class ShootingScreenDialogRestorationTest {
                     onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
                     onRemoveNdWheelOverscroll = {},
                     onManageFilterSets = {},
+                    onOpenShootingFilters = {},
                     onSelectNotation = {},
                     onSelectFilm = {},
                     onSelectProfile = {},

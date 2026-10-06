@@ -112,6 +112,21 @@ data class SlotCalculatorSnapshot(
      */
     val lastFilterSourceKind: String? = null,
     val lastFilterSetId: String? = null,
+    /**
+     * Mounted auxiliary filters (FILTER-AUX-001), one entry per mounted
+     * item in display order. Additive optional: a snapshot written before
+     * auxiliary filters existed omits it, and any CPL / GND rows still in
+     * [filterStack] migrate into auxiliary filters on restore
+     * (FILTER-PERSIST-002).
+     */
+    val auxiliaryFilters: List<PersistentAuxiliaryFilter>? = null,
+    /**
+     * The slot's candidate Filter Sets (FILTER-CAMERA-001) by stable id.
+     * Additive optional: absent means no explicit assignment; the sets
+     * referenced by the restored wheels and auxiliary filters are always
+     * included on restore.
+     */
+    val candidateFilterSetIds: List<String>? = null,
 )
 
 /**

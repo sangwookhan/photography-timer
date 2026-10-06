@@ -55,6 +55,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.vm.FilterItemCategory
 import com.sangwook.ptimer.app.vm.FilterItemEditorDraft
 import com.sangwook.ptimer.app.vm.FilterItemSaveBlockReason
 import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
@@ -65,19 +66,26 @@ import com.sangwook.ptimer.core.exposure.FilterValueUnit
 
 /** Which physical filter the editor opened on. */
 internal sealed class FilterItemEditorTarget {
-    /** A brand-new item, starting in the session's remembered notation
-     *  (FILTER-ITEM-007). The kind always starts Fixed. */
-    data class New(val initialUnit: FilterValueUnit) : FilterItemEditorTarget()
+    /** A brand-new item from the Filter Set's Auxiliary or ND tab,
+     *  starting in the session's remembered notation (FILTER-ITEM-007).
+     *  A new ND item is ND; a new auxiliary item starts at the first
+     *  auxiliary kind. */
+    data class New(
+        val initialUnit: FilterValueUnit,
+        val category: FilterItemCategory = FilterItemCategory.nd,
+    ) : FilterItemEditorTarget()
 
     data class Existing(val item: FilterItem) : FilterItemEditorTarget()
 }
 
 /**
  * Registers or edits one physical filter (FILTER-ITEM-002/003/004,
- * FILTER-CPL-001..004, FILTER-GND-001/003). The kind is chosen
- * explicitly; Fixed and GND take a decimal value in Stops, OD, or ND
- * factor with the canonical conversion shown live, and a CPL exposes its
- * three exposure-loss fields on a decimal keyboard. Saving is refused —
+ * FILTER-CPL-001..004, FILTER-GND-001/003, FILTER-COLOR-001/002). The
+ * kind is chosen explicitly; ND and GND take a decimal value in Stops,
+ * OD, or ND factor with the canonical conversion shown live, a CPL
+ * exposes its three exposure-loss fields on a decimal keyboard, a Color
+ * filter records its optical color beside an explicit loss in stops, and
+ * an Effect filter its explicit loss. Saving is refused —
  * with the affected cameras — when a stack would exceed 30 stops or
  * would lose a row it currently mounts (FILTER-ITEM-005).
  *
@@ -95,7 +103,10 @@ internal fun FilterItemEditorDialog(
     var draft by remember(target) {
         mutableStateOf(
             when (target) {
-                is FilterItemEditorTarget.New -> FilterItemEditorDraft(unit = target.initialUnit)
+                is FilterItemEditorTarget.New -> FilterItemEditorDraft(
+                    kind = target.category.kinds.first(),
+                    unit = target.initialUnit,
+                )
                 is FilterItemEditorTarget.Existing ->
                     FilterItemEditorDraft.editing(target.item.name, target.item.behavior)
             },
@@ -104,6 +115,11 @@ internal fun FilterItemEditorDialog(
     var blocked by remember { mutableStateOf<FilterItemSaveOutcome.Blocked?>(null) }
     val nameFocus = remember { FocusRequester() }
     val isNew = target is FilterItemEditorTarget.New
+    val selectableKinds = FilterItemCategory.selectableKinds(
+        category = (target as? FilterItemEditorTarget.New)?.category
+            ?: FilterItemCategory.of((target as FilterItemEditorTarget.Existing).item.behavior.kind),
+        isNewItem = isNew,
+    )
     LaunchedEffect(target) { if (isNew) runCatching { nameFocus.requestFocus() } }
 
     fun save() {
@@ -173,21 +189,25 @@ internal fun FilterItemEditorDialog(
                                 .fillMaxWidth()
                                 .focusRequester(nameFocus),
                         )
-                        Spacer(Modifier.height(16.dp))
-                        SectionLabel(stringResource(R.string.filter_item_kind))
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            FilterItemKind.entries.forEachIndexed { index, kind ->
-                                SegmentedButton(
-                                    selected = draft.kind == kind,
-                                    onClick = { draft = draft.copy(kind = kind) },
-                                    shape = SegmentedButtonDefaults.itemShape(
-                                        index = index,
-                                        count = FilterItemKind.entries.size,
-                                    ),
-                                ) { Text(localizedFilterKindName(kind)) }
+                        // The auxiliary path offers only auxiliary kinds; the
+                        // ND path has one kind and shows no choice.
+                        if (selectableKinds.size > 1) {
+                            Spacer(Modifier.height(16.dp))
+                            SectionLabel(stringResource(R.string.filter_item_kind))
+                            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                selectableKinds.forEachIndexed { index, kind ->
+                                    SegmentedButton(
+                                        selected = draft.kind == kind,
+                                        onClick = { draft = draft.copy(kind = kind) },
+                                        shape = SegmentedButtonDefaults.itemShape(
+                                            index = index,
+                                            count = selectableKinds.size,
+                                        ),
+                                    ) { Text(localizedFilterKindName(kind), maxLines = 1) }
+                                }
                             }
+                            FooterText(stringResource(R.string.filter_item_kind_footer))
                         }
-                        FooterText(stringResource(R.string.filter_item_kind_footer))
 
                         Spacer(Modifier.height(20.dp))
                         when (draft.kind) {
@@ -195,6 +215,14 @@ internal fun FilterItemEditorDialog(
                                 RegisteredValueSection(draft) { draft = it }
 
                             FilterItemKind.cpl -> CplChoicesSection(draft) { draft = it }
+
+                            FilterItemKind.color -> {
+                                OpticalColorSection(draft) { draft = it }
+                                Spacer(Modifier.height(20.dp))
+                                ExposureLossSection(draft) { draft = it }
+                            }
+
+                            FilterItemKind.effect -> ExposureLossSection(draft) { draft = it }
                         }
 
                         if (draft.kind == FilterItemKind.gnd) {
@@ -233,6 +261,9 @@ internal fun FilterItemEditorDialog(
 
                                 FilterItemSaveBlockReason.removesSelectedChoice ->
                                     R.string.filter_item_save_blocked_choice
+
+                                FilterItemSaveBlockReason.tooManyNDWheels ->
+                                    R.string.filter_item_save_blocked_nd_wheels
                             },
                             cameras,
                         ),
@@ -304,6 +335,47 @@ private fun RegisteredValueSection(draft: FilterItemEditorDraft, onDraft: (Filte
         ErrorText(stringResource(R.string.filter_item_value_error))
     }
     FooterText(stringResource(R.string.filter_item_value_footer))
+}
+
+/** Color of a Color filter (FILTER-COLOR-001): chosen from the same
+ *  palette as Filter Sets, each choice drawn in its actual color, with
+ *  the selected color's name, separate from the loss. */
+@Composable
+private fun OpticalColorSection(draft: FilterItemEditorDraft, onDraft: (FilterItemEditorDraft) -> Unit) {
+    SectionLabel(stringResource(R.string.filter_item_optical_color))
+    FilterSetColorGrid(selection = draft.opticalColor, onSelect = { onDraft(draft.copy(opticalColor = it)) })
+    Spacer(Modifier.height(8.dp))
+    Text(filterColorName(draft.opticalColor), style = MaterialTheme.typography.bodyMedium)
+    FooterText(stringResource(R.string.filter_item_optical_color_footer))
+}
+
+/** Explicit loss of a Color or Effect filter in stops
+ *  (FILTER-COLOR-001/002): user-supplied, zero allowed, never inferred
+ *  from the color or the name. */
+@Composable
+private fun ExposureLossSection(draft: FilterItemEditorDraft, onDraft: (FilterItemEditorDraft) -> Unit) {
+    SectionLabel(stringResource(R.string.filter_item_exposure_loss))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = draft.valueText,
+            onValueChange = { onDraft(draft.copy(valueText = it)) },
+            label = { Text(stringResource(R.string.filter_item_value)) },
+            singleLine = true,
+            isError = draft.hasValueError,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            stringResource(R.string.notation_stops),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    if (draft.hasValueError) {
+        Spacer(Modifier.height(4.dp))
+        ErrorText(stringResource(R.string.filter_item_loss_error))
+    }
+    FooterText(stringResource(R.string.filter_item_loss_footer))
 }
 
 /** The three CPL exposure-loss fields (FILTER-CPL-001/002/003). */

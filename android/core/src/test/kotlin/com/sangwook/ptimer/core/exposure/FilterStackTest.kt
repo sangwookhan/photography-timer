@@ -81,42 +81,39 @@ class FilterStackTest {
             FilterItemBehavior.Fixed(FilterRegisteredValue(1000.0, FilterValueUnit.filterFactor)),
         )
         val nd8 = fixed("ND8", 3.0)
+        val nd2 = fixed("ND2", 1.0)
         val cpl = FilterItem(
             "CPL",
             FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))),
         )
         val nisi = FilterSet("NiSi", FilterSetColor.red, listOf(nd1000))
-        val lee = FilterSet("Lee", FilterSetColor.green, listOf(nd8, cpl))
+        val lee = FilterSet("Lee", FilterSetColor.green, listOf(nd8, nd2, cpl))
         val inventory = FilterInventory(listOf(nisi, lee))
-        // Deliberately interleaved: Standard, Lee, NiSi, Lee.
-        val stack = stackOf(
-            listOf(
-                FilterWheel.standard(2.0),
-                wheel(lee, cpl, FilterRowChoice.CplLoss(1.0)),
-                wheel(nisi, nd1000),
-                wheel(lee, nd8),
-            ),
+        // Deliberately interleaved: Lee, NiSi, Lee — three ND wheels
+        // beside a mounted CPL that never takes part in ND ordering.
+        val stack = FilterStack.validated(
+            listOf(wheel(lee, nd2), wheel(nisi, nd1000), wheel(lee, nd8)),
+            listOf(MountedAuxiliaryFilter(lee.id, cpl.id, AuxiliaryFilterChoice.CplLoss(2.0))),
             inventory,
-        )
+        )!!
         assertEquals(16.0, stack.effectiveStops, 1e-9)
         assertEquals(10.0, stack.registeredSubtotal(FilterSource.FilterSet(nisi.id)), 1e-9)
-        assertEquals(4.0, stack.registeredSubtotal(FilterSource.FilterSet(lee.id)), 1e-9)
-        assertEquals(2.0, stack.registeredSubtotal(FilterSource.Standard), 1e-9)
+        assertEquals("Auxiliary contributions are not an ND subtotal.", 4.0, stack.registeredSubtotal(FilterSource.FilterSet(lee.id)), 1e-9)
 
-        // NiSi (10) > Lee (3 + 1 = 4) > Standard (2); Lee's rows descend.
-        assertEquals(listOf(2, 3, 1, 0), stack.commitSortPermutation(inventory))
+        // NiSi (10) > Lee (3 + 1 = 4); Lee's rows descend.
+        assertEquals(listOf(1, 2, 0), stack.commitSortPermutation(inventory))
         val sorted = stack.sortedForCommit(inventory)
         assertEquals(
             listOf(
                 FilterSource.FilterSet(nisi.id),
                 FilterSource.FilterSet(lee.id),
                 FilterSource.FilterSet(lee.id),
-                FilterSource.Standard,
             ),
             sorted.wheels.map { it.source },
         )
         assertEquals(select(nd8), sorted.wheels[1].selection)
-        assertEquals(select(cpl, FilterRowChoice.CplLoss(1.0)), sorted.wheels[2].selection)
+        assertEquals(select(nd2), sorted.wheels[2].selection)
+        assertEquals("The auxiliary filters stay as they are.", stack.auxiliaryFilters, sorted.auxiliaryFilters)
         assertEquals(16.0, sorted.effectiveStops, 1e-9)
     }
 
@@ -186,138 +183,116 @@ class FilterStackTest {
         val gnd = FilterItem("GND 0.6", FilterItemBehavior.Gnd(stops(2.0)))
         val set = FilterSet("GND", FilterSetColor.purple, listOf(gnd))
         val inventory = FilterInventory(listOf(set))
-        var stack = stackOf(listOf(FilterWheel.standard(3.0), FilterWheel.empty(set.id)), inventory)
+        var stack = stackOf(listOf(FilterWheel.standard(3.0)), inventory)
 
         stack = accepted(
-            stack.replacingWheel(
-                1,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
+            stack.replacingAuxiliaryFilters(
+                listOf(MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly))),
                 inventory,
             ),
         )
         assertEquals(3.0, stack.effectiveStops, 1e-9)
-        assertNotNull("Record only is a mounted item.", stack.wheels[1].mountedItemId)
-        assertFalse(
-            "A mounted Record-only item is never cleaned up.",
-            stack.wheels[1].isCleanable,
-        )
-        assertFalse(stack.canRemoveEmptyWheel)
+        assertTrue("Record only is a mounted item and keeps the summary.", stack.hasAuxiliaryFilters)
+        assertEquals(0.0, stack.auxiliaryRows.single().contributionStops, 0.0)
 
         stack = accepted(
-            stack.replacingWheel(
-                1,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
+            stack.replacingAuxiliaryFilters(
+                listOf(MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue))),
                 inventory,
             ),
         )
         assertEquals(5.0, stack.effectiveStops, 1e-9)
-        // The GND sorts by its registered value even in Record-only mode.
-        assertEquals(2.0, stack.rows[1].registeredStops, 0.0)
+        assertEquals(2.0, stack.auxiliaryRows.single().registeredStops, 0.0)
     }
 
     @Test fun emptyAndRecordOnlyAreDistinctStates() {
         val gnd = FilterItem("GND", FilterItemBehavior.Gnd(stops(2.0)))
-        val set = FilterSet("GND", FilterSetColor.purple, listOf(gnd))
+        val nd = fixed("ND8", 3.0)
+        val set = FilterSet("GND", FilterSetColor.purple, listOf(gnd, nd))
         val inventory = FilterInventory(listOf(set))
         val empty = stackOf(listOf(FilterWheel.standard(1.0), FilterWheel.empty(set.id)), inventory)
         assertTrue(empty.wheels[1].isCleanable)
         assertTrue(empty.canRemoveEmptyWheel)
 
         val recordOnly = accepted(
-            empty.replacingWheel(
-                1,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
+            empty.replacingAuxiliaryFilters(
+                listOf(MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly))),
                 inventory,
             ),
         )
         assertEquals(empty.effectiveStops, recordOnly.effectiveStops, 0.0)
-        assertNotEquals(empty.wheels[1], recordOnly.wheels[1])
-        assertFalse("A Record-only wheel is not an Empty wheel.", recordOnly.wheels[1].isCleanable)
+        assertTrue("The Empty wheel stays an Empty wheel.", recordOnly.wheels[1].isCleanable)
+        assertTrue("The Record-only GND is mounted in the summary.", recordOnly.hasAuxiliaryFilters)
+        // Wheel cleanup never removes a mounted auxiliary filter.
+        assertEquals(recordOnly.auxiliaryFilters, recordOnly.removingEmptyWheel(at = 1).auxiliaryFilters)
     }
 
     // --- Example 5 — CPL rows and sibling exclusivity ---
 
-    @Test fun cplRowsAreDistinctChoicesAndSiblingsDisableEveryRowOfTheItem() {
+    @Test fun auxiliaryItemsNeverAppearOnAnNdWheelAndMountOnce() {
         val cpl = FilterItem(
             "CPL",
             FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))),
         )
-        val set = FilterSet("CPL", FilterSetColor.orange, listOf(cpl))
+        val nd = fixed("ND8", 3.0)
+        val set = FilterSet("CPL", FilterSetColor.orange, listOf(cpl, nd))
         val inventory = FilterInventory(listOf(set))
-        var stack = stackOf(
-            listOf(FilterWheel.empty(set.id), FilterWheel.empty(set.id)),
-            inventory,
-        )
+        var stack = stackOf(listOf(FilterWheel.empty(set.id)), inventory)
 
-        val ownRows = stack.rowOptions(0, inventory)
+        // FILTER-STACK-003: Empty plus the set's ND items only.
         assertEquals(
-            listOf(
-                FilterWheelSelection.Empty,
-                select(cpl, FilterRowChoice.CplLoss(1.0)),
-                select(cpl, FilterRowChoice.CplLoss(1.5)),
-                select(cpl, FilterRowChoice.CplLoss(2.0)),
-            ),
-            ownRows.map { it.selection },
+            listOf(FilterWheelSelection.Empty, select(nd)),
+            stack.rowOptions(0, inventory).map { it.selection },
         )
-
-        stack = accepted(
+        assertEquals(
+            rejected(FilterStackRejection.unresolvedSelection),
             stack.replacingWheel(0, select(cpl, FilterRowChoice.CplLoss(1.5)), inventory),
         )
-        assertEquals(1.5, stack.effectiveStops, 1e-9)
 
-        val siblingRows = stack.rowOptions(1, inventory)
-        for (option in siblingRows.filter { it.selection != FilterWheelSelection.Empty }) {
-            assertEquals(FilterStackRejection.itemAlreadyMounted, option.unavailability)
-        }
-        // The owning wheel may switch between the item's own rows.
-        assertTrue(stack.rowOptions(0, inventory).all { it.isAvailable })
-        stack = accepted(
-            stack.replacingWheel(0, select(cpl, FilterRowChoice.CplLoss(2.0)), inventory),
-        )
+        val mount = MountedAuxiliaryFilter(set.id, cpl.id, AuxiliaryFilterChoice.CplLoss(1.5))
+        stack = accepted(stack.replacingAuxiliaryFilters(listOf(mount), inventory))
+        assertEquals(1.5, stack.effectiveStops, 1e-9)
+        // Changing the choice updates the same mounted item.
+        stack = accepted(stack.replacingAuxiliaryFilters(listOf(mount.copy(choice = AuxiliaryFilterChoice.CplLoss(2.0))), inventory))
         assertEquals(2.0, stack.effectiveStops, 1e-9)
+        // The same physical item cannot be mounted twice.
+        assertEquals(
+            rejected(FilterStackRejection.itemAlreadyMounted),
+            stack.replacingAuxiliaryFilters(listOf(mount, mount), inventory),
+        )
     }
 
     // --- Example 6 — cap behavior with Record only ---
 
-    @Test fun recordOnlyRemainsAddableAtCapAndEnablingContributionIsRejected() {
+    @Test fun recordOnlyRemainsMountableAtCapAndEnablingContributionIsRejected() {
         val gnd = FilterItem("GND", FilterItemBehavior.Gnd(stops(2.0)))
         val set = FilterSet("GND", FilterSetColor.purple, listOf(gnd))
         val inventory = FilterInventory(listOf(set))
         var stack = stackOf(listOf(FilterWheel.standard(30.0)), inventory)
 
-        assertNull(stack.addUnavailability(FilterSource.FilterSet(set.id), inventory))
+        // A GND-only set holds no ND item, so it never makes a wheel.
+        assertEquals(
+            FilterAddUnavailability.filterSetHasNoItems,
+            stack.addUnavailability(FilterSource.FilterSet(set.id), inventory),
+        )
         assertEquals(
             FilterAddUnavailability.noSelectableValue,
             stack.addUnavailability(FilterSource.Standard, inventory),
         )
 
-        stack = stack.addingWheel(FilterSource.FilterSet(set.id), inventory)
-        stack = accepted(
-            stack.replacingWheel(
-                1,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-                inventory,
-            ),
-        )
+        val recordOnly = MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.recordOnly))
+        stack = accepted(stack.replacingAuxiliaryFilters(listOf(recordOnly), inventory))
         assertEquals(30.0, stack.effectiveStops, 1e-9)
 
         val before = stack
         assertEquals(
             rejected(FilterStackRejection.exceedsTotalLimit),
-            stack.replacingWheel(
-                1,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
+            stack.replacingAuxiliaryFilters(
+                listOf(recordOnly.copy(choice = AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue))),
                 inventory,
             ),
         )
         assertEquals("A rejected change leaves the previous state intact.", before, stack)
-        val options = stack.rowOptions(1, inventory)
-        assertEquals(
-            FilterStackRejection.exceedsTotalLimit,
-            options.first {
-                it.selection == select(gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue))
-            }.unavailability,
-        )
     }
 
     @Test fun addUnavailabilityReasons() {
@@ -355,6 +330,36 @@ class FilterStackTest {
         assertEquals(FilterWheel.empty(set.id), added.wheels[1])
         assertEquals(stack.effectiveStops, added.effectiveStops, 0.0)
         assertEquals(stack, stack.addingWheel(FilterSource.FilterSet(FilterSetId.generate()), inventory))
+    }
+
+    // --- ND wheel row order ---
+
+    /** FILTER-STACK-003: an ND wheel offers Empty, then only its Set's ND
+     *  items, weakest to strongest by canonical stops (never by name or the
+     *  registered number), equal stops by name and then id. It is not the
+     *  Filter Set list order reversed: equal stops still read by name. */
+    @Test fun ndWheelRowsReadWeakestFirstByCanonicalStops() {
+        fun factor(name: String, value: Double) =
+            FilterItem(name, FilterItemBehavior.Fixed(FilterRegisteredValue(value, FilterValueUnit.filterFactor)))
+        val nd100k = factor("ND100k", 100_000.0)
+        val bigStopper = fixed("Big Stopper", 10.0)
+        val nd400 = factor("ND400", 400.0)
+        val alpha = fixed("Alpha 3", 3.0)
+        val nd8 = fixed("ND8", 3.0)
+        val twin = fixed("ND8", 3.0)
+        val gnd = FilterItem("A soft GND", FilterItemBehavior.Gnd(stops(2.0)))
+        val red = FilterItem("Red", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        val set = FilterSet("Bag", FilterSetColor.blue, listOf(nd100k, gnd, nd8, bigStopper, red, nd400, twin, alpha))
+        val inventory = FilterInventory(listOf(set))
+        val stack = stackOf(listOf(FilterWheel.empty(set.id)), inventory)
+
+        val twins = listOf(nd8, twin).sortedBy { it.id.rawValue }
+        val rows = stack.rowOptions(0, inventory)
+        assertEquals(
+            listOf(FilterWheelSelection.Empty) + (listOf(alpha) + twins + listOf(nd400, bigStopper, nd100k)).map { select(it) },
+            rows.map { it.selection },
+        )
+        assertEquals(listOf(3.0, 3.0, 3.0, 8.64, 10.0, 16.6), rows.drop(1).map { Math.round(it.row.contributionStops * 100) / 100.0 })
     }
 
     // --- Standard wheels keep the budget-truncated ladder ---
@@ -485,7 +490,7 @@ class FilterStackTest {
 
     // --- FILTER-STACK-005 — CPL and GND sort keys ---
 
-    @Test fun cplSortsByItsSelectedChoiceAndGndByRegisteredDensityInBothModes() {
+    @Test fun auxiliaryChangesNeverMoveTheNdWheels() {
         val cpl = FilterItem(
             "CPL",
             FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))),
@@ -494,93 +499,154 @@ class FilterStackTest {
         val two = fixed("Two", 2.0)
         val set = FilterSet("S", FilterSetColor.red, listOf(cpl, gnd, two))
         val inventory = FilterInventory(listOf(set))
-        val base = stackOf(
-            listOf(
-                wheel(set, cpl, FilterRowChoice.CplLoss(1.0)),
-                wheel(set, gnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-                wheel(set, two),
-            ),
-            inventory,
-        )
-        // Registered values: CPL 1 < GND 1.8 < Two 2 -> [two, gnd, cpl].
-        assertEquals(listOf(2, 1, 0), base.commitSortPermutation(inventory))
-
-        // Raising the CPL choice to 2 ties with Two: the stable sort keeps
-        // the CPL (index 0) ahead of Two (index 2).
-        val cplTwo = accepted(
-            base.replacingWheel(0, select(cpl, FilterRowChoice.CplLoss(2.0)), inventory),
-        )
-        assertEquals(listOf(0, 2, 1), cplTwo.commitSortPermutation(inventory))
-
-        // Switching the GND to Apply full value must not move it.
-        val gndFull = accepted(
-            base.replacingWheel(
-                1,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
+        val base = stackOf(listOf(FilterWheel.standard(3.0), wheel(set, two)), inventory)
+        val permutation = base.commitSortPermutation(inventory)
+        val mounted = accepted(
+            base.replacingAuxiliaryFilters(
+                listOf(
+                    MountedAuxiliaryFilter(set.id, cpl.id, AuxiliaryFilterChoice.CplLoss(2.0)),
+                    MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)),
+                ),
                 inventory,
             ),
         )
-        assertEquals(
-            base.commitSortPermutation(inventory),
-            gndFull.commitSortPermutation(inventory),
-        )
-        assertEquals(1.8, gndFull.rows[1].registeredStops, 0.0)
-        assertEquals(1.8, gndFull.rows[1].contributionStops, 0.0)
-        assertEquals(0.0, base.rows[1].contributionStops, 0.0)
+        assertEquals(permutation, mounted.commitSortPermutation(inventory))
+        assertEquals(3.0, mounted.registeredSubtotal(FilterSource.Standard), 1e-9)
+        assertEquals(2.0, mounted.registeredSubtotal(FilterSource.FilterSet(set.id)), 1e-9)
+        assertEquals(8.8, mounted.effectiveStops, 1e-9)
     }
 
-    @Test fun gndModeSwitchNeverMovesItsGroupWhileACplChoiceMayAfterSettlement() {
-        val gnd = FilterItem("GND 0.9", FilterItemBehavior.Gnd(stops(3.0)))
-        val cpl = FilterItem(
-            "CPL",
-            FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))),
+    // --- FILTER-STACK-001 / FILTER-AUX-002/004 — the auxiliary summary ---
+
+    private fun auxiliaryInventory(): Pair<FilterInventory, List<FilterItem>> {
+        val red = FilterItem("Red 25A", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        val night = FilterItem("Night", FilterItemBehavior.Effect(FilterExposureLoss(1.0)))
+        val cpl = FilterItem("CPL", FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.5, null, null))))
+        val soft = FilterItem("Soft GND 2", FilterItemBehavior.Gnd(stops(2.0)))
+        val hard = FilterItem("Hard GND 3", FilterItemBehavior.Gnd(stops(3.0)))
+        // Set order puts the GNDs first, so kind order has to win.
+        val set = FilterSet("Kit", FilterSetColor.blue, listOf(soft, hard, cpl, night, red))
+        return FilterInventory(listOf(set)) to listOf(red, night, cpl, soft, hard)
+    }
+
+    private fun mountAll(inventory: FilterInventory, items: List<FilterItem>): List<MountedAuxiliaryFilter> {
+        val setId = inventory.filterSets.single().id
+        return items.map { MountedAuxiliaryFilter(setId, it.id, MountedAuxiliaryFilter.initialChoice(it)!!) }
+    }
+
+    @Test fun anyNumberOfAuxiliaryFiltersMountWithinTheCap() {
+        val (inventory, items) = auxiliaryInventory()
+        val stack = accepted(
+            stackOf(listOf(FilterWheel.standard(2.0)), inventory)
+                .replacingAuxiliaryFilters(mountAll(inventory, items), inventory),
         )
-        val lee = FilterSet("Lee", FilterSetColor.red, listOf(gnd))
-        val nisi = FilterSet("NiSi", FilterSetColor.green, listOf(cpl))
-        val inventory = FilterInventory(listOf(lee, nisi))
-        var stack = stackOf(
+        assertEquals(5, stack.auxiliaryFilters.size)
+        // Red 3 + Night 1 + CPL 1.5 + two Record-only GNDs + Standard 2.
+        assertEquals(7.5, stack.effectiveStops, 1e-9)
+        assertEquals("Three ND wheels beside the summary.", 3, stack.wheelLimit)
+    }
+
+    @Test fun auxiliaryFiltersKeepTheirDisplayOrderWhateverTheMountOrder() {
+        val (inventory, items) = auxiliaryInventory()
+        val (red, night, cpl, soft, hard) = items
+        val expected = listOf(red.id, night.id, cpl.id, soft.id, hard.id)
+        for (order in listOf(items, items.reversed(), listOf(hard, cpl, red, soft, night))) {
+            val stack = accepted(
+                stackOf(listOf(FilterWheel.standard(0.0)), inventory)
+                    .replacingAuxiliaryFilters(mountAll(inventory, order), inventory),
+            )
+            assertEquals(expected, stack.auxiliaryFilters.map { it.itemId })
+            assertEquals(expected, FilterStack.normalizedAuxiliaryFilters(mountAll(inventory, order), inventory).map { it.itemId })
+        }
+    }
+
+    @Test fun theCapRefusesAuxiliaryAfterNdAndNdAfterAuxiliary() {
+        val heavy = FilterItem("Heavy Effect", FilterItemBehavior.Effect(FilterExposureLoss(9.0)))
+        val red = FilterItem("Red 25A", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        val set = FilterSet("Kit", FilterSetColor.blue, listOf(heavy, red))
+        val inventory = FilterInventory(listOf(set))
+        val redMount = MountedAuxiliaryFilter(set.id, red.id, AuxiliaryFilterChoice.RegisteredLoss)
+        val heavyMount = MountedAuxiliaryFilter(set.id, heavy.id, AuxiliaryFilterChoice.RegisteredLoss)
+
+        // ND first: ND 20 + Red 3 = 23; adding a 9-stop Effect is refused
+        // and nothing already mounted changes.
+        val ndFirst = accepted(stackOf(listOf(FilterWheel.standard(20.0)), inventory).replacingAuxiliaryFilters(listOf(redMount), inventory))
+        assertEquals(
+            rejected(FilterStackRejection.exceedsTotalLimit),
+            ndFirst.replacingAuxiliaryFilters(listOf(redMount, heavyMount), inventory),
+        )
+        assertEquals(23.0, ndFirst.effectiveStops, 1e-9)
+
+        // Auxiliary first: 9 + 3 = 12 mounted; the ND wheel's budget is 18
+        // and a value past it is refused.
+        val auxFirst = accepted(
+            stackOf(listOf(FilterWheel.standard(15.0)), inventory)
+                .replacingAuxiliaryFilters(listOf(heavyMount, redMount), inventory),
+        )
+        assertEquals(18.0, auxFirst.remainingBudget(excludingWheelAt = 0), 1e-9)
+        assertEquals(
+            rejected(FilterStackRejection.exceedsTotalLimit),
+            auxFirst.replacingWheel(0, FilterWheelSelection.Standard(19.0), inventory),
+        )
+        assertTrue(auxFirst.rowOptions(0, inventory).all { (it.selection as FilterWheelSelection.Standard).stops <= 18.0 })
+        assertEquals(27.0, auxFirst.effectiveStops, 1e-9)
+    }
+
+    @Test fun fourNdWheelsRefuseAnAuxiliaryMountAndThreeKeepPlusAway() {
+        val (inventory, items) = auxiliaryInventory()
+        val four = stackOf(List(4) { FilterWheel.standard(0.0) }, inventory)
+        assertEquals(
+            rejected(FilterStackRejection.tooManyNDWheels),
+            four.replacingAuxiliaryFilters(mountAll(inventory, items.take(1)), inventory),
+        )
+        val three = accepted(
+            stackOf(List(3) { FilterWheel.standard(0.0) }, inventory)
+                .replacingAuxiliaryFilters(mountAll(inventory, items.take(1)), inventory),
+        )
+        assertFalse(three.canAddWheel)
+        assertEquals(FilterAddUnavailability.stackFull, three.addUnavailability(FilterSource.Standard, inventory))
+        // Clearing the auxiliary filters gives the fourth space back.
+        assertTrue(accepted(three.replacingAuxiliaryFilters(emptyList(), inventory)).canAddWheel)
+    }
+
+    @Test fun legacyCplAndGndWheelsMigrateIntoAuxiliaryFilters() {
+        val cpl = FilterItem("CPL", FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))))
+        val gnd = FilterItem("GND", FilterItemBehavior.Gnd(stops(3.0)))
+        val set = FilterSet("Lee", FilterSetColor.red, listOf(cpl, gnd))
+        val (wheels, auxiliary) = FilterStack.migratingLegacyWheels(
             listOf(
-                FilterWheel.standard(2.0),
-                wheel(lee, gnd, FilterRowChoice.Gnd(GndCalculationMode.recordOnly)),
-                wheel(nisi, cpl, FilterRowChoice.CplLoss(2.0)),
+                wheel(set, cpl, FilterRowChoice.CplLoss(1.5)),
+                wheel(set, gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
             ),
-            inventory,
-        ).sortedForCommit(inventory)
-        // Lee (registered 3) > Standard (2) == NiSi (2) -> Standard first.
+        )
+        assertEquals("A stack of only auxiliary rows gets one Standard 0 wheel.", listOf(FilterWheel.standard(0.0)), wheels)
         assertEquals(
             listOf(
-                FilterSource.FilterSet(lee.id),
-                FilterSource.Standard,
-                FilterSource.FilterSet(nisi.id),
+                MountedAuxiliaryFilter(set.id, cpl.id, AuxiliaryFilterChoice.CplLoss(1.5)),
+                MountedAuxiliaryFilter(set.id, gnd.id, AuxiliaryFilterChoice.Gnd(GndCalculationMode.applyFullValue)),
             ),
-            stack.wheels.map { it.source },
+            auxiliary,
         )
-        assertEquals("Record only contributes nothing.", 4.0, stack.effectiveStops, 1e-9)
+        val stack = FilterStack.validated(wheels, auxiliary, FilterInventory(listOf(set)))!!
+        assertEquals("The effective total is preserved.", 4.5, stack.effectiveStops, 1e-9)
+    }
 
-        // Record only -> Apply full value: same sort value, same position.
-        stack = accepted(
-            stack.replacingWheel(
-                0,
-                select(gnd, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
-                inventory,
-            ),
+    @Test fun aKindChangeMovesTheSelectionIntoTheNewRole() {
+        val item = fixed("Red 25A", 3.0)
+        val set = FilterSet("S", FilterSetColor.red, listOf(item))
+        val asColor = FilterInventory(
+            listOf(set.copy(items = listOf(item.copy(behavior = FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))))),
         )
-        assertEquals(listOf(0, 1, 2), stack.commitSortPermutation(inventory))
-        assertEquals(3.0, stack.registeredSubtotal(FilterSource.FilterSet(lee.id)), 1e-9)
-        assertEquals(7.0, stack.effectiveStops, 1e-9)
+        val moved = FilterStack.reassigningRoles(listOf(FilterWheel.standard(1.0), wheel(set, item)), emptyList(), asColor)
+        assertEquals(listOf(FilterWheel.standard(1.0)), moved.wheels)
+        assertEquals(listOf(0), moved.wheelOrigins)
+        assertEquals(listOf(MountedAuxiliaryFilter(set.id, item.id, AuxiliaryFilterChoice.RegisteredLoss)), moved.auxiliaryFilters)
 
-        // A different CPL choice changes NiSi's subtotal: NiSi (1.5) drops
-        // below Standard (2).
-        stack = accepted(
-            stack.replacingWheel(2, select(cpl, FilterRowChoice.CplLoss(1.5)), inventory),
-        )
-        assertEquals(listOf(0, 1, 2), stack.commitSortPermutation(inventory))
-        stack = accepted(stack.replacingWheel(1, FilterWheelSelection.Standard(1.0), inventory))
-        assertEquals(
-            "NiSi (1.5) now leads Standard (1).",
-            listOf(0, 2, 1),
-            stack.commitSortPermutation(inventory),
-        )
+        // Back to ND: the mount becomes a Filter Set ND wheel at the end.
+        val back = FilterStack.reassigningRoles(moved.wheels, moved.auxiliaryFilters, FilterInventory(listOf(set)))
+        assertEquals(listOf(FilterWheel.standard(1.0), wheel(set, item)), back.wheels)
+        assertEquals(listOf(0, null), back.wheelOrigins)
+        assertTrue(back.auxiliaryFilters.isEmpty())
     }
 
     @Test fun validatedRejectsOverCapDuplicateAndUnresolvedWheels() {

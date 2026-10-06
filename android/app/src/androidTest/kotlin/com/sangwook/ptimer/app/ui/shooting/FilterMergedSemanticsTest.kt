@@ -190,6 +190,7 @@ class FilterMergedSemanticsTest {
             onOpenAbout = {},
             showExactAlarmSettingsAction = false,
             onOpenExactAlarmSettings = {},
+            onOpenShootingFilters = {},
         )
     }
 

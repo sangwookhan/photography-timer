@@ -22,7 +22,9 @@ sum-type discriminator — the custom film library, the timer-state
 collection, the timer-metadata collection, and the timer workspace
 snapshot — follows one uniform decode policy, applied identically on both
 platforms. The camera-slot session follows a related but distinct policy
-(see below) because it has its own legacy-migration path.
+(see below) because it has its own legacy-migration path. Filter inventory
+uses the saved-state exception below so empty or failed recovery cannot
+be mistaken for first use.
 
 ## Requirements
 
@@ -61,7 +63,9 @@ platforms. The camera-slot session follows a related but distinct policy
   an array, is treated as malformed — not as a legitimately empty
   collection. A genuinely empty collection is the absence of the payload
   itself, which is a distinct, clean state from a payload present on disk
-  but corrupt.
+  but corrupt. Filter inventory is an exception: a successfully saved empty
+  inventory shall remain an explicit stored empty state, distinct from an
+  inventory that has never been saved.
 
 ### Quarantine and signal
 
@@ -75,7 +79,12 @@ platforms. The camera-slot session follows a related but distinct policy
 - **PERSIST-QUARANTINE-003** — Clearing a collection to empty — including
   when a restore recovers zero records — removes only the primary key and
   preserves the quarantine, so the very restore cycle that produced the
-  quarantine cannot destroy it.
+  quarantine cannot destroy it. For filter inventory, clearing all Sets shall
+  store an explicit empty inventory instead of removing the primary payload.
+  Malformed, unsupported or failed inventory reads shall not remove the primary
+  payload or convert previously stored inventory into never-saved absence;
+  preserve the failure evidence under the quarantine rules above. None of
+  these states shall seed Samples under `calculator/filter-sets.md`.
 - **PERSIST-QUARANTINE-004** — A decode failure logs a diagnostic signal
   (at minimum: failure kind, dropped-record count, schema context) without
   ever logging the raw payload or user data.

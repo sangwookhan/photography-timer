@@ -89,13 +89,25 @@ compact presence, not folded into the shooting screen itself.
   permitted to also have a cramped hit area. On Android this is enforced
   as a minimum 48dp interactive target. Visual size may stay smaller than
   the interactive area; this requirement concerns usable interactive area,
-  not identical visual size across platforms.
+  not identical visual size across platforms. The approved compact Android
+  Main header is an exception for the Stops / OD / ND notation selector:
+  retain its accepted layout, including approximately 42.7dp-wide segments
+  in English at a 360dp viewport. This exception does not reduce the minimum
+  target for other controls or claim that the selector satisfies 48dp.
 
 ### Accessibility semantics
 
 - **SHELL-040** — Core shooting/timer controls remain operable and
   understandable through the platform's screen reader (VoiceOver on iOS,
   TalkBack on Android) without relying on color alone to convey state.
+
+### Graphic resource parity
+
+- **SHELL-041** — Native SF Symbols on iOS and Material icons on Android may
+  differ in shape. Any separately supplied app-specific image or icon shall
+  use the same original graphic on both platforms, with consistent visual
+  proportions and meaning. Native icon differences shall not justify two
+  separately drawn versions of an app-specific graphic.
 
 ## Non-goals
 

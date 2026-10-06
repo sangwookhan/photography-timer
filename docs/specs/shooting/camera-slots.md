@@ -31,8 +31,9 @@ which setup drives the screen without touching any other slot's state.
 ### Per-slot state
 
 - **SLOT-010** — Each slot shall own its own: selected film and active
-  reciprocity profile, base shutter, mixed Filter Stack and last-used Filter
-  Source (see `calculator/filter-sets.md`), and exposure scale mode, plus
+  reciprocity profile, base shutter, candidate Filter Sets, ND wheels,
+  mounted auxiliary selections, and last-used ND Filter Source
+  (see `calculator/filter-sets.md`), and exposure scale mode, plus
   Target Shutter state. The reciprocity result the user sees is
   recomputed from that stored state whenever the slot is active, not
   stored as its own field. Digital-vs-film workflow is derived entirely

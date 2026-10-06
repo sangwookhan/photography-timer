@@ -52,13 +52,11 @@ struct ExposureCalculatorScreen: View {
     /// sheet's `onDismiss`.
     @State private var pendingFormulaSeedFilmID: String?
     @State private var isAboutPresented = false
-    /// Visibility of the Filter Set management sheet (Filter Set
-    /// contract): reached from the ND header entry and by
-    /// long-pressing the Plus wheel.
-    @State private var isFilterSetManagementPresented = false
-    /// Visibility of the shooting popup (FILTER-FLOW-002): the ND
-    /// header entry, the Plus auxiliary action, and the mounted
-    /// summary open it on the auxiliary tab.
+    /// Global Filter management from the Settings menu (FILTER-FLOW-006).
+    @State private var isFilterManagementPresented = false
+    /// Visibility of Shooting Filters (FILTER-FLOW-002): the Select
+    /// Filters button, the Plus Shooting filters action, and the
+    /// mounted summary all open the same sheet.
     @State private var isShootingFilterSelectionPresented = false
 
     private let bottomSheetAdapter: BottomSheetWorkspacePresentationAdapter
@@ -205,14 +203,14 @@ struct ExposureCalculatorScreen: View {
                     onRequestRename: { slotID in
                         slotIDPendingRename = slotID
                     },
-                    onManageFilterSets: {
-                        isFilterSetManagementPresented = true
-                    },
                     onOpenShootingFilters: {
                         isShootingFilterSelectionPresented = true
                     },
                     onShowAbout: {
                         isAboutPresented = true
+                    },
+                    onShowFilterManagement: {
+                        isFilterManagementPresented = true
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -391,11 +389,6 @@ struct ExposureCalculatorScreen: View {
                     )
                 }
             }
-            .sheet(isPresented: $isFilterSetManagementPresented) {
-                FilterSetManagementView(viewModel: viewModel) {
-                    isFilterSetManagementPresented = false
-                }
-            }
             .sheet(isPresented: $isShootingFilterSelectionPresented) {
                 ShootingFilterSelectionView(viewModel: viewModel) {
                     isShootingFilterSelectionPresented = false
@@ -463,6 +456,11 @@ struct ExposureCalculatorScreen: View {
             }
             .sheet(isPresented: $isAboutPresented) {
                 PTimerAboutView()
+            }
+            .sheet(isPresented: $isFilterManagementPresented) {
+                FilterManagementView(viewModel: viewModel) {
+                    isFilterManagementPresented = false
+                }
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -626,9 +624,9 @@ private struct ExposureWorkspaceMainContent: View {
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
-    let onManageFilterSets: () -> Void
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
+    let onShowFilterManagement: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -643,9 +641,9 @@ private struct ExposureWorkspaceMainContent: View {
                         onRequestRename: {
                             onRequestRename(slotID)
                         },
-                        onManageFilterSets: onManageFilterSets,
                         onOpenShootingFilters: onOpenShootingFilters,
-                        onShowAbout: onShowAbout
+                        onShowAbout: onShowAbout,
+                        onShowFilterManagement: onShowFilterManagement
                     )
                     .tag(slotID)
                 }
@@ -714,9 +712,9 @@ private struct CameraSlotCalculatorPage: View {
     /// through only on the active page; inactive pages pass `nil`
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
-    let onManageFilterSets: () -> Void
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
+    let onShowFilterManagement: () -> Void
 
     /// Occupied filter spaces of this page: the ND wheels plus one for
     /// a visible auxiliary summary (FILTER-STACK-007).
@@ -750,6 +748,7 @@ private struct CameraSlotCalculatorPage: View {
                 onResetFilmModeContextAndName: pageState.isActive ? viewModel.resetFilmModeWorkingContextAndCameraName : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
                 onShowAbout: pageState.isActive ? onShowAbout : {},
+                onShowFilterManagement: pageState.isActive ? onShowFilterManagement : {},
                 style: style
             )
             // Header carries required visible content (camera title
@@ -863,10 +862,6 @@ private struct CameraSlotCalculatorPage: View {
                 addUnavailabilityText: { source in
                     pageState.isActive ? viewModel.filterAddUnavailabilityText(for: source) : nil
                 },
-                onManageFilterSets: {
-                    guard pageState.isActive else { return }
-                    onManageFilterSets()
-                },
                 onOpenShootingFilters: {
                     guard pageState.isActive else { return }
                     onOpenShootingFilters()
@@ -970,6 +965,7 @@ private struct HeaderView: View {
     /// so the photographer cannot rename a slot they are not on.
     let onRequestRename: (() -> Void)?
     let onShowAbout: () -> Void
+    let onShowFilterManagement: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     /// Gates the destructive reset behind an explicit confirmation so a
@@ -994,11 +990,15 @@ private struct HeaderView: View {
                 // space at the bottom solely to hold it. Kept in the tree
                 // (opacity/hit-testing gated) rather than conditionally
                 // removed so its presence is stable for assistive tech.
+                // A visible button surface beside the Settings menu, with
+                // an ordinary gap between their targets (RESET-005).
                 Button("Reset") {
                     showsResetConfirmation = true
                 }
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.secondary)
                 .opacity(showsResetAction ? 1 : 0)
                 .allowsHitTesting(showsResetAction)
                 .accessibilityHidden(!showsResetAction)
@@ -1018,12 +1018,28 @@ private struct HeaderView: View {
                     Button("Cancel", role: .cancel) {}
                 }
 
-                Button("About", systemImage: "info.circle", action: onShowAbout)
-                    .labelStyle(.iconOnly)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .accessibilityHint("Opens app version, legal, support, and film data information")
-                    .accessibilityIdentifier("about-ptimer-button")
+                // Global Settings (FILTER-FLOW-006): inventory management
+                // and About. Camera-specific Shooting Filters stays on the
+                // wheel header, Plus, and the summary.
+                Menu {
+                    Button("Filter management", systemImage: "camera.filters", action: onShowFilterManagement)
+                        .accessibilityIdentifier("settings-filter-management")
+                    Button("About", systemImage: "info.circle", action: onShowAbout)
+                        .accessibilityHint("Opens app version, legal, support, and film data information")
+                        .accessibilityIdentifier("about-ptimer-button")
+                } label: {
+                    // Same glyph size as the About glyph it replaces, so
+                    // the header keeps its height; the menu opens across
+                    // a 44-point width (a hit shape alone does not widen
+                    // a menu's target).
+                    Image(systemName: "gearshape")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44)
+                        .contentShape(Rectangle())
+                }
+                .tint(Color.secondary)
+                .accessibilityLabel(Text("Settings"))
+                .accessibilityIdentifier("settings-button")
             }
 
             FilmSelectionRow(

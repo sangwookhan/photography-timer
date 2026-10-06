@@ -30,7 +30,8 @@ enum ViewModelDependencyFactory {
             customFilmLibrary: CustomFilmLibrary(
                 store: UserDefaultsCustomFilmLibraryStore()
             ),
-            filterInventoryStore: UserDefaultsFilterInventoryStore()
+            filterInventoryStore: UserDefaultsFilterInventoryStore(),
+            initialFilterInventory: .samples()
         )
     }
 

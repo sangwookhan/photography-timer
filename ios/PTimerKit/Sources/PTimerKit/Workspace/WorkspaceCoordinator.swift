@@ -58,7 +58,7 @@ public final class WorkspaceCoordinator: ObservableObject {
             currentCustomFilms: { customLibrary.customFilms }
         )
         let targetShutterModel = TargetShutterModel()
-        let filterInventoryModel = FilterInventoryModel(store: dependencies.filterInventoryStore)
+        let filterInventoryModel = FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel

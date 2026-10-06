@@ -16,9 +16,9 @@ import SwiftUI
 /// (FILTER-A11Y-001); it never pretends to be an adjustable wheel.
 struct AuxiliaryFilterSummaryView: View {
     let summary: AuxiliaryFilterSummaryDisplayState
-    /// The column's height: the wheels' label row plus their viewport,
-    /// so the summary shares the row's vertical extent without moving
-    /// any wheel's touch center.
+    /// The column's height: the wheels' picker viewport, so the summary's
+    /// top and bottom match the wheels' and Base Shutter's without moving
+    /// any wheel's touch center (FILTER-AUX-005).
     let height: CGFloat
     let isInteractive: Bool
     let style: ExposureWorkspaceMainLayoutStyle

@@ -35,15 +35,19 @@ data class FilterItemId(val rawValue: String) {
 /**
  * Fixed, platform-neutral color palette shared by Filter Sets and Color
  * filters, in hue order: the required Red, Yellow, Yellow-green, Green,
- * and Blue, with one transition color between neighbors (orange, teal,
- * purple, pink) and no near-duplicates. Persisted by [name] so both
+ * and Blue, with the photographic Red-orange, Orange, and Yellow-orange
+ * between Red and Yellow, one transition color between the other
+ * neighbors (teal, purple, pink), and no near-duplicates
+ * (FILTER-COLOR-004). Persisted by [name] so both
  * platforms map the same token to their own color system; tokens retired
  * from the earlier palette map explicitly on restore. Duplicate colors
  * across Filter Sets are allowed. (iOS: `FilterSetColor`.)
  */
 enum class FilterSetColor {
     red,
+    redOrange,
     orange,
+    yellowOrange,
     yellow,
     yellowGreen,
     green,
@@ -76,7 +80,7 @@ enum class FilterSetColor {
         /**
          * Random suggestion for a new Filter Set that differs from the
          * suggestion offered on the immediately preceding creation
-         * opening. With one color excluded there are always eight
+         * opening. With one color excluded there are always ten
          * candidates left, so the call never fails.
          */
         fun suggestion(excluding: FilterSetColor?, random: Random = Random.Default): FilterSetColor =

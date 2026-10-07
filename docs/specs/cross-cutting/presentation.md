@@ -81,6 +81,23 @@ compact presence, not folded into the shooting screen itself.
   open before a configuration/Activity recreation (not a full app restart)
   reopens automatically afterward, rather than silently closing.
 
+### Android typography
+
+- **SHELL-022** — On Android at the standard system font scale, the Main
+  shooting screen shall use the available screen space to keep primary text
+  comfortably readable without unnecessary empty space or layout expansion.
+  Typography shall be visually balanced within the established screen
+  structure. The full-screen Timers workspace and Details screen shall follow
+  the same standard-size readability principle.
+
+- **SHELL-023** — On Android, the Main shooting screen, full-screen Timers
+  workspace, and Details screen shall remain readable at the minimum and
+  maximum system font scales. Required text, values, symbols, and controls
+  shall remain within the usable screen area and shall not become unreadable
+  through clipping or displacement. This requirement does not require the
+  established screen structure to expand merely to follow the system font
+  scale.
+
 ### Touch targets
 
 - **SHELL-030** — Primary shooting/timer action controls and ND notation

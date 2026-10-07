@@ -17,3 +17,5 @@ to 100 (source change not committed or pushed), system font scale 1.0,
 input-screens-capped-2.0/: normal build, system font scale 2.0
 (effective 1.3 in app windows). Screens checked: film picker, Shooting
 filters, target shutter sheet, overflow menu, rename camera.
+
+capped/ also holds Main, Timers, Details at 1.15 (normal build).

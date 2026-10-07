@@ -30,7 +30,7 @@ final class FilterStatusRegionAccessibilityTests: XCTestCase {
             isSecondaryEmphasis: true,
             idleSourceSummary: summary
         )
-        let host = try hosted(FilterStatusRegionView(content: content, style: style))
+        let host = try hosted(FilterStatusRegionView(content: content, occupiedSpaceCount: 2, style: style))
         defer { host.window.isHidden = true }
 
         let labels = try accessibilityLabels(in: host)
@@ -48,7 +48,7 @@ final class FilterStatusRegionAccessibilityTests: XCTestCase {
             secondaryText: "Total 16 stops",
             isHeld: true
         )
-        let host = try hosted(FilterStatusRegionView(content: content, style: style))
+        let host = try hosted(FilterStatusRegionView(content: content, occupiedSpaceCount: 2, style: style))
         defer { host.window.isHidden = true }
 
         let labels = try accessibilityLabels(in: host)

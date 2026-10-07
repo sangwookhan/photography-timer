@@ -25,7 +25,8 @@ public final class WorkspaceCoordinator: ObservableObject {
     public let cameraSlotSessionModel: CameraSlotSessionModel
     public let targetShutterModel: TargetShutterModel
     public let customFilmLibrary: CustomFilmLibrary
-    public let filterInventoryModel: FilterInventoryModel
+    /// Internal: the view model is the only writer of the inventory.
+    let filterInventoryModel: FilterInventoryModel
     public let viewModel: ExposureCalculatorViewModel
 
     public init(
@@ -57,7 +58,7 @@ public final class WorkspaceCoordinator: ObservableObject {
             currentCustomFilms: { customLibrary.customFilms }
         )
         let targetShutterModel = TargetShutterModel()
-        let filterInventoryModel = FilterInventoryModel(store: dependencies.filterInventoryStore)
+        let filterInventoryModel = FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel

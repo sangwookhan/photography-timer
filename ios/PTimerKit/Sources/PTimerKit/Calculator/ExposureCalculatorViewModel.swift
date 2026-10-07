@@ -40,8 +40,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
     /// Canonical fractional-aware ND value. Source of truth for the
     /// calc engine and the SwiftUI ND-picker binding. The shipping
-    /// picker writes whole stops and the three commercial presets
-    /// (§2.2); other third-stop values remain reserved infrastructure
+    /// picker writes whole stops; a saved fractional value stays on its
+    /// own wheel, and other third-stop values remain reserved infrastructure
     /// (see `docs/specs/Calculator.md` §1.4). `@Published` so a
     /// reserved-path fractional write — e.g. from a test or a future
     /// custom-ND workflow — still emits `objectWillChange` without
@@ -189,7 +189,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Source of truth for the user's Filter Sets and physical filter
     /// items (Filter Set contract). The +FilterSets extension writes
     /// through it; stack reconciliation runs here on every change.
-    public let filterInventoryModel: FilterInventoryModel
+    /// Internal: this view model is its only writer, and the app reads
+    /// `filterInventory`.
+    let filterInventoryModel: FilterInventoryModel
     /// App-global display-settings store (ND notation mode). Display
     /// preferences only; never participates in calculation.
     private let displaySettingStore: DisplaySettingStoring
@@ -249,7 +251,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             cameraSlotSessionModel: cameraSlotSessionModel,
             targetShutterModel: TargetShutterModel(),
             customFilmLibrary: dependencies.customFilmLibrary,
-            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore),
+            filterInventoryModel: FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory),
             isFilterStackOrderingSuspended: isFilterStackOrderingSuspended
         )
     }
@@ -273,7 +275,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         let resolvedSlotSession = cameraSlotSessionModel ?? CameraSlotSessionModel()
         let resolvedCustomLibrary = customFilmLibrary ?? dependencies.customFilmLibrary
         let resolvedInventory = filterInventoryModel
-            ?? FilterInventoryModel(store: dependencies.filterInventoryStore)
+            ?? FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel
@@ -284,7 +286,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
             presetFilms: dependencies.presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
-            currentFilterInventory: { resolvedInventory.inventory }
+            // The calculator's mirror, not the inventory model: an
+            // inventory change reaches the facade before the model stores
+            // it, and the session it saves must read the new kinds.
+            currentFilterInventory: { calculatorModel.filterInventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
         self.filterInventoryModel = resolvedInventory
@@ -363,7 +368,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             sessionStore: cameraSlotSessionPersistenceStore,
             presetFilms: presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
-            currentFilterInventory: { resolvedInventory.inventory }
+            // The calculator's mirror, not the inventory model: an
+            // inventory change reaches the facade before the model stores
+            // it, and the session it saves must read the new kinds.
+            currentFilterInventory: { calculatorModel.filterInventory }
         )
         self.customFilmLibrary = resolvedCustomLibrary
         self.filterInventoryModel = resolvedInventory
@@ -461,8 +469,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     /// `NDStep` values the SwiftUI ND picker renders. Sourced from
     /// the active scale; the shipping ND ladder is whole stops
-    /// (`0…30`) plus the three commercial fractional presets per
-    /// `docs/specs/Calculator.md` §2.2 in every shipping scale mode.
+    /// (`0…30`, ND-001) in every shipping scale mode.
     public var pickerNDSteps: [NDStep] {
         calculatorModel.exposureScale.ndSteps
     }
@@ -490,9 +497,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             // wrapper — otherwise a reserved-path fractional ND
             // write away from the default zero state would not
             // register as "working" (the shipping ND picker emits
-            // whole stops and the three commercial presets, but this
+            // whole stops and keeps a saved fractional value, and this
             // guard must still cover the reserved third-stop path).
             || abs(ndStep.stops - Double(defaultFilmModeNDStop)) > ExposureCalculator.stabilityEpsilon
+            // Any mounted auxiliary filter, zero-contribution ones
+            // included. Selected Filter Sets alone do not count, nor do
+            // the Empty or Standard 0 wheels an Apply leaves (RESET-004).
+            || !calculatorModel.filterStack.auxiliaryFilters.isEmpty
             || scaleMode != .oneThirdStop
             || targetShutterModel.isActive
     }
@@ -864,13 +875,17 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // calc model and refreshes SwiftUI observers.
         scaleMode = .oneThirdStop
         baseShutter = defaultFilmModeBaseShutter
-        // Reset the canonical fractional `ndStep` directly. Routing
-        // through `ndStop = defaultFilmModeNDStop` would no-op when
-        // `ndStop` already equals `0` (e.g., after the user dragged
-        // ND to a fractional value, leaving the integer wrapper
-        // unchanged), so a fractional drift would survive the reset.
-        ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
+        // The whole Filter Stack returns to one Standard 0 wheel with
+        // no auxiliary filter (RESET-011), even when its total is
+        // already 0 — Empty Set wheels and a Record-only GND included.
+        // The camera's selected Filter Sets and its remembered Plus
+        // source stay (FILTER-PLUS-004). Writing the model directly also
+        // resets a fractional `ndStep` the integer wrapper would miss.
+        calculatorModel.ndStep = NDStep(stops: Double(defaultFilmModeNDStop))
+        syncNDStepMirrorFromModel()
         ndStop = defaultFilmModeNDStop
+        objectWillChange.send()
+        persistCalculatorContext()
         // Target Shutter is part of the slot's shooting context, so
         // the workspace reset also drops it. Tap-to-reset returns the
         // entire slot to a clean shooting setup, not just the
@@ -1140,6 +1155,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         CameraSlotCalculatorSnapshot(
             baseShutterSeconds: calculatorModel.baseShutterSeconds,
             filterStack: calculatorModel.filterStack,
+            candidateFilterSetIDs: calculatorModel.candidateFilterSetIDs,
             lastFilterSource: calculatorModel.lastFilterSource,
             scaleMode: calculatorModel.scaleMode,
             selectedPresetFilm: filmSelectionModel.selectedPresetFilm,
@@ -1184,9 +1200,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // shooting context. The published `ndStep` mirror refreshes
         // from the model afterwards.
         if calculatorModel.filterWheels != snapshot.filterWheels
+            || calculatorModel.filterStack.auxiliaryFilters != snapshot.auxiliaryFilters
+            || calculatorModel.candidateFilterSetIDs != snapshot.candidateFilterSetIDs
             || calculatorModel.lastFilterSource != snapshot.lastFilterSource {
             calculatorModel.restoreFilterWheels(
                 snapshot.filterWheels,
+                auxiliaryFilters: snapshot.auxiliaryFilters,
+                candidateFilterSetIDs: snapshot.candidateFilterSetIDs,
                 lastFilterSource: snapshot.lastFilterSource
             )
             syncNDStepMirrorFromModel()
@@ -1794,12 +1814,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     /// LAYOUT presence of the Plus wheel, deliberately separate from
     /// whether adding is possible: the Plus wheel stays at the end
-    /// while fewer than four actual wheels exist (FILTER-PLUS-001) so
-    /// source browsing remains possible even when adding is currently
-    /// disabled (FILTER-PLUS-005); the presence never flickers under
-    /// a moving finger because it depends on the committed count only.
+    /// while the applicable ND-wheel limit permits another wheel —
+    /// four without auxiliary filters, three with them
+    /// (FILTER-PLUS-001) — so source browsing remains possible even
+    /// when adding is currently disabled (FILTER-PLUS-005); the
+    /// presence never flickers under a moving finger because it
+    /// depends on the committed state only.
     public var showsAddFilterWheelControl: Bool {
-        calculatorModel.filterWheels.count < FilterStack.maximumWheelCount
+        calculatorModel.filterWheels.count < calculatorModel.filterStack.wheelLimit
     }
 
     /// Why the settled source cannot add a wheel right now, or `nil`
@@ -1860,6 +1882,49 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             objectWillChange.send()
         }
         persistCalculatorContext()
+    }
+
+    /// Commits a Shooting Filters session at once (FILTER-AUX-003,
+    /// FILTER-CAMERA-003): the working Filter Set selection and the
+    /// working mounts of the selected sets. Sets left unselected lose
+    /// this camera's auxiliary mounts and ND wheels; one Standard 0-stop
+    /// wheel remains when no ND wheel is left. The sets stay in the
+    /// inventory. Returns the rejection — committing nothing — when the
+    /// result would be invalid.
+    @discardableResult
+    public func applyShootingFilters(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter]
+    ) -> FilterStackRejection? {
+        exitNDWheelReshapingForCommand()
+        defer { attemptFilterStackOrderReconciliation() }
+        let stackBefore = calculatorModel.filterStack
+        let candidatesBefore = calculatorModel.candidateFilterSetIDs
+        // The same ordering rule as the set commit: positions stay while
+        // the screen reader orders the wheels or a reorder is queued.
+        let orderingPolicy: FilterStackCommitOrderingPolicy =
+            isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
+            ? .preserveCurrentOrder
+            : .automatic
+        if let rejection = calculatorModel.applyShootingFilters(
+            selectedFilterSetIDs: selected,
+            mounts: mounts.filter { selected.contains($0.filterSetID) },
+            orderingPolicy: orderingPolicy
+        ) {
+            return rejection
+        }
+        guard calculatorModel.filterStack != stackBefore || calculatorModel.candidateFilterSetIDs != candidatesBefore else {
+            return nil
+        }
+        clearFilterRejectionNotice()
+        enterNDWheelReshaping()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            syncNDStepMirrorFromModel()
+            objectWillChange.send()
+        }
+        persistCalculatorContext()
+        reexamineNDWheelCleanup()
+        return nil
     }
 
     /// Updates the platform-neutral screen-reader ordering policy
@@ -2005,6 +2070,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     var filterSourceSummary: [FilterStatusSourceSummaryItem]? {
         FilterStatusRegionPresenter.sourceSummary(
             wheels: calculatorModel.filterWheels,
+            auxiliaryFilters: calculatorModel.filterStack.auxiliaryFilters,
             sourceName: filterSourceName,
             sourceColor: filterSetColor(for:)
         )
@@ -2625,6 +2691,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         }
         return FilterStatusRegionPresenter.sourceSummary(
             wheels: filterWheels(forPage: pageState),
+            auxiliaryFilters: cameraSlotSessionModel.snapshot(forInactiveSlot: pageState.slotID)?.auxiliaryFilters ?? [],
             sourceName: filterSourceName,
             sourceColor: filterSetColor(for:)
         )
@@ -2663,8 +2730,16 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     public var ndStackTotalDisplayState: NDStackTotalDisplayState {
         NDStackTotalDisplayState(
             effectiveStep: calculatorModel.effectiveNDStep,
-            wheelCount: calculatorModel.ndFilterSteps.count
+            wheelCount: occupiedFilterSpaceCount
         )
+    }
+
+    /// Occupied filter spaces in the main row (FILTER-STACK-007): the
+    /// ND wheels plus one for the auxiliary summary while any
+    /// auxiliary filter is mounted. Drives the shared numeric size and
+    /// the Total's visibility precondition.
+    public var occupiedFilterSpaceCount: Int {
+        calculatorModel.ndFilterSteps.count + (calculatorModel.filterStack.hasAuxiliaryFilters ? 1 : 0)
     }
 
     /// Refreshes the published `ndStep` mirror from the model's

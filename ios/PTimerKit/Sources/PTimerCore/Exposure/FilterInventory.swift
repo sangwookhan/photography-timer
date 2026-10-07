@@ -32,26 +32,31 @@ public struct FilterItemID: Hashable, Sendable {
     }
 }
 
-/// Fixed, platform-neutral color palette for Filter Sets. Persisted
-/// by `rawValue` so both platforms map the same token to their own
-/// color system. Duplicate colors across Filter Sets are allowed.
+/// Fixed, platform-neutral color palette shared by Filter Sets and
+/// Color filters, in hue order: the required Red, Yellow, Yellow-green,
+/// Green, and Blue, with the photographic Red-orange, Orange, and
+/// Yellow-orange between Red and Yellow, one transition color between
+/// the other neighbors (teal, purple, pink), and no near-duplicates
+/// (FILTER-COLOR-004). Persisted by
+/// `rawValue` so both platforms map the same token to their own color
+/// system; tokens retired from earlier palettes map explicitly on
+/// restore. Duplicate colors across Filter Sets are allowed.
 public enum FilterSetColor: String, CaseIterable, Sendable {
     case red
+    case redOrange
     case orange
+    case yellowOrange
     case yellow
+    case yellowGreen
     case green
-    case mint
     case teal
-    case cyan
     case blue
-    case indigo
     case purple
     case pink
-    case brown
 
     /// Random suggestion for a new Filter Set that differs from the
     /// suggestion offered on the immediately preceding creation
-    /// opening. With one color excluded there are always eleven
+    /// opening. With one color excluded there are always ten
     /// candidates left, so the call never fails.
     public static func suggestion<G: RandomNumberGenerator>(
         excluding previous: FilterSetColor?,
@@ -227,35 +232,90 @@ public enum GNDCalculationMode: String, CaseIterable, Sendable {
 }
 
 /// Behavior kind of a physical item — chosen explicitly by the user,
-/// never inferred from the name.
+/// never inferred from the name. `fixed` is the ND kind: the only
+/// kind an ND wheel offers. CPL, GND, Color, and Effect are auxiliary
+/// kinds, mounted through the shooting selection surface instead.
 public enum FilterItemKind: String, CaseIterable, Sendable {
     case fixed
     case cpl
     case gnd
+    case color
+    case effect
+
+    /// Whether items of this kind are mounted as auxiliary filters
+    /// rather than selected on an ND wheel (FILTER-ITEM-003).
+    public var isAuxiliary: Bool {
+        self != .fixed
+    }
+}
+
+/// User-supplied exposure loss of a Color or Effect filter, in stops
+/// (FILTER-COLOR-001/002). Distinct from `FilterRegisteredValue`: no
+/// unit conversion, and zero is allowed so a filter with no measurable
+/// loss can still be mounted and recorded. Valid when finite and in
+/// the closed range 0–30 stops.
+public struct FilterExposureLoss: Hashable, Sendable {
+    public static let range: ClosedRange<Double> = 0...Double(ExposureScale.maximumWholeNDStops)
+
+    public let stops: Double
+
+    public init(stops: Double) {
+        self.stops = stops
+    }
+
+    public var isValid: Bool {
+        stops.isFinite && Self.range.contains(stops)
+    }
 }
 
 public enum FilterItemBehavior: Hashable, Sendable {
     case fixed(FilterRegisteredValue)
     case cpl(CPLExposureLossChoices)
     case gnd(FilterRegisteredValue)
+    /// A Color filter: its explicit loss and its color, chosen from the
+    /// same palette as Filter Sets (FILTER-COLOR-001).
+    case color(FilterExposureLoss, FilterSetColor)
+    /// An Effect filter (for example a night light-pollution filter)
+    /// with its explicit loss.
+    case effect(FilterExposureLoss)
 
     public var kind: FilterItemKind {
         switch self {
         case .fixed: return .fixed
         case .cpl: return .cpl
         case .gnd: return .gnd
+        case .color: return .color
+        case .effect: return .effect
         }
     }
 
-    /// Registered full-density value for Fixed and GND items; CPL
-    /// items carry choices instead.
+    /// Registered full-density value for Fixed and GND items; the
+    /// other kinds carry choices or a plain loss instead.
     public var registeredValue: FilterRegisteredValue? {
         switch self {
         case .fixed(let value), .gnd(let value):
             return value
-        case .cpl:
+        case .cpl, .color, .effect:
             return nil
         }
+    }
+
+    /// The explicit loss of a Color or Effect item; `nil` otherwise.
+    public var exposureLoss: FilterExposureLoss? {
+        switch self {
+        case .color(let loss, _), .effect(let loss):
+            return loss
+        case .fixed, .cpl, .gnd:
+            return nil
+        }
+    }
+
+    /// The color of a Color item; `nil` otherwise.
+    public var opticalColor: FilterSetColor? {
+        if case .color(_, let color) = self {
+            return color
+        }
+        return nil
     }
 
     public var isValid: Bool {
@@ -264,6 +324,8 @@ public enum FilterItemBehavior: Hashable, Sendable {
             return value.isValid
         case .cpl(let choices):
             return choices.isValid
+        case .color(let loss, _), .effect(let loss):
+            return loss.isValid
         }
     }
 }
@@ -307,6 +369,18 @@ public struct FilterSet: Identifiable, Hashable, Sendable {
 
     public func item(withID id: FilterItemID) -> FilterItem? {
         items.first { $0.id == id }
+    }
+
+    /// The set's ND items — the only items an ND wheel offers
+    /// (FILTER-STACK-003).
+    public var ndItems: [FilterItem] {
+        items.filter { !$0.behavior.kind.isAuxiliary }
+    }
+
+    /// The set's auxiliary items (CPL, GND, Color, Effect), mounted
+    /// through shooting selection.
+    public var auxiliaryItems: [FilterItem] {
+        items.filter { $0.behavior.kind.isAuxiliary }
     }
 }
 
@@ -355,5 +429,25 @@ public struct FilterInventory: Hashable, Sendable {
         case .filterSet(let id):
             return filterSet(withID: id) != nil
         }
+    }
+
+    /// A camera's candidate Filter Sets made consistent with this
+    /// inventory and its stack (FILTER-CAMERA-001, FILTER-SET-004,
+    /// FILTER-PERSIST-002): unknown and repeated sets are dropped, the
+    /// candidates keep their selection order, and every other set a
+    /// wheel or a mounted auxiliary filter still references is
+    /// appended, in inventory order, so the restored selections stay
+    /// reachable.
+    public func normalizedCandidateFilterSetIDs(
+        _ candidates: [FilterSetID],
+        referencedBy wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter]
+    ) -> [FilterSetID] {
+        let existing = Set(filterSets.map(\.id))
+        var seen: Set<FilterSetID> = []
+        let kept = candidates.filter { existing.contains($0) && seen.insert($0).inserted }
+        let referenced = Set(wheels.compactMap { $0.source.filterSetID })
+            .union(auxiliaryFilters.map(\.filterSetID))
+        return kept + filterSets.map(\.id).filter { referenced.contains($0) && !seen.contains($0) }
     }
 }

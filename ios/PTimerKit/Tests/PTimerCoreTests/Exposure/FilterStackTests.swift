@@ -4,9 +4,10 @@
 import XCTest
 @testable import PTimerCore
 
-/// Filter Set contract — mixed stack rules (FILTER-STACK-001…006,
-/// FILTER-GND-001/002, FILTER-CPL-005, FILTER-PLUS-005,
-/// FILTER-PERSIST-002) driven by the spec's verification examples.
+/// Filter Set contract — ND wheels plus mounted auxiliary filters
+/// (FILTER-STACK-001…006, FILTER-AUX-003/004, FILTER-GND-001/002,
+/// FILTER-CPL-005, FILTER-PLUS-005, FILTER-PERSIST-002/003) driven by
+/// the spec's verification examples.
 final class FilterStackTests: XCTestCase {
     private let scale = ExposureScale.oneThirdStop
 
@@ -20,6 +21,14 @@ final class FilterStackTests: XCTestCase {
 
     private func select(_ item: FilterItem, _ choice: FilterRowChoice = .fixed) -> FilterWheelSelection {
         .item(FilterRowSelection(itemID: item.id, choice: choice))
+    }
+
+    private func mount(_ item: FilterItem, in set: FilterSet, _ choice: AuxiliaryFilterChoice? = nil) -> MountedAuxiliaryFilter {
+        MountedAuxiliaryFilter(
+            filterSetID: set.id,
+            itemID: item.id,
+            choice: choice ?? MountedAuxiliaryFilter.initialChoice(for: item) ?? .registeredLoss
+        )
     }
 
     // MARK: Example 1 — two separate 3-stop items, exclusivity by id
@@ -51,15 +60,15 @@ final class FilterStackTests: XCTestCase {
     func testSourceGroupsSortByRegisteredSubtotalAndStayContiguous() throws {
         let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
         let nd8 = fixed("ND8", 3)
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let nd2 = fixed("ND2", 1)
         let nisi = FilterSet(name: "NiSi", color: .red, items: [nd1000])
-        let lee = FilterSet(name: "Lee", color: .green, items: [nd8, cpl])
+        let lee = FilterSet(name: "Lee", color: .green, items: [nd8, nd2])
         let inventory = FilterInventory(filterSets: [nisi, lee])
         // Deliberately interleaved: Standard, Lee, NiSi, Lee.
         let stack = FilterStack(
             wheels: [
                 .standard(NDStep(stops: 2)),
-                FilterWheel(source: .filterSet(lee.id), selection: select(cpl, .cplLoss(1))),
+                FilterWheel(source: .filterSet(lee.id), selection: select(nd2)),
                 FilterWheel(source: .filterSet(nisi.id), selection: select(nd1000)),
                 FilterWheel(source: .filterSet(lee.id), selection: select(nd8)),
             ],
@@ -75,7 +84,7 @@ final class FilterStackTests: XCTestCase {
         let sorted = stack.sortedForCommit(inventory: inventory)
         XCTAssertEqual(sorted.wheels.map(\.source), [.filterSet(nisi.id), .filterSet(lee.id), .filterSet(lee.id), .standard])
         XCTAssertEqual(sorted.wheels[1].selection, select(nd8))
-        XCTAssertEqual(sorted.wheels[2].selection, select(cpl, .cplLoss(1)))
+        XCTAssertEqual(sorted.wheels[2].selection, select(nd2))
         XCTAssertEqual(sorted.effectiveStep.stops, 16, accuracy: 1e-9)
     }
 
@@ -138,170 +147,265 @@ final class FilterStackTests: XCTestCase {
         XCTAssertEqual(stack.sortValue(forWheelAt: 2), 0)
     }
 
-    // MARK: Example 4 — GND Record only vs Apply full value
+    // MARK: Example 4 — GND Record only vs Apply full value (auxiliary)
 
     func testGNDRecordOnlyContributesZeroAndApplyFullContributesRegisteredValue() throws {
         let gnd = FilterItem(name: "GND 0.6", behavior: .gnd(stops(2)))
         let set = FilterSet(name: "GND", color: .purple, items: [gnd])
         let inventory = FilterInventory(filterSets: [set])
-        var stack = FilterStack(wheels: [.standard(NDStep(stops: 3)), .empty(in: set.id)], inventory: inventory)
+        var stack = FilterStack(wheels: [.standard(NDStep(stops: 3))], inventory: inventory)
 
-        stack = try stack.replacingWheel(at: 1, with: select(gnd, .gnd(.recordOnly)), inventory: inventory).get()
+        XCTAssertEqual(MountedAuxiliaryFilter.initialChoice(for: gnd), .gnd(.recordOnly), "Record only is the default (FILTER-GND-002).")
+        stack = try stack.replacingAuxiliaryFilters(with: [mount(gnd, in: set)], inventory: inventory).get()
         XCTAssertEqual(stack.effectiveStep.stops, 3, accuracy: 1e-9)
-        XCTAssertNotNil(stack.wheels[1].mountedItemID, "Record only is a mounted item.")
-        XCTAssertFalse(stack.wheels[1].isCleanable, "A mounted Record-only item is never cleaned up.")
-        XCTAssertFalse(stack.canRemoveEmptyWheel)
+        XCTAssertTrue(stack.hasAuxiliaryFilters, "A Record-only GND is mounted even at zero stops (FILTER-AUX-001).")
+        XCTAssertEqual(stack.auxiliaryRows.first?.contributionStops, 0)
+        XCTAssertEqual(stack.auxiliaryRows.first?.registeredStops, 2, "Registered density stays distinct from the contribution.")
+        XCTAssertEqual(stack.wheels, [.standard(NDStep(stops: 3))], "Mounting never touches the ND wheels.")
 
-        stack = try stack.replacingWheel(at: 1, with: select(gnd, .gnd(.applyFullValue)), inventory: inventory).get()
+        stack = try stack.replacingAuxiliaryFilters(with: [mount(gnd, in: set, .gnd(.applyFullValue))], inventory: inventory).get()
         XCTAssertEqual(stack.effectiveStep.stops, 5, accuracy: 1e-9)
-        // The GND sorts by its registered value even in Record-only mode.
-        XCTAssertEqual(stack.rows[1].registeredStops, 2)
+        XCTAssertEqual(stack.auxiliaryFilters.count, 1, "A mode change updates the same mounted item.")
     }
 
-    func testEmptyAndRecordOnlyAreDistinctStates() throws {
+    func testEmptyWheelAndRecordOnlyMountAreDistinctStates() throws {
         let gnd = FilterItem(name: "GND", behavior: .gnd(stops(2)))
         let set = FilterSet(name: "GND", color: .purple, items: [gnd])
         let inventory = FilterInventory(filterSets: [set])
         let empty = FilterStack(wheels: [.standard(NDStep(stops: 1)), .empty(in: set.id)], inventory: inventory)
         XCTAssertTrue(empty.wheels[1].isCleanable)
         XCTAssertTrue(empty.canRemoveEmptyWheel)
-        XCTAssertEqual(empty.removingRightmostEmptyWheel().wheels.count, 1)
+        XCTAssertFalse(empty.hasAuxiliaryFilters)
 
-        let recordOnly = try empty.replacingWheel(at: 1, with: select(gnd, .gnd(.recordOnly)), inventory: inventory).get()
+        let recordOnly = try empty.replacingAuxiliaryFilters(with: [mount(gnd, in: set)], inventory: inventory).get()
         XCTAssertEqual(recordOnly.effectiveStep, empty.effectiveStep)
-        XCTAssertNotEqual(recordOnly.wheels[1], empty.wheels[1])
-        XCTAssertEqual(recordOnly.removingRightmostEmptyWheel().wheels.count, 2)
+        XCTAssertTrue(recordOnly.hasAuxiliaryFilters)
+        // Wheel cleanup never removes a mounted auxiliary filter
+        // (FILTER-STACK-006): only the Empty wheel goes.
+        let cleaned = recordOnly.removingRightmostEmptyWheel()
+        XCTAssertEqual(cleaned.wheels.count, 1)
+        XCTAssertEqual(cleaned.auxiliaryFilters, recordOnly.auxiliaryFilters)
     }
 
-    // MARK: Example 5 — CPL rows and sibling exclusivity
+    // MARK: ND wheel row order
 
-    func testCPLRowsAreDistinctChoicesAndSiblingsDisableEveryRowOfTheItem() throws {
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        let set = FilterSet(name: "CPL", color: .orange, items: [cpl])
+    /// FILTER-STACK-003: an ND wheel offers Empty, then only its Set's ND
+    /// items, weakest to strongest by canonical stops (never by name or the
+    /// registered number), equal stops by name and then id. It is not the
+    /// Filter Set list order reversed: equal stops still read by name.
+    func testNDWheelRowsReadWeakestFirstByCanonicalStops() throws {
+        let nd100k = FilterItem(name: "ND100k", behavior: .fixed(FilterRegisteredValue(value: 100_000, unit: .filterFactor)))
+        let bigStopper = fixed("Big Stopper", 10)
+        let nd400 = FilterItem(name: "ND400", behavior: .fixed(FilterRegisteredValue(value: 400, unit: .filterFactor)))
+        let alpha = fixed("Alpha 3", 3)
+        let nd8 = fixed("ND8", 3)
+        let nd8Twin = fixed("ND8", 3)
+        let gnd = FilterItem(name: "A soft GND", behavior: .gnd(stops(2)))
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let set = FilterSet(name: "Bag", color: .blue, items: [nd100k, gnd, nd8, bigStopper, red, nd400, nd8Twin, alpha])
         let inventory = FilterInventory(filterSets: [set])
-        var stack = FilterStack(wheels: [.empty(in: set.id), .empty(in: set.id)], inventory: inventory)
+        let stack = FilterStack(wheels: [.empty(in: set.id)], inventory: inventory)
 
-        let ownRows = stack.rowOptions(forWheelAt: 0, inventory: inventory, scale: scale)
-        XCTAssertEqual(ownRows.map(\.selection), [.empty, select(cpl, .cplLoss(1)), select(cpl, .cplLoss(1.5)), select(cpl, .cplLoss(2))])
+        let twins = [nd8, nd8Twin].sorted { $0.id.rawValue < $1.id.rawValue }
+        let rows = stack.rowOptions(forWheelAt: 0, inventory: inventory, scale: scale)
+        XCTAssertEqual(rows.map(\.selection), [.empty] + ([alpha] + twins + [nd400, bigStopper, nd100k]).map { select($0) })
+        XCTAssertEqual(rows.map(\.row.contributionStops).dropFirst().map { ($0 * 100).rounded() / 100 }, [3, 3, 3, 8.64, 10, 16.6])
+    }
 
-        stack = try stack.replacingWheel(at: 0, with: select(cpl, .cplLoss(1.5)), inventory: inventory).get()
+    // MARK: Example 5 — CPL choices and item exclusivity across wheels and auxiliary filters
+
+    func testCPLMountsOnceWithOneChoiceAndTheSameItemIsExcludedEverywhere() throws {
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let nd8 = fixed("ND8", 3)
+        let set = FilterSet(name: "52mm", color: .orange, items: [cpl, nd8])
+        let inventory = FilterInventory(filterSets: [set])
+        var stack = FilterStack(wheels: [.empty(in: set.id)], inventory: inventory)
+
+        XCTAssertEqual(MountedAuxiliaryFilter.initialChoice(for: cpl), .cplLoss(1), "The first configured choice is the initial one.")
+        stack = try stack.replacingAuxiliaryFilters(with: [mount(cpl, in: set, .cplLoss(1.5))], inventory: inventory).get()
         XCTAssertEqual(stack.effectiveStep.stops, 1.5, accuracy: 1e-9)
 
-        let siblingRows = stack.rowOptions(forWheelAt: 1, inventory: inventory, scale: scale)
-        for option in siblingRows where option.selection != .empty {
-            XCTAssertEqual(option.unavailability, .itemAlreadyMounted)
-        }
-        // The owning wheel may switch between the item's own rows.
-        let owning = stack.rowOptions(forWheelAt: 0, inventory: inventory, scale: scale)
-        XCTAssertTrue(owning.allSatisfy(\.isAvailable))
-        stack = try stack.replacingWheel(at: 0, with: select(cpl, .cplLoss(2)), inventory: inventory).get()
+        // The wheel offers Empty and the set's ND items only; the CPL
+        // never appears as a wheel row (FILTER-STACK-003).
+        let rows = stack.rowOptions(forWheelAt: 0, inventory: inventory, scale: scale)
+        XCTAssertEqual(rows.map(\.selection), [.empty, select(nd8)])
+
+        // Changing the choice updates the same mounted item; a second
+        // mount of the same physical item is refused (FILTER-AUX-004).
+        stack = try stack.replacingAuxiliaryFilters(with: [mount(cpl, in: set, .cplLoss(2))], inventory: inventory).get()
         XCTAssertEqual(stack.effectiveStep.stops, 2, accuracy: 1e-9)
+        XCTAssertEqual(stack.auxiliaryFilters.count, 1)
+        XCTAssertEqual(
+            stack.replacingAuxiliaryFilters(with: [mount(cpl, in: set, .cplLoss(1)), mount(cpl, in: set, .cplLoss(2))], inventory: inventory),
+            .failure(.itemAlreadyMounted)
+        )
+        // An unconfigured choice never resolves to another choice.
+        XCTAssertEqual(
+            stack.replacingAuxiliaryFilters(with: [mount(cpl, in: set, .cplLoss(1.25))], inventory: inventory),
+            .failure(.unresolvedSelection)
+        )
+        // An item on a wheel cannot be mounted as an auxiliary filter,
+        // and a wheel cannot select an item mounted as one.
+        stack = try stack.replacingWheel(at: 0, with: select(nd8), inventory: inventory).get()
+        XCTAssertEqual(
+            stack.replacingAuxiliaryFilters(with: [mount(cpl, in: set, .cplLoss(2)), MountedAuxiliaryFilter(filterSetID: set.id, itemID: nd8.id, choice: .registeredLoss)], inventory: inventory),
+            .failure(.unresolvedSelection),
+            "An ND item is never an auxiliary filter."
+        )
     }
 
     // MARK: Example 6 — cap behavior with Record only
 
-    func testRecordOnlyRemainsAddableAtCapAndEnablingContributionIsRejected() throws {
+    func testRecordOnlyRemainsMountableAtCapAndEnablingContributionIsRejected() throws {
         let gnd = FilterItem(name: "GND", behavior: .gnd(stops(2)))
         let set = FilterSet(name: "GND", color: .purple, items: [gnd])
         let inventory = FilterInventory(filterSets: [set])
         var stack = FilterStack(wheels: [.standard(NDStep(stops: 30))], inventory: inventory)
-
-        XCTAssertNil(stack.addUnavailability(for: .filterSet(set.id), inventory: inventory, scale: scale))
         XCTAssertEqual(stack.addUnavailability(for: .standard, inventory: inventory, scale: scale), .noSelectableValue)
+        XCTAssertEqual(stack.addUnavailability(for: .filterSet(set.id), inventory: inventory, scale: scale), .filterSetHasNoItems, "A set without ND items adds no wheel.")
 
-        stack = stack.addingWheel(for: .filterSet(set.id), inventory: inventory)
-        stack = try stack.replacingWheel(at: 1, with: select(gnd, .gnd(.recordOnly)), inventory: inventory).get()
+        stack = try stack.replacingAuxiliaryFilters(with: [mount(gnd, in: set)], inventory: inventory).get()
         XCTAssertEqual(stack.effectiveStep.stops, 30, accuracy: 1e-9)
 
         let before = stack
         XCTAssertEqual(
-            stack.replacingWheel(at: 1, with: select(gnd, .gnd(.applyFullValue)), inventory: inventory),
+            stack.replacingAuxiliaryFilters(with: [mount(gnd, in: set, .gnd(.applyFullValue))], inventory: inventory),
             .failure(.exceedsTotalLimit)
         )
         XCTAssertEqual(stack, before, "A rejected change leaves the previous state intact.")
-        let options = stack.rowOptions(forWheelAt: 1, inventory: inventory, scale: scale)
-        XCTAssertEqual(options.first { $0.selection == select(gnd, .gnd(.applyFullValue)) }?.unavailability, .exceedsTotalLimit)
-    }
+        XCTAssertEqual(stack.remainingBudget(excludingWheelAt: 0), 30, accuracy: 1e-9)
 
-    func testAddUnavailabilityReasons() {
-        let mounted = fixed("Only", 3)
-        let set = FilterSet(name: "One item", color: .pink, items: [mounted])
-        let emptySet = FilterSet(name: "Empty", color: .pink)
-        let inventory = FilterInventory(filterSets: [set, emptySet])
-        let stack = FilterStack(
-            wheels: [FilterWheel(source: .filterSet(set.id), selection: select(mounted))],
-            inventory: inventory
-        )
-        XCTAssertEqual(stack.addUnavailability(for: .filterSet(set.id), inventory: inventory, scale: scale), .allItemsMounted)
-        XCTAssertEqual(stack.addUnavailability(for: .filterSet(emptySet.id), inventory: inventory, scale: scale), .filterSetHasNoItems)
-        XCTAssertEqual(stack.addUnavailability(for: .filterSet(FilterSetID.generate()), inventory: inventory, scale: scale), .unknownFilterSet)
-        XCTAssertNil(stack.addUnavailability(for: .standard, inventory: inventory, scale: scale))
-        let full = FilterStack(standardSteps: [NDStep(stops: 1), NDStep(stops: 1), NDStep(stops: 1), NDStep(stops: 1)])
-        XCTAssertEqual(full.addUnavailability(for: .standard, inventory: inventory, scale: scale), .stackFull)
-    }
-
-    func testAddingAWheelNeverChangesTheEffectiveValue() {
-        let set = FilterSet(name: "S", color: .red, items: [fixed("X", 4)])
-        let inventory = FilterInventory(filterSets: [set])
-        let stack = FilterStack(single: NDStep(stops: 6.6))
-        let added = stack.addingWheel(for: .filterSet(set.id), inventory: inventory)
-        XCTAssertEqual(added.wheels.count, 2)
-        XCTAssertEqual(added.wheels[1], .empty(in: set.id))
-        XCTAssertEqual(added.effectiveStep, stack.effectiveStep)
-        XCTAssertEqual(stack.addingWheel(for: .filterSet(FilterSetID.generate()), inventory: inventory), stack)
-    }
-
-    // MARK: Standard wheels keep the budget-truncated ladder
-
-    func testStandardRowsAreTruncatedToTheRemainingBudget() {
-        let item = fixed("Big", 25)
-        let set = FilterSet(name: "S", color: .red, items: [item])
-        let inventory = FilterInventory(filterSets: [set])
-        let stack = FilterStack(
-            wheels: [.standard(NDStep(stops: 0)), FilterWheel(source: .filterSet(set.id), selection: select(item))],
-            inventory: inventory
-        )
-        let rows = stack.rowOptions(forWheelAt: 0, inventory: inventory, scale: scale)
-        XCTAssertEqual(rows.last?.row.contributionStops, 5)
-        XCTAssertTrue(rows.allSatisfy(\.isAvailable))
+        // A Color filter's loss shares the same budget (FILTER-COLOR-002).
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 2), .red))
+        let colorSet = FilterSet(name: "Color", color: .red, items: [red])
+        let both = FilterInventory(filterSets: [set, colorSet])
         XCTAssertEqual(
-            stack.replacingWheel(at: 0, with: .standard(NDStep(stops: 6)), inventory: inventory),
+            stack.replacingAuxiliaryFilters(with: [mount(gnd, in: set), mount(red, in: colorSet)], inventory: both),
             .failure(.exceedsTotalLimit)
         )
     }
 
-    // MARK: FILTER-ITEM-004 — ND1000 is exactly 10 stops through the stack
+    // MARK: FILTER-STACK-001 — conditional wheel limit
 
-    func testND1000ContributesExactlyTenStopsThroughSumSortAndCap() throws {
-        let nd1000 = FilterItem(name: "Big Stopper", behavior: .fixed(FilterRegisteredValue(value: 1000, unit: .filterFactor)))
-        let nd8 = fixed("ND8", 3)
-        let set = FilterSet(name: "Lee", color: .red, items: [nd8, nd1000])
+    func testAuxiliaryFiltersLowerTheWheelLimitToThreeAndNeverRemoveWheels() throws {
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(.defaults))
+        let set = FilterSet(name: "S", color: .red, items: [cpl])
+        let inventory = FilterInventory(filterSets: [set])
+        XCTAssertEqual(FilterStack.wheelLimit(hasAuxiliaryFilters: false), 4)
+        XCTAssertEqual(FilterStack.wheelLimit(hasAuxiliaryFilters: true), 3)
+
+        let four = FilterStack(standardSteps: [NDStep(stops: 1), NDStep(stops: 1), NDStep(stops: 1), NDStep(stops: 1)])
+        XCTAssertEqual(
+            four.replacingAuxiliaryFilters(with: [mount(cpl, in: set)], inventory: inventory),
+            .failure(.tooManyNDWheels),
+            "Mounting never deletes or merges ND wheels; the user reduces them first."
+        )
+        XCTAssertNil(FilterStack.validated(wheels: four.wheels, auxiliaryFilters: [mount(cpl, in: set)], inventory: inventory))
+
+        var three = FilterStack(standardSteps: [NDStep(stops: 1), NDStep(stops: 1), NDStep(stops: 1)])
+        XCTAssertTrue(three.canAddWheel)
+        three = try three.replacingAuxiliaryFilters(with: [mount(cpl, in: set)], inventory: inventory).get()
+        XCTAssertEqual(three.wheelLimit, 3)
+        XCTAssertFalse(three.canAddWheel)
+        XCTAssertEqual(three.addUnavailability(for: .standard, inventory: inventory, scale: scale), .stackFull)
+        XCTAssertEqual(three.addingWheel(for: .standard, inventory: inventory), three)
+
+        // Removing the last auxiliary filter restores the four-wheel
+        // capacity (FILTER-AUX-001).
+        let cleared = try three.replacingAuxiliaryFilters(with: [], inventory: inventory).get()
+        XCTAssertFalse(cleared.hasAuxiliaryFilters)
+        XCTAssertTrue(cleared.canAddWheel)
+    }
+
+    /// Any number of auxiliary filters may be mounted; a physical item
+    /// still mounts once, and the 30-stop limit still refuses the whole
+    /// change without touching the committed selection.
+    func testAnyNumberOfAuxiliaryFiltersMountWithinTheCap() throws {
+        let items = (0..<5).map { FilterItem(name: "GND \($0)", behavior: .gnd(stops(1))) }
+        let set = FilterSet(name: "GND", color: .purple, items: items)
+        let inventory = FilterInventory(filterSets: [set])
+        let stack = FilterStack(single: NDStep(stops: 0))
+        let five = try stack.replacingAuxiliaryFilters(with: items.map { mount($0, in: set, .gnd(.applyFullValue)) }, inventory: inventory).get()
+        XCTAssertEqual(five.auxiliaryFilters.count, 5)
+        XCTAssertEqual(five.effectiveStep.stops, 5, accuracy: 1e-9)
+        XCTAssertEqual(
+            stack.replacingAuxiliaryFilters(with: [mount(items[0], in: set), mount(items[0], in: set)], inventory: inventory),
+            .failure(.itemAlreadyMounted)
+        )
+    }
+
+    /// Both selection orders hit the same 30-stop limit: auxiliary
+    /// filters after ND, and ND after auxiliary filters.
+    func testTheCapRefusesAuxiliaryAfterNDAndNDAfterAuxiliary() throws {
+        let color = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 6), .red))
+        let effect = FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 5)))
+        let set = FilterSet(name: "Kit", color: .blue, items: [color, effect])
         let inventory = FilterInventory(filterSets: [set])
 
-        var stack = FilterStack(wheels: [.standard(NDStep(stops: 17)), .empty(in: set.id), .empty(in: set.id)], inventory: inventory)
-        stack = try stack.replacingWheel(at: 1, with: select(nd8), inventory: inventory).get()
-        stack = try stack.replacingWheel(at: 2, with: select(nd1000), inventory: inventory).get()
-        XCTAssertEqual(stack.rows[2].contributionStops, 10, "Exact, not log2(1000).")
-        XCTAssertEqual(stack.effectiveStep.stops, 30, "17 + 3 + 10 lands exactly on the cap.")
-        XCTAssertTrue(FilterStack.isWithinTotalLimit(stack.contributions))
+        let ndFirst = FilterStack(single: NDStep(stops: 20))
+        XCTAssertEqual(
+            ndFirst.replacingAuxiliaryFilters(with: [mount(color, in: set), mount(effect, in: set)], inventory: inventory),
+            .failure(.exceedsTotalLimit),
+            "20 + 6 + 5 exceeds 30; the committed stack is unchanged."
+        )
 
-        // Standard (17) leads the set (10 + 3); within the set ND1000
-        // (10) before ND8 (3).
+        let auxFirst = try FilterStack(single: NDStep(stops: 0))
+            .replacingAuxiliaryFilters(with: [mount(color, in: set), mount(effect, in: set)], inventory: inventory).get()
+        XCTAssertEqual(auxFirst.remainingBudget(excludingWheelAt: 0), 19, accuracy: 1e-9, "ND can take only what the auxiliary filters leave.")
+        XCTAssertEqual(
+            auxFirst.replacingWheel(at: 0, with: .standard(NDStep(stops: 20)), inventory: inventory),
+            .failure(.exceedsTotalLimit),
+            "Raising the ND wheel past the remaining budget is refused; the auxiliary filters stay."
+        )
+        XCTAssertNoThrow(try auxFirst.replacingWheel(at: 0, with: .standard(NDStep(stops: 19)), inventory: inventory).get())
+    }
+
+    /// Display order is Color, Effect, CPL, GND, then set order, then
+    /// item order — independent of the order items were mounted.
+    func testAuxiliaryFiltersKeepTheirDisplayOrderWhateverTheMountOrder() throws {
+        let gndA = FilterItem(name: "GND A", behavior: .gnd(stops(1)))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, nil, nil])))
+        let red = FilterItem(name: "Red", behavior: .color(FilterExposureLoss(stops: 1), .red))
+        let night = FilterItem(name: "Night", behavior: .effect(FilterExposureLoss(stops: 0)))
+        let gndB = FilterItem(name: "GND B", behavior: .gnd(stops(1)))
+        let yellow = FilterItem(name: "Yellow", behavior: .color(FilterExposureLoss(stops: 1), .yellow))
+        let first = FilterSet(name: "First", color: .blue, items: [gndA, cpl, red])
+        let second = FilterSet(name: "Second", color: .green, items: [night, gndB, yellow])
+        let inventory = FilterInventory(filterSets: [first, second])
+        let mounts = [mount(gndB, in: second), mount(yellow, in: second), mount(cpl, in: first), mount(night, in: second), mount(red, in: first), mount(gndA, in: first)]
+
+        let expected = [red.id, yellow.id, night.id, cpl.id, gndA.id, gndB.id]
+        let stack = try FilterStack(single: NDStep(stops: 0)).replacingAuxiliaryFilters(with: mounts, inventory: inventory).get()
+        XCTAssertEqual(stack.auxiliaryFilters.map(\.itemID), expected)
+        let reversed = try FilterStack(single: NDStep(stops: 0)).replacingAuxiliaryFilters(with: mounts.reversed(), inventory: inventory).get()
+        XCTAssertEqual(reversed.auxiliaryFilters.map(\.itemID), expected)
+        XCTAssertEqual(FilterStack.normalizedAuxiliaryFilters(mounts, inventory: inventory).map(\.itemID), expected)
+    }
+
+    // MARK: FILTER-STACK-005 — auxiliary filters do not take part in ND ordering
+
+    func testAuxiliaryChangesNeverReorderNDWheels() throws {
+        let gnd = FilterItem(name: "GND 0.9", behavior: .gnd(stops(3)))
+        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let nd2 = fixed("ND2", 1)
+        let lee = FilterSet(name: "Lee", color: .red, items: [gnd, nd2])
+        let nisi = FilterSet(name: "NiSi", color: .green, items: [cpl])
+        let inventory = FilterInventory(filterSets: [lee, nisi])
+        var stack = FilterStack(
+            wheels: [FilterWheel(source: .filterSet(lee.id), selection: select(nd2)), .standard(NDStep(stops: 2))],
+            inventory: inventory
+        ).sortedForCommit(inventory: inventory)
+        // Standard (2) leads Lee (1).
+        XCTAssertEqual(stack.wheels.map(\.source), [.standard, .filterSet(lee.id)])
+
+        stack = try stack.replacingAuxiliaryFilters(with: [mount(gnd, in: lee, .gnd(.applyFullValue)), mount(cpl, in: nisi, .cplLoss(2))], inventory: inventory).get()
+        XCTAssertEqual(stack.effectiveStep.stops, 8, accuracy: 1e-9)
+        // Lee's registered subtotal counts its ND wheel only, not the GND.
+        XCTAssertEqual(stack.registeredSubtotal(of: .filterSet(lee.id)), 1, accuracy: 1e-9)
+        XCTAssertEqual(stack.commitSortPermutation(inventory: inventory), [0, 1])
         let sorted = stack.sortedForCommit(inventory: inventory)
-        XCTAssertEqual(sorted.wheels[0].selection, .standard(NDStep(stops: 17)))
-        XCTAssertEqual(sorted.wheels[1].selection, select(nd1000))
-        XCTAssertEqual(sorted.wheels[2].selection, select(nd8))
-
-        // Cap: one more Standard stop with ND1000 mounted is refused.
-        XCTAssertEqual(
-            stack.replacingWheel(at: 0, with: .standard(NDStep(stops: 18)), inventory: inventory),
-            .failure(.exceedsTotalLimit)
-        )
-        // A 9.97-stop reading would have left room; the exact 10 does not.
-        XCTAssertEqual(
-            FilterStack.validated(wheels: [.standard(NDStep(stops: 21)), FilterWheel(source: .filterSet(set.id), selection: select(nd1000))], inventory: inventory),
-            nil
-        )
+        XCTAssertEqual(sorted.auxiliaryFilters, stack.auxiliaryFilters, "Sorting carries the auxiliary filters through unchanged.")
+        XCTAssertEqual(sorted.wheels, stack.wheels)
     }
 
     // MARK: FILTER-PERSIST-002 — safe normalization
@@ -330,84 +434,55 @@ final class FilterStackTests: XCTestCase {
         XCTAssertNil(FilterStack.normalizedWheels(Array(repeating: .standard(NDStep(stops: 0)), count: 5), inventory: inventory))
     }
 
-    func testNormalizationRestoresAVanishedCPLChoiceAsEmptyNeverAnotherChoice() {
-        // FILTER-PERSIST-002: a persisted CPL selection whose configured
-        // choice no longer exists restores as Empty.
+    func testNormalizationUnmountsAVanishedCPLChoiceNeverSubstitutingAnother() {
         let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 2, nil])))
-        let set = FilterSet(name: "CPL", color: .orange, items: [cpl])
+        let gnd = FilterItem(name: "GND", behavior: .gnd(stops(2)))
+        let set = FilterSet(name: "CPL", color: .orange, items: [cpl, gnd])
         let inventory = FilterInventory(filterSets: [set])
-        let wheel = FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1.5)))
+        let stale = mount(cpl, in: set, .cplLoss(1.5))
+        let valid = mount(gnd, in: set)
         XCTAssertEqual(
-            FilterStack.normalizedWheels([wheel], inventory: inventory),
-            [.empty(in: set.id)]
+            FilterStack.normalizedAuxiliaryFilters([stale, valid, valid], inventory: inventory),
+            [valid],
+            "The stale CPL is unmounted, not moved to another choice; a duplicate item is dropped."
         )
-        // A kind change that removes the mounted row restores as Empty too.
-        let nowGND = FilterItem(id: cpl.id, name: "CPL", behavior: .gnd(stops(2)))
-        let changed = FilterInventory(filterSets: [FilterSet(id: set.id, name: "CPL", color: .orange, items: [nowGND])])
-        XCTAssertEqual(FilterStack.normalizedWheels([wheel], inventory: changed), [.empty(in: set.id)])
+        // A kind change that removes the mounted row unmounts it too.
+        let nowND = FilterItem(id: cpl.id, name: "CPL", behavior: .fixed(stops(2)))
+        let changed = FilterInventory(filterSets: [FilterSet(id: set.id, name: "CPL", color: .orange, items: [nowND, gnd])])
+        XCTAssertEqual(FilterStack.normalizedAuxiliaryFilters([mount(cpl, in: set, .cplLoss(1)), valid], inventory: changed), [valid])
+        // An unknown set drops its mounts.
+        XCTAssertEqual(FilterStack.normalizedAuxiliaryFilters([mount(gnd, in: FilterSet(name: "Gone", color: .red))], inventory: inventory), [])
+        // A legacy wheel that still names a CPL row can no longer
+        // resolve on a wheel and reads Empty (FILTER-STACK-003).
+        let wheel = FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1)))
+        XCTAssertEqual(FilterStack.normalizedWheels([wheel], inventory: inventory), [.empty(in: set.id)])
     }
 
-    // MARK: FILTER-STACK-005 — CPL and GND sort keys
-
-    func testCPLSortsByItsSelectedChoiceAndGNDByRegisteredDensityInBothModes() throws {
+    func testLegacyMixedWheelsMigrateCPLAndGNDRowsIntoAuxiliaryFilters() {
         let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        let gnd = FilterItem(name: "GND", behavior: .gnd(stops(1.8)))
-        let two = fixed("Two", 2)
-        let set = FilterSet(name: "S", color: .red, items: [cpl, gnd, two])
+        let gnd = FilterItem(name: "GND", behavior: .gnd(stops(2)))
+        let nd8 = fixed("ND8", 3)
+        let set = FilterSet(name: "Kit", color: .teal, items: [cpl, gnd, nd8])
+        let legacy: [FilterWheel] = [
+            .standard(NDStep(stops: 6.6)),
+            FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1.5))),
+            FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.applyFullValue))),
+            FilterWheel(source: .filterSet(set.id), selection: select(nd8)),
+        ]
+        let migrated = FilterStack.migratingLegacyWheels(legacy)
+        XCTAssertEqual(migrated.wheels, [.standard(NDStep(stops: 6.6)), FilterWheel(source: .filterSet(set.id), selection: select(nd8))])
+        XCTAssertEqual(migrated.auxiliaryFilters, [
+            MountedAuxiliaryFilter(filterSetID: set.id, itemID: cpl.id, choice: .cplLoss(1.5)),
+            MountedAuxiliaryFilter(filterSetID: set.id, itemID: gnd.id, choice: .gnd(.applyFullValue)),
+        ])
         let inventory = FilterInventory(filterSets: [set])
-        let base = FilterStack(
-            wheels: [
-                FilterWheel(source: .filterSet(set.id), selection: select(cpl, .cplLoss(1))),
-                FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))),
-                FilterWheel(source: .filterSet(set.id), selection: select(two)),
-            ],
-            inventory: inventory
-        )
-        // Registered values: CPL 1 < GND 1.8 < Two 2 -> [two, gnd, cpl].
-        XCTAssertEqual(base.commitSortPermutation(inventory: inventory), [2, 1, 0])
+        let stack = FilterStack.validated(wheels: migrated.wheels, auxiliaryFilters: migrated.auxiliaryFilters, inventory: inventory)
+        XCTAssertEqual(stack?.effectiveStep.stops ?? 0, 6.6 + 1.5 + 2 + 3, accuracy: 1e-9, "The effective total is preserved.")
 
-        // Raising the CPL choice to 2 ties with Two: the stable sort keeps
-        // the CPL (index 0) ahead of Two (index 2).
-        let cplTwo = try base.replacingWheel(at: 0, with: select(cpl, .cplLoss(2)), inventory: inventory).get()
-        XCTAssertEqual(cplTwo.commitSortPermutation(inventory: inventory), [0, 2, 1])
-
-        // Switching the GND to Apply full value must not move it.
-        let gndFull = try base.replacingWheel(at: 1, with: select(gnd, .gnd(.applyFullValue)), inventory: inventory).get()
-        XCTAssertEqual(gndFull.commitSortPermutation(inventory: inventory), base.commitSortPermutation(inventory: inventory))
-        XCTAssertEqual(gndFull.rows[1].registeredStops, 1.8)
-        XCTAssertEqual(gndFull.rows[1].contributionStops, 1.8)
-        XCTAssertEqual(base.rows[1].contributionStops, 0)
-    }
-
-    func testGNDModeSwitchNeverMovesItsGroupWhileACPLChoiceMayAfterSettlement() throws {
-        let gnd = FilterItem(name: "GND 0.9", behavior: .gnd(stops(3)))
-        let cpl = FilterItem(name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
-        let lee = FilterSet(name: "Lee", color: .red, items: [gnd])
-        let nisi = FilterSet(name: "NiSi", color: .green, items: [cpl])
-        let inventory = FilterInventory(filterSets: [lee, nisi])
-        var stack = FilterStack(
-            wheels: [
-                .standard(NDStep(stops: 2)),
-                FilterWheel(source: .filterSet(lee.id), selection: select(gnd, .gnd(.recordOnly))),
-                FilterWheel(source: .filterSet(nisi.id), selection: select(cpl, .cplLoss(2))),
-            ],
-            inventory: inventory
-        ).sortedForCommit(inventory: inventory)
-        // Lee (registered 3) > Standard (2) == NiSi (2) -> Standard first.
-        XCTAssertEqual(stack.wheels.map(\.source), [.filterSet(lee.id), .standard, .filterSet(nisi.id)])
-        XCTAssertEqual(stack.effectiveStep.stops, 4, accuracy: 1e-9, "Record only contributes nothing.")
-
-        // Record only -> Apply full value: same sort value, same position.
-        stack = try stack.replacingWheel(at: 0, with: select(gnd, .gnd(.applyFullValue)), inventory: inventory).get()
-        XCTAssertEqual(stack.commitSortPermutation(inventory: inventory), [0, 1, 2])
-        XCTAssertEqual(stack.registeredSubtotal(of: .filterSet(lee.id)), 3, accuracy: 1e-9)
-        XCTAssertEqual(stack.effectiveStep.stops, 7, accuracy: 1e-9)
-
-        // A different CPL choice changes NiSi's subtotal: NiSi (1.5) drops below Standard (2).
-        stack = try stack.replacingWheel(at: 2, with: select(cpl, .cplLoss(1.5)), inventory: inventory).get()
-        XCTAssertEqual(stack.commitSortPermutation(inventory: inventory), [0, 1, 2])
-        stack = try stack.replacingWheel(at: 1, with: .standard(NDStep(stops: 1)), inventory: inventory).get()
-        XCTAssertEqual(stack.commitSortPermutation(inventory: inventory), [0, 2, 1], "NiSi (1.5) now leads Standard (1).")
+        // A stack that held only auxiliary rows receives one Standard 0 wheel.
+        let auxiliaryOnly = FilterStack.migratingLegacyWheels([FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly)))])
+        XCTAssertEqual(auxiliaryOnly.wheels, [.standard(NDStep(stops: 0))])
+        XCTAssertEqual(auxiliaryOnly.auxiliaryFilters.count, 1)
     }
 
     func testValidatedRejectsOverCapDuplicateAndUnresolvedWheels() {
@@ -434,16 +509,23 @@ final class FilterStackTests: XCTestCase {
 
     func testSummaryCapturesSourceItemModeAndContribution() throws {
         let gnd = FilterItem(name: "Lee GND 0.9", behavior: .gnd(FilterRegisteredValue(value: 0.9, unit: .opticalDensity)))
-        let set = FilterSet(name: "Lee holder", color: .indigo, items: [gnd])
+        let red = FilterItem(name: "Red 25A", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let set = FilterSet(name: "Lee holder", color: .purple, items: [gnd, red])
         let inventory = FilterInventory(filterSets: [set])
-        let stack = FilterStack(
-            wheels: [.standard(NDStep(stops: 6.6)), FilterWheel(source: .filterSet(set.id), selection: select(gnd, .gnd(.recordOnly))), .empty(in: set.id)],
+        let stack = try FilterStack(
+            wheels: [.standard(NDStep(stops: 6.6)), .empty(in: set.id)],
             inventory: inventory
-        )
+        ).replacingAuxiliaryFilters(with: [mount(gnd, in: set), mount(red, in: set)], inventory: inventory).get()
         let summary = FilterSummaryEntry.summary(for: stack, inventory: inventory)
-        XCTAssertEqual(summary.count, 2, "Empty wheels are omitted.")
-        XCTAssertEqual(summary[0].sourceKind, .standard)
-        XCTAssertEqual(summary[0].contributedStops, 6.6)
+        XCTAssertEqual(summary.count, 3, "Auxiliary filters first (Color before GND), then wheels; Empty wheels are omitted.")
+        XCTAssertEqual(summary[2].sourceKind, .standard)
+        XCTAssertEqual(summary[2].contributedStops, 6.6)
+        let color = summary[0]
+        XCTAssertEqual(color.itemKind, .color)
+        XCTAssertEqual(color.calculationMode, .fixed, "A Color filter contributes its registered loss.")
+        XCTAssertEqual(color.canonicalStops, 3)
+        XCTAssertEqual(color.contributedStops, 3)
+        XCTAssertNil(color.originalUnit)
         let entry = summary[1]
         XCTAssertEqual(entry.sourceKind, .filterSet)
         XCTAssertEqual(entry.filterSetID, set.id.rawValue)
@@ -456,5 +538,132 @@ final class FilterStackTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(entry.canonicalStops), 3, accuracy: 1e-9)
         XCTAssertEqual(entry.calculationMode, .gndRecordOnly)
         XCTAssertEqual(entry.contributedStops, 0)
+    }
+
+    // MARK: Kind correction (FILTER-ITEM-005)
+
+    func testReassigningRolesMovesSelectionsAcrossTheNDAndAuxiliaryRoles() {
+        let ndID = FilterItemID(rawValue: "nd")
+        let auxID = FilterItemID(rawValue: "aux")
+        let setID = FilterSetID(rawValue: "set")
+        let redNowColor = FilterItem(id: ndID, name: "Red 25A", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let cplNowND = FilterItem(id: auxID, name: "CPL", behavior: .fixed(FilterRegisteredValue(value: 1, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [FilterSet(id: setID, name: "S", color: .blue, items: [redNowColor, cplNowND])])
+        let standard = FilterWheel.standard(NDStep(stops: 3))
+        let mountedRed = FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: ndID, choice: .fixed)))
+        let mountedCPL = MountedAuxiliaryFilter(filterSetID: setID, itemID: auxID, choice: .cplLoss(1))
+
+        let result = FilterStack.reassigningRoles(wheels: [standard, mountedRed], auxiliaryFilters: [mountedCPL], selectedFilterSetIDs: [setID], inventory: inventory)
+
+        XCTAssertEqual(result.wheels, [
+            standard,
+            FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: auxID, choice: .fixed))),
+        ], "The ND wheel leaves the row; the former CPL becomes a wheel at the end.")
+        XCTAssertEqual(result.wheelOrigins, [0, nil])
+        XCTAssertEqual(result.auxiliaryFilters, [MountedAuxiliaryFilter(filterSetID: setID, itemID: ndID, choice: .registeredLoss)])
+    }
+
+    func testReassigningRolesLeavesUnchangedKindsAndUnknownItemsAlone() {
+        let setID = FilterSetID(rawValue: "set")
+        let nd = FilterItem(id: FilterItemID(rawValue: "nd"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [FilterSet(id: setID, name: "S", color: .blue, items: [nd])])
+        let wheel = FilterWheel(source: .filterSet(setID), selection: .item(FilterRowSelection(itemID: nd.id, choice: .fixed)))
+        let unknown = MountedAuxiliaryFilter(filterSetID: setID, itemID: FilterItemID(rawValue: "gone"), choice: .registeredLoss)
+
+        let result = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [unknown], selectedFilterSetIDs: [setID], inventory: inventory)
+
+        XCTAssertEqual(result.wheels, [wheel])
+        XCTAssertEqual(result.wheelOrigins, [0])
+        XCTAssertEqual(result.auxiliaryFilters, [unknown], "Unknown items are left to normal re-resolution.")
+    }
+
+    /// FILTER-ITEM-005: an ND item moved into a selected Filter Set stays
+    /// on the same wheel under its new Set; moved into a Set the camera
+    /// does not select, the wheel becomes Empty under its original source
+    /// in the same position. An auxiliary item that becomes ND while it
+    /// moves to an unselected Set gets no wheel there.
+    func testAMovedNDItemStaysOnlyUnderASelectedSetAndOtherwiseLeavesItsWheelEmpty() {
+        let kitID = FilterSetID(rawValue: "kit"), bagID = FilterSetID(rawValue: "bag")
+        let nd8 = FilterItem(id: FilterItemID(rawValue: "nd8"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let red = FilterItem(id: FilterItemID(rawValue: "red"), name: "Red", behavior: .fixed(FilterRegisteredValue(value: 2, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [
+            FilterSet(id: kitID, name: "Kit", color: .blue, items: []),
+            FilterSet(id: bagID, name: "Bag", color: .green, items: [nd8, red]),
+        ])
+        let wheels = [FilterWheel.standard(NDStep(stops: 2)), FilterWheel(source: .filterSet(kitID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))]
+        let redMount = MountedAuxiliaryFilter(filterSetID: kitID, itemID: red.id, choice: .registeredLoss)
+
+        let unselected = FilterStack.reassigningRoles(wheels: wheels, auxiliaryFilters: [redMount], selectedFilterSetIDs: [kitID], inventory: inventory)
+        XCTAssertEqual(unselected.wheels, [.standard(NDStep(stops: 2)), .empty(in: kitID)])
+        XCTAssertEqual(unselected.wheelOrigins, [0, 1])
+        XCTAssertTrue(unselected.auxiliaryFilters.isEmpty, "The Red, now ND and in Bag, gets no wheel in a Set the camera does not select.")
+
+        let selected = FilterStack.reassigningRoles(wheels: wheels, auxiliaryFilters: [], selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
+        XCTAssertEqual(selected.wheels, [.standard(NDStep(stops: 2)), FilterWheel(source: .filterSet(bagID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))])
+        XCTAssertEqual(selected.wheelOrigins, [0, 1])
+    }
+
+    /// One save that moves an ND wheel's item to an unselected Set and
+    /// makes it auxiliary: unchecked like any moved auxiliary item, so the
+    /// destination is not selected (FILTER-ITEM-009).
+    func testAWheelItemMadeAuxiliaryAndMovedToAnUnselectedSetIsUnchecked() {
+        let kitID = FilterSetID(rawValue: "kit"), bagID = FilterSetID(rawValue: "bag")
+        let nd8 = FilterItem(id: FilterItemID(rawValue: "nd8"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let nowCPL = FilterItem(id: nd8.id, name: "ND8", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let wheel = FilterWheel(source: .filterSet(kitID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))
+        let inventory = FilterInventory(filterSets: [
+            FilterSet(id: kitID, name: "Kit", color: .blue, items: []),
+            FilterSet(id: bagID, name: "Bag", color: .green, items: [nowCPL]),
+        ])
+
+        let unselected = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [], selectedFilterSetIDs: [kitID], inventory: inventory)
+        XCTAssertEqual(unselected.wheels, [.standard(NDStep(stops: 0))])
+        XCTAssertTrue(unselected.auxiliaryFilters.isEmpty, "Not mounted under Bag, which the camera does not select.")
+
+        let selected = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: [], selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
+        XCTAssertEqual(selected.auxiliaryFilters.map(\.itemID), [nd8.id], "Bag is selected: it stays picked there.")
+    }
+
+    /// FILTER-ITEM-005/009: a moved item is judged against the camera's
+    /// selected Filter Sets before the move. Into a Set the camera does not
+    /// select, an ND wheel becomes Empty under its original source at the
+    /// same position and an auxiliary item is unmounted; nothing selects
+    /// the destination.
+    func testAMovedAuxiliaryItemFollowsOnlyIntoASelectedSet() {
+        let kitID = FilterSetID(rawValue: "kit"), pouchID = FilterSetID(rawValue: "pouch"), bagID = FilterSetID(rawValue: "bag")
+        let cpl = FilterItem(id: FilterItemID(rawValue: "cpl"), name: "CPL", behavior: .cpl(CPLExposureLossChoices(fields: [1, 1.5, 2])))
+        let red = FilterItem(id: FilterItemID(rawValue: "red"), name: "Red", behavior: .color(FilterExposureLoss(stops: 3), .red))
+        let nd8 = FilterItem(id: FilterItemID(rawValue: "nd8"), name: "ND8", behavior: .fixed(FilterRegisteredValue(value: 3, unit: .stops)))
+        let inventory = FilterInventory(filterSets: [
+            FilterSet(id: kitID, name: "Kit", color: .blue, items: []),
+            FilterSet(id: pouchID, name: "Pouch", color: .orange, items: [cpl, nd8]),
+            FilterSet(id: bagID, name: "Bag", color: .green, items: [red]),
+        ])
+        let wheel = FilterWheel(source: .filterSet(kitID), selection: .item(FilterRowSelection(itemID: nd8.id, choice: .fixed)))
+        let mounts = [
+            MountedAuxiliaryFilter(filterSetID: kitID, itemID: cpl.id, choice: .cplLoss(1.5)),
+            MountedAuxiliaryFilter(filterSetID: kitID, itemID: red.id, choice: .registeredLoss),
+        ]
+
+        let onlyKit = FilterStack.reassigningRoles(wheels: [wheel], auxiliaryFilters: mounts, selectedFilterSetIDs: [kitID], inventory: inventory)
+        XCTAssertEqual(onlyKit.wheels, [.empty(in: kitID)], "Pouch is not selected: the ND wheel stays Kit's, now Empty.")
+        XCTAssertEqual(onlyKit.wheelOrigins, [0], "The same wheel, so it keeps its identity.")
+        XCTAssertTrue(onlyKit.auxiliaryFilters.isEmpty, "Neither Pouch nor Bag is selected: the CPL and the Red are unmounted.")
+
+        let withBag = FilterStack.reassigningRoles(wheels: [.standard(NDStep(stops: 0))], auxiliaryFilters: mounts, selectedFilterSetIDs: [kitID, bagID], inventory: inventory)
+        XCTAssertEqual(withBag.auxiliaryFilters, [MountedAuxiliaryFilter(filterSetID: bagID, itemID: red.id, choice: .registeredLoss)], "Bag is selected, so the Red follows; Pouch is not, so the CPL is unmounted.")
+    }
+
+    /// ND-001 / ND-PERSIST-005: Standard offers whole stops only, but a
+    /// wheel holding a fractional value saved before keeps that value as
+    /// its own row; other wheels never offer it.
+    func testASavedFractionalStandardValueStaysOnlyOnItsOwnWheel() {
+        let stack = FilterStack(standardSteps: [NDStep(stops: 6.6), NDStep(stops: 2)])
+        let own = stack.rowOptions(forWheelAt: 0, inventory: .empty, scale: .default).map(\.row.contributionStops)
+        let other = stack.rowOptions(forWheelAt: 1, inventory: .empty, scale: .default).map(\.row.contributionStops)
+        XCTAssertEqual(own.filter { $0 != $0.rounded() }, [6.6], "The saved value stays selectable on its wheel.")
+        XCTAssertEqual(Array(own.prefix(8)), [0, 1, 2, 3, 4, 5, 6, 6.6], "In numeric order among the whole stops.")
+        XCTAssertTrue(other.allSatisfy { $0 == $0.rounded() }, "Never offered as a new Standard choice.")
+        XCTAssertEqual(stack.effectiveStep.stops, 8.6, accuracy: 1e-9, "Its contribution is unchanged.")
     }
 }

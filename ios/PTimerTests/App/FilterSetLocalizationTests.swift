@@ -14,14 +14,20 @@ final class FilterSetLocalizationTests: XCTestCase {
         "%lld empty filter wheels removed",
         "No more filters in this direction",
         "Add filter",
-        "Manage Filter Sets",
-        "Filter Sets",
+        "Selected Filter Sets",
+        "Available Filter Sets",
+        "Open shooting filters",
+        "%lld auxiliary filters",
+        "1 auxiliary filter",
+        "Select ND filters on the main screen.",
+        "Apply to exposure",
+        "Red-orange",
+        "Yellow-orange",
         "Filter not available",
         "Already mounted on this camera",
         "Exceeds 30 stops",
         "Empty · no filter mounted",
         "Filter Set name",
-        "Finish Editing",
     ]
 
     func testFilterSetStringsHaveEnglishAndKoreanValues() throws {
@@ -34,6 +40,23 @@ final class FilterSetLocalizationTests: XCTestCase {
             XCTAssertEqual(english, key, "English value for \(key)")
             XCTAssertNotEqual(korean, "MISSING", "Korean entry missing for \(key)")
             XCTAssertNotEqual(korean, key, "Korean entry untranslated for \(key)")
+        }
+    }
+
+    /// L10N-015 / L10N-011: no Korean value spells Filter Set in English;
+    /// the Color kind reads 컬러 while a Filter Set's color field stays
+    /// 색상; and the example Set names have no catalog entry, so they
+    /// stay English in every locale.
+    func testKoreanFilterSetVocabularyAndExampleNames() throws {
+        let path = try XCTUnwrap(Bundle.main.path(forResource: "ko", ofType: "lproj"))
+        let table = try XCTUnwrap(NSDictionary(contentsOfFile: (path as NSString).appendingPathComponent("Localizable.strings")) as? [String: String])
+        XCTAssertEqual(table.filter { $0.value.contains("Filter Set") || $0.value.contains("필터셋") }, [:])
+        XCTAssertEqual(try localizedValue("Add Filter Set", locale: "ko"), "필터 세트 추가")
+        XCTAssertEqual(try localizedValue("Add Example Filter Sets", locale: "ko"), "예시 필터 세트 추가")
+        XCTAssertEqual(try localizedValue("filter-kind-color", locale: "ko"), "컬러")
+        XCTAssertEqual(try localizedValue("Color", locale: "ko"), "색상")
+        for name in ["Digital Magnetic Filters", "Film Square ND/GND", "Film Color Filters"] {
+            XCTAssertEqual(try localizedValue(name, locale: "ko"), "MISSING", name)
         }
     }
 

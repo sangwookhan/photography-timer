@@ -65,16 +65,18 @@ public final class CalculatorModel {
                 guard let step = wheel.standardStep else { return wheel }
                 return .standard(sanitizedNDStep(step, for: scaleMode))
             }
-            if FilterStack.validated(wheels: snapped, inventory: filterInventory) == nil {
+            // The mounted auxiliary filters stay and count toward the cap.
+            let auxiliary = filterStack.auxiliaryFilters
+            if FilterStack.validated(wheels: snapped, auxiliaryFilters: auxiliary, inventory: filterInventory) == nil {
                 for index in snapped.indices.reversed() {
-                    guard FilterStack.validated(wheels: snapped, inventory: filterInventory) == nil,
+                    guard FilterStack.validated(wheels: snapped, auxiliaryFilters: auxiliary, inventory: filterInventory) == nil,
                           let original = originals[index].standardStep else {
                         continue
                     }
                     snapped[index] = .standard(sanitizedNDStepRoundingDown(original, for: scaleMode))
                 }
             }
-            if let restacked = FilterStack.validated(wheels: snapped, inventory: filterInventory) {
+            if let restacked = FilterStack.validated(wheels: snapped, auxiliaryFilters: auxiliary, inventory: filterInventory) {
                 filterStack = restacked
             }
             liveSelections = liveSelections.mapValues { selection in
@@ -109,11 +111,8 @@ public final class CalculatorModel {
         exposureScale.shutterSteps.map(\.seconds)
     }
 
-    /// Whole-stop subset of the ND ladder, for callers still bound to
-    /// `Int`. The shipping ND ladder is whole stops plus the three
-    /// commercial fractional presets (per `docs/specs/Calculator.md`
-    /// §2.2); this helper drops the presets and returns only the
-    /// whole-stop values. The fractional-aware `pickerNDSteps` surface
+    /// Whole-stop ND ladder, for callers still bound to `Int`. The
+    /// shipping ND ladder is whole stops (ND-001). The fractional-aware `pickerNDSteps` surface
     /// is the canonical source for the SwiftUI picker; both views are
     /// kept for the legacy integer binding compatibility.
     public var pickerWholeNDStops: [Int] {
@@ -142,6 +141,12 @@ public final class CalculatorModel {
     /// wheel adds next. Per camera; the facade carries it through slot
     /// snapshots.
     public private(set) var lastFilterSource: FilterSource = .standard
+
+    /// The active slot's candidate Filter Sets (FILTER-CAMERA-001), in
+    /// their selection order (FILTER-SET-004). Selecting a set never
+    /// mounts anything; every set the stack references is always a
+    /// candidate.
+    public private(set) var candidateFilterSetIDs: [FilterSetID] = CalculatorDefaults.candidateFilterSetIDs
 
     /// Stable per-wheel identity (PTIMER-199 §4.3): `ndFilterWheelIDs[i]`
     /// names the wheel at `filterWheels[i]` and follows it through
@@ -201,21 +206,36 @@ public final class CalculatorModel {
 
     /// Replaces the resolution inventory and re-resolves the committed
     /// stack against it: a wheel whose Filter Set vanished is dropped
-    /// (its identity with it), an item that vanished reads Empty, a
-    /// stale last source falls back to Standard. Should the resolved
-    /// contributions no longer fit the cap — the facade blocks such
-    /// edits up front — every mounted item reads Empty instead of
-    /// clamping any value.
+    /// (its identity with it), an item that vanished reads Empty, an
+    /// auxiliary filter that no longer resolves is unmounted, the
+    /// candidates follow the inventory, and a stale last source falls
+    /// back to Standard. Should the resolved contributions no longer
+    /// fit the cap — the facade blocks such edits up front — every
+    /// mounted wheel item reads Empty and, failing that, the auxiliary
+    /// filters are unmounted, instead of clamping any value.
     public func applyFilterInventory(_ inventory: FilterInventory) {
         filterInventory = inventory
+        // A kind change moves the selection into the item's new role and
+        // a moved item follows it (FILTER-ITEM-005/009) first; surviving
+        // wheels keep their ids.
+        let reassigned = FilterStack.reassigningRoles(
+            wheels: filterStack.wheels,
+            auxiliaryFilters: filterStack.auxiliaryFilters,
+            selectedFilterSetIDs: candidateFilterSetIDs,
+            inventory: inventory
+        )
         var wheels: [FilterWheel] = []
         var ids: [Int] = []
-        for (index, wheel) in filterStack.wheels.enumerated() {
+        for (wheel, origin) in zip(reassigned.wheels, reassigned.wheelOrigins) {
             guard let normalized = FilterStack.normalizedWheel(wheel, inventory: inventory) else {
                 continue
             }
             wheels.append(normalized)
-            ids.append(ndFilterWheelIDs.indices.contains(index) ? ndFilterWheelIDs[index] : makeNDFilterWheelID())
+            if let origin, ndFilterWheelIDs.indices.contains(origin) {
+                ids.append(ndFilterWheelIDs[origin])
+            } else {
+                ids.append(makeNDFilterWheelID())
+            }
         }
         if wheels.isEmpty {
             wheels = [.standard(NDStep(stops: 0))]
@@ -226,13 +246,16 @@ public final class CalculatorModel {
             guard let itemID = wheel.mountedItemID, !mounted.insert(itemID).inserted else { return wheel }
             return FilterWheel(source: wheel.source, selection: .empty)
         }
-        if let stack = FilterStack.validated(wheels: wheels, inventory: inventory) {
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(reassigned.auxiliaryFilters, inventory: inventory)
+            .filter { !mounted.contains($0.itemID) }
+        if let stack = FilterStack.validated(wheels: wheels, auxiliaryFilters: auxiliary, inventory: inventory) {
             filterStack = stack
         } else {
             let emptied = wheels.map { wheel -> FilterWheel in
                 wheel.isStandard ? wheel : FilterWheel(source: wheel.source, selection: .empty)
             }
-            filterStack = FilterStack.validated(wheels: emptied, inventory: inventory)
+            filterStack = FilterStack.validated(wheels: emptied, auxiliaryFilters: auxiliary, inventory: inventory)
+                ?? FilterStack.validated(wheels: emptied, inventory: inventory)
                 ?? FilterStack(single: CalculatorDefaults.ndStep)
             if filterStack.wheels.count != ids.count {
                 ids = filterStack.wheels.map { _ in makeNDFilterWheelID() }
@@ -240,15 +263,14 @@ public final class CalculatorModel {
         }
         ndFilterWheelIDs = ids
         liveSelections = liveSelections.filter { ndFilterWheelIDs.contains($0.key) }
-        if !inventory.contains(lastFilterSource) {
-            lastFilterSource = .standard
-        }
+        normalizeCandidatesAndLastSource()
     }
 
-    /// Settles the Plus wheel on `source`. Unknown Filter Sets are
-    /// refused; merely changing the source never touches the stack.
+    /// Settles the Plus wheel on `source`. Sources the camera does not
+    /// offer (an unknown or non-candidate Filter Set) are refused;
+    /// merely changing the source never touches the stack.
     public func selectFilterSource(_ source: FilterSource) {
-        guard filterInventory.contains(source) else {
+        guard filterSources.contains(source) else {
             return
         }
         lastFilterSource = source
@@ -348,6 +370,8 @@ public final class CalculatorModel {
         }
         filterStack = filterStack.addingWheel(for: source, inventory: filterInventory)
         ndFilterWheelIDs.append(makeNDFilterWheelID())
+        // A set the stack references is always a candidate.
+        normalizeCandidatesAndLastSource()
     }
 
     /// A2 cleanup (PTIMER-199 §4.2.2): removes every CLEANABLE wheel
@@ -426,23 +450,32 @@ public final class CalculatorModel {
         restoreFilterWheels(steps.map(FilterWheel.standard), lastFilterSource: .standard)
     }
 
-    /// Restores a mixed wheel stack from persistence or a slot switch.
-    /// The caller supplies pre-validated wheels; this guard is the
-    /// last defensive shield so corrupted input can never trip the
-    /// domain type's programmer-error preconditions — a violating
-    /// stack restores as the default single wheel instead (reject,
-    /// never clamp). A last source the inventory no longer knows
-    /// falls back to Standard.
-    public func restoreFilterWheels(_ wheels: [FilterWheel], lastFilterSource source: FilterSource) {
+    /// Restores a slot's stack — wheels, mounted auxiliary filters,
+    /// and candidate sets — from persistence or a slot switch. The
+    /// caller supplies pre-validated state; this guard is the last
+    /// defensive shield so corrupted input can never trip the domain
+    /// type's programmer-error preconditions — a violating stack
+    /// restores as the default single wheel instead (reject, never
+    /// clamp). A last source the camera no longer offers falls back to
+    /// Standard.
+    public func restoreFilterWheels(
+        _ wheels: [FilterWheel],
+        auxiliaryFilters: [MountedAuxiliaryFilter] = [],
+        candidateFilterSetIDs candidates: [FilterSetID] = [],
+        lastFilterSource source: FilterSource
+    ) {
         clearLiveNDStopPreview()
+        let auxiliary = FilterStack.normalizedAuxiliaryFilters(auxiliaryFilters, inventory: filterInventory)
         if let normalized = FilterStack.normalizedWheels(wheels, inventory: filterInventory),
-           let stack = FilterStack.validated(wheels: normalized, inventory: filterInventory) {
+           let stack = FilterStack.validated(wheels: normalized, auxiliaryFilters: auxiliary, inventory: filterInventory) {
             filterStack = stack
         } else {
             filterStack = FilterStack(single: CalculatorDefaults.ndStep)
         }
         regenerateNDFilterWheelIDs()
-        lastFilterSource = filterInventory.contains(source) ? source : .standard
+        candidateFilterSetIDs = candidates
+        lastFilterSource = source
+        normalizeCandidatesAndLastSource()
     }
 
     /// Picker rows for one wheel — the single source for what a wheel
@@ -583,7 +616,7 @@ public final class CalculatorModel {
             let live = liveSelections[wheelID].flatMap { liveContribution(of: $0, forWheelID: wheelID) }
             return sum + (live ?? entry.element.contributionStops)
         }
-        return NDStep(stops: total)
+        return NDStep(stops: total + filterStack.auxiliaryContributions.reduce(0, +))
     }
 
     /// The stack the calculator is showing right now — the committed
@@ -604,13 +637,14 @@ public final class CalculatorModel {
             }
             return FilterWheel(source: wheel.source, selection: live)
         }
-        return FilterStack.validated(wheels: wheels, inventory: filterInventory)
+        return FilterStack.validated(wheels: wheels, auxiliaryFilters: filterStack.auxiliaryFilters, inventory: filterInventory)
     }
 
     /// Whole-stop view of `effectiveNDStep`, kept for callers still
     /// bound to the legacy `Int` ND surface. Exact for whole-stop
-    /// selections; the three commercial presets and any reserved-path
-    /// third-stop value round to the nearest integer here, so callers
+    /// selections; a saved fractional value (a former commercial preset)
+    /// and any reserved-path third-stop value round to the nearest
+    /// integer here, so callers
     /// that need the true fractional value must read `effectiveNDStep`.
     public var effectiveNDStop: Int {
         effectiveNDStep.wholeStops ?? Int(effectiveNDStep.stops.rounded())
@@ -789,16 +823,18 @@ public final class CalculatorModel {
         for mode: ExposureScaleMode
     ) -> NDStep {
         // A value at or near an entry on the target scale's ND ladder
-        // snaps to that canonical entry. This preserves the PTIMER-209
-        // commercial presets (6.6, 7.6, 16.6) — which are neither whole
-        // nor third-stop and would otherwise be forced off the ladder —
-        // and normalizes any drift to the canonical value rather than
-        // keeping a near-match double.
+        // snaps to that canonical entry, normalizing any drift to the
+        // canonical value rather than keeping a near-match double.
         let ladder = ExposureScale.scale(for: mode).ndSteps
         if let match = ladder.first(where: {
             abs($0.stops - step.stops) <= ExposureCalculator.stabilityEpsilon
         }) {
             return match
+        }
+        // A commercial value saved before Standard became whole stops
+        // keeps its exact contribution (ND-PERSIST-005).
+        if let preset = ExposureScale.commercialNDPresetStop(matching: step.stops) {
+            return NDStep(stops: preset)
         }
 
         switch mode {
@@ -823,6 +859,11 @@ public final class CalculatorModel {
             abs($0.stops - step.stops) <= ExposureCalculator.stabilityEpsilon
         }) {
             return match
+        }
+        // A commercial value saved before Standard became whole stops
+        // keeps its exact contribution (ND-PERSIST-005).
+        if let preset = ExposureScale.commercialNDPresetStop(matching: step.stops) {
+            return NDStep(stops: preset)
         }
 
         switch mode {
@@ -857,5 +898,138 @@ public final class CalculatorModel {
             return seconds
         }
         return nearest.seconds
+    }
+}
+
+// MARK: - Candidate Filter Sets and auxiliary filters (FILTER-CAMERA, FILTER-AUX)
+
+extension CalculatorModel {
+    /// The Filter Sources the Plus wheel offers
+    /// (FILTER-PLUS-001): Standard, then this camera's candidate sets
+    /// that hold at least one ND item.
+    public var filterSources: [FilterSource] {
+        [.standard] + candidateFilterSetIDs.compactMap { id in
+            guard let filterSet = filterInventory.filterSet(withID: id), !filterSet.ndItems.isEmpty else {
+                return nil
+            }
+            return .filterSet(id)
+        }
+    }
+
+    /// The mounted auxiliary filters, resolved (FILTER-AUX-001).
+    public var mountedAuxiliaryFilters: [ResolvedAuxiliaryFilter] {
+        filterStack.auxiliaryRows
+    }
+
+    /// Keeps the candidates consistent with the inventory and the
+    /// stack, and the remembered source among the offered sources.
+    private func normalizeCandidatesAndLastSource() {
+        candidateFilterSetIDs = filterInventory.normalizedCandidateFilterSetIDs(
+            candidateFilterSetIDs,
+            referencedBy: filterStack.wheels,
+            auxiliaryFilters: filterStack.auxiliaryFilters
+        )
+        if !filterSources.contains(lastFilterSource) {
+            lastFilterSource = .standard
+        }
+    }
+
+    /// Arranges this camera's candidate Filter Sets without a Shooting
+    /// Filters commit: no wheel is removed and Plus does not move. Sets
+    /// the stack references stay candidates, and a remembered source
+    /// that is no longer offered falls back to Standard. No production
+    /// caller: package tests arrange a camera with it, while the app
+    /// assigns candidates only through `applyShootingFilters` and
+    /// restore.
+    func arrangeCandidateFilterSetIDs(_ ids: [FilterSetID]) {
+        candidateFilterSetIDs = ids
+        normalizeCandidatesAndLastSource()
+    }
+
+    /// The stack a Shooting Filters session would commit
+    /// (FILTER-AUX-003, FILTER-CAMERA-003): this camera's ND wheels
+    /// without those from sets the session leaves unselected — one
+    /// Standard 0-stop wheel when none is left — with `mounts` as the
+    /// mounted auxiliary filters, and the identities of the surviving
+    /// wheels — empty for that fresh Standard wheel, whose identity only
+    /// Apply assigns. A rejection names why the session cannot be
+    /// applied. It reads only: a view's body computes the preview, and a
+    /// write here would invalidate that body on every pass.
+    func shootingFiltersStack(
+        selectedFilterSetIDs selected: Set<FilterSetID>,
+        mounts: [MountedAuxiliaryFilter]
+    ) -> (result: Result<FilterStack, FilterStackRejection>, wheelIDs: [Int]) {
+        var wheels: [FilterWheel] = []
+        var ids: [Int] = []
+        for (wheel, wheelID) in zip(filterStack.wheels, ndFilterWheelIDs) {
+            if let setID = wheel.source.filterSetID, !selected.contains(setID) {
+                continue
+            }
+            wheels.append(wheel)
+            ids.append(wheelID)
+        }
+        if wheels.isEmpty {
+            wheels = [.standard(NDStep(stops: 0))]
+        }
+        guard let remaining = FilterStack.validated(wheels: wheels, inventory: filterInventory) else {
+            return (.failure(.unresolvedSelection), ids)
+        }
+        return (remaining.replacingAuxiliaryFilters(with: mounts, inventory: filterInventory), ids)
+    }
+
+    /// Commits a Shooting Filters session at once (FILTER-AUX-003,
+    /// FILTER-CAMERA-003): the selected Filter Sets become this camera's
+    /// candidates in their selection order (FILTER-SET-004), `mounts`
+    /// its auxiliary filters, and the ND wheels of the sets left
+    /// unselected are removed. When it adds Filter Sets while Plus is on
+    /// Standard, Plus moves to the preferred ND Set and every Standard
+    /// 0-stop wheel becomes an Empty wheel of that Set, keeping its
+    /// identity (FILTER-PLUS-006). The result then takes the commit
+    /// order (FILTER-STACK-005), or keeps the current positions under
+    /// `.preserveCurrentOrder` (FILTER-A11Y-006). Returns the rejection
+    /// — leaving everything unchanged — when the domain refuses it.
+    @discardableResult
+    public func applyShootingFilters(
+        selectedFilterSetIDs selected: [FilterSetID],
+        mounts: [MountedAuxiliaryFilter],
+        orderingPolicy: FilterStackCommitOrderingPolicy = .automatic
+    ) -> FilterStackRejection? {
+        let (result, ids) = shootingFiltersStack(selectedFilterSetIDs: Set(selected), mounts: mounts)
+        switch result {
+        case .success(let stack):
+            let addsFilterSets = selected.contains { !candidateFilterSetIDs.contains($0) }
+            let preferred = lastFilterSource == .standard && addsFilterSets
+                ? PreferredNDSource.winner(among: selected.compactMap(filterInventory.filterSet(withID:)))
+                : nil
+            let applied = preferred.flatMap { stack.convertingZeroStandardWheels(to: $0, inventory: filterInventory) } ?? stack
+            ndFilterWheelIDs = ids.isEmpty ? [makeNDFilterWheelID()] : ids
+            switch orderingPolicy {
+            case .automatic:
+                applyCommitOrder(to: applied)
+            case .preserveCurrentOrder:
+                filterStack = applied
+            }
+            candidateFilterSetIDs = selected
+            if let preferred {
+                lastFilterSource = .filterSet(preferred)
+            }
+            normalizeCandidatesAndLastSource()
+            return nil
+        case .failure(let rejection):
+            return rejection
+        }
+    }
+}
+
+private extension FilterStack {
+    /// The same stack with every Standard 0-stop wheel turned into an
+    /// Empty wheel of `filterSetID` (FILTER-PLUS-006): nothing is
+    /// mounted and the total is unchanged. `nil` when the result does
+    /// not validate.
+    func convertingZeroStandardWheels(to filterSetID: FilterSetID, inventory: FilterInventory) -> FilterStack? {
+        let converted = wheels.map { wheel in
+            wheel.standardStep.map { $0.stops == 0 } == true ? FilterWheel.empty(in: filterSetID) : wheel
+        }
+        return FilterStack.validated(wheels: converted, auxiliaryFilters: auxiliaryFilters, inventory: inventory)
     }
 }

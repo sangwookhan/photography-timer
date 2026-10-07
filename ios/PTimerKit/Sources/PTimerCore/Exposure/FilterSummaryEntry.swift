@@ -60,11 +60,37 @@ public struct FilterSummaryEntry: Hashable, Sendable {
         self.contributedStops = contributedStops
     }
 
-    /// Captures every wheel of `stack` against `inventory` as it
-    /// stands right now. Empty wheels are omitted (nothing mounted);
-    /// Record-only items are kept with a 0-stop contribution.
+    /// Captures `stack` against `inventory` as it stands right now,
+    /// in main-row order: every mounted auxiliary filter first, then
+    /// every wheel. Empty wheels are omitted (nothing mounted);
+    /// Record-only GNDs are kept with a 0-stop contribution. Color and
+    /// Effect items record `fixed` as their mode — they contribute
+    /// their registered loss — with the item kind telling them apart.
     public static func summary(for stack: FilterStack, inventory: FilterInventory) -> [FilterSummaryEntry] {
-        zip(stack.wheels, stack.rows).compactMap { wheel, row in
+        let auxiliary = stack.auxiliaryRows.map { row -> FilterSummaryEntry in
+            let mode: CalculationMode
+            switch row.mount.choice {
+            case .cplLoss: mode = .cplLoss
+            case .gnd(.recordOnly): mode = .gndRecordOnly
+            case .gnd(.applyFullValue): mode = .gndApplyFullValue
+            case .registeredLoss: mode = .fixed
+            }
+            let registered = row.item.behavior.registeredValue
+            return FilterSummaryEntry(
+                sourceKind: .filterSet,
+                filterSetID: row.mount.filterSetID.rawValue,
+                filterSetName: row.filterSetName,
+                itemID: row.mount.itemID.rawValue,
+                itemName: row.item.name,
+                itemKind: row.item.behavior.kind,
+                originalValue: registered?.value,
+                originalUnit: registered?.unit,
+                canonicalStops: row.registeredStops,
+                calculationMode: mode,
+                contributedStops: row.contributionStops
+            )
+        }
+        let wheels = zip(stack.wheels, stack.rows).compactMap { wheel, row -> FilterSummaryEntry? in
             switch wheel.selection {
             case .standard(let step):
                 return FilterSummaryEntry(
@@ -77,13 +103,6 @@ public struct FilterSummaryEntry: Hashable, Sendable {
             case .item(let selection):
                 let filterSet = wheel.source.filterSetID.flatMap(inventory.filterSet(withID:))
                 let item = row.item
-                let mode: CalculationMode
-                switch selection.choice {
-                case .fixed: mode = .fixed
-                case .cplLoss: mode = .cplLoss
-                case .gnd(.recordOnly): mode = .gndRecordOnly
-                case .gnd(.applyFullValue): mode = .gndApplyFullValue
-                }
                 let registered = item?.behavior.registeredValue
                 return FilterSummaryEntry(
                     sourceKind: .filterSet,
@@ -95,10 +114,11 @@ public struct FilterSummaryEntry: Hashable, Sendable {
                     originalValue: registered?.value,
                     originalUnit: registered?.unit,
                     canonicalStops: row.registeredStops,
-                    calculationMode: mode,
+                    calculationMode: .fixed,
                     contributedStops: row.contributionStops
                 )
             }
         }
+        return auxiliary + wheels
     }
 }

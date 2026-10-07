@@ -104,7 +104,7 @@ extension ExposureScale {
     /// `ExposureCalculator.fullStopShutterSpeeds` so every change to
     /// the canonical full-stop ladder shows up here without
     /// duplication, and the shared `shippingNDLadder` (whole stops
-    /// 0…30 plus the three commercial fractional presets, PTIMER-209).
+    /// 0…30, ND-001).
     public static let fullStop: ExposureScale = ExposureScale(
         mode: .fullStop,
         shutterSteps: ExposureCalculator.fullStopShutterSpeeds.map(ShutterStep.init(seconds:)),
@@ -114,14 +114,11 @@ extension ExposureScale {
     /// Densified shutter ladder paired with the shared ND ladder — the
     /// shipping calculator scale. Shutter is the geometric-mean
     /// densified ladder (55 entries spanning 1/8000…30s); ND is
-    /// `shippingNDLadder` (whole stops `0…maximumWholeNDStops` plus the
-    /// three commercial fractional presets) because real-world fixed ND
-    /// filters ship in whole-stop strengths apart from those products.
-    /// The fractional-aware `NDStep` type additionally stays a reserved
-    /// domain primitive (e.g. `thirdStopCount` for third-stop
-    /// persistence) so a future custom/variable-ND workflow can route
-    /// through the same calc path; arbitrary fractional ND beyond the
-    /// three presets shall not surface in the shipping ND picker.
+    /// `shippingNDLadder` (whole stops `0…maximumWholeNDStops`, ND-001):
+    /// Standard offers whole stops only, and products such as ND100 are
+    /// registered Filter Items instead. The fractional-aware `NDStep`
+    /// type stays the domain primitive, so a saved fractional Standard
+    /// value keeps its exact contribution (ND-PERSIST-005).
     /// (Per Calculator spec §2.2, §2.3.)
     public static let oneThirdStop: ExposureScale = ExposureScale(
         mode: .oneThirdStop,
@@ -153,8 +150,9 @@ extension ExposureScale {
     /// the shipping ND picker exposes, and the only off-grid values
     /// eligible for commercial labels and exact persistence; they are
     /// permanent Stops-wheel entries, independent of the active ND
-    /// notation. (The `NDStep` type still supports reserved third-stop
-    /// values for a future custom / variable-ND workflow.)
+    /// notation. They are no longer new Standard choices (ND-001) but
+    /// keep their mappings for registered items and for Standard values
+    /// saved before (ND-011, ND-PERSIST-005).
     public static let commercialFractionalNDStops: [Double] = [6.6, 7.6, 16.6]
 
     /// The canonical commercial preset stop value matching `stops`
@@ -169,14 +167,11 @@ extension ExposureScale {
         }
     }
 
-    /// The shipping ND ladder: whole stops `0…maximumWholeNDStops` plus
-    /// the commercial fractional presets, merged in numeric order so
-    /// the wheel reads `… 6, 6.6, 7, 7.6, 8, … 16, 16.6, 17 …`. Shared
-    /// by both scales so the ND ladder stays identical across modes.
+    /// The shipping ND ladder: whole stops `0…maximumWholeNDStops` in
+    /// numeric order (ND-001). Shared by both scales so the ND ladder
+    /// stays identical across modes.
     static let shippingNDLadder: [NDStep] =
-        ((0...maximumWholeNDStops).map(Double.init) + commercialFractionalNDStops)
-            .sorted()
-            .map(NDStep.init(stops:))
+        (0...maximumWholeNDStops).map { NDStep(stops: Double($0)) }
 }
 
 extension ExposureScale {

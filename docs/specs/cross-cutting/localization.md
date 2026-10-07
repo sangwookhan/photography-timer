@@ -36,10 +36,16 @@ platform-specific.
   reciprocity/film details, custom film authoring, About/legal/version, and
   notification text are translated.
 - **L10N-011** — The following remain English/symbolic in every locale and
-  are never translated: product names, technical notation (ND, OD, ISO,
-  and the shared formula's symbolic terms), formula expressions, numeric
-  source values, source URLs, film/manufacturer names (catalog data), and
-  graph/table technical column and axis labels.
+  are never translated: product names, the example Filter Set names and example
+  Filter Item names defined by FILTER-SET-008, technical notation (ND, GND, CPL,
+  OD, ISO, and the shared formula's symbolic terms), formula expressions,
+  numeric source values, source URLs, film/manufacturer names (catalog data),
+  and graph/table technical column and axis labels.
+- **L10N-015** — Korean user-facing Filter Set vocabulary shall use **필터 세트**
+  consistently, including create, select, available, name and delete actions.
+  Filter Item kind **Color** shall read **컬러** in Korean. App-managed Color
+  swatch names may be localized. The fixed example Set/item names remain English
+  under L10N-011.
 - **L10N-012** — Localizing reciprocity confidence-presentation text is
   presentation-only: it shall never change the confidence mapping,
   evaluation order, or result semantics described in

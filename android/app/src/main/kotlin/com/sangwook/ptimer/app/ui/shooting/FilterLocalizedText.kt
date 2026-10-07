@@ -209,6 +209,7 @@ internal fun filterRejectionText(rejection: FilterStackRejection): String = when
     FilterStackRejection.exceedsTotalLimit -> stringResource(R.string.filter_reject_exceeds_limit)
     FilterStackRejection.itemAlreadyMounted -> stringResource(R.string.filter_reject_already_mounted)
     FilterStackRejection.unresolvedSelection -> stringResource(R.string.filter_reject_unavailable)
+    FilterStackRejection.tooManyNDWheels -> stringResource(R.string.filter_reject_too_many_nd_wheels)
 }
 
 /** Every refusal reason resolved at once, so a gesture or an assistive
@@ -242,17 +243,16 @@ internal fun filterRejectionNoticeText(notice: FilterRejectionNotice): String =
 internal fun filterColorName(token: FilterSetColor): String = stringResource(
     when (token) {
         FilterSetColor.red -> R.string.filter_color_red
+        FilterSetColor.redOrange -> R.string.filter_color_red_orange
         FilterSetColor.orange -> R.string.filter_color_orange
+        FilterSetColor.yellowOrange -> R.string.filter_color_yellow_orange
         FilterSetColor.yellow -> R.string.filter_color_yellow
+        FilterSetColor.yellowGreen -> R.string.filter_color_yellow_green
         FilterSetColor.green -> R.string.filter_color_green
-        FilterSetColor.mint -> R.string.filter_color_mint
         FilterSetColor.teal -> R.string.filter_color_teal
-        FilterSetColor.cyan -> R.string.filter_color_cyan
         FilterSetColor.blue -> R.string.filter_color_blue
-        FilterSetColor.indigo -> R.string.filter_color_indigo
         FilterSetColor.purple -> R.string.filter_color_purple
         FilterSetColor.pink -> R.string.filter_color_pink
-        FilterSetColor.brown -> R.string.filter_color_brown
     },
 )
 
@@ -261,17 +261,21 @@ internal fun filterColorName(token: FilterSetColor): String = stringResource(
 @Composable
 internal fun localizedFilterKindName(kind: FilterItemKind): String = stringResource(
     when (kind) {
+        // A fixed-value item is an ND filter; users never see "Fixed".
         FilterItemKind.fixed -> R.string.filter_kind_fixed
         FilterItemKind.cpl -> R.string.filter_kind_cpl
         FilterItemKind.gnd -> R.string.filter_kind_gnd
+        FilterItemKind.color -> R.string.filter_kind_color
+        FilterItemKind.effect -> R.string.filter_kind_effect
     },
 )
 
 /**
  * Inventory-row detail for one physical filter: kind, registered
  * representation, and — when the registered unit is not stops — the
- * canonical conversion. `Fixed · OD 0.9 · 3 stops`, `GND · ND8 ·
- * 3 stops`, `CPL · 1 / 1.5 / 2 stops`.
+ * canonical conversion. `ND · OD 0.9 · 3 stops`, `GND · ND8 ·
+ * 3 stops`, `CPL · 1 / 1.5 / 2 stops`, `Color · Red · 2 stops`,
+ * `Effect · 0.5 stops`.
  */
 @Composable
 internal fun filterItemDetailText(item: FilterItem): String {
@@ -284,6 +288,11 @@ internal fun filterItemDetailText(item: FilterItem): String {
                 .joinToString(" / ") { FilterWheelPresenter.decimalStopsValue(it) }
             stringResource(R.string.filter_stops, list)
         }
+
+        is FilterItemBehavior.Color ->
+            filterColorName(behavior.color) + DetailSeparator + filterStopsText(behavior.loss.stops)
+
+        is FilterItemBehavior.Effect -> filterStopsText(behavior.loss.stops)
     }
     return "$kind$DetailSeparator$detail"
 }

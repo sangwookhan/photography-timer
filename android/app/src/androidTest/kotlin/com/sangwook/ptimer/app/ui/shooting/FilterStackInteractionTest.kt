@@ -4,6 +4,14 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.foundation.layout.Box
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import com.sangwook.ptimer.core.exposure.MountedAuxiliaryFilter
+import com.sangwook.ptimer.core.exposure.FilterExposureLoss
+import com.sangwook.ptimer.core.exposure.AuxiliaryFilterChoice
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -90,7 +98,7 @@ class FilterStackInteractionTest {
                     onAddFilterWheel = controller::addFilterWheel,
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onOverscrollRemove = controller::removeNdWheelFromOverscroll,
-                    onManageFilterSets = {},
+                    onOpenShootingFilters = {},
                 )
             }
         }
@@ -124,6 +132,63 @@ class FilterStackInteractionTest {
         // stays contiguous ahead of Standard (2).
         val xs = listOf(first, second, third).map { it.getUnclippedBoundsInRoot().left }
         assertTrue("Wheels render in the settled group order: $xs", xs[0] < xs[1] && xs[1] < xs[2])
+    }
+
+    /**
+     * FILTER-PLUS-001: clearing the auxiliary filters beside three ND
+     * wheels makes Plus available, and it must show at once inside the
+     * row. The card re-splits its columns from the same state one pass
+     * later, as the ND card does; the wheels used to keep the width of
+     * the first pass and push Plus out of the row until a wheel moved.
+     */
+    @Test
+    fun clearingAuxiliaryFilters_showsPlusInsideTheRowWithoutAWheelGesture() {
+        val nd8 = stops("ND8", 3.0)
+        val nd64 = stops("ND64", 6.0)
+        val red = FilterItem("Red 25A", FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red))
+        val kit = FilterSet("Kit", FilterSetColor.blue, listOf(nd8, nd64, red))
+        val c = controller(FilterInventory(listOf(kit)))
+        c.arrangeCandidateFilterSets(listOf(kit.id))
+        commit(c, 0, FilterWheelSelection.Standard(2.0))
+        for (item in listOf(nd8, nd64)) {
+            c.addFilterWheel(FilterSource.FilterSet(kit.id))
+            val added = c.state.value.filterWheels.indexOfLast { wheel -> wheel.rows.any { it.selection is FilterWheelSelection.Item } && wheel.rows[wheel.committedIndex].selection !is FilterWheelSelection.Item }
+            commit(c, added, FilterWheelSelection.Item(FilterRowSelection(item.id, FilterRowChoice.Fixed)))
+        }
+        assertEquals(3, c.state.value.filterWheels.size)
+        assertNull(c.applyShootingFilters(listOf(kit.id), listOf(MountedAuxiliaryFilter(kit.id, red.id, AuxiliaryFilterChoice.RegisteredLoss))))
+        assertFalse("Three ND wheels beside an auxiliary filter leave no room for Plus.", c.state.value.plus.isVisible)
+
+        composeTestRule.setContent {
+            val state by c.state.collectAsState()
+            PTimerTheme {
+                // The column the card hands the wheels follows the same
+                // state, measured in a pass of its own.
+                BoxWithConstraints(Modifier.width(360.dp)) {
+                    val rowWidth = if (state.plus.isVisible) maxWidth - 100.dp else maxWidth - 60.dp
+                    Box(Modifier.width(rowWidth).testTag("row")) {
+                        FilterStackGroup(
+                            state = state,
+                            onWheelActive = c::setNdWheelActive,
+                            onWheelValue = c::setNdWheelValue,
+                            onAddFilterWheel = c::addFilterWheel,
+                            onAdjustFilterWheel = c::adjustFilterWheel,
+                            onOverscrollRemove = c::removeNdWheelFromOverscroll,
+                            onOpenShootingFilters = {},
+                        )
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Nothing but Apply with the filter cleared; no wheel is touched.
+        composeTestRule.runOnIdle { assertNull(c.applyShootingFilters(listOf(kit.id), emptyList())) }
+        composeTestRule.waitForIdle()
+
+        val row = composeTestRule.onNodeWithTag("row").getUnclippedBoundsInRoot()
+        val plus = composeTestRule.onNodeWithContentDescription("Add filter").getUnclippedBoundsInRoot()
+        assertTrue("Plus ${plus.left}..${plus.right} lies inside the row ${row.left}..${row.right}.", plus.right <= row.right + 0.5.dp)
     }
 
     @Test

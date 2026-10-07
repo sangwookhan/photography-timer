@@ -5,12 +5,14 @@ package com.sangwook.ptimer.app.vm
 
 import com.sangwook.ptimer.app.persistence.PersistenceWriter
 import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
+import com.sangwook.ptimer.core.exposure.FilterExposureLoss
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemBehavior
 import com.sangwook.ptimer.core.exposure.FilterRegisteredValue
 import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
+import com.sangwook.ptimer.core.exposure.FilterSetId
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.persistence.FilterInventoryStoring
 import com.sangwook.ptimer.core.persistence.PersistentFilterInventorySnapshot
@@ -35,7 +37,10 @@ class FilterInventoryModelTest {
         var cleared = 0
             private set
 
-        override fun loadSnapshot(): PersistentFilterInventorySnapshot? = toLoad
+        var loads = 0
+            private set
+
+        override fun loadSnapshot(): PersistentFilterInventorySnapshot? { loads++; return toLoad }
         override fun saveSnapshot(snapshot: PersistentFilterInventorySnapshot) { saved += snapshot }
         override fun clearSnapshot() { cleared++ }
     }
@@ -58,14 +63,149 @@ class FilterInventoryModelTest {
         val stored = PersistentFilterInventorySnapshot.from(
             FilterInventory(listOf(FilterSet("Stored", FilterSetColor.teal))),
         )
-        assertEquals("Stored", model(RecordingStore(stored)).filterSets.single().name)
+        assertEquals(listOf("Stored"), model(RecordingStore(stored)).filterSets.map { it.name })
 
         val bootstrap = FilterInventory(listOf(FilterSet("Bootstrap", FilterSetColor.pink)))
         assertEquals(
             "Bootstrap",
-            model(RecordingStore(stored), initial = bootstrap).filterSets.single().name,
+            model(RecordingStore(stored), initial = bootstrap).filterSets[0].name,
         )
-        assertTrue(model().filterSets.isEmpty())
+        assertTrue("No built-in Set (FILTER-SET-002 retired).", model().filterSets.isEmpty())
+    }
+
+    /** FILTER-SET-008: a fresh installation starts with the first-launch
+     *  inventory, written at once, so it is offered only once: an edited
+     *  Sample is kept, deleted Samples stay deleted, and a saved empty
+     *  inventory stays empty. */
+    @Test
+    fun aFreshInstallSeedsTheFirstLaunchInventoryOnce() {
+        val store = RecordingStore()
+        val samples = FilterInventorySamples.inventory()
+        val sut = FilterInventoryModel(store = store, persistenceWriter = PersistenceWriter { it() }, firstLaunchInventory = samples)
+        assertEquals(samples, sut.inventory.value)
+        assertEquals("The seed is written at once.", samples, store.saved.single().restoredInventory)
+
+        store.toLoad = store.saved.last()
+        val first = samples.filterSets.first()
+        sut.renameFilterSet(first.id, "My ND")
+        store.toLoad = store.saved.last()
+        val again = FilterInventoryModel(store = store, persistenceWriter = PersistenceWriter { it() }, firstLaunchInventory = samples)
+        assertEquals("An edited Sample is not overwritten.", "My ND", again.inventory.value.filterSet(first.id)?.name)
+
+        samples.filterSets.forEach { again.deleteFilterSet(it.id) }
+        store.toLoad = store.saved.last()
+        val afterDelete = FilterInventoryModel(store = store, persistenceWriter = PersistenceWriter { it() }, firstLaunchInventory = samples)
+        assertTrue("Deleted Samples are not seeded again.", afterDelete.filterSets.isEmpty())
+    }
+
+    /** FILTER-SET-008: Add Example Filter Sets appends three fresh copies on
+     *  every run, after examples were edited or deleted and while copies
+     *  exist: new Set and item ids, the next free name suffix, existing
+     *  Sets unchanged, and the result saved. */
+    @Test
+    fun addingExampleFilterSetsAppendsFreshCopiesOnEveryRun() {
+        val store = RecordingStore()
+        val examples = FilterInventorySamples.inventory()
+        val sut = FilterInventoryModel(store = store, persistenceWriter = inlineWriter, firstLaunchInventory = examples)
+        sut.renameFilterSet(examples.filterSets[0].id, "My magnetic kit")
+        sut.deleteFilterSet(examples.filterSets[1].id)
+        val existing = sut.filterSets
+
+        val first = sut.addExampleFilterSets()
+        assertEquals(listOf("Digital Magnetic Filters", "Film Square ND/GND", "Film Color Filters 2"), first.map { it.name })
+        val second = sut.addExampleFilterSets()
+        assertEquals(listOf("Digital Magnetic Filters 2", "Film Square ND/GND 2", "Film Color Filters 3"), second.map { it.name })
+        assertEquals(examples.filterSets.map { set -> set.items.map { it.name to it.behavior } }, second.map { set -> set.items.map { it.name to it.behavior } })
+
+        assertEquals("Existing Sets are unchanged.", existing + first + second, sut.filterSets)
+        assertEquals("Every Set id is new.", sut.filterSets.size, sut.filterSets.map { it.id }.toSet().size)
+        val itemIds = sut.filterSets.flatMap { set -> set.items.map { it.id } }
+        assertEquals("Every item id is new.", itemIds.size, itemIds.toSet().size)
+        assertEquals("The copies are saved.", sut.inventory.value, store.saved.last().restoredInventory)
+    }
+
+    /** The bootstrap already read the store and found nothing saved: the
+     *  model takes that as a fresh installation without a second read. */
+    @Test
+    fun aBootstrapReadThatFoundNothingSeedsWithoutReadingAgain() {
+        val store = RecordingStore()
+        val samples = FilterInventorySamples.inventory()
+        val sut = FilterInventoryModel(
+            store = store,
+            initial = null,
+            initialIsStoreRead = true,
+            persistenceWriter = inlineWriter,
+            firstLaunchInventory = samples,
+        )
+        assertEquals("No second store read.", 0, store.loads)
+        assertEquals(samples, sut.inventory.value)
+        assertEquals("The seed is written once.", samples, store.saved.single().restoredInventory)
+    }
+
+    /** FILTER-SET-008: an upgrade that never saved an inventory gets the
+     *  Samples once, like a fresh installation; a saved empty inventory
+     *  counts as saved and gets none (an unreadable or failed read reads as
+     *  a saved empty inventory, DataStoreFilterInventoryStoreTest). */
+    @Test
+    fun samplesAreSeededOnlyWhenNoInventoryWasEverSaved() {
+        val samples = FilterInventorySamples.inventory()
+        val neverSaved = RecordingStore()
+        assertEquals("Upgrade with nothing saved: Samples.", samples, FilterInventoryModel(store = neverSaved, persistenceWriter = inlineWriter, firstLaunchInventory = samples).inventory.value)
+
+        val savedEmpty = RecordingStore(PersistentFilterInventorySnapshot.from(FilterInventory()))
+        val model = FilterInventoryModel(store = savedEmpty, persistenceWriter = inlineWriter, firstLaunchInventory = samples)
+        assertTrue("A saved empty inventory stays empty.", model.filterSets.isEmpty())
+        assertTrue("Nothing is written over it.", savedEmpty.saved.isEmpty())
+    }
+
+    /** FILTER-SET-009: an upgrade keeps the saved inventory: no Samples,
+     *  and a former Default Set is ordinary inventory that can be deleted. */
+    @Test
+    fun anUpgradeKeepsAFormerDefaultAsAnOrdinarySet() {
+        val formerDefault = FilterSet("Default", FilterSetColor.blue, emptyList(), FilterSetId("default"))
+        val lee = FilterSet("Lee", FilterSetColor.red)
+        val store = RecordingStore(PersistentFilterInventorySnapshot.from(FilterInventory(listOf(formerDefault, lee))))
+        val samples = FilterInventorySamples.inventory()
+        val sut = FilterInventoryModel(store = store, persistenceWriter = PersistenceWriter { it() }, firstLaunchInventory = samples)
+        assertEquals("No Samples on upgrade.", listOf(formerDefault.id, lee.id), sut.filterSets.map { it.id })
+        assertEquals(formerDefault, sut.inventory.value.filterSet(formerDefault.id))
+        assertTrue("Nothing is written by restoring.", store.saved.isEmpty())
+
+        sut.deleteFilterSet(formerDefault.id)
+        assertEquals("A former Default can be deleted.", listOf(lee.id), sut.filterSets.map { it.id })
+    }
+
+    /** FILTER-SET-008: the three example Filter Sets and their registered
+     *  values, with fixed English names; the ND-factor items convert
+     *  through the shared mapping (ND-011), ND400 by log2 without
+     *  snapping. */
+    @Test
+    fun theExampleFilterSetsHoldTheApprovedItems() {
+        val examples = FilterInventorySamples.inventory()
+        assertEquals(listOf("Digital Magnetic Filters", "Film Square ND/GND", "Film Color Filters"), examples.filterSets.map { it.name })
+        assertTrue(examples.filterSets.all { set -> set.items.all { it.isWellFormed } })
+        assertEquals(3, examples.filterSets.map { it.id }.toSet().size)
+
+        val magnetic = examples.filterSets[0].items
+        assertEquals(listOf("ND8", "ND64", "ND1000", "ND100k", "Night Filter"), magnetic.map { it.name })
+        assertEquals(listOf(3.0, 6.0, 10.0).map { FilterItemBehavior.Fixed(FilterRegisteredValue(it, FilterValueUnit.stops)) }, magnetic.take(3).map { it.behavior })
+        assertEquals(FilterItemBehavior.Fixed(FilterRegisteredValue(100_000.0, FilterValueUnit.filterFactor)), magnetic[3].behavior)
+        assertEquals(16.6, (magnetic[3].behavior as FilterItemBehavior.Fixed).value.canonicalStops!!, 1e-9)
+        assertEquals(FilterItemBehavior.Effect(FilterExposureLoss(0.3)), magnetic[4].behavior)
+
+        val square = examples.filterSets[1].items
+        assertEquals(listOf("ND400", "2-stop ND", "3-stop ND", "4-stop ND", "3-stop Soft GND"), square.map { it.name })
+        assertEquals(FilterItemBehavior.Fixed(FilterRegisteredValue(400.0, FilterValueUnit.filterFactor)), square[0].behavior)
+        assertEquals(kotlin.math.log2(400.0), (square[0].behavior as FilterItemBehavior.Fixed).value.canonicalStops!!, 1e-9)
+        assertEquals(listOf(2.0, 3.0, 4.0).map { FilterItemBehavior.Fixed(FilterRegisteredValue(it, FilterValueUnit.stops)) }, square.subList(1, 4).map { it.behavior })
+        assertEquals(FilterItemBehavior.Gnd(FilterRegisteredValue(3.0, FilterValueUnit.stops)), square[4].behavior)
+
+        val color = examples.filterSets[2].items
+        assertEquals(listOf("Red Filter", "Orange Filter", "Yellow Filter", "CPL"), color.map { it.name })
+        assertEquals(FilterItemBehavior.Color(FilterExposureLoss(3.0), FilterSetColor.red), color[0].behavior)
+        assertEquals(FilterItemBehavior.Color(FilterExposureLoss(2.0), FilterSetColor.orange), color[1].behavior)
+        assertEquals(FilterItemBehavior.Color(FilterExposureLoss(1.0), FilterSetColor.yellow), color[2].behavior)
+        assertEquals(FilterItemBehavior.Cpl(CplExposureLossChoices(listOf(1.0, 1.5, 2.0))), color[3].behavior)
     }
 
     // MARK: Filter Sets
@@ -88,6 +228,32 @@ class FilterInventoryModelTest {
         assertEquals(second!!.id, sut.filterSets[1].id)
     }
 
+    /** FILTER-ITEM-009: a proposed New Filter Set and its filter are made
+     *  in one change with one saved snapshot, so no Set-only state is
+     *  published or saved; a refused save changes and writes nothing. */
+    @Test
+    fun aProposedFilterSetIsCreatedTogetherWithItsFilter() {
+        val store = RecordingStore()
+        val sut = model(store)
+        val nd8 = fixed("ND8", 3.0)
+
+        assertNull("A blank name creates nothing.", sut.createFilterSet("  ", FilterSetColor.teal, nd8))
+        assertNull("An invalid filter creates nothing.", sut.createFilterSet("New Filter Set", FilterSetColor.teal, fixed(" ", 3.0)))
+        assertTrue(sut.filterSets.isEmpty())
+        assertTrue("A refused save writes nothing.", store.saved.isEmpty())
+
+        val created = sut.createFilterSet(" New Filter Set ", FilterSetColor.teal, nd8)!!
+        assertEquals("New Filter Set", created.name)
+        assertEquals(listOf(nd8), created.items)
+        assertEquals(listOf(created), sut.filterSets)
+        assertEquals("One saved snapshot, never a Set without its filter.", 1, store.saved.size)
+        assertEquals(listOf(listOf(nd8.id)), store.saved.single().restoredInventory.filterSets.map { set -> set.items.map { it.id } })
+
+        assertNull("An item id already in use creates nothing.", sut.createFilterSet("Other", FilterSetColor.red, nd8))
+        assertEquals(1, store.saved.size)
+        assertEquals(1, sut.filterSets.size)
+    }
+
     @Test
     fun renameAndRecolorKeepTheStableIdAndSkipNoOps() {
         val store = RecordingStore()
@@ -96,34 +262,17 @@ class FilterInventoryModelTest {
         store.saved.clear()
 
         sut.renameFilterSet(set.id, "  NiSi kit  ")
-        sut.recolorFilterSet(set.id, FilterSetColor.mint)
+        sut.recolorFilterSet(set.id, FilterSetColor.teal)
         assertEquals("NiSi kit", sut.inventory.value.filterSet(set.id)?.name)
-        assertEquals(FilterSetColor.mint, sut.inventory.value.filterSet(set.id)?.color)
-        assertEquals(set.id, sut.filterSets.single().id)
+        assertEquals(FilterSetColor.teal, sut.inventory.value.filterSet(set.id)?.color)
+        assertEquals(listOf(set.id), sut.filterSets.map { it.id })
         assertEquals(2, store.saved.size)
 
         // Unchanged values and a blank rename write nothing.
         sut.renameFilterSet(set.id, "NiSi kit")
         sut.renameFilterSet(set.id, "  ")
-        sut.recolorFilterSet(set.id, FilterSetColor.mint)
+        sut.recolorFilterSet(set.id, FilterSetColor.teal)
         assertEquals(2, store.saved.size)
-    }
-
-    @Test
-    fun moveReordersWithoutChangingIds() {
-        val sut = model()
-        val a = sut.createFilterSet("A", FilterSetColor.red)!!
-        val b = sut.createFilterSet("B", FilterSetColor.blue)!!
-        val c = sut.createFilterSet("C", FilterSetColor.green)!!
-
-        sut.moveFilterSet(fromIndex = 2, toIndex = 0)
-        assertEquals(listOf("C", "A", "B"), sut.filterSets.map { it.name })
-        assertEquals(listOf(c.id, a.id, b.id), sut.filterSets.map { it.id })
-
-        // Out-of-range and no-op moves change nothing.
-        sut.moveFilterSet(0, 0)
-        sut.moveFilterSet(0, 9)
-        assertEquals(listOf("C", "A", "B"), sut.filterSets.map { it.name })
     }
 
     @Test
@@ -216,7 +365,7 @@ class FilterInventoryModelTest {
     }
 
     @Test
-    fun moveItemAndDeleteItemActOnTheOwningSetOnly() {
+    fun relocateItemAndDeleteItemKeepTheItemID() {
         val sut = model()
         val nisi = sut.createFilterSet("NiSi", FilterSetColor.red)!!
         val lee = sut.createFilterSet("Lee", FilterSetColor.blue)!!
@@ -226,12 +375,20 @@ class FilterInventoryModelTest {
         sut.addItem(b, lee.id)
         sut.addItem(fixed("Keep", 4.0), nisi.id)
 
-        sut.moveItem(lee.id, fromIndex = 1, toIndex = 0)
-        assertEquals(listOf("B", "A"), sut.inventory.value.filterSet(lee.id)?.items?.map { it.name })
-        assertEquals(listOf("Keep"), sut.inventory.value.filterSet(nisi.id)?.items?.map { it.name })
+        // FILTER-ITEM-009: an existing item moves to another set with its
+        // id and edits, in one change.
+        val renamed = a.copy(name = "A2")
+        sut.relocateItem(renamed, nisi.id)
+        assertEquals(listOf("B"), sut.inventory.value.filterSet(lee.id)?.items?.map { it.name })
+        assertEquals(listOf("Keep", "A2"), sut.inventory.value.filterSet(nisi.id)?.items?.map { it.name })
+        assertEquals(nisi.id, sut.inventory.value.item(a.id)?.first?.id)
+        sut.relocateItem(renamed, nisi.id)
+        assertEquals("Moving into its own set changes nothing.", 2, sut.inventory.value.filterSet(nisi.id)?.items?.size)
+        sut.relocateItem(renamed, lee.id)
+        assertEquals(listOf("B", "A2"), sut.inventory.value.filterSet(lee.id)?.items?.map { it.name })
 
         sut.deleteItem(b.id)
-        assertEquals(listOf("A"), sut.inventory.value.filterSet(lee.id)?.items?.map { it.name })
+        assertEquals(listOf("A2"), sut.inventory.value.filterSet(lee.id)?.items?.map { it.name })
         assertNull(sut.inventory.value.item(b.id))
     }
 
@@ -239,7 +396,7 @@ class FilterInventoryModelTest {
     fun everyMutationRoundTripsThroughThePersistedSnapshot() {
         val store = RecordingStore()
         val sut = model(store)
-        val set = sut.createFilterSet("Lee holder", FilterSetColor.indigo)!!
+        val set = sut.createFilterSet("Lee holder", FilterSetColor.blue)!!
         sut.addItem(
             FilterItem("Big Stopper", FilterItemBehavior.Fixed(FilterRegisteredValue(1000.0, FilterValueUnit.filterFactor))),
             set.id,
@@ -251,7 +408,7 @@ class FilterInventoryModelTest {
 
         val restored = store.saved.last().restoredInventory
         assertEquals(sut.inventory.value, restored)
-        assertEquals(FilterSetColor.indigo, restored.filterSets.single().color)
+        assertEquals(FilterSetColor.blue, restored.filterSet(set.id)!!.color)
         assertEquals(10.0, restored.item(sut.inventory.value.filterSet(set.id)!!.items[0].id)!!.second.behavior.registeredValue!!.canonicalStops!!, 1e-9)
     }
 }

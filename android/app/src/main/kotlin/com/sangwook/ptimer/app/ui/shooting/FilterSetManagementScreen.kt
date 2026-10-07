@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,12 +31,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -62,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -69,20 +73,26 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.vm.FilterItemEditorSessionMemory
+import com.sangwook.ptimer.app.vm.FilterSetItemOrder
 import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
 import com.sangwook.ptimer.app.vm.FilterSetRenameCommit
+import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
 import com.sangwook.ptimer.core.exposure.FilterItemId
 import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSetId
+import com.sangwook.ptimer.core.exposure.NDNotationFormatter
+import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 import com.sangwook.ptimer.ui.theme.filterSetColor
 
@@ -93,12 +103,11 @@ import com.sangwook.ptimer.ui.theme.filterSetColor
  */
 internal class FilterSetManagementActions(
     val suggestCreationColor: () -> FilterSetColor,
-    val createFilterSet: (String, FilterSetColor) -> Unit,
+    val createFilterSet: (String, FilterSetColor) -> FilterSet?,
+    val createFilterSetHolding: (String, FilterSetColor, FilterItem) -> FilterSet?,
     val renameFilterSet: (FilterSetId, String) -> Unit,
     val recolorFilterSet: (FilterSetId, FilterSetColor) -> Unit,
-    val moveFilterSet: (Int, Int) -> Unit,
     val deleteFilterSet: (FilterSetId) -> Unit,
-    val moveFilterItem: (FilterSetId, Int, Int) -> Unit,
     val deleteFilterItem: (FilterItemId) -> Unit,
     val saveFilterItem: (FilterItem, FilterSetId) -> FilterItemSaveOutcome,
     val camerasAffectedByDeletingFilterSet: (FilterSetId) -> List<CameraSlotIdentity>,
@@ -106,222 +115,325 @@ internal class FilterSetManagementActions(
 )
 
 /**
- * The single Filter Set management surface (FILTER-SET-001): create,
- * rename, recolor, reorder, and delete Filter Sets, and manage each
- * set's physical filters. Reached from the ND header entry and from the
- * Plus wheel's management long press.
- *
- * Two levels in one full-screen dialog. Material puts dismissal on the
- * leading navigation icon, so the list level closes the surface with a
- * Close icon while the detail level goes Back with an arrow; the system
- * back button follows the same path. Wherever edit mode is actionable
- * the Edit / Finish Editing toggle stays a directly visible trailing
- * text action, never behind an overflow menu, and is worded apart from
- * the dismissal; an empty list presents no such control at all.
- * (iOS: `FilterSetManagementView`.)
+ * One Filter Set's editor (FILTER-SET-001/002/006), opened from its row
+ * in Shooting Filters or in Filter management: rename, recolor, manage
+ * its physical filters, and delete it globally after a confirmation that
+ * names it. Material puts dismissal on the leading
+ * navigation icon; the system back button follows the same path. When
+ * the set is deleted the editor closes. (iOS: `FilterSetDetailView`.)
  */
 @Composable
 internal fun FilterSetManagementScreen(
     inventory: FilterInventory,
+    filterSetId: FilterSetId,
     actions: FilterSetManagementActions,
     onDismiss: () -> Unit,
 ) {
-    // Survives rotation; the id (not an index) so a reorder underneath
-    // never swaps which set the detail level shows.
-    var detailSetId by rememberSaveable { mutableStateOf<String?>(null) }
-    val detailSet = detailSetId?.let { inventory.filterSet(FilterSetId(it)) }
-
-    val back = { detailSetId = null }
+    val filterSet = inventory.filterSet(filterSetId)
+    // Deleted here or elsewhere: nothing left to edit.
+    LaunchedEffect(filterSet == null) { if (filterSet == null) onDismiss() }
+    if (filterSet == null) return
     Dialog(
-        // System back reaches the surface as a dismiss request: it leaves
-        // the detail level first and only then closes the surface, so the
-        // hardware path matches the leading navigation icon.
-        onDismissRequest = { if (detailSetId == null) onDismiss() else back() },
+        onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         // Each Dialog hosts its own AndroidComposeView and re-derives
         // LocalDensity, so the app's font-scale cap is reapplied here.
         CappedFontScale {
             Surface(modifier = Modifier.fillMaxSize()) {
-                when {
-                    detailSetId == null -> FilterSetListLevel(
-                        filterSets = inventory.filterSets,
-                        actions = actions,
-                        onOpen = { detailSetId = it.rawValue },
-                        onDismiss = onDismiss,
-                    )
-
-                    detailSet == null -> MissingFilterSetLevel(onBack = back)
-
-                    // The detail level's rename draft and notation memory
-                    // are keyed on the set, so each one starts fresh.
-                    else -> FilterSetDetailLevel(
-                        filterSet = detailSet,
-                        actions = actions,
-                        onBack = back,
-                    )
-                }
+                // The rename draft and notation memory are keyed on the
+                // set, so each one starts fresh.
+                FilterSetDetailLevel(
+                    filterSet = filterSet,
+                    filterSets = inventory.filterSets,
+                    actions = actions,
+                    onBack = onDismiss,
+                )
             }
         }
     }
 }
 
+/**
+ * Filter management, opened from the Settings menu: the read-only
+ * Standard row first, then the shared Filter Set inventory by name, each
+ * with its contents hint, then Add filter, Add Filter Set, and Add Example
+ * Filter Sets. A row opens
+ * that set's editor. It holds no camera selection or auxiliary mounting.
+ * (iOS: `FilterManagementView`.)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterSetListLevel(
-    filterSets: List<FilterSet>,
-    actions: FilterSetManagementActions,
-    onOpen: (FilterSetId) -> Unit,
+internal fun FilterManagementScreen(
+    inventory: FilterInventory,
+    suggestCreationColor: () -> FilterSetColor,
+    createFilterSet: (String, FilterSetColor) -> FilterSet?,
+    createFilterSetHolding: (String, FilterSetColor, FilterItem) -> FilterSet?,
+    saveFilterItem: (FilterItem, FilterSetId) -> FilterItemSaveOutcome,
+    addExampleFilterSets: () -> Unit,
+    onOpenFilterSet: (FilterSetId) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var isEditing by rememberSaveable { mutableStateOf(false) }
     var creationColor by remember { mutableStateOf<FilterSetColor?>(null) }
-    // Bound to the STABLE id captured when the confirmation opened, so a
-    // reorder underneath cannot redirect the delete (FILTER-SET-001).
-    var pendingDeletion by remember { mutableStateOf<FilterSet?>(null) }
-
-    // Deleting the last Filter Set leaves reorder/delete edit mode with
-    // nothing to act on, so the mode ends with the control that exits it
-    // (FILTER-SET-001) instead of stranding the user in it.
-    LaunchedEffect(filterSets.isEmpty()) { if (filterSets.isEmpty()) isEditing = false }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.filter_sets_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_done))
-                    }
-                },
-                actions = {
-                    // No sets, nothing to reorder or delete: an Edit
-                    // control here would be a no-op, so it is absent.
-                    // Close and New stay.
-                    if (filterSets.isNotEmpty()) {
-                        TextButton(onClick = { isEditing = !isEditing }) {
-                            Text(
-                                stringResource(
-                                    if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
-                                ),
+    var showsStandardList by remember { mutableStateOf(false) }
+    // A general Add filter: no Set chosen yet; the color is the one a
+    // proposed New Filter Set would get (FILTER-ITEM-009).
+    var newFilterColor by remember { mutableStateOf<FilterSetColor?>(null) }
+    val editorSession = remember { FilterItemEditorSessionMemory() }
+    val filterSets = FilterSetItemOrder.sortedByName(inventory.filterSets)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        CappedFontScale {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(stringResource(R.string.filter_management_title)) },
+                            navigationIcon = {
+                                IconButton(onClick = onDismiss) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.action_close),
+                                    )
+                                }
+                            },
+                        )
+                    },
+                ) { padding ->
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .consumeWindowInsets(padding)
+                            .navigationBarsPadding(),
+                    ) {
+                        item(key = "standard") {
+                            StandardFilterSourceRow(
+                                showsSelectedCue = false,
+                                onOpen = { showsStandardList = true },
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                                    .testTag("filter-management-standard"),
                             )
+                            HorizontalDivider()
+                        }
+                        itemsIndexed(filterSets, key = { _, set -> set.id.rawValue }) { _, filterSet ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 56.dp)
+                                    .clickable(
+                                        onClickLabel = stringResource(R.string.filter_set_edit_named, filterSet.name),
+                                        onClick = { onOpenFilterSet(filterSet.id) },
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                                    .testTag("filter-management-set-${filterSet.id.rawValue}"),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                FilterSetColorSwatch(filterSet.color, size = 12.dp)
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        filterSet.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        filterSetContentsHintText(filterSet),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            HorizontalDivider()
+                        }
+                        item {
+                            // Filter-first registration, never attached to
+                            // Standard (FILTER-FLOW-004).
+                            TextButton(
+                                onClick = { newFilterColor = suggestCreationColor() },
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .padding(top = 8.dp)
+                                    .testTag("filter-management-add-filter"),
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.nd_add_filter))
+                            }
+                            TextButton(
+                                onClick = { creationColor = suggestCreationColor() },
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .testTag("filter-management-add-filter-set"),
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.filter_add_filter_set))
+                            }
+                            // Fresh, unselected copies of the example Filter
+                            // Sets, at any time (FILTER-SET-008).
+                            TextButton(
+                                onClick = addExampleFilterSets,
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .padding(bottom = 8.dp)
+                                    .testTag("filter-management-add-example-filter-sets"),
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.filter_add_example_filter_sets))
+                            }
                         }
                     }
-                    IconButton(onClick = { creationColor = actions.suggestCreationColor() }) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.filter_set_new))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        if (filterSets.isEmpty()) {
-            Text(
-                stringResource(R.string.filter_sets_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(padding).padding(16.dp),
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .consumeWindowInsets(padding)
-                    .navigationBarsPadding(),
-            ) {
-                itemsIndexed(filterSets, key = { _, it -> it.id.rawValue }) { index, filterSet ->
-                    FilterSetRow(
-                        filterSet = filterSet,
-                        isEditing = isEditing,
-                        canMoveUp = index > 0,
-                        canMoveDown = index < filterSets.lastIndex,
-                        onOpen = { onOpen(filterSet.id) },
-                        onMoveUp = { actions.moveFilterSet(index, index - 1) },
-                        onMoveDown = { actions.moveFilterSet(index, index + 1) },
-                        onDelete = { pendingDeletion = filterSet },
-                    )
-                    HorizontalDivider()
                 }
+            }
+            creationColor?.let { color ->
+                NewFilterSetDialog(
+                    suggestedColor = color,
+                    onSave = { name, chosen ->
+                        creationColor = null
+                        createFilterSet(name, chosen)
+                    },
+                    onDismiss = { creationColor = null },
+                )
+            }
+            newFilterColor?.let { color ->
+                FilterItemEditorDialog(
+                    target = FilterItemEditorTarget.New(editorSession.initialUnit),
+                    filterSets = inventory.filterSets,
+                    initialFilterSetId = null,
+                    suggestCreationColor = suggestCreationColor,
+                    createFilterSet = createFilterSet,
+                    createFilterSetHolding = createFilterSetHolding,
+                    onSave = saveFilterItem,
+                    onSaved = { editorSession.didSaveNewItem(it) },
+                    onDismiss = { newFilterColor = null },
+                    proposedFilterSetColor = color,
+                )
+            }
+            if (showsStandardList) {
+                StandardNdListScreen(onDismiss = { showsStandardList = false })
             }
         }
     }
-
-    creationColor?.let { suggestion ->
-        NewFilterSetDialog(
-            suggestedColor = suggestion,
-            onSave = { name, color ->
-                actions.createFilterSet(name, color)
-                creationColor = null
-            },
-            onDismiss = { creationColor = null },
-        )
-    }
-
-    pendingDeletion?.let { filterSet ->
-        val cameras = actions.camerasAffectedByDeletingFilterSet(filterSet.id)
-        ConfirmDeleteDialog(
-            title = stringResource(R.string.filter_set_delete_title),
-            message = if (cameras.isEmpty()) {
-                stringResource(R.string.filter_set_delete_message)
-            } else {
-                stringResource(R.string.filter_set_delete_message_cameras, localizedCameraNames(cameras))
-            },
-            confirmLabel = stringResource(R.string.filter_delete_named, filterSet.name),
-            onConfirm = {
-                actions.deleteFilterSet(filterSet.id)
-                pendingDeletion = null
-            },
-            onDismiss = { pendingDeletion = null },
-        )
-    }
 }
 
+/**
+ * Standard as a Set-like row (FILTER-SET-007): a built-in ND source that
+ * is always available, never a user inventory Set. It has no edit or
+ * removal action; a lock marks it read-only and, in Shooting Filters, a
+ * check that cannot be removed marks it selected. Opening it shows its
+ * read-only ND list. (iOS: `StandardFilterSourceLabel`.)
+ */
 @Composable
-private fun FilterSetRow(
-    filterSet: FilterSet,
-    isEditing: Boolean,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onOpen: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val countText = filterCountText(filterSet.items.size)
-    val colorName = filterColorName(filterSet.color)
+internal fun StandardFilterSourceRow(showsSelectedCue: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val standard = stringResource(R.string.filter_source_standard)
+    val builtIn = stringResource(R.string.filter_standard_built_in)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .clickable(onClick = onOpen)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .semantics(mergeDescendants = true) {
+                if (showsSelectedCue) selected = true
+            }
+            .then(modifier),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        FilterSetColorSwatch(filterSet.color)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                // Color is never the only cue: the row reads out its
-                // color name beside the name and the filter count.
-                .clearAndSetSemantics {
-                    contentDescription = "${filterSet.name}, $colorName, $countText"
-                },
-        ) {
-            Text(filterSet.name, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                countText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (showsSelectedCue) {
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
             )
+            Spacer(Modifier.width(12.dp))
         }
-        if (isEditing) {
-            ReorderControls(canMoveUp, canMoveDown, onMoveUp, onMoveDown)
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.action_delete),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(standard, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            Text(builtIn, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Standard's ND values, read-only (FILTER-SET-007, ND-001): whole stops
+ * 1–30 with their OD and ND factor. Zero is no ND filter and is not
+ * listed. (iOS: `StandardNDListView`.)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun StandardNdListScreen(onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        CappedFontScale {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(stringResource(R.string.filter_source_standard)) },
+                            navigationIcon = {
+                                IconButton(onClick = onDismiss) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.action_close),
+                                    )
+                                }
+                            },
+                        )
+                    },
+                ) { padding ->
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .consumeWindowInsets(padding)
+                            .navigationBarsPadding()
+                            .testTag("standard-nd-list"),
+                    ) {
+                        items((1..ExposureScale.MAXIMUM_WHOLE_ND_STOPS).toList()) { stops ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                                    .padding(horizontal = 16.dp)
+                                    .semantics(mergeDescendants = true) {},
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(filterStopsText(stops.toDouble()), modifier = Modifier.weight(1f))
+                                Text(
+                                    listOf(NDNotationMode.OPTICAL_DENSITY, NDNotationMode.FILTER_FACTOR)
+                                        .joinToString(" · ") { NDNotationFormatter.display(stops.toDouble(), it).inline },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            HorizontalDivider()
+                        }
+                    }
+                }
             }
         }
     }
@@ -335,9 +447,11 @@ private fun FilterSetRow(
 @Composable
 private fun FilterSetDetailLevel(
     filterSet: FilterSet,
+    filterSets: List<FilterSet>,
     actions: FilterSetManagementActions,
     onBack: () -> Unit,
 ) {
+    var isDeletionPending by remember { mutableStateOf(false) }
     var nameDraft by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(filterSet.name) }
     var isEditing by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(false) }
     var editorTarget by remember { mutableStateOf<FilterItemEditorTarget?>(null) }
@@ -429,43 +543,84 @@ private fun FilterSetDetailLevel(
 
             Spacer(Modifier.height(24.dp))
             SectionLabel(stringResource(R.string.filter_set_section_filters))
-            if (filterSet.items.isEmpty()) {
+            // One physical-item list, ND first, then Color, Effect, CPL,
+            // GND, each kind by name, with no manual reorder (FILTER-SET-001,
+            // FILTER-ITEM-001).
+            val orderedItems = FilterSetItemOrder.ordered(filterSet.items)
+            if (orderedItems.isEmpty()) {
                 Text(
                     stringResource(R.string.filter_items_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            filterSet.items.forEachIndexed { index, item ->
+            orderedItems.forEach { item ->
                 FilterItemRow(
                     item = item,
                     isEditing = isEditing,
-                    canMoveUp = index > 0,
-                    canMoveDown = index < filterSet.items.lastIndex,
                     onOpen = { editorTarget = FilterItemEditorTarget.Existing(item) },
-                    onMoveUp = { actions.moveFilterItem(filterSet.id, index, index - 1) },
-                    onMoveDown = { actions.moveFilterItem(filterSet.id, index, index + 1) },
                     onDelete = { pendingDeletion = item },
                 )
                 HorizontalDivider()
             }
             Spacer(Modifier.height(8.dp))
+            // One Add Filter action; the type is chosen in the editor.
             TextButton(
                 onClick = { editorTarget = FilterItemEditorTarget.New(editorSession.initialUnit) },
+                modifier = Modifier.testTag("filter-set-add-filter"),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.nd_add_filter))
             }
             FooterText(stringResource(R.string.filter_items_footer))
+            // Global deletion belongs to the set's editor, never to its
+            // Shooting Filters row (FILTER-SET-006).
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            TextButton(
+                onClick = { isDeletionPending = true },
+                modifier = Modifier.testTag("filter-set-delete"),
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.filter_set_delete), color = MaterialTheme.colorScheme.error)
+            }
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    if (isDeletionPending) {
+        val cameras = actions.camerasAffectedByDeletingFilterSet(filterSet.id)
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.filter_set_delete_named_title, filterSet.name),
+            message = if (cameras.isEmpty()) {
+                stringResource(R.string.filter_set_delete_global_message, filterSet.name)
+            } else {
+                stringResource(
+                    R.string.filter_set_delete_global_message_cameras,
+                    filterSet.name,
+                    localizedCameraNames(cameras),
+                )
+            },
+            confirmLabel = stringResource(R.string.action_delete),
+            onConfirm = {
+                isDeletionPending = false
+                actions.deleteFilterSet(filterSet.id)
+            },
+            onDismiss = { isDeletionPending = false },
+        )
     }
 
     editorTarget?.let { target ->
         FilterItemEditorDialog(
             target = target,
-            onSave = { item -> actions.saveFilterItem(item, filterSet.id) },
+            filterSets = filterSets,
+            initialFilterSetId = filterSet.id,
+            suggestCreationColor = actions.suggestCreationColor,
+            createFilterSet = actions.createFilterSet,
+            createFilterSetHolding = actions.createFilterSetHolding,
+            onSave = actions.saveFilterItem,
             onSaved = { item ->
                 // Only a saved NEW item teaches the session its notation.
                 if (target is FilterItemEditorTarget.New) editorSession.didSaveNewItem(item)
@@ -497,11 +652,7 @@ private fun FilterSetDetailLevel(
 private fun FilterItemRow(
     item: FilterItem,
     isEditing: Boolean,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
     onOpen: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val detail = filterItemDetailText(item)
@@ -517,7 +668,12 @@ private fun FilterItemRow(
                 .weight(1f)
                 .clearAndSetSemantics { contentDescription = "${item.name}, $detail" },
         ) {
-            Text(item.name, style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // A Color filter shows its actual color beside its name
+                // (FILTER-COLOR-001); the name is spoken.
+                item.behavior.opticalColor?.let { FilterSetColorSwatch(it, size = 10.dp) }
+                Text(item.name, style = MaterialTheme.typography.bodyLarge)
+            }
             Text(
                 detail,
                 style = MaterialTheme.typography.bodySmall,
@@ -525,7 +681,6 @@ private fun FilterItemRow(
             )
         }
         if (isEditing) {
-            ReorderControls(canMoveUp, canMoveDown, onMoveUp, onMoveDown)
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
@@ -537,56 +692,12 @@ private fun FilterItemRow(
     }
 }
 
-/** The set is gone (deleted from another surface); Back returns to the list. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MissingFilterSetLevel(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.filter_sets_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_close),
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Text(
-            stringResource(R.string.filter_set_missing),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(padding).padding(16.dp),
-        )
-    }
-}
-
-@Composable
-private fun ReorderControls(canMoveUp: Boolean, canMoveDown: Boolean, onMoveUp: () -> Unit, onMoveDown: () -> Unit) {
-    IconButton(onClick = onMoveUp, enabled = canMoveUp) {
-        Icon(
-            Icons.Filled.KeyboardArrowUp,
-            contentDescription = stringResource(R.string.filter_action_move_up),
-        )
-    }
-    IconButton(onClick = onMoveDown, enabled = canMoveDown) {
-        Icon(
-            Icons.Filled.KeyboardArrowDown,
-            contentDescription = stringResource(R.string.filter_action_move_down),
-        )
-    }
-}
-
 /**
  * Creation dialog (FILTER-SET-003): a name plus the required color,
  * preselected with the suggestion taken when this dialog opened.
  */
 @Composable
-private fun NewFilterSetDialog(
+internal fun NewFilterSetDialog(
     suggestedColor: FilterSetColor,
     onSave: (String, FilterSetColor) -> Unit,
     onDismiss: () -> Unit,
@@ -640,9 +751,10 @@ private fun NewFilterSetDialog(
     )
 }
 
-/** Destructive confirmation naming the targeted Filter Set or filter. */
+/** Destructive confirmation naming what it changes. Cancel, the back
+ *  button, and a tap outside it all dismiss it unchanged. */
 @Composable
-private fun ConfirmDeleteDialog(
+internal fun ConfirmDeleteDialog(
     title: String,
     message: String,
     confirmLabel: String,
@@ -668,11 +780,13 @@ private fun ConfirmDeleteDialog(
     )
 }
 
-/** Twelve-token color grid; each swatch carries its color name. */
+/** Eleven-token color grid in hue order over two rows; each swatch
+ *  carries its color name. Shared by Filter Sets and Color filters
+ *  (FILTER-COLOR-001/004). */
 @Composable
-private fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetColor) -> Unit) {
+internal fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetColor) -> Unit, rowSpacing: Dp = 8.dp) {
     val tokens = FilterSetColor.entries
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(rowSpacing)) {
         tokens.chunked(COLOR_GRID_COLUMNS).forEach { rowTokens ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowTokens.forEach { token ->
@@ -716,10 +830,10 @@ private fun FilterSetColorGrid(selection: FilterSetColor, onSelect: (FilterSetCo
 
 /** Source-color dot with a hairline outline; the name travels with it. */
 @Composable
-private fun FilterSetColorSwatch(token: FilterSetColor) {
+internal fun FilterSetColorSwatch(token: FilterSetColor, size: Dp = 16.dp) {
     Box(
         modifier = Modifier
-            .size(16.dp)
+            .size(size)
             .clip(CircleShape)
             .background(filterSetColor(token))
             .border(
@@ -738,4 +852,5 @@ private fun filterCountText(count: Int): String =
         stringResource(R.string.filter_set_filter_count, count)
     }
 
+// Eleven palette colors read in hue order over two rows.
 private const val COLOR_GRID_COLUMNS = 6

@@ -24,6 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -67,7 +69,7 @@ class DataStoreFilterInventoryStoreTest {
             listOf(
                 FilterSet(
                     name = "Lee holder",
-                    color = FilterSetColor.indigo,
+                    color = FilterSetColor.blue,
                     items = listOf(
                         FilterItem(
                             "Big Stopper",
@@ -209,14 +211,64 @@ class DataStoreFilterInventoryStoreTest {
         assertNull(ds.readQuarantine())
     }
 
+    /** An unreadable payload is a saved inventory, not a fresh
+     *  installation: it reads as empty and the Samples are never seeded
+     *  over it (FILTER-SET-008). */
     @Test
-    fun corruptPayloadFailsSafeToNullAndIsQuarantined() {
+    fun corruptPayloadReadsAsASavedEmptyInventoryAndIsQuarantined() {
         val ds = newDataStore("inventory_corrupt.preferences_pb")
         ds.writeRaw("{not valid json")
         val store = DataStoreFilterInventoryStore(ds)
 
-        assertNull(store.loadSnapshot())
+        assertEquals(emptyList<Any>(), store.loadSnapshot()!!.filterSets)
         assertEquals("{not valid json", ds.readQuarantine())
+    }
+
+    /** A read that fails is not a fresh installation either. */
+    @Test
+    fun aFailedReadIsASavedEmptyInventoryNotAFreshInstallation() {
+        val store = DataStoreFilterInventoryStore(FailingReadDataStore())
+
+        assertEquals(emptyList<Any>(), store.loadSnapshot()!!.filterSets)
+    }
+
+    private class FailingReadDataStore : DataStore<Preferences> {
+        override val data: Flow<Preferences> = flow { throw IOException("simulated read failure") }
+        override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+            throw IOException("simulated write failure")
+    }
+
+    /** Fails the first read only; everything else reaches [inner]. */
+    private class FirstReadFailsDataStore(private val inner: DataStore<Preferences>) : DataStore<Preferences> {
+        private var failNext = true
+        override val data: Flow<Preferences> = flow {
+            if (failNext) {
+                failNext = false
+                throw IOException("simulated transient read failure")
+            }
+            emitAll(inner.data)
+        }
+        override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+            inner.updateData(transform)
+    }
+
+    /** A transient read failure leaves the stored inventory unread; the
+     *  first save keeps a copy of it before writing over it. */
+    @Test
+    fun aSaveAfterAFailedReadQuarantinesTheUnreadPayloadFirst() {
+        val ds = newDataStore("inventory_failed_read.preferences_pb")
+        val saved = FilterInventoryCodec.encode(sample)
+        ds.writeRaw(saved)
+        val store = DataStoreFilterInventoryStore(FirstReadFailsDataStore(ds))
+
+        assertEquals(emptyList<Any>(), store.loadSnapshot()!!.filterSets)
+        val edited = PersistentFilterInventorySnapshot.from(FilterInventory(listOf(FilterSet("New", FilterSetColor.red))))
+        store.saveSnapshot(edited)
+
+        assertEquals("The unread payload is kept.", saved, ds.readQuarantine())
+        assertEquals(edited, store.loadSnapshot())
+        store.saveSnapshot(sample)
+        assertEquals("Later saves leave the quarantine alone.", saved, ds.readQuarantine())
     }
 
     @Test

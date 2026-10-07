@@ -72,12 +72,39 @@ data class FilterSummaryEntry(
 
     companion object {
         /**
-         * Captures every wheel of [stack] against [inventory] as it
-         * stands right now. Empty wheels are omitted (nothing mounted);
-         * Record-only items are kept with a 0-stop contribution.
+         * Captures [stack] against [inventory] as it stands right now, in
+         * main-row order: every mounted auxiliary filter first, then every
+         * wheel. Empty wheels are omitted (nothing mounted); Record-only
+         * GNDs are kept with a 0-stop contribution. Color and Effect items
+         * record `fixed` as their mode — they contribute their registered
+         * loss — with the item kind telling them apart.
          */
-        fun summary(stack: FilterStack, inventory: FilterInventory): List<FilterSummaryEntry> =
-            stack.wheels.zip(stack.rows).mapNotNull { (wheel, row) ->
+        fun summary(stack: FilterStack, inventory: FilterInventory): List<FilterSummaryEntry> {
+            val auxiliary = stack.auxiliaryRows.map { row ->
+                val mode = when (val choice = row.mount.choice) {
+                    is AuxiliaryFilterChoice.CplLoss -> CalculationMode.cplLoss
+                    is AuxiliaryFilterChoice.Gnd -> when (choice.mode) {
+                        GndCalculationMode.recordOnly -> CalculationMode.gndRecordOnly
+                        GndCalculationMode.applyFullValue -> CalculationMode.gndApplyFullValue
+                    }
+                    is AuxiliaryFilterChoice.RegisteredLoss -> CalculationMode.fixed
+                }
+                val registered = row.item.behavior.registeredValue
+                FilterSummaryEntry(
+                    sourceKind = SourceKind.filterSet,
+                    filterSetId = row.mount.filterSetId.rawValue,
+                    filterSetName = row.filterSetName,
+                    itemId = row.mount.itemId.rawValue,
+                    itemName = row.item.name,
+                    itemKind = row.item.behavior.kind,
+                    originalValue = registered?.value,
+                    originalUnit = registered?.unit,
+                    canonicalStops = row.registeredStops,
+                    calculationMode = mode,
+                    contributedStops = row.contributionStops,
+                )
+            }
+            val wheels = stack.wheels.zip(stack.rows).mapNotNull { (wheel, row) ->
                 when (val selection = wheel.selection) {
                     is FilterWheelSelection.Standard -> FilterSummaryEntry(
                         sourceKind = SourceKind.standard,
@@ -90,14 +117,6 @@ data class FilterSummaryEntry(
                     is FilterWheelSelection.Item -> {
                         val filterSet = wheel.source.filterSetId?.let { inventory.filterSet(it) }
                         val item = row.item
-                        val mode = when (val choice = selection.selection.choice) {
-                            is FilterRowChoice.Fixed -> CalculationMode.fixed
-                            is FilterRowChoice.CplLoss -> CalculationMode.cplLoss
-                            is FilterRowChoice.Gnd -> when (choice.mode) {
-                                GndCalculationMode.recordOnly -> CalculationMode.gndRecordOnly
-                                GndCalculationMode.applyFullValue -> CalculationMode.gndApplyFullValue
-                            }
-                        }
                         val registered = item?.behavior?.registeredValue
                         FilterSummaryEntry(
                             sourceKind = SourceKind.filterSet,
@@ -109,12 +128,14 @@ data class FilterSummaryEntry(
                             originalValue = registered?.value,
                             originalUnit = registered?.unit,
                             canonicalStops = row.registeredStops,
-                            calculationMode = mode,
+                            calculationMode = CalculationMode.fixed,
                             contributedStops = row.contributionStops,
                         )
                     }
                 }
             }
+            return auxiliary + wheels
+        }
     }
 }
 

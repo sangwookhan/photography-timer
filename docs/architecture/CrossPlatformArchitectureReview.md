@@ -381,6 +381,75 @@ takes an injected `ndCleanupScope`, wired to `viewModelScope` in
 change and is neither duplicated nor silently dropped across
 recreation, slot switch, reset, or restoration.
 
+The filter inventory (PTIMER-221) follows the same rule.
+`ShootingAppViewModel` builds one `FilterInventoryModel` from the
+bootstrap's single store read (`initialIsStoreRead`) and keeps it
+private. The composition reads only its `StateFlow<FilterInventory>`
+(`filterInventory`). `CalculatorController` receives the model and is
+its only writer. Every Filter Set and item command goes through the
+controller, which saves the inventory and then reconciles every camera
+through `FilterStack.reassigningRoles`. Each camera is judged against
+its own selected Filter Sets, before the move:
+
+- An ND item moved into a selected Set stays on the same wheel under
+  that Set.
+- An ND item moved into an Available Set leaves its wheel Empty under
+  the original source. The wheel keeps its position and its wheel ID
+  until ordinary empty-wheel cleanup.
+- A moved auxiliary filter stays mounted only under a selected Set.
+
+No move adds, removes, or reorders a camera's selected Filter Sets.
+The same call runs for the active camera, the inactive camera
+snapshots, the save check, and the slot-session restore. The restore
+uses the stored selected Filter Sets and runs before any referenced
+legacy Set is added.
+
+Committed state and the Shooting Filters draft have separate owners
+and lifetimes:
+
+| State | Owner | Lifetime |
+|---|---|---|
+| Committed camera state: selected Filter Sets in order, ND wheels, mounted auxiliary filters, remembered Plus source | `CalculatorController`, per camera slot | The process; persisted in the slot session |
+| Filter inventory | `FilterInventoryModel`, private to `ShootingAppViewModel`, written only by `CalculatorController` | The process; persisted in the inventory store |
+| Shooting Filters working draft | `ShootingFiltersSession`, composition state of `ShootingFiltersScreen` | While the screen is open; never persisted |
+
+The draft is not a competing source of truth. `ShootingFiltersScreen`
+holds it, copied from the camera's committed selection, and one
+`LaunchedEffect` keyed on the committed selection, the mounts, and the
+inventory calls `followed`. `followed` only aligns the draft with the
+committed state and the inventory: it rebases on a committed change and
+then reconciles, so the order and number of updates do not matter. It
+never commits. Only `applyShootingFilters` commits the draft. An
+inventory save has already reached every camera when `followed` runs,
+and neither Apply nor Cancel undoes it.
+
+```mermaid
+flowchart LR
+  subgraph UI["Composition"]
+    Editors["Filter Set and item editors"]
+    Screen["ShootingFiltersScreen"]
+    Draft["ShootingFiltersSession<br/>working draft"]
+  end
+  subgraph Owner["ShootingAppViewModel"]
+    Controller["CalculatorController<br/>only writer"]
+    Inventory["FilterInventoryModel<br/>(private)"]
+  end
+  subgraph Core[":core (pure)"]
+    Rules["FilterStack.reassigningRoles<br/>validated / normalized"]
+  end
+  Stores[("DataStore: inventory and slot session")]
+  Editors -- "inventory save: immediate" --> Controller
+  Controller --> Inventory
+  Controller -- "reconcile every camera" --> Rules
+  Inventory --> Stores
+  Controller --> Stores
+  Inventory -. "filterInventory StateFlow" .-> Screen
+  Controller -. "committed selection" .-> Screen
+  Screen -- "picks and Set changes" --> Draft
+  Screen -- "followed" --> Draft
+  Screen -- "Apply: applyShootingFilters" --> Controller
+```
+
 The detailed migration note (before/after ownership diagrams, the
 problem-to-change mapping, lifecycle sequence diagrams, the committed
 vs interaction-transient state table, and the verification matrix)
@@ -391,6 +460,14 @@ canonical record going forward.
 ---
 
 ## 5. Stage 3 — Test-execution architecture (G1)
+
+> Current structure (2026-10-06, PTIMER-221). The diagram and table in
+> this section are the 2026-07-18 audit. Since then,
+> `android/app/src/androidTest` has gained 13 instrumented Compose UI
+> test sources, and they compile with
+> `:app:compileDebugAndroidTestKotlin`. This document does not claim
+> that they ran: a run is reported only with its logs.
+> `connectedAndroidTest` is not part of the current Definition of Done.
 
 ```mermaid
 flowchart LR

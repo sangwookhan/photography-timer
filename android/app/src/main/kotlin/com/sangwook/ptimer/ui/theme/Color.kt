@@ -61,32 +61,33 @@ fun filterTypePalette(): FilterTypePalette =
 // source cue reads the same token iOS renders with system colors.
 private val FilterSetColorsLight = mapOf(
     FilterSetColor.red to Color(0xFFD32F2F),
+    // Red-orange and Yellow-orange sit visibly between their neighbors;
+    // Yellow is a bright photographic yellow, not a muted mustard.
+    FilterSetColor.redOrange to Color(0xFFF4511E),
     FilterSetColor.orange to Color(0xFFEF6C00),
-    FilterSetColor.yellow to Color(0xFFC79100),
+    FilterSetColor.yellowOrange to Color(0xFFFFA000),
+    FilterSetColor.yellow to Color(0xFFFFD600),
+    // The iOS yellow-green, distinct from both neighbors in light and dark.
+    FilterSetColor.yellowGreen to Color(0xFF99CC2E),
     FilterSetColor.green to Color(0xFF2E7D32),
-    FilterSetColor.mint to Color(0xFF00A78E),
     FilterSetColor.teal to Color(0xFF00796B),
-    FilterSetColor.cyan to Color(0xFF0097A7),
     FilterSetColor.blue to Color(0xFF1565C0),
-    FilterSetColor.indigo to Color(0xFF3949AB),
     FilterSetColor.purple to Color(0xFF7B1FA2),
     FilterSetColor.pink to Color(0xFFC2185B),
-    FilterSetColor.brown to Color(0xFF6D4C41),
 )
 
 private val FilterSetColorsDark = mapOf(
     FilterSetColor.red to Color(0xFFEF5350),
+    FilterSetColor.redOrange to Color(0xFFFF7043),
     FilterSetColor.orange to Color(0xFFFFA726),
-    FilterSetColor.yellow to Color(0xFFFFD54F),
+    FilterSetColor.yellowOrange to Color(0xFFFFB300),
+    FilterSetColor.yellow to Color(0xFFFFEB3B),
+    FilterSetColor.yellowGreen to Color(0xFF99CC2E),
     FilterSetColor.green to Color(0xFF66BB6A),
-    FilterSetColor.mint to Color(0xFF4DD0A5),
     FilterSetColor.teal to Color(0xFF4DB6AC),
-    FilterSetColor.cyan to Color(0xFF4DD0E1),
     FilterSetColor.blue to Color(0xFF64B5F6),
-    FilterSetColor.indigo to Color(0xFF7986CB),
     FilterSetColor.purple to Color(0xFFBA68C8),
     FilterSetColor.pink to Color(0xFFF06292),
-    FilterSetColor.brown to Color(0xFFA1887F),
 )
 
 /** Compose color for a Filter Set's user-selected source-color token. */

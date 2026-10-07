@@ -239,7 +239,7 @@ internal fun ShootingScreenHarness(state: CalculatorUiState) {
         onAddFilterWheel = {},
         onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
         onRemoveNdWheelOverscroll = {},
-        onManageFilterSets = {},
+        onOpenShootingFilters = {},
         onSelectNotation = {},
         onSelectFilm = {},
         onSelectProfile = {},
@@ -265,6 +265,7 @@ internal fun ShootingScreenHarness(state: CalculatorUiState) {
         onCreateFormulaFromTable = { _, _ -> true },
         onReferencePoints = { _, _ -> emptyList() },
         onOpenAbout = {},
+        onOpenFilterManagement = {},
         showExactAlarmSettingsAction = false,
         onOpenExactAlarmSettings = {},
     )

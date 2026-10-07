@@ -8,3 +8,12 @@ running timer.
 
 capped/: normal build (app-wide 1.3 cap active), system font scale
 0.85, 1.0, 1.3, 2.0 for Main, Timers, Details.
+
+uncapped/: throwaway local build with the app-wide cap constant raised
+to 100 (source change not committed or pushed), system font scale 1.0,
+1.3, 2.0 for Main, Timers, Details. main-no-timer_1.0.png is Main at
+1.0 with no timer present.
+
+input-screens-capped-2.0/: normal build, system font scale 2.0
+(effective 1.3 in app windows). Screens checked: film picker, Shooting
+filters, target shutter sheet, overflow menu, rename camera.

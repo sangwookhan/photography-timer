@@ -83,20 +83,19 @@ compact presence, not folded into the shooting screen itself.
 
 ### Android typography
 
-- **SHELL-022** — On Android at the standard system font scale, the Main
-  shooting screen shall use the available screen space to keep primary text
-  comfortably readable without unnecessary empty space or layout expansion.
-  Typography shall be visually balanced within the established screen
-  structure. The full-screen Timers workspace and Details screen shall follow
-  the same standard-size readability principle.
+- **SHELL-022** — On Android, labels on the Main shooting screen shall
+  remain legible at the standard system font scale and grow with increased
+  system font scale where the established layout has room. The auxiliary-filter
+  wheel/box region shall retain its existing size and arrangement as font
+  scale changes. Enlarging labels shall not displace or obscure required
+  shooting values and controls.
 
-- **SHELL-023** — On Android, the Main shooting screen, full-screen Timers
-  workspace, and Details screen shall remain readable at the minimum and
-  maximum system font scales. Required text, values, symbols, and controls
-  shall remain within the usable screen area and shall not become unreadable
-  through clipping or displacement. This requirement does not require the
-  established screen structure to expand merely to follow the system font
-  scale.
+- **SHELL-023** — On Android, compact Mini Timer, full-screen Timers, and
+  Reciprocity Details shall limit effective text enlargement where otherwise
+  required time values, labels, units, descriptions, or actions would be
+  truncated, obscured, or made difficult to use. Each surface shall preserve
+  readable required information and operable controls at the maximum system
+  font scale. Unaffected screens shall retain their established presentation.
 
 ### Touch targets
 

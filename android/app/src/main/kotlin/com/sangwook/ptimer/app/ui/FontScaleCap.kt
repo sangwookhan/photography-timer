@@ -25,8 +25,8 @@ internal const val MaxCappedFontScale = 1.3f
  * the Timers action row wraps.
  */
 internal const val MaxMiniTimerFontScale = 1f
-internal const val MaxTimersFontScale = 1.3f
-internal const val MaxDetailsFontScale = 1.3f
+internal const val MaxTimersFontScale = 1f
+internal const val MaxDetailsFontScale = 1f
 
 /**
  * Wraps [content] with a [LocalDensity] whose fontScale is clamped to

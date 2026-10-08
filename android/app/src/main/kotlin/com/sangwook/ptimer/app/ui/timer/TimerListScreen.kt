@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.annotation.StringRes
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
@@ -632,7 +633,7 @@ private fun TimerCard(
             if (card.identity.subtitle.isNotEmpty()) {
                 Text(
                     localizedTimerSubtitle(card.identity.subtitle),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -712,7 +713,7 @@ private fun TimerCard(
             }
             Text(
                 secondary,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             // Whether this timer captured at least one Filter Set row. It
@@ -760,7 +761,7 @@ private fun TimerCard(
                     // font scale (see the title/StatusBadge row above).
                     Text(
                         basisText,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -802,7 +803,7 @@ private fun TimerCard(
             if (filterReference != null) {
                 Text(
                     filterReference,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     // FILTER-PERSIST-003 asks the list to present the
                     // reference string, and a realistic one — two Filter Set

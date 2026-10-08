@@ -24,3 +24,5 @@ implementation/: build with region-specific limits (mini timer 1.0,
 Timers 1.5, Details 1.5, Main body 1.0), system font scale 1.0, 1.5,
 2.0. Close-ups are full-resolution crops at 2.0. implementation.patch
 is the local, unpushed implementation commit (format-patch).
+
+v0.8.0-reference/: app 0.8.0 (7f9e8c10) built from a worktree, same state, system font scale 1.0, 1.3, 2.0 (Main with mini timer, Timers).

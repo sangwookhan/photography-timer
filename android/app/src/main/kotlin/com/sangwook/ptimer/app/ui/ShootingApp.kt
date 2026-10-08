@@ -516,6 +516,7 @@ fun ShootingApp(
                     onOpenFilterManagement = { showFilterManagement = true },
                     showExactAlarmSettingsAction = exactAlarmWarningRelevant,
                     onOpenExactAlarmSettings = { showExactAlarmInfo = true },
+                    reserveNavigationBarInset = !hasTimers,
                 )
         }
             // Overlay, not part of the Column above: the calculator's

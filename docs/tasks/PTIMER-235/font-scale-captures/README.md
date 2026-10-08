@@ -19,3 +19,8 @@ input-screens-capped-2.0/: normal build, system font scale 2.0
 filters, target shutter sheet, overflow menu, rename camera.
 
 capped/ also holds Main, Timers, Details at 1.15 (normal build).
+
+implementation/: build with region-specific limits (mini timer 1.0,
+Timers 1.5, Details 1.5, Main body 1.0), system font scale 1.0, 1.5,
+2.0. Close-ups are full-resolution crops at 2.0. implementation.patch
+is the local, unpushed implementation commit (format-patch).

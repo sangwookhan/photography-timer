@@ -1,0 +1,199 @@
+From 5126b0ccdf5a542169bf9304c2f86111ec756605 Mon Sep 17 00:00:00 2001
+From: Sangwook Han <sangwook.han@gmail.com>
+Date: Thu, 8 Oct 2026 09:00:47 +0900
+Subject: [PATCH] Scope Android font-scale limits to individual regions
+
+The app-wide 1.3 cap no longer governs the compact timer, the
+full-screen Timers workspace and Details. Each region now applies
+its own limit: the mini timer 1.0, Timers 1.5, Details 1.5. The
+Main shooting body keeps its existing 1.0 pin. Other overlays (the
+shooting filters screens and the exact-alarm banner) are wrapped in
+the previous 1.3 cap so their behavior is unchanged.
+
+Investigation experiment on the Spec PR candidate boundaries; not
+yet tied to an approved spec revision.
+
+PTIMER-235 Android font scale
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ .../sangwook/ptimer/app/ui/FontScaleCap.kt    |  5 ++
+ .../com/sangwook/ptimer/app/ui/ShootingApp.kt | 86 +++++++++++--------
+ 2 files changed, 54 insertions(+), 37 deletions(-)
+
+diff --git a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/FontScaleCap.kt b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/FontScaleCap.kt
+index 9d681154..1554a73a 100644
+--- a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/FontScaleCap.kt
++++ b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/FontScaleCap.kt
+@@ -18,6 +18,11 @@ import androidx.compose.ui.unit.Density
+  */
+ internal const val MaxCappedFontScale = 1.3f
+ 
++/** Effective font-scale limits owned by the regions that no longer follow [MaxCappedFontScale]. */
++internal const val MaxMiniTimerFontScale = 1f
++internal const val MaxTimersFontScale = 1.5f
++internal const val MaxDetailsFontScale = 1.5f
++
+ /**
+  * Wraps [content] with a [LocalDensity] whose fontScale is clamped to
+  * [maxFontScale] (defaults to [MaxCappedFontScale]). Must be applied INSIDE
+diff --git a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/ShootingApp.kt b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/ShootingApp.kt
+index 3f8ac4ab..f4cbb543 100644
+--- a/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/ShootingApp.kt
++++ b/android/app/src/main/kotlin/com/sangwook/ptimer/app/ui/ShootingApp.kt
+@@ -370,7 +370,6 @@ fun ShootingApp(
+ 
+     // Timers live in a peeking bottom sheet so starting one adds it without
+     // leaving the shooting surface (the sheet appears once any timer exists).
+-    CappedFontScale {
+     Box(Modifier.fillMaxSize()) {
+     BottomSheetScaffold(
+         scaffoldState = scaffoldState,
+@@ -378,27 +377,31 @@ fun ShootingApp(
+         sheetDragHandle = null,
+         sheetContent = {
+             if (expanded) {
+-                FullTimerList(
+-                    state = timerState,
+-                    onEvent = viewModel::onEvent,
+-                    onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
+-                    focusId = focusTimerId,
+-                    ndNotationMode = ndNotationMode,
+-                    modifier = Modifier.fillMaxWidth(),
+-                    soundingAlarmId = soundingAlarmId,
+-                    onStopAlarm = { viewModel.stopAlarm() },
+-                )
++                CappedFontScale(MaxTimersFontScale) {
++                    FullTimerList(
++                        state = timerState,
++                        onEvent = viewModel::onEvent,
++                        onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
++                        focusId = focusTimerId,
++                        ndNotationMode = ndNotationMode,
++                        modifier = Modifier.fillMaxWidth(),
++                        soundingAlarmId = soundingAlarmId,
++                        onStopAlarm = { viewModel.stopAlarm() },
++                    )
++                }
+             } else {
+-                MiniTimerBar(
+-                    state = timerState,
+-                    onOpen = { id ->
+-                        focusTimerId = id
+-                        scope.launch { scaffoldState.bottomSheetState.expand() }
+-                    },
+-                    modifier = Modifier.fillMaxWidth(),
+-                    soundingAlarmId = soundingAlarmId,
+-                    onStopAlarm = { viewModel.stopAlarm() },
+-                )
++                CappedFontScale(MaxMiniTimerFontScale) {
++                    MiniTimerBar(
++                        state = timerState,
++                        onOpen = { id ->
++                            focusTimerId = id
++                            scope.launch { scaffoldState.bottomSheetState.expand() }
++                        },
++                        modifier = Modifier.fillMaxWidth(),
++                        soundingAlarmId = soundingAlarmId,
++                        onStopAlarm = { viewModel.stopAlarm() },
++                    )
++                }
+             }
+         },
+     ) { innerPadding ->
+@@ -525,12 +528,14 @@ fun ShootingApp(
+                         .padding(innerPadding)
+                         .windowInsetsPadding(WindowInsets.statusBars),
+                 ) {
+-                    ExactAlarmWarningBanner(
+-                        onOpenSettings = exactAlarmAvailability::openSettings,
+-                        onDismiss = {
+-                            scope.launch { displaySettingsStore.setExactAlarmWarningDismissed(true) }
+-                        },
+-                    )
++                    CappedFontScale {
++                        ExactAlarmWarningBanner(
++                            onOpenSettings = exactAlarmAvailability::openSettings,
++                            onDismiss = {
++                                scope.launch { displaySettingsStore.setExactAlarmWarningDismissed(true) }
++                            },
++                        )
++                    }
+                 }
+             }
+             // Modal scrim while the timer list is expanded: dims and blocks the
+@@ -554,19 +559,22 @@ fun ShootingApp(
+         // Reciprocity details is a focused full-screen overlay above the timer
+         // bottom sheet, so the timer peek isn't reachable from within it.
+         details?.let { activeDetails ->
+-            Surface(modifier = Modifier.fillMaxSize()) {
+-                ReciprocityDetailsScreen(
+-                    state = activeDetails,
+-                    onBack = { details = null },
+-                    onSelectModel = { id ->
+-                        controller.selectProfile(id)
+-                        details = controller.detailsState()
+-                    },
+-                )
++            CappedFontScale(MaxDetailsFontScale) {
++                Surface(modifier = Modifier.fillMaxSize()) {
++                    ReciprocityDetailsScreen(
++                        state = activeDetails,
++                        onBack = { details = null },
++                        onSelectModel = { id ->
++                            controller.selectProfile(id)
++                            details = controller.detailsState()
++                        },
++                    )
++                }
+             }
+         }
+ 
+         if (showShootingFilters) {
++          CappedFontScale {
+             ShootingFiltersScreen(
+                 inventory = filterInventory,
+                 committed = calcState.mountedAuxiliaryFilters,
+@@ -591,9 +599,11 @@ fun ShootingApp(
+                 },
+                 onDismiss = { showShootingFilters = false },
+             )
++          }
+         }
+ 
+         if (showFilterManagement) {
++          CappedFontScale {
+             FilterManagementScreen(
+                 inventory = filterInventory,
+                 suggestCreationColor = controller::suggestFilterSetCreationColor,
+@@ -604,9 +614,11 @@ fun ShootingApp(
+                 onOpenFilterSet = { editedFilterSetId = it },
+                 onDismiss = { showFilterManagement = false },
+             )
++          }
+         }
+ 
+         editedFilterSetId?.let { filterSetId ->
++          CappedFontScale {
+             FilterSetManagementScreen(
+                 inventory = filterInventory,
+                 filterSetId = filterSetId,
+@@ -626,6 +638,7 @@ fun ShootingApp(
+                 },
+                 onDismiss = { editedFilterSetId = null },
+             )
++          }
+         }
+ 
+         if (showAbout) {
+@@ -646,7 +659,6 @@ fun ShootingApp(
+             )
+         }
+     }
+-    }
+ }
+ 
+ /**
+-- 
+2.54.0 (Apple Git-157)
+

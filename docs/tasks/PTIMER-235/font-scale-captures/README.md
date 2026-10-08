@@ -26,3 +26,5 @@ Timers 1.5, Details 1.5, Main body 1.0), system font scale 1.0, 1.5,
 is the local, unpushed implementation commit (format-patch).
 
 v0.8.0-reference/: app 0.8.0 (7f9e8c10) built from a worktree, same state, system font scale 1.0, 1.3, 2.0 (Main with mini timer, Timers).
+
+code-pr/: final build of the Code PR branch (Main labels, mini timer 1.0, Timers 1.3, Details 1.7); scan files show the failures that set the limits.

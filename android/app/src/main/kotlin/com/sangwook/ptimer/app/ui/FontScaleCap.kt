@@ -19,6 +19,16 @@ import androidx.compose.ui.unit.Density
 internal const val MaxCappedFontScale = 1.3f
 
 /**
+ * Regions whose layout must not change with the system font scale hold their
+ * text at 1x (SHELL-023). Measured on device: any enlargement moves the
+ * Timers sheet and Details components (26 px and 9 px at 1.05), and from 1.3
+ * the Timers action row wraps.
+ */
+internal const val MaxMiniTimerFontScale = 1f
+internal const val MaxTimersFontScale = 1.3f
+internal const val MaxDetailsFontScale = 1.3f
+
+/**
  * Wraps [content] with a [LocalDensity] whose fontScale is clamped to
  * [maxFontScale] (defaults to [MaxCappedFontScale]). Must be applied INSIDE
  * each `Dialog`/`AlertDialog`/`ModalBottomSheet` composable's own content, not

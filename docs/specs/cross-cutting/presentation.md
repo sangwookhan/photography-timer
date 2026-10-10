@@ -81,6 +81,22 @@ compact presence, not folded into the shooting screen itself.
   open before a configuration/Activity recreation (not a full app restart)
   reopens automatically afterward, rather than silently closing.
 
+### Android typography
+
+- **SHELL-022** — On Android, labels on the Main shooting screen shall
+  remain legible at the standard system font scale and grow with increased
+  system font scale where the established layout has room. The auxiliary-filter
+  wheel/box region shall retain its existing size and arrangement as font
+  scale changes. Enlarging labels shall not displace or obscure required
+  shooting values and controls.
+
+- **SHELL-023** — On Android, compact Mini Timer, full-screen Timers, and
+  Reciprocity Details shall limit effective text enlargement where otherwise
+  required time values, labels, units, descriptions, or actions would be
+  truncated, obscured, or made difficult to use. Each surface shall preserve
+  readable required information and operable controls at the maximum system
+  font scale. Unaffected screens shall retain their established presentation.
+
 ### Touch targets
 
 - **SHELL-030** — Primary shooting/timer action controls and ND notation

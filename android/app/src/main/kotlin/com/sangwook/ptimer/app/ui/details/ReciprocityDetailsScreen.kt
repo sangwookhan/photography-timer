@@ -5,6 +5,8 @@ package com.sangwook.ptimer.app.ui.details
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -89,13 +91,16 @@ fun ReciprocityDetailsScreen(
             // Current result: Adjusted | Corrected side by side, then Status.
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Row height = the taller column; each column puts its value at the
+                    // bottom, so the two values share one baseline even when one
+                    // label wraps and the other does not.
+                    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         ResultValue(stringResource(R.string.shooting_adjusted_shutter), state.adjustedShutterText, Modifier.weight(1f))
                         ResultValue(stringResource(R.string.shooting_corrected_exposure), localizedCoreText(state.correctedExposureText), Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.recip_status), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.recip_status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             localizedCoreText(state.statusText),
                             style = MaterialTheme.typography.titleSmall,
@@ -109,7 +114,7 @@ fun ReciprocityDetailsScreen(
                         Spacer(Modifier.height(6.dp))
                         Text(
                             localizedCoreText(detail),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = if (state.statusTone == ReciprocityStatusTone.warning) {
                                 StatusWarning
                             } else {
@@ -137,7 +142,7 @@ fun ReciprocityDetailsScreen(
                             FilterChip(
                                 selected = option.id == state.selectedModelId,
                                 onClick = { onSelectModel(option.id) },
-                                label = { Text(option.label) },
+                                label = { com.sangwook.ptimer.app.ui.shooting.ModelChipLabel(option.label) },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -157,13 +162,13 @@ fun ReciprocityDetailsScreen(
                     Text(stringResource(R.string.recip_details), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     state.notesText?.let { notes ->
                         Column {
-                            Text(stringResource(R.string.recip_notes), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.recip_notes), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(notes, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     state.referenceUrlText?.let { url ->
                         Column {
-                            Text(stringResource(R.string.recip_reference_url), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.recip_reference_url), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(url, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -214,7 +219,7 @@ fun ReciprocityDetailsScreen(
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.recip_legend), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     state.legendLines.forEach { line ->
-                        Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -235,7 +240,7 @@ fun ReciprocityDetailsScreen(
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                     }
                     state.sourcePageUrl?.let { url ->
-                        Text(stringResource(R.string.recip_source_page), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.recip_source_page), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             url,
                             style = MaterialTheme.typography.bodyMedium,
@@ -244,7 +249,7 @@ fun ReciprocityDetailsScreen(
                         )
                     }
                     state.downloadUrl?.let { url ->
-                        Text(stringResource(R.string.recip_download_link), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.recip_download_link), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             url,
                             style = MaterialTheme.typography.bodyMedium,
@@ -253,7 +258,7 @@ fun ReciprocityDetailsScreen(
                         )
                     }
                     state.sourceNote?.let {
-                        Text(localizedCoreText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(localizedCoreText(it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -265,8 +270,8 @@ fun ReciprocityDetailsScreen(
 
 @Composable
 private fun ResultValue(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace, maxLines = 1)
     }
 }
@@ -286,7 +291,7 @@ private fun ReferenceRowView(row: ReciprocityReferenceRow, warningTone: Boolean)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 row.meteredText,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.width(88.dp),
@@ -298,7 +303,7 @@ private fun ReferenceRowView(row: ReciprocityReferenceRow, warningTone: Boolean)
         row.belowNote?.let { note ->
             Text(
                 note,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 100.dp),
             )

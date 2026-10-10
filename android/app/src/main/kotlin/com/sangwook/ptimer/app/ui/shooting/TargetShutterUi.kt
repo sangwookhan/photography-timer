@@ -84,7 +84,7 @@ internal fun TargetShutterRow(
         ) {
             Text(
                 stringResource(R.string.target_shutter_label),
-                style = MaterialTheme.typography.titleSmall,
+                style = mainLabelStyle(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f, fill = false),
                 maxLines = 1,

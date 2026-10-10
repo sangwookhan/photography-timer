@@ -370,7 +370,6 @@ fun ShootingApp(
 
     // Timers live in a peeking bottom sheet so starting one adds it without
     // leaving the shooting surface (the sheet appears once any timer exists).
-    CappedFontScale {
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
@@ -378,27 +377,31 @@ fun ShootingApp(
         sheetDragHandle = null,
         sheetContent = {
             if (expanded) {
-                FullTimerList(
-                    state = timerState,
-                    onEvent = viewModel::onEvent,
-                    onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
-                    focusId = focusTimerId,
-                    ndNotationMode = ndNotationMode,
-                    modifier = Modifier.fillMaxWidth(),
-                    soundingAlarmId = soundingAlarmId,
-                    onStopAlarm = { viewModel.stopAlarm() },
-                )
+                CappedFontScale(MaxTimersFontScale) {
+                    FullTimerList(
+                        state = timerState,
+                        onEvent = viewModel::onEvent,
+                        onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
+                        focusId = focusTimerId,
+                        ndNotationMode = ndNotationMode,
+                        modifier = Modifier.fillMaxWidth(),
+                        soundingAlarmId = soundingAlarmId,
+                        onStopAlarm = { viewModel.stopAlarm() },
+                    )
+                }
             } else {
-                MiniTimerBar(
-                    state = timerState,
-                    onOpen = { id ->
-                        focusTimerId = id
-                        scope.launch { scaffoldState.bottomSheetState.expand() }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    soundingAlarmId = soundingAlarmId,
-                    onStopAlarm = { viewModel.stopAlarm() },
-                )
+                CappedFontScale(MaxMiniTimerFontScale) {
+                    MiniTimerBar(
+                        state = timerState,
+                        onOpen = { id ->
+                            focusTimerId = id
+                            scope.launch { scaffoldState.bottomSheetState.expand() }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        soundingAlarmId = soundingAlarmId,
+                        onStopAlarm = { viewModel.stopAlarm() },
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -513,6 +516,7 @@ fun ShootingApp(
                     onOpenFilterManagement = { showFilterManagement = true },
                     showExactAlarmSettingsAction = exactAlarmWarningRelevant,
                     onOpenExactAlarmSettings = { showExactAlarmInfo = true },
+                    reserveNavigationBarInset = !hasTimers,
                 )
         }
             // Overlay, not part of the Column above: the calculator's
@@ -525,12 +529,14 @@ fun ShootingApp(
                         .padding(innerPadding)
                         .windowInsetsPadding(WindowInsets.statusBars),
                 ) {
-                    ExactAlarmWarningBanner(
-                        onOpenSettings = exactAlarmAvailability::openSettings,
-                        onDismiss = {
-                            scope.launch { displaySettingsStore.setExactAlarmWarningDismissed(true) }
-                        },
-                    )
+                    CappedFontScale {
+                        ExactAlarmWarningBanner(
+                            onOpenSettings = exactAlarmAvailability::openSettings,
+                            onDismiss = {
+                                scope.launch { displaySettingsStore.setExactAlarmWarningDismissed(true) }
+                            },
+                        )
+                    }
                 }
             }
             // Modal scrim while the timer list is expanded: dims and blocks the
@@ -554,19 +560,22 @@ fun ShootingApp(
         // Reciprocity details is a focused full-screen overlay above the timer
         // bottom sheet, so the timer peek isn't reachable from within it.
         details?.let { activeDetails ->
-            Surface(modifier = Modifier.fillMaxSize()) {
-                ReciprocityDetailsScreen(
-                    state = activeDetails,
-                    onBack = { details = null },
-                    onSelectModel = { id ->
-                        controller.selectProfile(id)
-                        details = controller.detailsState()
-                    },
-                )
+            CappedFontScale(MaxDetailsFontScale) {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    ReciprocityDetailsScreen(
+                        state = activeDetails,
+                        onBack = { details = null },
+                        onSelectModel = { id ->
+                            controller.selectProfile(id)
+                            details = controller.detailsState()
+                        },
+                    )
+                }
             }
         }
 
         if (showShootingFilters) {
+          CappedFontScale {
             ShootingFiltersScreen(
                 inventory = filterInventory,
                 committed = calcState.mountedAuxiliaryFilters,
@@ -591,9 +600,11 @@ fun ShootingApp(
                 },
                 onDismiss = { showShootingFilters = false },
             )
+          }
         }
 
         if (showFilterManagement) {
+          CappedFontScale {
             FilterManagementScreen(
                 inventory = filterInventory,
                 suggestCreationColor = controller::suggestFilterSetCreationColor,
@@ -604,9 +615,11 @@ fun ShootingApp(
                 onOpenFilterSet = { editedFilterSetId = it },
                 onDismiss = { showFilterManagement = false },
             )
+          }
         }
 
         editedFilterSetId?.let { filterSetId ->
+          CappedFontScale {
             FilterSetManagementScreen(
                 inventory = filterInventory,
                 filterSetId = filterSetId,
@@ -626,6 +639,7 @@ fun ShootingApp(
                 },
                 onDismiss = { editedFilterSetId = null },
             )
+          }
         }
 
         if (showAbout) {
@@ -645,7 +659,6 @@ fun ShootingApp(
                 onDismiss = { showExactAlarmInfo = false },
             )
         }
-    }
     }
 }
 

@@ -6,8 +6,11 @@ package com.sangwook.ptimer.app.ui.shooting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -51,6 +54,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -84,8 +89,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.ui.ScaledLabelFontScale
+import com.sangwook.ptimer.app.ui.mainLabelSizeSp
 import com.sangwook.ptimer.app.ui.localizedCoreText
 import com.sangwook.ptimer.app.ui.localizedFilmName
 import com.sangwook.ptimer.app.vm.CalculatorUiState
@@ -155,6 +163,10 @@ fun ShootingScreen(
     onOpenFilterManagement: () -> Unit,
     showExactAlarmSettingsAction: Boolean,
     onOpenExactAlarmSettings: () -> Unit,
+    // False while the timer peek is showing: the peek already sits over the
+    // navigation bar, so reserving its inset here left a dead band between
+    // the page dots and the peek and cost the result card that height.
+    reserveNavigationBarInset: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -195,7 +207,16 @@ fun ShootingScreen(
     // dialogs opened from here derive their own density and keep their
     // own caps.
     CappedFontScale(maxFontScale = 1f) {
-    Scaffold(modifier = modifier) { padding ->
+    Scaffold(
+        modifier = modifier,
+        contentWindowInsets = if (reserveNavigationBarInset) {
+            ScaffoldDefaults.contentWindowInsets
+        } else {
+            // The parent already insets the status bar and the peek covers the
+            // navigation bar, so nothing is left to reserve here.
+            WindowInsets(0, 0, 0, 0)
+        },
+    ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             HorizontalPager(
                 state = pagerState,
@@ -226,9 +247,15 @@ fun ShootingScreen(
                 // display-only.
                 val writesActiveSlot = page == activeIndex
                 val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
+                // Scrolls only when the page is taller than the room above
+                // the timer peek; otherwise nothing moves. Without it the
+                // Column squeezed the result card's rows into the space
+                // left and the Corrected Exposure row was pressed against
+                // the card's bottom edge or hidden.
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
                 ) {
                     // Header: camera name (tap to rename) + Reset.
@@ -327,6 +354,9 @@ fun ShootingScreen(
                         // the first chip's wrap-content width claims whatever it
                         // needs and squeezes a longer-labeled sibling into a
                         // narrow, character-wrapped column at large font scale.
+                        // Both labels are fitted to one line inside the chip's
+                        // own height, so the two chips are the same size and
+                        // neither grows to hold a wrapped label.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -335,7 +365,7 @@ fun ShootingScreen(
                                 FilterChip(
                                     selected = option.id == pageState.selectedProfileId,
                                     onClick = { onSelectProfile(option.id) },
-                                    label = { Text(option.label) },
+                                    label = { ModelChipLabel(option.label) },
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -461,7 +491,8 @@ fun ShootingScreen(
 
             // Page dots + "N of M" at the bottom; swipe to change camera.
             PagerDots(count = state.slots.size, current = pagerState.currentPage)
-            Spacer(Modifier.height(8.dp))
+            // The peek sits right below; the gap is only for the bare screen.
+            if (reserveNavigationBarInset) Spacer(Modifier.height(8.dp))
         }
     }
     }
@@ -560,6 +591,20 @@ private val CardRowPadding = 8.dp
 
 /** The ND card's left and right content padding. */
 private val NdCardHorizontalPadding = 2.dp
+
+/**
+ * One typography and one left origin for the five Main labels (Target Shutter,
+ * Base Shutter, Adjusted Shutter, Reciprocity, Corrected Exposure): the same
+ * size (see [mainLabelSizeSp]) and the same inset from the card edge, so they
+ * never differ from each other.
+ */
+internal val MainLabelInset = CardRowPadding
+
+@Composable
+internal fun mainLabelStyle(): androidx.compose.ui.text.TextStyle =
+    MaterialTheme.typography.titleSmall.copy(
+        fontSize = mainLabelSizeSp(LocalConfiguration.current.fontScale).sp,
+    )
 
 /**
  * The global Settings menu beside Reset: Filter management, the shared
@@ -825,7 +870,7 @@ private fun NdFilterHeaderRow(
     onSelectNotation: (NDNotationMode) -> Unit,
     onOpenShootingFilters: () -> Unit,
 ) {
-    val captionStyle = MaterialTheme.typography.labelMedium
+    val captionStyle = mainLabelStyle()
     val measurer = rememberTextMeasurer()
     val captionNatural = remember(baseShutterCaption, captionStyle) {
         measurer.measure(baseShutterCaption, captionStyle, maxLines = 1, softWrap = false).size.width
@@ -863,7 +908,7 @@ private fun NdFilterHeaderRow(
         layout(width, height) {
             val notationX = width - notationWidth
             val buttonX = notationX - NdHeaderButtonNotationGap.roundToPx() - button.width
-            caption.placeRelative(0, (height - caption.height) / 2)
+            caption.placeRelative(MainLabelInset.roundToPx() - NdCardHorizontalPadding.roundToPx(), (height - caption.height) / 2)
             button.placeRelative(buttonX, (height - button.height) / 2)
             notation.placeRelative(notationX, 0)
         }
@@ -1090,21 +1135,22 @@ private fun ResultCard(
             )
 
             if (state.hasFilm) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                HorizontalDivider()
                 // Reciprocity status + details entry (ⓘ) between the two values.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        stringResource(R.string.shooting_reciprocity),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f, fill = false),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    BoundedScaledLabel(Modifier.weight(1f, fill = false), slotHeight = MinTouchTargetSize, scale = false) {
+                        Text(
+                            stringResource(R.string.shooting_reciprocity),
+                            style = mainLabelStyle(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     // The value and its (i) are one details target
                     // (DETAILS-014), apart from the timer start buttons.
                     val detailsLabel = stringResource(R.string.shooting_reciprocity_details_cd)
@@ -1127,7 +1173,7 @@ private fun ResultCard(
                         )
                     }
                 }
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                HorizontalDivider()
                 ResultRow(
                     label = stringResource(R.string.shooting_corrected_exposure),
                     value = state.correctedText ?: stringResource(R.string.shooting_no_corrected_value),
@@ -1159,22 +1205,30 @@ private fun ResultRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.weight(1f))
+        // The label takes the whole remaining width (no spacer competing
+        // for it), so it only ellipsizes when the value truly needs the room.
+        BoundedScaledLabel(Modifier.weight(1f), slotHeight = MinTouchTargetSize, scale = false) {
+            Text(
+                label,
+                style = mainLabelStyle(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         // Value + the whole-seconds comparison sit side by side on one line so
         // the row height never changes whether or not the seconds are shown
         // (iOS dual-duration display).
         secondary?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontFamily = FontFamily.Monospace,
-            )
+            BoundedScaledLabel(slotHeight = MinTouchTargetSize, style = MaterialTheme.typography.labelSmall, scale = false) {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                )
+            }
         }
         Text(
             value,
@@ -1267,4 +1321,47 @@ internal fun PagerDots(count: Int, current: Int) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/**
+ * A Main label whose text follows the system font scale inside a slot of a
+ * fixed height. The slot is what its parent measures, so a larger label can
+ * neither resize the row nor move its siblings (SHELL-022), and the text,
+ * centred in the slot, stays inside it. [slotHeight] is the height the
+ * parent row already has (a touch-target row) or, when the row has no spare
+ * height, the label's own 1x line height.
+ */
+@Composable
+private fun BoundedScaledLabel(
+    modifier: Modifier = Modifier,
+    slotHeight: androidx.compose.ui.unit.Dp? = null,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelMedium,
+    scale: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    // Measured here, at the surface's pinned 1x density.
+    val height = slotHeight ?: with(LocalDensity.current) { style.lineHeight.toDp() }
+    Box(modifier.height(height), contentAlignment = Alignment.CenterStart) {
+        if (scale) ScaledLabelFontScale { content() } else content()
+    }
+}
+
+/**
+ * Label of a model-selection chip, fitted to one line by shrinking the text,
+ * never by growing the chip: the chip keeps its own height and a longer label
+ * simply gets a smaller size.
+ */
+@Composable
+internal fun ModelChipLabel(text: String) {
+    Text(
+        text,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+            minFontSize = 9.sp,
+            maxFontSize = MaterialTheme.typography.labelLarge.fontSize,
+            stepSize = 0.5.sp,
+        ),
+    )
 }

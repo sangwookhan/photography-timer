@@ -15,6 +15,7 @@
 		F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
+		B3C1FFC9B64BE426D19A513E /* SheetCloseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */; };
 		A00000000000000000000A84 /* PTimerAboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000A83 /* PTimerAboutView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
 		A00000000000000000000005 /* TimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* TimerManager.swift */; };
@@ -58,6 +59,7 @@
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
 		A00000000000000000000D03 /* TimerPersistenceQuarantineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */; };
+		B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */; };
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
@@ -131,6 +133,7 @@
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButton.swift; sourceTree = "<group>"; };
 		A00000000000000000000A83 /* PTimerAboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerAboutView.swift; sourceTree = "<group>"; };
 		A00000000000000000000013 /* ExposureCalculatorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorScreen.swift; sourceTree = "<group>"; };
 		A00000000000000000000015 /* TimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManager.swift; sourceTree = "<group>"; };
@@ -176,6 +179,7 @@
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerPersistenceQuarantineTests.swift; sourceTree = "<group>"; };
+		B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButtonTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
@@ -329,6 +333,7 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
+				B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
 				A00000000000000000000D02 /* CustomFilmLibraryQuarantineTests.swift */,
@@ -343,6 +348,7 @@
 				A00000000000000000000011 /* PTimerApp.swift */,
 				A00000000000000000000012 /* ContentView.swift */,
 				A00000000000000000000A83 /* PTimerAboutView.swift */,
+				B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */,
 				A000000000000000000000D0 /* Workspace */,
 			);
 			path = App;
@@ -649,6 +655,7 @@
 				EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */,
 				A00000000000000000000002 /* ContentView.swift in Sources */,
 				A00000000000000000000A84 /* PTimerAboutView.swift in Sources */,
+				B3C1FFC9B64BE426D19A513E /* SheetCloseButton.swift in Sources */,
 				A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */,
 				A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */,
 				A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */,
@@ -704,6 +711,7 @@
 				A0000000000000000000011C /* RecordReplayHarness.swift in Sources */,
 				A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */,
 				A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */,
+				B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
 				A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */,

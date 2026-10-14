@@ -534,3 +534,26 @@ struct EmptyCameraPagerView: View {
         }
     }
 }
+
+/// Shown in place of the pager while camera data could not be read
+/// (CAMERA-PERSIST-004): no camera surface, no camera actions, and the same
+/// explanation on both platforms. Timers stay available below.
+struct CameraDataUnavailableView: View {
+    var body: some View {
+        PagerMessageLayout {
+            VStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Text("Camera data couldn't be loaded. Restart the app.")
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("camera-data-unavailable-message")
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("camera-data-unavailable")
+    }
+}

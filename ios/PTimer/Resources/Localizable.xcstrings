@@ -2459,6 +2459,16 @@
         }
       }
     },
+    "Camera data couldn't be loaded. Restart the app." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 데이터를 불러오지 못했습니다. 앱을 다시 시작하세요."
+          }
+        }
+      }
+    },
     "Camera management" : {
       "localizations" : {
         "ko" : {

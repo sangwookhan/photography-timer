@@ -58,17 +58,22 @@ public struct UserDefaultsCameraSlotSessionStore: CameraSlotSessionPersistenceSt
         userDefaults.removeObject(forKey: snapshotKey)
     }
 
-    /// The managed camera list under its own key. A value that is
-    /// missing, cannot be decoded, or carries an unknown schema version
-    /// reads as absent, like the legacy snapshot above.
+    /// The managed camera list under its own key. A present value that
+    /// cannot be decoded, or carries an unknown schema version, is
+    /// reported as undecodable so the caller replaces it atomically
+    /// rather than falling back to the legacy snapshot. A
+    /// `UserDefaults` read cannot fail, so `.readFailed` never occurs.
     public func loadManagedList() -> ManagedCameraListLoadResult {
-        guard let data = userDefaults.data(forKey: managedKey),
+        guard let object = userDefaults.object(forKey: managedKey) else {
+            return .absent
+        }
+        guard let data = object as? Data,
               let snapshot = try? decoder.decode(
                 PersistentManagedCameraListSnapshot.self,
                 from: data
               ),
               snapshot.schemaVersion == PersistentManagedCameraListSnapshot.currentSchemaVersion else {
-            return .absent
+            return .undecodable
         }
         return .loaded(snapshot)
     }

@@ -12,11 +12,17 @@ import PTimerCore
 /// Sources, in precedence order (CAMERA-PERSIST-006):
 /// 1. A readable managed payload always wins; missing fields take their
 ///    documented defaults and the normalized list is persisted.
-/// 2. With no readable managed payload, the legacy camera-slot session
-///    snapshot (or, failing that, the legacy single-context snapshot,
-///    handled by the ViewModel) migrates into the managed list. The
-///    legacy stores are never modified or removed by migration, so a
-///    retry after an interruption repeats the same idempotent migration.
+/// 2. Content that was read but cannot be decoded is replaced by one
+///    atomic write of fresh camera state with new identities. No
+///    absent-payload interval exists, so legacy data is never used.
+/// 3. A storage read that supplies no content performs no delete or
+///    write: the session stays read-only and initialization retries on
+///    the next launch.
+/// 4. With no managed payload, the legacy camera-slot session snapshot
+///    (or, failing that, the legacy single-context snapshot, handled
+///    by the ViewModel) migrates into the managed list. The legacy
+///    stores are never modified or removed by migration, so a retry
+///    after an interruption repeats the same idempotent migration.
 public struct CameraSlotSessionPersistenceController {
     /// Holds the managed camera list and, read-only, the legacy
     /// camera-slot session snapshot that migrates into it.
@@ -35,8 +41,11 @@ public struct CameraSlotSessionPersistenceController {
     /// unresolved reference is skipped safely rather than fabricated.
     public let currentFilterInventory: () -> FilterInventory
 
-    /// The automatic-name sequence store (CAMERA-PERSIST-001).
+    /// The dedicated automatic-name sequence store (CAMERA-PERSIST-001).
     public let sequenceStore: CameraNameSequenceStoring
+
+    /// Shared by copies of this struct.
+    private let state = SessionState()
 
     public init(
         sessionStore: CameraSlotSessionPersistenceStoring,
@@ -50,6 +59,22 @@ public struct CameraSlotSessionPersistenceController {
         self.presetFilms = presetFilms
         self.currentCustomFilms = currentCustomFilms
         self.currentFilterInventory = currentFilterInventory
+    }
+
+    private final class SessionState {
+        /// Fresh install, legacy migration, or corrupt-content
+        /// replacement: the sequence is written (at least 5) before the
+        /// first managed-list payload is committed.
+        var needsSequenceInitialization = false
+        /// Set when the storage read failed: nothing is written this
+        /// session.
+        var isReadOnly = false
+    }
+
+    /// Whether camera state may be written this session. `false` after
+    /// a failed storage read (CAMERA-PERSIST-004).
+    public var isWritable: Bool {
+        !state.isReadOnly
     }
 
     /// The first automatic number after the four legacy cameras.
@@ -84,19 +109,49 @@ public struct CameraSlotSessionPersistenceController {
     }
 
     public enum ManagedRestore {
-        /// No readable managed payload: the caller may migrate legacy data.
+        /// No managed payload: the caller may migrate legacy data.
         case absent
         case restored(RestoredManagedList)
+        /// The storage read failed: no editable camera state exists
+        /// this session and nothing is written.
+        case readFailed
     }
 
-    /// Loads the managed payload (CAMERA-PERSIST-006).
+    /// Loads the managed payload (CAMERA-PERSIST-001/004/006).
     public func loadManagedList() -> ManagedRestore {
         switch sessionStore.loadManagedList() {
         case .absent:
+            // Fresh install or legacy migration: the sequence is
+            // initialized before the first managed payload is written.
+            state.needsSequenceInitialization = true
             return .absent
+        case .readFailed:
+            state.isReadOnly = true
+            return .readFailed
+        case .undecodable:
+            // One atomic write replaces the unreadable content, so no
+            // absent-payload interval lets stale legacy data migrate.
+            state.needsSequenceInitialization = true
+            let fresh = Self.replacementList()
+            persist(fresh)
+            return .restored(fresh)
         case let .loaded(snapshot):
             return .restored(normalizedList(from: snapshot))
         }
+    }
+
+    /// Four default cameras with newly generated identities, shown in
+    /// order, the first active (CAMERA-PERSIST-004).
+    private static func replacementList() -> RestoredManagedList {
+        let ids = (0..<4).map { _ in CameraSlotID.generate() }
+        return RestoredManagedList(
+            cameras: ids.enumerated().map { index, id in
+                CameraListEntry(id: id, name: CameraNaming.defaultName(number: index + 1))
+            },
+            activeSlotID: ids[0],
+            issuedIDs: Set(ids),
+            snapshotsBySlotID: Dictionary(uniqueKeysWithValues: ids.map { ($0, .initial) })
+        )
     }
 
     /// Applies the per-record defaults and duplicate-identity handling,
@@ -184,13 +239,15 @@ public struct CameraSlotSessionPersistenceController {
         )
     }
 
-    /// Reserves the next automatic number before the camera is committed
-    /// (CAMERA-003). A missing or unreadable sequence, or one below 5 or
-    /// at the integer limit, uses the normal allocation at 5
+    /// Reserves the next automatic number durably before the camera is
+    /// committed (CAMERA-003, PERSIST-CAMERA-SEQUENCE-002). A missing
+    /// or unreadable sequence uses the normal allocation at 5
     /// (CAMERA-PERSIST-007), so a display number may repeat after that
-    /// fallback while camera identities never do. A failed creation may
-    /// leave a gap. Returns `nil` when the reservation could not be written.
+    /// fallback while camera identities never do. A failed or
+    /// interrupted creation may leave a gap. Returns `nil` when the
+    /// session is read-only or the reservation could not be written.
     public func reserveNextCameraNumber() -> Int? {
+        guard isWritable else { return nil }
         let number = Self.usableSequenceValue(sequenceStore.load()) ?? Self.initialSequenceValue
         guard sequenceStore.save(nextNumber: number + 1) else {
             return nil
@@ -211,9 +268,25 @@ public struct CameraSlotSessionPersistenceController {
         return stored
     }
 
+    /// Writes the initial sequence value before the first managed payload
+    /// (fresh install, legacy migration, corrupt-content replacement).
+    /// Advance-only: a readable value of at least 5 is never lowered or
+    /// replaced. Returns whether the managed payload may now be written.
+    private func ensureSequenceInitialized() -> Bool {
+        guard state.needsSequenceInitialization else { return true }
+        if case let .value(stored) = sequenceStore.load(), stored >= Self.initialSequenceValue {
+            state.needsSequenceInitialization = false
+            return true
+        }
+        guard sequenceStore.save(nextNumber: Self.initialSequenceValue) else { return false }
+        state.needsSequenceInitialization = false
+        return true
+    }
+
     /// Persists the whole managed list in one write, so list entries,
     /// order, pager inclusion, active camera, and calculator states
-    /// land together (CAMERA-PERSIST-005).
+    /// land together (CAMERA-PERSIST-005). Skipped for the whole
+    /// session after a failed storage read.
     public func save(
         cameras: [CameraListEntry],
         activeSlotID: CameraSlotID?,
@@ -221,6 +294,10 @@ public struct CameraSlotSessionPersistenceController {
         activeSlotSnapshot: CameraSlotCalculatorSnapshot?,
         inactiveSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]
     ) {
+        guard isWritable else { return }
+        // Sequence before payload (CAMERA-PERSIST-001/002): without it the
+        // managed list is not committed, so a retry stays consistent.
+        guard ensureSequenceInitialized() else { return }
         var allSnapshots = inactiveSnapshots
         if let activeSlotID, let activeSlotSnapshot {
             allSnapshots[activeSlotID] = activeSlotSnapshot

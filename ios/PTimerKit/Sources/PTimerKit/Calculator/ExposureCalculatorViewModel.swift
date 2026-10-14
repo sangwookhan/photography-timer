@@ -122,6 +122,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// pager from the active camera the model resolved instead of the
     /// pager's own fallback page overwriting that decision.
     @Published public private(set) var cameraListRevision = 0
+    /// Whether camera-list edits may be applied and persisted. `false`
+    /// for the whole session after a failed storage read: camera state
+    /// is not made authoritative and nothing is written (CAMERA-PERSIST-004).
+    @Published public private(set) var isCameraListEditable = true
     /// Custom films, mirrored from `customFilmLibrary`.
     @Published public private(set) var customFilms: [FilmIdentity] = []
     /// The user's filter inventory, mirrored from `filterInventoryModel`
@@ -980,16 +984,18 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     // MARK: - Camera list management
 
-    /// Adds a camera named from the automatic-name sequence (`Camera 5`
-    /// first, then increasing); it joins the pager at the end and becomes
-    /// active. Returns `nil` when the number could not be reserved.
+    /// Adds a camera named from the durable automatic-name sequence
+    /// (`Camera 5` first, then increasing); it joins the pager at the
+    /// end and becomes active. Returns `nil` when the list is not
+    /// editable or the number could not be reserved.
     @discardableResult
     public func addCamera() -> CameraSlotID? {
-        guard let number = sessionPersistence?.reserveNextCameraNumber() else {
+        guard isCameraListEditable,
+              let number = sessionPersistence?.reserveNextCameraNumber() else {
             return nil
         }
-        // The number is reserved before the camera record is committed; a
-        // failure after this point leaves a gap, never a reuse.
+        // The number is reserved durably before the camera record is
+        // committed; a failure after this point leaves a gap, never a reuse.
         var added: CameraSlotID?
         applyCameraListEdit {
             added = $0.addCamera(named: CameraNaming.defaultName(number: number))
@@ -1002,7 +1008,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Already-started timers keep the name captured at start time.
     @discardableResult
     public func renameCamera(_ slotID: CameraSlotID, to name: String) -> Bool {
-        guard CameraNaming.trimmedName(name) != nil,
+        guard isCameraListEditable,
+              CameraNaming.trimmedName(name) != nil,
               cameraSlotSessionModel.entry(for: slotID) != nil else {
             return false
         }
@@ -1046,6 +1053,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// edit runs on the session model, the (possibly new) active
     /// camera's state is loaded, and everything persists in one write.
     private func applyCameraListEdit(_ edit: (CameraSlotSessionModel) -> Void) {
+        guard isCameraListEditable else { return }
         defer { cameraListRevision += 1 }
         let previousActive = cameraSlotSessionModel.activeSlotID
         if let previousActive {
@@ -2837,12 +2845,21 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     private func restorePersistedCalculatorContext() {
         // Precedence (CAMERA-PERSIST-006): a readable managed payload
-        // wins; legacy data migrates only when no readable managed
-        // payload exists.
+        // wins; an undecodable one is atomically replaced by the
+        // controller; legacy data migrates only when no managed payload
+        // exists. A failed storage read leaves no editable camera state.
         let managedRestore = sessionPersistence?.loadManagedList() ?? .absent
         switch managedRestore {
         case let .restored(managed):
             applyManagedList(managed)
+            return
+        case .readFailed:
+            isCameraListEditable = false
+            applyManagedList(
+                CameraSlotSessionPersistenceController.RestoredManagedList(
+                    cameras: [], activeSlotID: nil, issuedIDs: [], snapshotsBySlotID: [:]
+                )
+            )
             return
         case .absent:
             break

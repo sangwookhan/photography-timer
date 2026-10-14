@@ -656,7 +656,9 @@ private struct ExposureWorkspaceMainContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if viewModel.availableCameraSlots.isEmpty {
+            if !viewModel.isCameraListEditable {
+                CameraDataUnavailableView()
+            } else if viewModel.availableCameraSlots.isEmpty {
                 EmptyCameraPagerView(
                     onManageCameras: { onShowCameraManagement(.emptyState) },
                     onAddCamera: { viewModel.addCamera() }

@@ -399,9 +399,10 @@ preference keys in the DataStore stores.
 ### 1.7a Camera slot domain
 
 Directory: Kit `CameraSlots/` (the concrete
-`UserDefaultsCameraSlotSessionStore` and the pager/management views stay
-in the app's `ExposureCalculator/CameraSlot/`). The type names keep the
-historical "slot" wording; behavior follows the managed camera list contract
+`UserDefaultsCameraSlotSessionStore`, `UserDefaultsCameraNameSequenceStore`
+and the pager/management views stay in the app's
+`ExposureCalculator/CameraSlot/`). The type names keep the historical
+"slot" wording; behavior follows the managed camera list contract
 ([`shooting/camera-slots.md`](../specs/shooting/camera-slots.md)).
 
 - `CameraSlotIdentity` — `CameraSlotID` is a string identity. The four
@@ -438,14 +439,15 @@ historical "slot" wording; behavior follows the managed camera list contract
   the managed list: the issued id set, the active camera id (absent when
   none), and per camera the id, name, pager inclusion, and an embedded
   `PersistentCameraSlotCalculatorSnapshot`. A version or camera collection
-  that cannot be decoded makes the whole payload unreadable, which loads
-  as absent; cameras then decode one by one, so a value that is not a
-  keyed camera record is skipped and a record with missing fields takes
-  its defaults.
+  that cannot be decoded makes the whole payload undecodable; cameras then
+  decode one by one, so a value that is not a keyed camera record is
+  skipped and a record with missing fields takes its defaults. The load
+  result distinguishes absent, loaded, undecodable, and failed-read
+  payloads.
 - `PersistentCameraNameSequence` — the automatic-name sequence
-  (`CameraNameSequenceStoring`, `CameraNameSequenceLoadResult`, and the
-  in-memory `InMemoryCameraNameSequenceStore`): its own store, separate
-  from the managed list, holding the next automatic number. It is never
+  (`PersistentCameraNameSequenceSnapshot`, `CameraNameSequenceStoring`,
+  `CameraNameSequenceLoadResult`): its own versioned store, separate from
+  the managed list, holding the next automatic number. It is never
   reconstructed from cameras, names, order, count, ids, or timers.
 - `PersistentCameraSlotSession` — the on-disk schema
   (`PersistentCameraSlotSessionSnapshot` +
@@ -464,12 +466,15 @@ historical "slot" wording; behavior follows the managed camera list contract
 - `CameraSlotSessionPersistenceController` — bridges the runtime
   `CameraSlotSessionModel` and the on-disk formats. Restore order: a
   readable managed payload wins, with per-record defaults, duplicate-identity
-  handling, and the normalized list persisted; with no readable managed
-  payload, the legacy session (or, failing that, the legacy single
-  context) migrates into the list. It owns the reservation of the next
-  automatic number before a camera is created, where a missing or
-  unreadable sequence allocates from 5. The view-model facade stays a
-  thin wiring layer.
+  handling, and the normalized list persisted; an undecodable payload is
+  replaced by one write of four default cameras with new identities; a
+  failed storage read writes nothing, leaves the session read-only, and the
+  shooting workspace shows `CameraDataUnavailableView` instead of the pager; with
+  no managed payload, the legacy session (or, failing that, the legacy
+  single context) migrates into the list. It owns the sequence-before-payload
+  write order and the reservation of the next automatic number before a
+  camera is created, where a missing or unreadable sequence allocates from 5.
+  The view-model facade stays a thin wiring layer.
 
 Camera list state lives on `CameraSlotSessionModel` (see §1.4). The
 camera identity that gets stamped on a timer flows into
@@ -483,10 +488,11 @@ Managed-list persistence: the whole list, order, pager inclusion, active
 camera, and every camera's snapshot are saved in one write to
 `UserDefaultsCameraSlotSessionStore` under `ptimer.managed-camera-list.snapshot`;
 the former `ptimer.camera-slot-session.snapshot` key is only read for
-migration. The automatic-name sequence is held by
-`InMemoryCameraNameSequenceStore`, so it does not survive a relaunch. On
-first launch after upgrade the legacy stores are read by the ViewModel's
-restore path; once the managed list is persisted it is the source of truth.
+migration. The automatic-name sequence is saved by
+`UserDefaultsCameraNameSequenceStore` under
+`ptimer.camera-name-sequence.snapshot`. On first launch after upgrade the
+legacy stores are read by the ViewModel's restore path; once the managed
+list is persisted it is the source of truth.
 
 Exposure-calculated timer identity lives in Kit
 `Workspace/ExposureTimerIdentity.swift`:
@@ -541,7 +547,7 @@ selection. Only Apply commits it; Cancel and closing the screen drop it.
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |
 | Managed camera list (order, names, pager inclusion), active camera, issued ids, inactive camera snapshots | `CameraSlotSessionModel` |
-| Automatic `Camera N` sequence | `CameraNameSequenceStoring` (`InMemoryCameraNameSequenceStore`), reserved through `CameraSlotSessionPersistenceController` |
+| Automatic `Camera N` sequence | `CameraNameSequenceStoring` (`UserDefaultsCameraNameSequenceStore`), reserved through `CameraSlotSessionPersistenceController` |
 | Pager utility-page visibility (transient) | SwiftUI view state of `ExposureCalculatorScreen` |
 | Camera identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
 | Active camera's Target Shutter duration | `TargetShutterModel` |

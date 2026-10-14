@@ -147,8 +147,16 @@ private struct LossyElement<Value: Decodable>: Decodable {
 
 /// Outcome of loading the managed camera list.
 public enum ManagedCameraListLoadResult: Equatable {
-    /// No readable managed payload exists; legacy migration may run.
+    /// No managed payload exists; legacy migration may run.
     case absent
     /// A readable managed payload.
     case loaded(PersistentManagedCameraListSnapshot)
+    /// Content was read successfully but its version, camera collection,
+    /// or whole payload cannot be decoded. It is atomically replaced
+    /// with fresh camera state; legacy data is never used in its place.
+    case undecodable
+    /// The storage read itself failed and supplied no content. Nothing
+    /// is deleted or written, and initialization retries on the next
+    /// launch.
+    case readFailed
 }

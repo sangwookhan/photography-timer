@@ -112,7 +112,7 @@ public final class CameraSlotSessionModel: ObservableObject {
 
     /// Adds a camera named `name` at the end of the list, shown in the
     /// pager and active. The name comes from the automatic-name sequence,
-    /// which the caller has already advanced; the model never
+    /// which the caller has already advanced durably; the model never
     /// derives it from the current cameras. The caller has also stashed
     /// the outgoing camera's snapshot.
     @discardableResult

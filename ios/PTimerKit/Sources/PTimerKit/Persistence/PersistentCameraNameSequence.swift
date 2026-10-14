@@ -3,25 +3,43 @@
 
 import Foundation
 
+/// On-disk shape of the automatic camera-name sequence: the number the
+/// next automatic `Camera N` name will use. It lives in its own
+/// versioned store, independent of the managed camera list, and is
+/// never reconstructed from cameras, names, order, count, identities,
+/// or timer records (CAMERA-NAME-004, PERSIST-CAMERA-SEQUENCE-001).
+public struct PersistentCameraNameSequenceSnapshot: Codable, Equatable {
+    public let schemaVersion: Int
+    public let nextNumber: Int
+
+    public static let currentSchemaVersion: Int = 1
+
+    public init(
+        schemaVersion: Int = PersistentCameraNameSequenceSnapshot.currentSchemaVersion,
+        nextNumber: Int
+    ) {
+        self.schemaVersion = schemaVersion
+        self.nextNumber = nextNumber
+    }
+}
+
 /// Outcome of reading the sequence store.
 public enum CameraNameSequenceLoadResult: Equatable {
     /// No sequence has been stored.
     case absent
     /// The next automatic number.
     case value(Int)
-    /// A value exists but cannot be used. The allocator treats it like
-    /// a missing value (CAMERA-PERSIST-007).
+    /// A value exists but cannot be used (undecodable, unsupported
+    /// version, or out of range). It is treated like a missing value:
+    /// the next initialization or allocation writes over it
+    /// (CAMERA-PERSIST-007).
     case unusable
 }
 
-/// Storage for the automatic camera-name sequence: the number the next
-/// automatic `Camera N` name will use. It is independent of the managed
-/// camera list and is never reconstructed from cameras, names, order,
-/// count, identities, or timer records (CAMERA-NAME-004).
 public protocol CameraNameSequenceStoring {
     func load() -> CameraNameSequenceLoadResult
-    /// Stores the next automatic number. Returns whether the write
-    /// succeeded.
+    /// Durably stores the next automatic number. Returns whether the
+    /// write succeeded.
     @discardableResult
     func save(nextNumber: Int) -> Bool
 }

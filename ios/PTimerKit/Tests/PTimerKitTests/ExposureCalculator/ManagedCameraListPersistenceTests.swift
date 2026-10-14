@@ -217,6 +217,112 @@ final class ManagedCameraListPersistenceTests: XCTestCase {
         XCTAssertEqual(store.persistedManaged?.activeCameraIDRaw, "camera2")
     }
 
+    // MARK: - Undecodable content and failed reads (CAMERA-PERSIST-004)
+
+    func testUndecodableContentIsAtomicallyReplacedWithFreshCamerasAndNoLegacyFallback() throws {
+        let store = InMemoryCameraListSessionStore()
+        store.legacy = PersistentCameraSlotSessionSnapshot(
+            schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
+            activeSlotIDRaw: "camera1",
+            slots: [legacySlot("camera1", name: "Stale legacy", baseShutter: 4, ndStop: 9)]
+        )
+        store.managed = .undecodable
+        let sequence = InMemoryCameraNameSequenceStore(.value(9))
+        sequenceStores[ObjectIdentifier(store)] = sequence
+
+        let viewModel = makeViewModel(store)
+
+        XCTAssertEqual(viewModel.cameraList.map(\.name), ["Camera 1", "Camera 2", "Camera 3", "Camera 4"], "Stale legacy data is never used.")
+        XCTAssertTrue(viewModel.cameraList.allSatisfy(\.isDisplayed))
+        XCTAssertEqual(viewModel.activeCameraSlotID, viewModel.cameraList.first?.id, "The first camera is active.")
+        let legacyIDs: Set<CameraSlotID> = [.camera1, .camera2, .camera3, .camera4]
+        XCTAssertTrue(Set(viewModel.cameraList.map(\.id)).isDisjoint(with: legacyIDs), "Recovery issues new opaque identities.")
+        XCTAssertEqual(Set(viewModel.cameraList.map(\.id)).count, 4)
+        XCTAssertGreaterThanOrEqual(store.managedSaveCount, 1, "A write replaces the unreadable content.")
+        XCTAssertNotEqual(store.managed, .absent, "The payload is replaced, never left absent.")
+        let persisted = try XCTUnwrap(store.persistedManaged)
+        XCTAssertEqual(persisted.cameras.map(\.idRaw), viewModel.cameraList.map(\.id.rawValue))
+        XCTAssertEqual(sequence.result, .value(9), "A readable sequence is never lowered.")
+    }
+
+    func testReplacementUsesAtLeastFiveForTheSequence() {
+        for stored in [CameraNameSequenceLoadResult.absent, .unusable, .value(3)] {
+            let store = InMemoryCameraListSessionStore()
+            store.managed = .undecodable
+            let sequence = InMemoryCameraNameSequenceStore(stored)
+            sequenceStores[ObjectIdentifier(store)] = sequence
+
+            _ = makeViewModel(store)
+
+            XCTAssertEqual(sequence.result, .value(5), "Stored \(stored) becomes 5.")
+        }
+    }
+
+    func testReplacementKeepsAReadableSequenceOfTwelve() throws {
+        let store = InMemoryCameraListSessionStore()
+        store.managed = .undecodable
+        let sequence = InMemoryCameraNameSequenceStore(.value(12))
+        sequenceStores[ObjectIdentifier(store)] = sequence
+
+        let viewModel = makeViewModel(store)
+
+        XCTAssertEqual(sequence.result, .value(12), "A readable 12 is preserved, not reset to 5.")
+        let added = try XCTUnwrap(viewModel.addCamera())
+        XCTAssertEqual(viewModel.cameraSlotIdentity(for: added)?.displayName, "Camera 12")
+        XCTAssertEqual(sequence.result, .value(13))
+    }
+
+    func testTimersStayUsableWhileCameraDataCouldNotBeLoaded() {
+        let store = InMemoryCameraListSessionStore()
+        store.managed = .readFailed
+        let viewModel = makeViewModel(store)
+        XCTAssertFalse(viewModel.isCameraListEditable)
+
+        viewModel.startTimer(from: 30)
+
+        XCTAssertEqual(viewModel.timers.count, 1, "A timer that needs no camera still starts.")
+        XCTAssertEqual(store.managedSaveCount, 0)
+    }
+
+    func testAStorageReadFailurePerformsNoWriteAndLeavesNoEditableCameraState() {
+        let store = InMemoryCameraListSessionStore()
+        store.legacy = PersistentCameraSlotSessionSnapshot(
+            schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
+            activeSlotIDRaw: "camera1",
+            slots: [legacySlot("camera1", name: "Stale legacy", baseShutter: 4, ndStop: 9)]
+        )
+        store.managed = .readFailed
+        let sequence = InMemoryCameraNameSequenceStore(.value(7))
+        sequenceStores[ObjectIdentifier(store)] = sequence
+
+        let viewModel = makeViewModel(store)
+
+        XCTAssertTrue(viewModel.cameraList.isEmpty, "No legacy fallback and no seeding.")
+        XCTAssertFalse(viewModel.isCameraListEditable)
+        XCTAssertNil(viewModel.addCamera())
+        XCTAssertFalse(viewModel.renameCamera(.camera1, to: "Edit"))
+        viewModel.setCameraDisplayed(false, for: .camera1)
+        viewModel.deleteCameras([.camera1])
+        viewModel.baseShutter = 2.0
+        XCTAssertEqual(store.managedSaveCount, 0, "Nothing is written for the whole session.")
+        XCTAssertEqual(store.managed, .readFailed)
+        XCTAssertEqual(store.legacyWriteCount, 0)
+        XCTAssertEqual(sequence.saveCount, 0)
+        XCTAssertEqual(sequence.result, .value(7))
+    }
+
+    func testTheNextLaunchRetriesInitializationAfterAFailedRead() {
+        let store = InMemoryCameraListSessionStore()
+        store.managed = .readFailed
+        _ = makeViewModel(store)
+
+        store.managed = .absent
+        let retried = makeViewModel(store)
+
+        XCTAssertTrue(retried.isCameraListEditable)
+        XCTAssertEqual(retried.cameraList.map(\.id), [.camera1, .camera2, .camera3, .camera4])
+    }
+
     // MARK: - Per-record defaults (CAMERA-PERSIST-004)
 
     func testRecordsWithMissingFieldsTakeTheDocumentedDefaults() throws {
@@ -320,6 +426,13 @@ final class ManagedCameraListPersistenceTests: XCTestCase {
         XCTAssertEqual(store.persistedManaged?.cameras.count, 0)
     }
 
+    func testACollectionThatCannotBeDecodedIsUndecodableContent() {
+        let json = #"{"schemaVersion":1,"issuedIDRaws":[],"activeCameraIDRaw":null,"cameras":"nope"}"#
+        XCTAssertThrowsError(try JSONDecoder().decode(PersistentManagedCameraListSnapshot.self, from: Data(json.utf8)))
+        let noVersion = #"{"issuedIDRaws":[],"cameras":[]}"#
+        XCTAssertThrowsError(try JSONDecoder().decode(PersistentManagedCameraListSnapshot.self, from: Data(noVersion.utf8)))
+    }
+
     func testAnOrphanedCalculatorStateIsIgnoredAndACameraWithoutStateGetsDefaults() throws {
         let store = InMemoryCameraListSessionStore()
         let full = try managedPayload { $0.baseShutter = 4 }
@@ -367,6 +480,34 @@ final class ManagedCameraListPersistenceTests: XCTestCase {
         XCTAssertEqual(timer.cameraSlot?.id, .camera1)
         XCTAssertEqual(timer.cameraSlot?.displayName, "Hasselblad")
         XCTAssertFalse(restored.cameraList.contains { $0.id == .camera1 })
+    }
+
+    func testTimerSnapshotsSurviveReplacementOfUndecodableCameraContent() throws {
+        let store = InMemoryCameraListSessionStore()
+        let timerStore = InMemoryCameraListTimerStore()
+        let metadataStore = InMemoryCameraListMetadataStore()
+        func launch() -> ExposureCalculatorViewModel {
+            ExposureCalculatorViewModel(
+                calculator: ExposureCalculator(),
+                timerManager: RuntimeBackedTimerManaging(persistenceStore: timerStore),
+                cameraSlotSessionPersistenceStore: store,
+                metadataPersistenceStore: metadataStore
+            )
+        }
+        let viewModel = launch()
+        viewModel.renameCamera(.camera1, to: "Hasselblad")
+        viewModel.baseShutter = 1.0
+        viewModel.ndStop = 6
+        viewModel.startTimer()
+        let started = try XCTUnwrap(viewModel.timers.first)
+
+        store.managed = .undecodable
+        let restored = launch()
+
+        let timer = try XCTUnwrap(restored.timers.first { $0.id == started.id })
+        XCTAssertEqual(timer.cameraSlot?.id, .camera1, "The captured identity is unchanged.")
+        XCTAssertEqual(timer.cameraSlot?.displayName, "Hasselblad", "The captured name is unchanged.")
+        XCTAssertFalse(restored.cameraList.contains { $0.id == .camera1 }, "Recovery never reassigns a captured identity.")
     }
 
     // MARK: - Helpers

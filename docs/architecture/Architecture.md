@@ -427,6 +427,12 @@ historical "slot" wording; behavior follows the managed camera list contract
   the workspace TabView pages. The active camera reads live calculator
   state; inactive cameras read their preserved snapshot from the
   session model.
+- `CameraPagerNavigation` / `CameraPagerPage` / `CameraManagementOrigin` —
+  pure rules for the trailing utility page: the page type, where closing
+  camera management returns to by entry route, the page indicator that
+  counts the utility page while camera positions exclude it, and when the
+  accessibility Next camera action reveals it. `CameraAccessibilityFocusTarget`
+  carries the focus outcome after a list change.
 - `PersistentManagedCameraList` — on-disk schema
   (`PersistentManagedCameraListSnapshot` + `PersistentManagedCamera`) for
   the managed list: the issued id set, the active camera id (absent when
@@ -536,6 +542,7 @@ selection. Only Apply commits it; Cancel and closing the screen drop it.
 | Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |
 | Managed camera list (order, names, pager inclusion), active camera, issued ids, inactive camera snapshots | `CameraSlotSessionModel` |
 | Automatic `Camera N` sequence | `CameraNameSequenceStoring` (`InMemoryCameraNameSequenceStore`), reserved through `CameraSlotSessionPersistenceController` |
+| Pager utility-page visibility (transient) | SwiftUI view state of `ExposureCalculatorScreen` |
 | Camera identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
 | Active camera's Target Shutter duration | `TargetShutterModel` |
 | Per-camera persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |

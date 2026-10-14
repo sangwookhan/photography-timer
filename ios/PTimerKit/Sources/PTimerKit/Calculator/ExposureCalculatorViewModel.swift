@@ -1011,6 +1011,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         return applied
     }
 
+    /// Where assistive-technology focus belongs after a camera-list
+    /// change: the resulting active camera, or the empty-state message
+    /// when no camera is active (CAMERA-PAGER-006).
+    public var accessibilityFocusTarget: CameraAccessibilityFocusTarget {
+        activeCameraSlotID.map(CameraAccessibilityFocusTarget.camera) ?? .emptyState
+    }
+
     public func setCameraDisplayed(_ isDisplayed: Bool, for slotID: CameraSlotID) {
         applyCameraListEdit { $0.setDisplayed(isDisplayed, for: slotID) }
     }

@@ -37,6 +37,12 @@ struct ExposureCalculatorScreen: View {
     /// from the Settings menu and the empty-pager state, including
     /// while timers are running.
     @State private var isCameraManagementPresented = false
+    /// The pager's trailing utility page is showing (transient; relaunch
+    /// returns to the active camera, CAMERA-PAGER-007).
+    @State private var isUtilityPageShowing = false
+    /// Where camera management was opened from, to choose where closing
+    /// it returns to.
+    @State private var cameraManagementOrigin: CameraManagementOrigin = .settings
     /// Visibility of the custom-film editor sheet. Toggled by the
     /// header "+" button inside the film selector; the selector
     /// collapses first so the sheet presents over a stable
@@ -216,7 +222,9 @@ struct ExposureCalculatorScreen: View {
                     onShowFilterManagement: {
                         isFilterManagementPresented = true
                     },
-                    onShowCameraManagement: {
+                    isUtilityPageShowing: $isUtilityPageShowing,
+                    onShowCameraManagement: { origin in
+                        cameraManagementOrigin = origin
                         isCameraManagementPresented = true
                     }
                 )
@@ -224,11 +232,12 @@ struct ExposureCalculatorScreen: View {
 
                 // Page marker — anchored above the rail's reserved
                 // band. y-position is independent of timer presence.
-                if !viewModel.availableCameraSlots.isEmpty {
-                    CameraSlotPagerIndicator(
-                        count: viewModel.availableCameraSlots.count,
-                        activeIndex: viewModel.activeCameraSlotIndex
-                    )
+                if let indicator = CameraPagerNavigation.indicator(
+                    displayedCameraCount: viewModel.availableCameraSlots.count,
+                    activeCameraIndex: viewModel.activeCameraSlotIndex,
+                    isUtilityPageShowing: isUtilityPageShowing
+                ) {
+                    CameraSlotPagerIndicator(indicator: indicator)
                     .padding(
                         .bottom,
                         ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
@@ -412,7 +421,7 @@ struct ExposureCalculatorScreen: View {
                     }
                 )
             }
-            .sheet(isPresented: $isCameraManagementPresented) {
+            .sheet(isPresented: $isCameraManagementPresented, onDismiss: handleCameraManagementDismissed) {
                 CameraManagementView(viewModel: viewModel) {
                     isCameraManagementPresented = false
                 }
@@ -618,6 +627,15 @@ struct ExposureCalculatorScreen: View {
         style.topPadding + style.selectorOverlayTopPadding
     }
 
+    /// Closing camera management returns by entry route (CAMERA-PAGER-007).
+    private func handleCameraManagementDismissed() {
+        let target = CameraPagerNavigation.returnTarget(
+            from: cameraManagementOrigin,
+            displayedCameraCount: viewModel.availableCameraSlots.count
+        )
+        isUtilityPageShowing = target == .utilityPage
+    }
+
     private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
         ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: availableHeight)
     }
@@ -633,17 +651,18 @@ private struct ExposureWorkspaceMainContent: View {
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
-    let onShowCameraManagement: () -> Void
+    @Binding var isUtilityPageShowing: Bool
+    let onShowCameraManagement: (CameraManagementOrigin) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if viewModel.availableCameraSlots.isEmpty {
                 EmptyCameraPagerView(
-                    onManageCameras: onShowCameraManagement,
+                    onManageCameras: { onShowCameraManagement(.emptyState) },
                     onAddCamera: { viewModel.addCamera() }
                 )
             } else {
-            TabView(selection: slotSelectionBinding) {
+            TabView(selection: pageSelectionBinding) {
                 ForEach(viewModel.availableCameraSlots, id: \.self) { slotID in
                     CameraSlotCalculatorPage(
                         pageState: viewModel.cameraSlotPageState(for: slotID),
@@ -657,10 +676,21 @@ private struct ExposureWorkspaceMainContent: View {
                         onOpenShootingFilters: onOpenShootingFilters,
                         onShowAbout: onShowAbout,
                         onShowFilterManagement: onShowFilterManagement,
-                        onShowCameraManagement: onShowCameraManagement
+                        onShowCameraManagement: { onShowCameraManagement(.settings) }
                     )
-                    .tag(slotID)
+                    .tag(CameraPagerPage.camera(slotID))
                 }
+                CameraManagementUtilityPage(
+                    isShowing: isUtilityPageShowing,
+                    onManageCameras: { onShowCameraManagement(.utilityPage) },
+                    onAddCamera: {
+                        // Adding settles on the new, now-active camera.
+                        if viewModel.addCamera() != nil {
+                            isUtilityPageShowing = false
+                        }
+                    }
+                )
+                .tag(CameraPagerPage.utilityPage)
             }
             // Page style with an always-hidden index strip — the
             // screen-level `CameraSlotPagerIndicator` is the only
@@ -681,10 +711,22 @@ private struct ExposureWorkspaceMainContent: View {
         // non-interactive so the slot transition source is
         // single-rooted on the workspace itself.
         .accessibilityAction(named: Text("Next camera")) {
-            viewModel.selectNextCameraSlot()
+            if isUtilityPageShowing { return }
+            if CameraPagerNavigation.revealsUtilityPage(
+                activeCameraIndex: viewModel.activeCameraSlotIndex,
+                displayedCameraCount: viewModel.availableCameraSlots.count
+            ) {
+                isUtilityPageShowing = true
+            } else {
+                viewModel.selectNextCameraSlot()
+            }
         }
         .accessibilityAction(named: Text("Previous camera")) {
-            viewModel.selectPreviousCameraSlot()
+            if isUtilityPageShowing {
+                isUtilityPageShowing = false
+            } else {
+                viewModel.selectPreviousCameraSlot()
+            }
         }
         .padding(.horizontal, style.horizontalPadding)
         .padding(.top, style.topPadding)
@@ -700,17 +742,27 @@ private struct ExposureWorkspaceMainContent: View {
 
     /// Binding that bridges `TabView`'s selection to the ViewModel's
     /// single state-transition entry point. `selectCameraSlot(_:)`
-    /// remains the source of truth — TabView's gesture paging fires
-    /// the setter once after the snap completes.
-    private var slotSelectionBinding: Binding<CameraSlotID> {
+    /// remains the source of truth for cameras — TabView's gesture paging
+    /// fires the setter once after the snap completes. The utility page is
+    /// not a camera: settling on it changes no camera, calculator, or timer
+    /// state.
+    private var pageSelectionBinding: Binding<CameraPagerPage> {
         Binding(
             get: {
-                viewModel.activeCameraSlotID
-                    ?? viewModel.availableCameraSlots.first
-                    ?? .camera1
+                CameraPagerNavigation.page(
+                    activeCamera: viewModel.activeCameraSlotID,
+                    firstDisplayedCamera: viewModel.availableCameraSlots.first,
+                    isUtilityPageShowing: isUtilityPageShowing
+                )
             },
             set: { newSelection in
-                viewModel.selectCameraSlot(newSelection)
+                switch newSelection {
+                case .utilityPage:
+                    isUtilityPageShowing = true
+                case let .camera(slotID):
+                    isUtilityPageShowing = false
+                    viewModel.selectCameraSlot(slotID)
+                }
             }
         )
     }

@@ -2199,26 +2199,6 @@
         }
       }
     },
-    "Select" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "선택"
-          }
-        }
-      }
-    },
-    "Finish" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "선택 종료"
-          }
-        }
-      }
-    },
     "Hide" : {
       "localizations" : {
         "ko" : {
@@ -2475,6 +2455,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이전 카메라"
+          }
+        }
+      }
+    },
+    "Camera management" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 관리"
+          }
+        }
+      }
+    },
+    "Manage existing cameras or add a new one." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기존 카메라를 관리하거나 새 카메라를 추가하세요."
           }
         }
       }

@@ -300,6 +300,82 @@ final class CameraListViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.cameraListRevision, revision, "Paging between cameras is not a list edit.")
     }
 
+    // MARK: - Accessibility focus target (CAMERA-PAGER-006)
+
+    func testFocusTargetIsTheResultingActiveCameraAfterEveryActiveCameraChange() throws {
+        let viewModel = makeViewModel()
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera1))
+
+        viewModel.setCameraDisplayed(false, for: .camera1)
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera2), "Hide the active camera.")
+
+        viewModel.deleteCameras([.camera2])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera3), "Delete the active camera.")
+
+        viewModel.hideCameras([.camera3, .camera4])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .emptyState, "Bulk hide of the last displayed cameras.")
+
+        viewModel.setCameraDisplayed(true, for: .camera1)
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera1), "Show with none active.")
+
+        let added = try XCTUnwrap(viewModel.addCamera())
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(added), "Add.")
+
+        viewModel.deleteCameras([added, .camera1])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .emptyState, "Bulk delete leaves nothing displayed.")
+    }
+
+    func testFocusRequestWaitsForTheConfirmationAndEachEditGetsItsOwnRequest() {
+        let first = CameraFocusRequest(target: .camera(.camera3), message: "Active camera: Camera 3")
+        let second = CameraFocusRequest(target: .emptyState, message: "No cameras shown")
+        XCTAssertNotEqual(first.id, second.id, "A later edit restarts the wait.")
+        XCTAssertFalse(first.isReady(isConfirmationPresented: true), "Not while the confirmation is dismissing.")
+        XCTAssertTrue(first.isReady(isConfirmationPresented: false))
+    }
+
+    func testEditModeFocusLatchFiresOnceEvenIfTheTargetRowIsRecreated() {
+        var latch = CameraFocusLatch()
+        let id = UUID()
+        latch.arm(id: id, target: .camera(.camera2))
+        XCTAssertEqual(latch.requestID(for: .camera(.camera2)), id)
+        XCTAssertNil(latch.requestID(for: .camera(.camera3)), "Only the target row is offered the request.")
+
+        XCTAssertTrue(latch.consume(id), "The first cell claims the request.")
+        XCTAssertNil(latch.requestID(for: .camera(.camera2)), "A recreated or scrolled-in row sees no request.")
+        XCTAssertFalse(latch.consume(id), "A second cell with a fresh coordinator cannot fire it again.")
+    }
+
+    func testEditModeFocusLatchReplacementAndExpiry() {
+        var latch = CameraFocusLatch()
+        let first = UUID()
+        let second = UUID()
+        latch.arm(id: first, target: .camera(.camera1))
+        latch.arm(id: second, target: .emptyState)
+        XCTAssertFalse(latch.consume(first), "A superseded request cannot fire or clear the newer one.")
+        XCTAssertEqual(latch.requestID(for: .emptyState), second)
+        XCTAssertTrue(latch.consume(second), "Expiry of an unclaimed request uses the same consume.")
+        XCTAssertEqual(latch, CameraFocusLatch())
+    }
+
+    func testEditModeConfirmedDeletionTargetsTheResultingRowOrTheEmptyState() {
+        let viewModel = makeViewModel()
+        viewModel.deleteCameras([.camera1])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera2), "Delete the active camera.")
+        viewModel.deleteCameras([.camera4])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera2), "Delete a non-active camera.")
+        viewModel.deleteCameras([.camera2, .camera3])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .emptyState, "No camera remains.")
+    }
+
+    func testFocusTargetFollowsBulkHideAndDeleteOfTheActiveCameraToTheNextOne() {
+        let viewModel = makeViewModel()
+        viewModel.selectCameraSlot(.camera2)
+        viewModel.hideCameras([.camera2, .camera3])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .camera(.camera4))
+        viewModel.deleteCameras([.camera4, .camera1])
+        XCTAssertEqual(viewModel.accessibilityFocusTarget, .emptyState, "Only hidden cameras remain.")
+    }
+
     // MARK: - Rename result
 
     func testRenameReportsFailureForAnUnknownCameraAndChangesNothing() {

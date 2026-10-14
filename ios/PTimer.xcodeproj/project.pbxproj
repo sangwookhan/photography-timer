@@ -61,6 +61,7 @@
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
 		A00000000000000000000D03 /* TimerPersistenceQuarantineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */; };
 		B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */; };
+		B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */; };
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
@@ -182,6 +183,7 @@
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerPersistenceQuarantineTests.swift; sourceTree = "<group>"; };
 		B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButtonTests.swift; sourceTree = "<group>"; };
+		B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagementAccessibilityTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
@@ -335,6 +337,7 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
+				B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */,
 				B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
@@ -715,6 +718,7 @@
 				A0000000000000000000011C /* RecordReplayHarness.swift in Sources */,
 				A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */,
 				A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */,
+				B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */,
 				B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,

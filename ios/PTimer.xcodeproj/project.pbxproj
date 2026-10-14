@@ -43,6 +43,7 @@
 		A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014A /* WheelPickerContinuousObserver.swift */; };
 		A0000000000000000000014D /* NDWheelPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014C /* NDWheelPickerView.swift */; };
 		A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000203 /* CameraSlotPagerIndicator.swift */; };
+		A00000000000000000234A04 /* CameraManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000234A03 /* CameraManagementView.swift */; };
 		A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* CameraSlotRenameSheet.swift */; };
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
 		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
@@ -166,6 +167,7 @@
 		A0000000000000000000014C /* NDWheelPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerView.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../docs; sourceTree = "<group>"; };
 		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
+		A00000000000000000234A03 /* CameraManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagementView.swift; sourceTree = "<group>"; };
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
@@ -484,6 +486,7 @@
 				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
 				EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */,
 				A0000000000000000000021E /* CameraSlotRenameSheet.swift */,
+				A00000000000000000234A03 /* CameraManagementView.swift */,
 			);
 			path = CameraSlot;
 			sourceTree = "<group>";
@@ -686,6 +689,7 @@
 				A0000000000000000000014D /* NDWheelPickerView.swift in Sources */,
 				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,
 				A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */,
+				A00000000000000000234A04 /* CameraManagementView.swift in Sources */,
 				A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

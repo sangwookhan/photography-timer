@@ -4,111 +4,119 @@
 import Foundation
 import PTimerCore
 
-/// Stable identity for a shooting-session camera slot. The first
-/// implementation supports `Camera 1` through `Camera 4`; identities
-/// stay stable across slot switches and persist into timer metadata so
-/// a timer can be associated with the camera that started it.
-public enum CameraSlotID: String, CaseIterable, Codable, Equatable, Hashable, Identifiable {
-    case camera1
-    case camera2
-    case camera3
-    case camera4
+/// Stable identity for a managed camera. The identity never changes
+/// for the life of a camera, is never reassigned to a different camera
+/// after deletion, and persists into timer metadata so a timer can be
+/// associated with the camera that started it.
+///
+/// The four identities that shipped with the fixed-slot product
+/// (`camera1` ... `camera4`) are kept verbatim as the migrated
+/// cameras' identities. Every other identity is generated and is not
+/// derived from a list position or a display name.
+public struct CameraSlotID: RawRepresentable, Codable, Equatable, Hashable, Identifiable {
+    public let rawValue: String
 
-    /// `Identifiable` conformance for SwiftUI surfaces (e.g.
-    /// `.sheet(item:)` on the rename sheet). Each slot is its own
-    /// stable identity, which is exactly what `Identifiable` asks
-    /// for — no wrapper struct is required.
+    /// `nil` for an empty / whitespace-only raw value, which can never
+    /// be a camera identity.
+    public init?(rawValue: String) {
+        guard !rawValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        self.rawValue = rawValue
+    }
+
+    private init(verbatim rawValue: String) {
+        self.rawValue = rawValue
+    }
+
     public var id: CameraSlotID { self }
 
-    /// Default order used by the session model and the slot pager
-    /// UI. The shipping experience exposes all four slots — the
-    /// session model preconditions that at least two are available,
-    /// not that only two are surfaced.
-    public static let allOrdered: [CameraSlotID] = CameraSlotID.allCases
+    public static let camera1 = CameraSlotID(verbatim: "camera1")
+    public static let camera2 = CameraSlotID(verbatim: "camera2")
+    public static let camera3 = CameraSlotID(verbatim: "camera3")
+    public static let camera4 = CameraSlotID(verbatim: "camera4")
 
-    /// Human-facing label used by the slot switcher and timer
-    /// metadata. Names stay simple by design — slot identity is not a
-    /// camera inventory.
-    public var defaultDisplayName: String {
-        switch self {
-        case .camera1: return String(localized: "Camera 1")
-        case .camera2: return String(localized: "Camera 2")
-        case .camera3: return String(localized: "Camera 3")
-        case .camera4: return String(localized: "Camera 4")
+    /// The identities of the pre-managed-list product, in their
+    /// original order. Migration and fresh-install seeding use them.
+    public static let legacyOrdered: [CameraSlotID] = [.camera1, .camera2, .camera3, .camera4]
+
+    /// Localized `Camera N` label for a legacy identity (`nil` for any
+    /// other identity). Used to freeze migrated names and to render
+    /// pre-managed-list timer records that never captured a name.
+    public var legacyDefaultName: String? {
+        guard let index = Self.legacyOrdered.firstIndex(of: self) else { return nil }
+        return CameraNaming.defaultName(number: index + 1)
+    }
+
+    /// A new, collision-free identity. UUID-based so it is never
+    /// derived from a position or a name and cannot collide with a
+    /// legacy `cameraN` raw value.
+    public static func generate() -> CameraSlotID {
+        CameraSlotID(verbatim: "camera-\(UUID().uuidString.lowercased())")
+    }
+
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        guard let id = CameraSlotID(rawValue: raw) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: decoder.codingPath, debugDescription: "Empty camera id")
+            )
         }
+        self = id
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
-/// View-facing pair of stable id + display label. Stored in timer
-/// metadata as a separate axis from the exposure-source tag (adjusted /
-/// corrected / future target shutter) so the two never collide.
-///
-/// The display layer reads `displayName`, which prefers
-/// `customDisplayName` (when present and non-empty) and otherwise
-/// falls back to `defaultDisplayName`. The rename / reset surface
-/// writes only `customDisplayName`; clearing it restores the
-/// canonical `Camera N` label without touching slot identity.
+/// View-facing pair of stable id + display name. Timer metadata
+/// captures it at timer start, so a later rename, hide, reorder, or
+/// delete of the camera never changes what an existing timer shows.
 public struct CameraSlotIdentity: Equatable, Hashable, Codable {
     public let id: CameraSlotID
-    /// Canonical, locale-stable label tied to the slot id (e.g.
-    /// `"Camera 1"`). Always present so the display layer has a
-    /// guaranteed fallback when no custom name exists.
-    public let defaultDisplayName: String
-    /// Optional photographer-supplied label. `nil` means "use default".
-    /// The rename / reset surface writes only this value; clearing it
-    /// restores the canonical `Camera N` label without changing slot
-    /// identity.
-    public var customDisplayName: String?
+    /// The camera's stored name (trimmed, non-empty).
+    public let displayName: String
 
-    /// Active label for any UI surface. Non-empty `customDisplayName`
-    /// wins; otherwise falls back to `defaultDisplayName`. Trimming
-    /// whitespace prevents an accidentally-blank custom name from
-    /// hiding the default.
-    public var displayName: String {
-        if let trimmed = customDisplayName?.trimmedNonEmpty {
-            return trimmed
-        }
-        return defaultDisplayName
-    }
-
-    /// Designated init. Lets callers (tests, future custom-name
-    /// editing) supply both fields explicitly. Production code paths
-    /// usually use the `displayName` convenience init below.
-    public init(
-        id: CameraSlotID,
-        defaultDisplayName: String? = nil,
-        customDisplayName: String? = nil
-    ) {
+    public init(id: CameraSlotID, displayName: String) {
         self.id = id
-        self.defaultDisplayName = defaultDisplayName ?? id.defaultDisplayName
-        self.customDisplayName = customDisplayName
+        self.displayName = displayName
     }
 
-    /// Convenience init that maps a single `displayName` argument
-    /// onto either the default name (when equal to the canonical
-    /// `id.defaultDisplayName`) or the custom slot. Used by call
-    /// sites that already had a pre-split display name — e.g., timer
-    /// metadata persistence captures one stored display name and
-    /// this init converts it back to the split representation.
+    /// Identity named by the legacy `Camera N` label (or the raw
+    /// identity for any other camera).
+    public init(id: CameraSlotID) {
+        self.init(id: id, displayName: id.legacyDefaultName ?? id.rawValue)
+    }
+
+    /// Restores a captured identity from persisted timer metadata,
+    /// where the stored name may be absent (older snapshots). A
+    /// missing name falls back to the legacy `Camera N` label, or to
+    /// the raw identity, so the entry stays renderable without
+    /// consulting the camera list.
     public init(id: CameraSlotID, displayName: String?) {
-        let defaultName = id.defaultDisplayName
+        let trimmed = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.id = id
-        self.defaultDisplayName = defaultName
-        if let trimmed = displayName?.trimmedNonEmpty,
-           trimmed != defaultName {
-            self.customDisplayName = trimmed
-        } else {
-            self.customDisplayName = nil
-        }
+        self.displayName = (trimmed?.isEmpty == false ? trimmed : nil)
+            ?? id.legacyDefaultName
+            ?? id.rawValue
     }
 }
 
-private extension String {
-    /// `nil` for an all-whitespace string; otherwise a
-    /// whitespace-stripped copy. Keeps display-name decisions free
-    /// of "" / "  " edge cases.
-    var trimmedNonEmpty: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+/// Default camera naming (`Camera N`) shared by seeding, migration, and
+/// the add action (whose number comes from the automatic-name sequence).
+public enum CameraNaming {
+    public static func defaultName(number: Int) -> String {
+        String(localized: "Camera \(number)")
+    }
+
+    /// Trimmed name, or `nil` for a blank / whitespace-only value.
+    public static func trimmedName(_ name: String?) -> String? {
+        guard let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
     }
 }

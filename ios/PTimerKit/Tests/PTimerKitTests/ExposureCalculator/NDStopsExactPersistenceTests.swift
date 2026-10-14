@@ -114,7 +114,9 @@ final class NDStopsExactPersistenceTests: XCTestCase {
 
         func persistedCamera1(ndStep: NDStep) throws -> PersistentCameraSlotCalculatorSnapshot {
             controller.save(
+                cameras: [CameraListEntry(id: .camera1, name: "Camera 1")],
                 activeSlotID: .camera1,
+                issuedIDs: [.camera1],
                 activeSlotSnapshot: CameraSlotCalculatorSnapshot(
                     baseShutterSeconds: 1.0,
                     ndStep: ndStep,
@@ -124,7 +126,10 @@ final class NDStopsExactPersistenceTests: XCTestCase {
                 ),
                 inactiveSnapshots: [:]
             )
-            return try XCTUnwrap(store.loadSnapshot()?.slots.first { $0.slotIDRaw == "camera1" })
+            guard case let .loaded(snapshot) = store.loadManagedList() else {
+                throw XCTSkip("No managed payload written")
+            }
+            return try XCTUnwrap(snapshot.cameras.first { $0.idRaw == "camera1" }?.calculator)
         }
 
         // Unsupported off-grid value: none of the three ND fields set.
@@ -143,6 +148,24 @@ final class NDStopsExactPersistenceTests: XCTestCase {
 
 /// Minimal in-memory session store for the writer-invariant test.
 private final class InMemoryCameraSlotSessionStore: CameraSlotSessionPersistenceStoring {
+    /// Managed camera list, kept as the schema-checked payload the
+    /// production store would return.
+    var managedList: ManagedCameraListLoadResult = .absent
+
+    func loadManagedList() -> ManagedCameraListLoadResult {
+        managedList
+    }
+
+    func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot) {
+        managedList = .loaded(snapshot)
+    }
+
+    /// The calculator state the managed list persisted for `id`.
+    func persistedCalculator(of id: CameraSlotID) -> PersistentCameraSlotCalculatorSnapshot? {
+        guard case let .loaded(snapshot) = managedList else { return nil }
+        return snapshot.cameras.first { $0.idRaw == id.rawValue }?.calculator
+    }
+
     private var stored: PersistentCameraSlotSessionSnapshot?
     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { stored }
     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) { stored = snapshot }

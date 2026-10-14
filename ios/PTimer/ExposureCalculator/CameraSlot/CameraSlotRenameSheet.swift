@@ -4,29 +4,20 @@
 import SwiftUI
 import PTimerKit
 
-/// Lightweight sheet that lets the photographer rename a camera slot
-/// or reset its custom name back to the canonical `Camera N` default.
-/// Driven from `ExposureWorkspaceMainContent` via `.sheet(item:)`
-/// keyed off the slot id pending rename.
+/// Lightweight sheet that lets the photographer rename a camera.
+/// Presented from the camera title and the camera management rows via
+/// `.sheet(item:)` keyed off the camera id pending rename.
 ///
-/// The sheet does not own slot state — it just collects a draft name,
-/// then forwards the result to the ViewModel facade through the
-/// `onSave` / `onReset` closures. Whitespace-only or empty input is
-/// treated as a reset request so the editing path round-trips with
-/// the rendering path on `CameraSlotIdentity`.
+/// The sheet does not own camera state — it collects a draft name and
+/// forwards it to the ViewModel facade through `onSave`. A blank or
+/// whitespace-only name is rejected: Save stays disabled and the
+/// stored name is left unchanged.
 struct CameraSlotRenameSheet: View {
     let slotID: CameraSlotID
-    /// Canonical `Camera N` label for `slotID`. Shown both as the
-    /// text-field placeholder and inside the Reset button so the
-    /// photographer always sees the value the slot would fall back
-    /// to, even before tapping Reset.
-    let defaultDisplayName: String
-    /// Pre-existing custom name for the slot, if any. The text field
-    /// seeds with this so re-opening the sheet on a renamed slot
-    /// shows the current value.
-    let initialCustomName: String?
-    let onSave: (String?) -> Void
-    let onReset: () -> Void
+    /// The camera's current name; seeds the text field.
+    let initialName: String
+    /// Returns whether the rename applied.
+    let onSave: (String) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var draftName: String = ""
@@ -36,7 +27,7 @@ struct CameraSlotRenameSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField(defaultDisplayName, text: $draftName)
+                    TextField("Camera name", text: $draftName)
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled(true)
                         .submitLabel(.done)
@@ -44,21 +35,10 @@ struct CameraSlotRenameSheet: View {
                         .onSubmit(performSave)
                         .accessibilityIdentifier("camera-slot-rename-text-field")
                 } header: {
-                    Text("Slot name")
-                } footer: {
-                    Text("Leave blank to use the default \(defaultDisplayName).")
-                }
-
-                if hasCustomName {
-                    Section {
-                        Button(role: .destructive, action: performReset) {
-                            Text("Reset to \(defaultDisplayName)")
-                        }
-                        .accessibilityIdentifier("camera-slot-rename-reset-button")
-                    }
+                    Text("Camera name")
                 }
             }
-            .navigationTitle("Rename slot")
+            .navigationTitle("Rename camera")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -69,11 +49,12 @@ struct CameraSlotRenameSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: performSave)
+                        .disabled(trimmedDraft.isEmpty)
                         .accessibilityIdentifier("camera-slot-rename-save-button")
                 }
             }
             .onAppear {
-                draftName = initialCustomName ?? ""
+                draftName = initialName
                 // Focus on the text field after appearing so the
                 // photographer can start typing immediately. The
                 // dispatch defer matches the standard SwiftUI
@@ -93,26 +74,10 @@ struct CameraSlotRenameSheet: View {
         draftName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var hasCustomName: Bool {
-        !(initialCustomName ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .isEmpty
-    }
-
     private func performSave() {
-        if trimmedDraft.isEmpty {
-            // Whitespace-only input is the editing path's "clear"
-            // signal — fall back to the same path as the explicit
-            // Reset button so the rules stay single-rooted.
-            onReset()
-        } else {
-            onSave(trimmedDraft)
+        guard !trimmedDraft.isEmpty else { return }
+        if onSave(trimmedDraft) {
+            dismiss()
         }
-        dismiss()
-    }
-
-    private func performReset() {
-        onReset()
-        dismiss()
     }
 }

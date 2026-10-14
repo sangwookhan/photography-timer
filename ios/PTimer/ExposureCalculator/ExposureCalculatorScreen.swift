@@ -33,6 +33,10 @@ struct ExposureCalculatorScreen: View {
     /// `nil` automatically. Only the active slot can request a
     /// rename — the title affordance on inactive pages is hidden.
     @State private var slotIDPendingRename: CameraSlotID?
+    /// Visibility of camera management (CAMERA-PAGER-002): reachable
+    /// from the Settings menu and the empty-pager state, including
+    /// while timers are running.
+    @State private var isCameraManagementPresented = false
     /// Visibility of the custom-film editor sheet. Toggled by the
     /// header "+" button inside the film selector; the selector
     /// collapses first so the sheet presents over a stable
@@ -211,21 +215,26 @@ struct ExposureCalculatorScreen: View {
                     },
                     onShowFilterManagement: {
                         isFilterManagementPresented = true
+                    },
+                    onShowCameraManagement: {
+                        isCameraManagementPresented = true
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 // Page marker — anchored above the rail's reserved
                 // band. y-position is independent of timer presence.
-                CameraSlotPagerIndicator(
-                    count: viewModel.availableCameraSlots.count,
-                    activeIndex: viewModel.activeCameraSlotIndex
-                )
-                .padding(
-                    .bottom,
-                    ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
-                )
-                .frame(maxWidth: .infinity)
+                if !viewModel.availableCameraSlots.isEmpty {
+                    CameraSlotPagerIndicator(
+                        count: viewModel.availableCameraSlots.count,
+                        activeIndex: viewModel.activeCameraSlotIndex
+                    )
+                    .padding(
+                        .bottom,
+                        ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
+                    )
+                    .frame(maxWidth: .infinity)
+                }
 
                 // Running timer preview rail boundary. Always
                 // rendered so the area reads as a preview surface
@@ -397,19 +406,16 @@ struct ExposureCalculatorScreen: View {
             .sheet(item: $slotIDPendingRename) { slotID in
                 CameraSlotRenameSheet(
                     slotID: slotID,
-                    defaultDisplayName: viewModel
-                        .cameraSlotIdentity(for: slotID)
-                        .defaultDisplayName,
-                    initialCustomName: viewModel
-                        .cameraSlotIdentity(for: slotID)
-                        .customDisplayName,
+                    initialName: viewModel.cameraSlotIdentity(for: slotID)?.displayName ?? "",
                     onSave: { newName in
-                        viewModel.setCameraSlotCustomName(newName, for: slotID)
-                    },
-                    onReset: {
-                        viewModel.resetCameraSlotCustomName(slotID)
+                        viewModel.renameCamera(slotID, to: newName)
                     }
                 )
+            }
+            .sheet(isPresented: $isCameraManagementPresented) {
+                CameraManagementView(viewModel: viewModel) {
+                    isCameraManagementPresented = false
+                }
             }
             .sheet(isPresented: $isCustomFilmEditorPresented, onDismiss: presentPendingFormulaSeed) {
                 CustomFilmEditorView(
@@ -627,9 +633,16 @@ private struct ExposureWorkspaceMainContent: View {
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
+    let onShowCameraManagement: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if viewModel.availableCameraSlots.isEmpty {
+                EmptyCameraPagerView(
+                    onManageCameras: onShowCameraManagement,
+                    onAddCamera: { viewModel.addCamera() }
+                )
+            } else {
             TabView(selection: slotSelectionBinding) {
                 ForEach(viewModel.availableCameraSlots, id: \.self) { slotID in
                     CameraSlotCalculatorPage(
@@ -643,7 +656,8 @@ private struct ExposureWorkspaceMainContent: View {
                         },
                         onOpenShootingFilters: onOpenShootingFilters,
                         onShowAbout: onShowAbout,
-                        onShowFilterManagement: onShowFilterManagement
+                        onShowFilterManagement: onShowFilterManagement,
+                        onShowCameraManagement: onShowCameraManagement
                     )
                     .tag(slotID)
                 }
@@ -655,17 +669,21 @@ private struct ExposureWorkspaceMainContent: View {
             // moving away from.
             .tabViewStyle(.page(indexDisplayMode: .never))
             .indexViewStyle(.page(backgroundDisplayMode: .never))
+            // Re-seeded after every camera-list edit (see
+            // `cameraListRevision`).
+            .id(viewModel.cameraListRevision)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         // VoiceOver users get explicit slot-step actions on the
         // workspace container in addition to TabView's
         // gesture-driven paging — the dot indicator stays
         // non-interactive so the slot transition source is
         // single-rooted on the workspace itself.
-        .accessibilityAction(named: Text("Next camera slot")) {
+        .accessibilityAction(named: Text("Next camera")) {
             viewModel.selectNextCameraSlot()
         }
-        .accessibilityAction(named: Text("Previous camera slot")) {
+        .accessibilityAction(named: Text("Previous camera")) {
             viewModel.selectPreviousCameraSlot()
         }
         .padding(.horizontal, style.horizontalPadding)
@@ -686,7 +704,11 @@ private struct ExposureWorkspaceMainContent: View {
     /// the setter once after the snap completes.
     private var slotSelectionBinding: Binding<CameraSlotID> {
         Binding(
-            get: { viewModel.activeCameraSlotID },
+            get: {
+                viewModel.activeCameraSlotID
+                    ?? viewModel.availableCameraSlots.first
+                    ?? .camera1
+            },
             set: { newSelection in
                 viewModel.selectCameraSlot(newSelection)
             }
@@ -715,6 +737,7 @@ private struct CameraSlotCalculatorPage: View {
     let onOpenShootingFilters: () -> Void
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
+    let onShowCameraManagement: () -> Void
 
     /// Occupied filter spaces of this page: the ND wheels plus one for
     /// a visible auxiliary summary (FILTER-STACK-007).
@@ -745,10 +768,10 @@ private struct CameraSlotCalculatorPage: View {
                 },
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
-                onResetFilmModeContextAndName: pageState.isActive ? viewModel.resetFilmModeWorkingContextAndCameraName : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
                 onShowAbout: pageState.isActive ? onShowAbout : {},
                 onShowFilterManagement: pageState.isActive ? onShowFilterManagement : {},
+                onShowCameraManagement: pageState.isActive ? onShowCameraManagement : {},
                 style: style
             )
             // Header carries required visible content (camera title
@@ -957,15 +980,13 @@ private struct HeaderView: View {
     let onSelectModel: (String) -> Void
     let showsResetAction: Bool
     let onResetFilmModeContext: () -> Void
-    /// Settings + camera name reset (the "Reset settings and name"
-    /// choice). The plain `onResetFilmModeContext` keeps the name.
-    let onResetFilmModeContextAndName: () -> Void
     /// Tap handler that opens the rename sheet. Non-nil only on the
     /// active page — inactive pages render the title as plain text
     /// so the photographer cannot rename a slot they are not on.
     let onRequestRename: (() -> Void)?
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
+    let onShowCameraManagement: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     /// Gates the destructive reset behind an explicit confirmation so a
@@ -1012,9 +1033,6 @@ private struct HeaderView: View {
                     Button("Reset settings", role: .destructive) {
                         onResetFilmModeContext()
                     }
-                    Button("Reset settings and name", role: .destructive) {
-                        onResetFilmModeContextAndName()
-                    }
                     Button("Cancel", role: .cancel) {}
                 }
 
@@ -1022,6 +1040,8 @@ private struct HeaderView: View {
                 // and About. Camera-specific Shooting Filters stays on the
                 // wheel header, Plus, and the summary.
                 Menu {
+                    Button("Cameras", systemImage: "camera", action: onShowCameraManagement)
+                        .accessibilityIdentifier("settings-camera-management")
                     Button("Filter management", systemImage: "camera.filters", action: onShowFilterManagement)
                         .accessibilityIdentifier("settings-filter-management")
                     Button("About", systemImage: "info.circle", action: onShowAbout)
@@ -1084,9 +1104,9 @@ private struct HeaderView: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Rename camera slot"))
+            .accessibilityLabel(Text("Rename camera"))
             .accessibilityValue(Text(cameraSlotTitle))
-            .accessibilityHint("Opens a sheet to rename or reset the camera slot label")
+            .accessibilityHint("Opens a sheet to rename the camera")
             .accessibilityIdentifier("camera-slot-rename-button")
         } else {
             Text(cameraSlotTitle)

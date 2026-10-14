@@ -47,7 +47,7 @@ struct CameraSlotPagerIndicator: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Camera slot")
+        .accessibilityLabel("Camera")
         .accessibilityValue(pageText)
         .accessibilityIdentifier("camera-slot-page-indicator")
     }

@@ -92,8 +92,7 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         // On-disk shape: the exact field is populated; the whole and
         // third-stop fields stay nil so pre-PTIMER-209 records are
         // untouched.
-        let snapshot = try XCTUnwrap(sessionStore.loadSnapshot())
-        let camera1Entry = try XCTUnwrap(snapshot.slots.first { $0.slotIDRaw == "camera1" })
+        let camera1Entry = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(try XCTUnwrap(camera1Entry.ndStopsExact), 16.6, accuracy: 1e-9)
         XCTAssertNil(camera1Entry.ndStop)
         XCTAssertNil(camera1Entry.ndStopThirds)
@@ -464,116 +463,27 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(viewModel.activeCameraSlotID, .camera1)
     }
 
-    // MARK: - Custom display name persistence
+    // MARK: - Camera name persistence
 
-    func testCustomDisplayNameRoundTripsAcrossRelaunch() throws {
+    func testRenamedCamerasRoundTripAcrossRelaunch() throws {
         let sessionStore = InMemorySessionStore()
         let viewModel = makeViewModel(sessionStore: sessionStore)
 
-        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
-        viewModel.setCameraSlotCustomName("Mamiya 7", for: .camera3)
+        viewModel.renameCamera(.camera1, to: "Hasselblad 500CM")
+        viewModel.renameCamera(.camera3, to: "Mamiya 7")
 
-        // Simulate a relaunch.
         let restored = makeViewModel(sessionStore: sessionStore)
 
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera1).displayName,
-            "Hasselblad 500CM"
-        )
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera3).displayName,
-            "Mamiya 7"
-        )
-        // Untouched slots still default to the canonical label.
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera2).displayName,
-            "Camera 2"
-        )
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera4).displayName,
-            "Camera 4"
-        )
+        XCTAssertEqual(restored.cameraSlotIdentity(for: .camera1)?.displayName, "Hasselblad 500CM")
+        XCTAssertEqual(restored.cameraSlotIdentity(for: .camera3)?.displayName, "Mamiya 7")
+        // Untouched cameras keep the frozen default names.
+        XCTAssertEqual(restored.cameraSlotIdentity(for: .camera2)?.displayName, "Camera 2")
+        XCTAssertEqual(restored.cameraSlotIdentity(for: .camera4)?.displayName, "Camera 4")
     }
 
-    func testResetClearsPersistedCustomDisplayName() throws {
-        let sessionStore = InMemorySessionStore()
-        let viewModel = makeViewModel(sessionStore: sessionStore)
-        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
-
-        viewModel.resetCameraSlotCustomName(.camera1)
-
-        // Inspect the on-disk snapshot directly: the entry for
-        // camera1 must persist no custom name (Optional `nil`) so
-        // a relaunch falls back to the default label.
-        let snapshot = try XCTUnwrap(sessionStore.loadSnapshot())
-        let camera1Entry = snapshot.slots.first { $0.slotIDRaw == "camera1" }
-        XCTAssertNil(camera1Entry?.customDisplayName)
-
-        let restored = makeViewModel(sessionStore: sessionStore)
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera1).displayName,
-            "Camera 1"
-        )
-    }
-
-    /// Steady-state "no rename" snapshot must persist no custom
-    /// name field (Optional stays `nil`) so a session that never
-    /// used the rename surface stays byte-for-byte compatible
-    /// with the pre-PTIMER-123 on-disk shape.
-    func testSnapshotWithoutRenameOmitsCustomDisplayNameField() throws {
-        let sessionStore = InMemorySessionStore()
-        let viewModel = makeViewModel(sessionStore: sessionStore)
-
-        viewModel.baseShutter = 1.0 / 60.0
-        viewModel.selectCameraSlot(.camera2)
-
-        let snapshot = try XCTUnwrap(sessionStore.loadSnapshot())
-        for slot in snapshot.slots {
-            XCTAssertNil(
-                slot.customDisplayName,
-                "Slot \(slot.slotIDRaw) must persist no custom name when none has been set."
-            )
-        }
-    }
-
-    /// A session snapshot saved before PTIMER-123 (no
-    /// `customDisplayName` field on disk) must decode into a
-    /// session whose slots all show the default `Camera N` label.
-    /// The Optional-additive field stays compatible.
-    func testLegacySnapshotWithoutCustomDisplayNameDecodesAsDefault() throws {
-        let sessionStore = InMemorySessionStore()
-        sessionStore.saveSnapshot(
-            PersistentCameraSlotSessionSnapshot(
-                schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
-                activeSlotIDRaw: "camera1",
-                slots: [
-                    PersistentCameraSlotCalculatorSnapshot(
-                        slotIDRaw: "camera1",
-                        selectedPresetFilmID: nil,
-                        selectedProfileID: nil,
-                        baseShutterSeconds: 1.0 / 30.0,
-                        ndStop: 0,
-                        ndStopThirds: nil,
-                        exposureScaleMode: nil
-                        // Note: customDisplayName intentionally omitted
-                        // so this exercises the pre-PTIMER-123 shape.
-                    ),
-                ]
-            )
-        )
-
-        let viewModel = makeViewModel(sessionStore: sessionStore)
-        XCTAssertEqual(
-            viewModel.cameraSlotIdentity(for: .camera1).displayName,
-            "Camera 1"
-        )
-        XCTAssertNil(viewModel.cameraSlotIdentity(for: .camera1).customDisplayName)
-    }
-
-    /// Custom names persist alongside calculator state; the
-    /// PTIMER-120 4-slot save/restore behaviour must continue to
-    /// work even when a subset of slots has been renamed.
-    func testFourSlotSaveAndRestoreKeepsRenamesWithCalculatorState() throws {
+    /// Calculator state and names persist together; the four-camera
+    /// save/restore keeps working when a subset has been renamed.
+    func testFourCameraSaveAndRestoreKeepsRenamesWithCalculatorState() throws {
         let sessionStore = InMemorySessionStore()
         let viewModel = makeViewModel(sessionStore: sessionStore)
         let triX = try XCTUnwrap(
@@ -583,18 +493,18 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         viewModel.selectPresetFilm(triX)
         viewModel.baseShutter = 1.0 / 60.0
         viewModel.ndStop = 4
-        viewModel.setCameraSlotCustomName("Hasselblad 500CM", for: .camera1)
+        viewModel.renameCamera(.camera1, to: "Hasselblad 500CM")
 
         viewModel.selectCameraSlot(.camera3)
         viewModel.baseShutter = 1.0 / 8.0
         viewModel.ndStop = 10
-        viewModel.setCameraSlotCustomName("Mamiya 7", for: .camera3)
+        viewModel.renameCamera(.camera3, to: "Mamiya 7")
 
         viewModel.selectCameraSlot(.camera1)
 
         let restored = makeViewModel(sessionStore: sessionStore)
         XCTAssertEqual(restored.activeCameraSlotID, .camera1)
-        XCTAssertEqual(restored.activeCameraSlot.displayName, "Hasselblad 500CM")
+        XCTAssertEqual(restored.activeCameraSlot?.displayName, "Hasselblad 500CM")
         XCTAssertEqual(restored.selectedPresetFilm?.id, triX.id)
         XCTAssertEqual(restored.baseShutter, 1.0 / 60.0, accuracy: 1e-9)
 
@@ -602,16 +512,8 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(camera3Page.cameraDisplayName, "Mamiya 7")
         XCTAssertEqual(camera3Page.baseShutter, 1.0 / 8.0, accuracy: 1e-9)
         XCTAssertEqual(camera3Page.ndStep.stops, 10, accuracy: 1e-9)
-
-        // Untouched slots round-trip with no custom name.
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera2).displayName,
-            "Camera 2"
-        )
-        XCTAssertEqual(
-            restored.cameraSlotIdentity(for: .camera4).displayName,
-            "Camera 4"
-        )
+        XCTAssertEqual(restored.cameraSlotIdentity(for: .camera2)?.displayName, "Camera 2")
+        XCTAssertEqual(restored.cameraSlotIdentity(for: .camera4)?.displayName, "Camera 4")
     }
 
     // MARK: - PTIMER-168: film + model selection survives relaunch
@@ -718,6 +620,24 @@ final class CameraSlotSessionPersistenceTests: XCTestCase {
 /// load path under test rejects unknown schema versions even in
 /// tests.
 private final class InMemorySessionStore: CameraSlotSessionPersistenceStoring {
+    /// Managed camera list, kept as the schema-checked payload the
+    /// production store would return.
+    var managedList: ManagedCameraListLoadResult = .absent
+
+    func loadManagedList() -> ManagedCameraListLoadResult {
+        managedList
+    }
+
+    func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot) {
+        managedList = .loaded(snapshot)
+    }
+
+    /// The calculator state the managed list persisted for `id`.
+    func persistedCalculator(of id: CameraSlotID) -> PersistentCameraSlotCalculatorSnapshot? {
+        guard case let .loaded(snapshot) = managedList else { return nil }
+        return snapshot.cameras.first { $0.idRaw == id.rawValue }?.calculator
+    }
+
     private var stored: PersistentCameraSlotSessionSnapshot?
 
     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? {

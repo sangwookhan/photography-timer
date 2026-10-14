@@ -5,243 +5,272 @@ import Combine
 import Foundation
 import PTimerCore
 
-/// `CameraSlotSessionModel` owns the camera-slot session state: which
-/// slot is currently active, and the calculator snapshot for every
-/// slot the user has not currently active. Inactive slot snapshots
-/// stay here untouched so a slot switch can restore the slot's
-/// exposure inputs and film selection without invoking any reset
-/// behavior on the active calculator/film models.
+/// One managed camera in the global camera list.
+public struct CameraListEntry: Equatable, Identifiable {
+    public let id: CameraSlotID
+    /// Stored, trimmed, non-empty name.
+    public var name: String
+    /// Whether the camera is included in the shooting pager.
+    public var isDisplayed: Bool
+
+    public init(id: CameraSlotID, name: String, isDisplayed: Bool = true) {
+        self.id = id
+        self.name = name
+        self.isDisplayed = isDisplayed
+    }
+}
+
+/// `CameraSlotSessionModel` owns the managed camera list: the global
+/// order, each camera's name and pager inclusion, the active camera
+/// (or the explicit absence of one), the identities ever issued, and
+/// the calculator snapshot of every camera that is not currently
+/// active. The active camera's live state remains on `CalculatorModel`
+/// + `FilmSelectionModel`; inactive snapshots stay here untouched so
+/// switching restores a camera's inputs without any reset behavior.
 ///
 /// The model holds session state only. Snapshot capture / load is
 /// orchestrated by the `ExposureCalculatorViewModel` facade so the
-/// other feature models (`CalculatorModel`, `FilmSelectionModel`,
-/// `ReciprocityModel`, `TimerWorkspaceModel`) keep owning their
-/// respective state types and the cross-model import rule stays
-/// intact.
+/// other feature models keep owning their own state types.
 @MainActor
 public final class CameraSlotSessionModel: ObservableObject {
-    /// Order of slots exposed to the UI. The shipping configuration
-    /// shows all four; the underlying domain enforces a minimum of
-    /// two via precondition. Kept as a stored array (rather than
-    /// `CameraSlotID.allOrdered` directly) so a future configuration
-    /// step can shorten it without reshaping the model.
-    public let availableSlots: [CameraSlotID]
+    /// The managed list in global user-defined order.
+    @Published public private(set) var cameras: [CameraListEntry]
 
-    @Published public private(set) var activeSlotID: CameraSlotID
+    /// The active camera, or `nil` when no camera is displayed.
+    @Published public private(set) var activeSlotID: CameraSlotID?
 
-    /// Photographer-supplied display names keyed by slot id. Absent
-    /// keys mean "use the canonical `Camera N` default"; entries are
-    /// stored already-trimmed so the round-trip from `displayName`
-    /// rendering matches the editing surface byte-for-byte.
-    /// `@Published` so a rename or reset propagates through to the
-    /// ViewModel facade and any view bound to the session model.
-    @Published public private(set) var customDisplayNames: [CameraSlotID: String]
+    /// Every identity ever issued, including deleted cameras, so a new
+    /// identity can never reuse one that old timer records may carry.
+    public private(set) var issuedIDs: Set<CameraSlotID>
 
-    /// Snapshots for slots that are not currently active. The active
-    /// slot's snapshot is intentionally absent — the live state on
-    /// `CalculatorModel` + `FilmSelectionModel` is the source of
-    /// truth for the active slot. Switching reads/writes this map.
+    /// Snapshots for cameras that are not currently active. The active
+    /// camera's snapshot is intentionally absent.
     private var inactiveSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]
 
+    private let generateID: () -> CameraSlotID
+
+    /// Seeds the fresh-install list: `camera1` ... `camera4`, in that
+    /// order, shown in the pager, with localized `Camera N` names
+    /// frozen as stored text.
+    public nonisolated static func seededCameras() -> [CameraListEntry] {
+        CameraSlotID.legacyOrdered.enumerated().map { index, id in
+            CameraListEntry(id: id, name: CameraNaming.defaultName(number: index + 1))
+        }
+    }
+
     public init(
-        availableSlots: [CameraSlotID] = CameraSlotID.allOrdered,
-        initialActiveSlotID: CameraSlotID = .camera1,
-        initialSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot] = [:],
-        initialCustomDisplayNames: [CameraSlotID: String] = [:]
+        cameras: [CameraListEntry] = CameraSlotSessionModel.seededCameras(),
+        activeSlotID: CameraSlotID? = .camera1,
+        issuedIDs: Set<CameraSlotID> = [],
+        snapshots: [CameraSlotID: CameraSlotCalculatorSnapshot] = [:],
+        generateID: @escaping () -> CameraSlotID = { CameraSlotID.generate() }
     ) {
-        // Camera-slot session shape invariants. The shipping
-        // experience exposes Camera 1-4; the underlying domain caps
-        // the count at 4 to avoid surfacing a slot that no
-        // `CameraSlotID` case represents, and demands at least 2
-        // because a single-slot session is the legacy single-camera
-        // calculator (which does not need this model).
-        precondition(
-            availableSlots.count >= 2,
-            "Camera slot session must expose at least two slots."
-        )
-        precondition(
-            availableSlots.count <= CameraSlotID.allCases.count,
-            "Camera slot session must expose at most \(CameraSlotID.allCases.count) slots."
-        )
-        precondition(
-            Set(availableSlots).count == availableSlots.count,
-            "Camera slot session must expose unique slot ids."
-        )
-        precondition(
-            availableSlots.contains(initialActiveSlotID),
-            "Initial active slot must be one of the available slots."
-        )
-        self.availableSlots = availableSlots
-        self.activeSlotID = initialActiveSlotID
-        self.inactiveSnapshots = initialSnapshots.filter { $0.key != initialActiveSlotID }
-        self.customDisplayNames = Self.sanitizeCustomNames(
-            initialCustomDisplayNames,
-            availableSlots: availableSlots
-        )
-    }
-
-    /// Identity for the currently active slot.
-    public var activeSlot: CameraSlotIdentity {
-        identity(for: activeSlotID)
-    }
-
-    /// Identity for an arbitrary slot id. The session model is the
-    /// single owner of `customDisplayName`; the returned identity
-    /// merges the canonical default with any photographer-supplied
-    /// custom name held in `customDisplayNames`.
-    public func identity(for slotID: CameraSlotID) -> CameraSlotIdentity {
-        CameraSlotIdentity(
-            id: slotID,
-            customDisplayName: customDisplayNames[slotID]
-        )
-    }
-
-    /// Sets the slot's photographer-supplied display name. Whitespace
-    /// is trimmed; an empty / whitespace-only / nil value clears the
-    /// custom entry (equivalent to `resetCustomDisplayName(for:)`).
-    /// Mirrors the trimming rule on
-    /// `CameraSlotIdentity.displayName` so the editing path round-
-    /// trips with the rendering path.
-    public func setCustomDisplayName(_ name: String?, for slotID: CameraSlotID) {
-        guard availableSlots.contains(slotID) else { return }
-        let trimmed = name?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmed, !trimmed.isEmpty {
-            customDisplayNames[slotID] = trimmed
+        let unique = Self.uniqueEntries(cameras)
+        self.cameras = unique
+        self.generateID = generateID
+        self.issuedIDs = issuedIDs.union(unique.map(\.id))
+        let displayed = unique.filter(\.isDisplayed).map(\.id)
+        let resolvedActive: CameraSlotID?
+        if let activeSlotID, displayed.contains(activeSlotID) {
+            resolvedActive = activeSlotID
         } else {
-            customDisplayNames.removeValue(forKey: slotID)
+            resolvedActive = displayed.first
+        }
+        self.activeSlotID = resolvedActive
+        let ids = Set(unique.map(\.id))
+        self.inactiveSnapshots = snapshots.filter {
+            ids.contains($0.key) && $0.key != resolvedActive
         }
     }
 
-    /// Clears the slot's custom display name so `identity(for:)`
-    /// falls back to the canonical `Camera N` label.
-    public func resetCustomDisplayName(for slotID: CameraSlotID) {
-        guard availableSlots.contains(slotID) else { return }
-        customDisplayNames.removeValue(forKey: slotID)
+    // MARK: - Reads
+
+    /// Cameras included in the shooting pager, in global order.
+    public var displayedCameras: [CameraListEntry] {
+        cameras.filter(\.isDisplayed)
     }
 
-    /// Bulk-loads photographer-supplied display names at app-start
-    /// restore time. Keys outside `availableSlots` are filtered, and
-    /// each value is trimmed; an empty trimmed value drops the entry.
-    /// Replaces any current map so a relaunch never carries forward a
-    /// stale runtime entry that the persisted snapshot does not
-    /// re-assert.
-    public func restoreCustomDisplayNames(_ names: [CameraSlotID: String]) {
-        customDisplayNames = Self.sanitizeCustomNames(
-            names,
-            availableSlots: availableSlots
-        )
+    public var displayedSlotIDs: [CameraSlotID] {
+        displayedCameras.map(\.id)
     }
 
-    private static func sanitizeCustomNames(
-        _ names: [CameraSlotID: String],
-        availableSlots: [CameraSlotID]
-    ) -> [CameraSlotID: String] {
-        let allowed = Set(availableSlots)
-        var sanitized: [CameraSlotID: String] = [:]
-        for (slotID, value) in names where allowed.contains(slotID) {
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            sanitized[slotID] = trimmed
+    public func entry(for slotID: CameraSlotID) -> CameraListEntry? {
+        cameras.first { $0.id == slotID }
+    }
+
+    /// Identity for the active camera, or `nil` when none is active.
+    public var activeSlot: CameraSlotIdentity? {
+        activeSlotID.flatMap { identity(for: $0) }
+    }
+
+    /// Identity for a camera in the list, or `nil` for an unknown id.
+    public func identity(for slotID: CameraSlotID) -> CameraSlotIdentity? {
+        entry(for: slotID).map { CameraSlotIdentity(id: $0.id, displayName: $0.name) }
+    }
+
+    // MARK: - List edits
+
+    /// Adds a camera named `name` at the end of the list, shown in the
+    /// pager and active. The name comes from the automatic-name sequence,
+    /// which the caller has already advanced; the model never
+    /// derives it from the current cameras. The caller has also stashed
+    /// the outgoing camera's snapshot.
+    @discardableResult
+    public func addCamera(named name: String) -> CameraSlotID {
+        var id = generateID()
+        while issuedIDs.contains(id) {
+            id = generateID()
         }
-        return sanitized
+        issuedIDs.insert(id)
+        cameras.append(CameraListEntry(id: id, name: name))
+        inactiveSnapshots.removeValue(forKey: id)
+        activeSlotID = id
+        return id
     }
 
-    /// Returns the snapshot stored for an inactive slot. Returns nil
-    /// for the currently active slot (the active state lives on the
-    /// calculator/film models, not here) and for any slot id that is
-    /// not in `availableSlots`.
+    /// Renames a camera. The name is trimmed; a blank name is rejected
+    /// and leaves the stored name unchanged. Returns whether it applied.
+    @discardableResult
+    public func renameCamera(_ slotID: CameraSlotID, to name: String) -> Bool {
+        guard let trimmed = CameraNaming.trimmedName(name),
+              let index = cameras.firstIndex(where: { $0.id == slotID }) else {
+            return false
+        }
+        cameras[index].name = trimmed
+        return true
+    }
+
+    /// Shows or hides one camera. Hiding preserves name, calculator
+    /// state, and list position.
+    public func setDisplayed(_ isDisplayed: Bool, for slotID: CameraSlotID) {
+        if isDisplayed {
+            guard let index = cameras.firstIndex(where: { $0.id == slotID }),
+                  !cameras[index].isDisplayed else { return }
+            cameras[index].isDisplayed = true
+            if activeSlotID == nil {
+                activeSlotID = slotID
+            }
+        } else {
+            hideCameras([slotID])
+        }
+    }
+
+    /// Hides several cameras in one change; ids no longer present are
+    /// ignored. The active camera follows CAMERA-PAGER-003.
+    public func hideCameras(_ slotIDs: Set<CameraSlotID>) {
+        let before = cameras
+        for index in cameras.indices where slotIDs.contains(cameras[index].id) {
+            cameras[index].isDisplayed = false
+        }
+        resolveActiveAfterRemoval(previous: before)
+    }
+
+    /// Deletes several cameras and their calculator state in one
+    /// change; ids no longer present are ignored. Identities stay in
+    /// the issued set so they are never reused.
+    public func deleteCameras(_ slotIDs: Set<CameraSlotID>) {
+        let before = cameras
+        cameras.removeAll { slotIDs.contains($0.id) }
+        for slotID in slotIDs {
+            inactiveSnapshots.removeValue(forKey: slotID)
+        }
+        resolveActiveAfterRemoval(previous: before)
+    }
+
+    /// Moves cameras in the global order (`List.onMove` semantics).
+    public func moveCameras(fromOffsets source: IndexSet, toOffset destination: Int) {
+        var reordered = cameras
+        let moving = source.sorted().map { reordered[$0] }
+        for index in source.sorted(by: >) {
+            reordered.remove(at: index)
+        }
+        let removedBefore = source.filter { $0 < destination }.count
+        let insertion = max(0, min(reordered.count, destination - removedBefore))
+        reordered.insert(contentsOf: moving, at: insertion)
+        cameras = reordered
+    }
+
+    /// Moves one camera by `delta` positions (non-drag reorder).
+    public func moveCamera(_ slotID: CameraSlotID, by delta: Int) {
+        guard let index = cameras.firstIndex(where: { $0.id == slotID }) else { return }
+        let target = max(0, min(cameras.count - 1, index + delta))
+        guard target != index else { return }
+        let entry = cameras.remove(at: index)
+        cameras.insert(entry, at: target)
+    }
+
+    /// CAMERA-PAGER-003: when the active camera was hidden or removed,
+    /// the next displayed camera in the resulting global order becomes
+    /// active; with none after it, the first displayed camera; with no
+    /// displayed camera, none.
+    private func resolveActiveAfterRemoval(previous: [CameraListEntry]) {
+        guard let active = activeSlotID else { return }
+        if let current = entry(for: active), current.isDisplayed {
+            return
+        }
+        let activeIndex = previous.firstIndex { $0.id == active } ?? -1
+        let survivorsAfter = previous
+            .dropFirst(activeIndex + 1)
+            .compactMap { old in entry(for: old.id) }
+            .filter(\.isDisplayed)
+        activeSlotID = survivorsAfter.first?.id ?? displayedCameras.first?.id
+    }
+
+    // MARK: - Snapshots
+
+    /// Snapshot stored for a camera that is not active. Returns nil
+    /// for the active camera and for unknown ids.
     public func snapshot(forInactiveSlot slotID: CameraSlotID) -> CameraSlotCalculatorSnapshot? {
-        guard slotID != activeSlotID,
-              availableSlots.contains(slotID) else {
+        guard slotID != activeSlotID, entry(for: slotID) != nil else {
             return nil
         }
         return inactiveSnapshots[slotID] ?? .initial
     }
 
-    /// Atomic slot switch: stores `outgoingSnapshot` for the
-    /// currently active slot, sets `targetSlotID` as the new active
-    /// slot, and returns the snapshot the caller should load into the
-    /// calculator/film models for the incoming slot.
-    ///
-    /// A no-op switch (target is already active) returns nil so the
-    /// caller can avoid redundant model writes.
+    /// Stores the live snapshot of a camera that is about to leave the
+    /// active position (or is being persisted).
+    public func storeSnapshot(_ snapshot: CameraSlotCalculatorSnapshot, for slotID: CameraSlotID) {
+        guard entry(for: slotID) != nil else { return }
+        inactiveSnapshots[slotID] = snapshot
+    }
+
+    /// Removes and returns a camera's stored snapshot (fresh defaults
+    /// when none) because that camera is becoming the live one.
+    public func takeSnapshot(for slotID: CameraSlotID) -> CameraSlotCalculatorSnapshot {
+        inactiveSnapshots.removeValue(forKey: slotID) ?? .initial
+    }
+
+    /// Atomic switch between displayed cameras: stores `outgoingSnapshot`
+    /// for the active camera and returns the incoming camera's snapshot.
+    /// A no-op switch, or a switch to a camera that is unknown or not
+    /// displayed, returns nil.
     @discardableResult
     public func switchActiveSlot(
         to targetSlotID: CameraSlotID,
         capturing outgoingSnapshot: CameraSlotCalculatorSnapshot
     ) -> CameraSlotCalculatorSnapshot? {
-        guard availableSlots.contains(targetSlotID) else {
+        guard let target = entry(for: targetSlotID), target.isDisplayed,
+              targetSlotID != activeSlotID else {
             return nil
         }
-        // Same-slot switch is a no-op: the caller's outgoing snapshot
-        // is dropped because the slot's state already lives on the
-        // active calc/film models. `selectCameraSlot` early-returns
-        // before reaching here, so this path is reached only when a
-        // caller deliberately invokes `switchActiveSlot` against the
-        // currently active slot — defensive only.
-        guard targetSlotID != activeSlotID else {
-            return nil
+        if let outgoing = activeSlotID {
+            inactiveSnapshots[outgoing] = outgoingSnapshot
         }
-
-        // Store outgoing slot's snapshot before flipping `activeSlotID`
-        // so a subscriber observing `$activeSlotID` reads a coherent
-        // map: the previously-active slot now has a stored snapshot,
-        // and the incoming slot's snapshot is removed (the calc/film
-        // models become the live state for the incoming slot).
-        inactiveSnapshots[activeSlotID] = outgoingSnapshot
-        let incomingSnapshot = inactiveSnapshots.removeValue(forKey: targetSlotID) ?? .initial
+        let incoming = inactiveSnapshots.removeValue(forKey: targetSlotID) ?? .initial
         activeSlotID = targetSlotID
-        return incomingSnapshot
+        return incoming
     }
 
-    /// Sets the active slot id at app-start restore time. Used when
-    /// persistence captured the last active slot and the calculator
-    /// context has been (or is about to be) loaded into the live
-    /// calc/film models for that slot. Removes any stale snapshot for
-    /// `slotID` because the live models are now the source of truth
-    /// for it.
-    ///
-    /// No outgoing-snapshot capture happens here: the prior active
-    /// slot at this point is the default placeholder (`camera1`) and
-    /// no real state was set against it. Callers should invoke this
-    /// before mutating the live calc/film models with the persisted
-    /// context.
-    public func restoreActiveSlot(to slotID: CameraSlotID) {
-        guard availableSlots.contains(slotID) else { return }
-        inactiveSnapshots.removeValue(forKey: slotID)
-        activeSlotID = slotID
-    }
-
-    /// Bulk-loads inactive-slot snapshots at app-start restore time.
-    /// Callers (the ViewModel during persistence restore) build the
-    /// dictionary from a `PersistentCameraSlotSessionSnapshot`, drop
-    /// the entry for the active slot (its state lives on the live
-    /// calc/film models), and pass the rest here.
-    ///
-    /// Slots not in `availableSlots` are silently filtered — keeps
-    /// the model robust against a future schema mismatch where a
-    /// persisted snapshot references a slot the runtime no longer
-    /// exposes.
-    public func restoreInactiveSnapshots(_ snapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]) {
-        let filtered = snapshots
-            .filter { availableSlots.contains($0.key) && $0.key != activeSlotID }
-        inactiveSnapshots = filtered
-    }
-
-    /// Read access to the full inactive-snapshot dictionary. Used by
-    /// the persistence layer to serialise the session shape; not by
-    /// regular slot navigation paths (those go through
-    /// `snapshot(forInactiveSlot:)` and `switchActiveSlot(...)`).
+    /// Read access to the inactive-snapshot dictionary for persistence.
     public func currentInactiveSnapshots() -> [CameraSlotID: CameraSlotCalculatorSnapshot] {
         inactiveSnapshots
     }
 
-    /// Applies `transform` to every inactive slot snapshot (Filter Set
+    /// Applies `transform` to every inactive snapshot (Filter Set
     /// contract: an inventory edit or deletion must follow into every
     /// camera stack that references the affected item or set).
     /// `transform` returns the replacement snapshot, or `nil` to leave
-    /// that slot untouched. Publishes once when any snapshot changed.
+    /// that camera untouched. Publishes once when any snapshot changed.
     public func updateInactiveSnapshots(
         _ transform: (CameraSlotID, CameraSlotCalculatorSnapshot) -> CameraSlotCalculatorSnapshot?
     ) {
@@ -258,14 +287,9 @@ public final class CameraSlotSessionModel: ObservableObject {
         }
     }
 
-    /// Scrubs `filmID` from every inactive slot snapshot
-    /// so a custom-film deletion does not leave the other slots
-    /// dangling on a no-longer-existing reference. The active slot
-    /// is not touched here — the ViewModel facade clears the active
-    /// selection through `FilmSelectionModel` separately. Returns
-    /// the set of slots whose snapshot was mutated so the caller
-    /// can trigger persistence + UI republish only when something
-    /// actually changed.
+    /// Scrubs `filmID` from every inactive camera snapshot so a
+    /// custom-film deletion does not leave other cameras dangling on a
+    /// no-longer-existing reference. Returns the touched ids.
     @discardableResult
     public func clearFilmReference(filmID: String) -> Set<CameraSlotID> {
         var touched: Set<CameraSlotID> = []
@@ -279,14 +303,40 @@ public final class CameraSlotSessionModel: ObservableObject {
             inactiveSnapshots[slotID] = updated
             touched.insert(slotID)
         }
-        // `inactiveSnapshots` is not `@Published` (page state reads
-        // are pull-driven via `snapshot(forInactiveSlot:)`), so a
-        // mutation in here would otherwise not trip the model's
-        // objectWillChange. Send manually only when something
-        // changed so non-deletion writes stay quiet.
         if !touched.isEmpty {
             objectWillChange.send()
         }
         return touched
+    }
+
+    // MARK: - Restore
+
+    /// Replaces the whole session at app-start restore time.
+    public func restore(
+        cameras restoredCameras: [CameraListEntry],
+        activeSlotID restoredActive: CameraSlotID?,
+        issuedIDs restoredIssued: Set<CameraSlotID>,
+        snapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]
+    ) {
+        let unique = Self.uniqueEntries(restoredCameras)
+        cameras = unique
+        issuedIDs = restoredIssued.union(unique.map(\.id))
+        let displayed = unique.filter(\.isDisplayed).map(\.id)
+        if let restoredActive, displayed.contains(restoredActive) {
+            activeSlotID = restoredActive
+        } else {
+            // Absent or stale: the first displayed camera, or none when
+            // nothing is displayed (the explicit no-active state).
+            activeSlotID = displayed.first
+        }
+        let ids = Set(unique.map(\.id))
+        inactiveSnapshots = snapshots.filter {
+            ids.contains($0.key) && $0.key != activeSlotID
+        }
+    }
+
+    private static func uniqueEntries(_ entries: [CameraListEntry]) -> [CameraListEntry] {
+        var seen = Set<CameraSlotID>()
+        return entries.filter { seen.insert($0.id).inserted }
     }
 }

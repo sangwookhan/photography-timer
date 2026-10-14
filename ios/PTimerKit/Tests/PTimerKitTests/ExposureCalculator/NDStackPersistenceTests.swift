@@ -123,9 +123,7 @@ final class NDStackPersistenceTests: XCTestCase {
         viewModel.setNDFilterStep(NDStep(stops: 3), at: 0)
         viewModel.setNDFilterStep(NDStep(stops: 6.6), at: 1)
 
-        let slot = try XCTUnwrap(
-            store.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue }
-        )
+        let slot = try XCTUnwrap(store.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.ndStopsExact ?? 0, 6.6, accuracy: 1e-9)
         XCTAssertNil(slot.ndStop, "The preset maximum persists exactly, not as a whole stop.")
         XCTAssertEqual(slot.ndStack?.count, 3)
@@ -334,6 +332,24 @@ final class NDStackPersistenceTests: XCTestCase {
 /// In-memory session store that exposes the stored snapshot so tests
 /// can assert on the persisted (on-disk-shaped) fields directly.
 private final class InMemoryStackSessionStore: CameraSlotSessionPersistenceStoring {
+    /// Managed camera list, kept as the schema-checked payload the
+    /// production store would return.
+    var managedList: ManagedCameraListLoadResult = .absent
+
+    func loadManagedList() -> ManagedCameraListLoadResult {
+        managedList
+    }
+
+    func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot) {
+        managedList = .loaded(snapshot)
+    }
+
+    /// The calculator state the managed list persisted for `id`.
+    func persistedCalculator(of id: CameraSlotID) -> PersistentCameraSlotCalculatorSnapshot? {
+        guard case let .loaded(snapshot) = managedList else { return nil }
+        return snapshot.cameras.first { $0.idRaw == id.rawValue }?.calculator
+    }
+
     var stored: PersistentCameraSlotSessionSnapshot?
 
     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? {

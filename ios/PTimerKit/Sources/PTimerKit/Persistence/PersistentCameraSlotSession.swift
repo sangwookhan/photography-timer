@@ -503,9 +503,16 @@ extension PersistentCameraSlotCalculatorSnapshot {
 /// the legacy store is read once at first launch as a migration
 /// source and otherwise ignored.
 public protocol CameraSlotSessionPersistenceStoring {
+    /// Legacy camera-slot session snapshot: the migration source for
+    /// the managed camera list. Never written by the managed-list
+    /// implementation.
     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot?
     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot)
     func clearSnapshot()
+    /// The managed camera list, stored separately from the legacy
+    /// snapshot.
+    func loadManagedList() -> ManagedCameraListLoadResult
+    func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot)
 }
 
 /// No-op store used by tests and any caller that wants to disable
@@ -515,4 +522,6 @@ public struct NoOpCameraSlotSessionPersistenceStore: CameraSlotSessionPersistenc
     public func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { nil }
     public func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) {}
     public func clearSnapshot() {}
+    public func loadManagedList() -> ManagedCameraListLoadResult { .absent }
+    public func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot) {}
 }

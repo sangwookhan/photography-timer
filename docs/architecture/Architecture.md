@@ -280,20 +280,23 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   lifecycle commands around `TimerManager`.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
-- **`CameraSlotSessionModel`** — active camera-slot identity, the
-  per-slot calculator snapshot for inactive slots, and the
-  photographer-supplied custom display names keyed by slot id. The
-  active slot's live state remains on `CalculatorModel` +
-  `FilmSelectionModel`; the session model only stores the inactive
-  slot snapshots, the `activeSlotID`, and `customDisplayNames`.
-  Snapshot capture and load on slot switch are orchestrated by the
-  view-model facade (the only place that already reads/writes both
-  `CalculatorModel` and `FilmSelectionModel` in one step). Rename
-  and reset are pure session-model mutations
-  (`setCustomDisplayName(_:for:)` /
-  `resetCustomDisplayName(for:)`); the facade re-publishes them as
-  `cameraSlotCustomDisplayNames` so SwiftUI surfaces redraw without
-  a slot switch.
+- **`CameraSlotSessionModel`** — the managed camera list: the cameras in
+  global order (`CameraListEntry`: stable `CameraSlotID`, stored name,
+  pager inclusion), the optional active camera (none when no camera is
+  displayed), the identities ever issued (so a deleted camera's id is
+  never reused), and the calculator snapshots of the cameras that are
+  not active. The active camera's live state remains on `CalculatorModel`
+  + `FilmSelectionModel`; the session model only stores the inactive
+  snapshots. The list edits (add by name, rename, show/hide, move,
+  single and bulk hide/delete) and the active-camera resolution after a
+  hide or delete are pure session-model mutations. Snapshot capture and
+  load around an edit are orchestrated by the view-model facade
+  (`applyCameraListEdit`, the only place that already reads/writes both
+  `CalculatorModel` and `FilmSelectionModel` in one step), which
+  persists the whole resulting state in one write and re-publishes the
+  list as `cameraList` so SwiftUI surfaces redraw. The automatic
+  `Camera N` number does not live here: it comes from the dedicated
+  sequence store (§1.7a).
 - **`TargetShutterModel`** — the active slot's optional Target
   Shutter duration ([Target Shutter spec](../specs/calculator/target-shutter.md))
   plus an in-session last-used memory. Per-slot persistence lives on
@@ -396,18 +399,22 @@ preference keys in the DataStore stores.
 ### 1.7a Camera slot domain
 
 Directory: Kit `CameraSlots/` (the concrete
-`UserDefaultsCameraSlotSessionStore` and the pager/rename views stay in
-the app's `ExposureCalculator/CameraSlot/`).
+`UserDefaultsCameraSlotSessionStore` and the pager/management views stay
+in the app's `ExposureCalculator/CameraSlot/`). The type names keep the
+historical "slot" wording; behavior follows the managed camera list contract
+([`shooting/camera-slots.md`](../specs/shooting/camera-slots.md)).
 
-- `CameraSlotIdentity` — `CameraSlotID` enum (`camera1` … `camera4`)
-  plus a stable id + default/custom display label pair. The id is
-  the only value written to timer metadata; the display label is
-  reconstructed on decode and also captured at start time so the
-  workspace can render the timer's slot label without resolving the
-  id back. The `customDisplayName` field is the photographer-
-  supplied label set through the rename surface; it lives on the
-  session model and is merged into the identity on read.
-- `CameraSlotCalculatorSnapshot` — value type carrying the per-slot
+- `CameraSlotIdentity` — `CameraSlotID` is a string identity. The four
+  identities of the fixed-slot product (`camera1` … `camera4`) are kept
+  verbatim; every other identity is generated (`camera-<uuid>`) and is
+  never derived from a position or a name. `CameraSlotIdentity` pairs the
+  id with the stored display name. The id and the name captured at timer
+  start are the values written to timer metadata, so the workspace
+  renders the timer's camera label without resolving the id against the
+  current list. `CameraNaming` holds the localized `Camera N` text and
+  name trimming.
+- `CameraSlotSessionModel` / `CameraListEntry` — see §1.4.
+- `CameraSlotCalculatorSnapshot` — value type carrying the per-camera
   calculator working state (base shutter, the Filter Stack's ND
   wheels with their per-wheel contributions, the mounted auxiliary
   filters with their contributions, the candidate Filter Sets, the
@@ -415,46 +422,65 @@ the app's `ExposureCalculator/CameraSlot/`).
   optional `targetShutterSeconds`).
   Live-preview overlays (`CalculatorModel.liveBaseShutter` /
   `liveNDStep`) deliberately stay out of the snapshot — a preview
-  only exists while a wheel drag is in flight on the active slot.
-- `CameraSlotPageState` — per-slot view-facing snapshot consumed by
-  the workspace TabView pages. Active slot reads live calculator
-  state; inactive slots read their preserved snapshot from the
+  only exists while a wheel drag is in flight on the active camera.
+- `CameraSlotPageState` — per-camera view-facing snapshot consumed by
+  the workspace TabView pages. The active camera reads live calculator
+  state; inactive cameras read their preserved snapshot from the
   session model.
-- `PersistentCameraSlotSession` — on-disk schema
+- `PersistentManagedCameraList` — on-disk schema
+  (`PersistentManagedCameraListSnapshot` + `PersistentManagedCamera`) for
+  the managed list: the issued id set, the active camera id (absent when
+  none), and per camera the id, name, pager inclusion, and an embedded
+  `PersistentCameraSlotCalculatorSnapshot`. A version or camera collection
+  that cannot be decoded makes the whole payload unreadable, which loads
+  as absent; cameras then decode one by one, so a value that is not a
+  keyed camera record is skipped and a record with missing fields takes
+  its defaults.
+- `PersistentCameraNameSequence` — the automatic-name sequence
+  (`CameraNameSequenceStoring`, `CameraNameSequenceLoadResult`, and the
+  in-memory `InMemoryCameraNameSequenceStore`): its own store, separate
+  from the managed list, holding the next automatic number. It is never
+  reconstructed from cameras, names, order, count, ids, or timers.
+- `PersistentCameraSlotSession` — the on-disk schema
   (`PersistentCameraSlotSessionSnapshot` +
-  `PersistentCameraSlotCalculatorSnapshot`) for the multi-slot
-  session. Stores raw `CameraSlotID` raw values, film/profile ids,
-  an Optional photographer-supplied `customDisplayName` per slot,
-  and — additively — the `filterStack` (ND wheels), the last Filter
-  Source, the mounted `auxiliaryFilters`, and the
+  `PersistentCameraSlotCalculatorSnapshot`) of the former multi-slot
+  session. It is the read-only migration source of the managed list and is
+  never rewritten by migration. Per-camera calculator state keeps this
+  schema: film/profile ids, the `filterStack` (ND wheels), the last
+  Filter Source, the mounted `auxiliaryFilters`, and the
   `candidateFilterSetIDs`. `ndStack` and the legacy scalar keep
   describing Standard wheels only so an older build degrades to a
   valid Standard stack. A snapshot written before auxiliary filters
-  existed restores through `FilterStack.migratingLegacyWheels`: its
-  CPL and GND wheel rows become auxiliary filters with the same item,
-  choice, and mode, and the sets they reference become candidates.
-  The runtime resolves ids back through the preset catalog
-  and falls back to "No film" for any id no longer in the catalog.
-  The `customDisplayName` field is additive; pre-PTIMER-123
-  snapshots decode unchanged and the schema version stays at `1`.
+  existed restores through `FilterStack.migratingLegacyWheels`. The
+  runtime resolves ids back through the preset catalog and falls back to
+  "No film" for any id no longer in the catalog. The legacy
+  `customDisplayName` is read only to carry names into the migration.
 - `CameraSlotSessionPersistenceController` — bridges the runtime
-  `CameraSlotSessionModel` and the on-disk session snapshot. Owns
-  serialise/deserialise so the ViewModel facade stays a thin
-  wiring layer.
+  `CameraSlotSessionModel` and the on-disk formats. Restore order: a
+  readable managed payload wins, with per-record defaults, duplicate-identity
+  handling, and the normalized list persisted; with no readable managed
+  payload, the legacy session (or, failing that, the legacy single
+  context) migrates into the list. It owns the reservation of the next
+  automatic number before a camera is created, where a missing or
+  unreadable sequence allocates from 5. The view-model facade stays a
+  thin wiring layer.
 
-Slot session state lives on `CameraSlotSessionModel` (see §1.4). The
-camera-slot identity that gets stamped on a timer flows into
+Camera list state lives on `CameraSlotSessionModel` (see §1.4). The
+camera identity that gets stamped on a timer flows into
 `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` /
 `cameraSlotDisplayName`; both fields are optional so older snapshots
-without slot identity decode unchanged.
+without camera identity decode unchanged, and the keys keep their
+historical names (renaming persisted keys needs an explicit
+compatibility migration).
 
-Multi-slot persistence: every slot's calculator snapshot is saved to
-`UserDefaultsCameraSlotSessionStore` under a dedicated
-key. On first launch after upgrade, the legacy single-context store
-(`UserDefaultsCalculatorContextStore`) is read by
-the ViewModel's restore path; once any state mutation happens, the
-new session snapshot becomes the source of truth and the legacy key
-is ignored.
+Managed-list persistence: the whole list, order, pager inclusion, active
+camera, and every camera's snapshot are saved in one write to
+`UserDefaultsCameraSlotSessionStore` under `ptimer.managed-camera-list.snapshot`;
+the former `ptimer.camera-slot-session.snapshot` key is only read for
+migration. The automatic-name sequence is held by
+`InMemoryCameraNameSequenceStore`, so it does not survive a relaunch. On
+first launch after upgrade the legacy stores are read by the ViewModel's
+restore path; once the managed list is persisted it is the source of truth.
 
 Exposure-calculated timer identity lives in Kit
 `Workspace/ExposureTimerIdentity.swift`:
@@ -508,10 +534,11 @@ selection. Only Apply commits it; Cancel and closing the screen drop it.
 | Selected film + profile override | `FilmSelectionModel` |
 | Reciprocity result derivation | `ReciprocityModel` (transform) |
 | Running timer collection + remaining time | `TimerRuntime` (wrapped by the app's `TimerManager`; consumed via `TimerWorkspaceModel`) |
-| Active camera-slot id + inactive slot snapshots + custom slot display names | `CameraSlotSessionModel` |
-| Camera-slot identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
-| Active slot's Target Shutter duration | `TargetShutterModel` |
-| Per-slot persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |
+| Managed camera list (order, names, pager inclusion), active camera, issued ids, inactive camera snapshots | `CameraSlotSessionModel` |
+| Automatic `Camera N` sequence | `CameraNameSequenceStoring` (`InMemoryCameraNameSequenceStore`), reserved through `CameraSlotSessionPersistenceController` |
+| Camera identity stamped on a started timer | `TimerWorkspaceModel` (via `RunningTimerItem.cameraSlot` and `PersistentTimerMetadataSnapshot.cameraSlotIDRaw` / `cameraSlotDisplayName`) |
+| Active camera's Target Shutter duration | `TargetShutterModel` |
+| Per-camera persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
 | Timer persistence | `UserDefaultsTimerPersistenceStore` |
 | Calculator context persistence | `UserDefaultsCalculatorContextStore` |

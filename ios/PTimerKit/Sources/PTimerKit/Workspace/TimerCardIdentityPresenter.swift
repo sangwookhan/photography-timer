@@ -16,20 +16,31 @@ import PTimerCore
 /// surface needs another formatted shape rather than reaching into
 /// the snapshot fields directly.
 public enum TimerCardIdentityPresenter {
-    /// Compact slot label rendered as the colored capsule badge on
-    /// timer cards (`"C2"`). Returns `nil` when the timer has no slot
-    /// identity — the caller falls back to a non-slot marker (e.g.
-    /// `"T<order>"`). A `switch` on the enum is used (rather than a
-    /// rawValue prefix-strip) so adding a future `CameraSlotID` case
-    /// surfaces as a compile error instead of a silently-wrong label.
+    /// Compact camera label rendered as the colored capsule badge on
+    /// timer cards (`"C2"`). Returns `nil` when the timer has no camera
+    /// identity — the caller falls back to a non-camera marker (e.g.
+    /// `"T<order>"`). Legacy identities keep `"C1"`...`"C4"`; any other
+    /// camera derives its badge from the captured name, so the badge
+    /// never depends on the current camera list: the first letter plus
+    /// the last two digits of a trailing number (`"Leica M6"` -> `"L6"`,
+    /// `"Camera 123"` -> `"C23"`), the last two digits of a name made
+    /// only of digits (`"35"` -> `"35"`), otherwise the first two letters.
     public static func compactCameraLabel(for snapshot: ExposureTimerIdentitySnapshot) -> String? {
-        guard let slotID = snapshot.cameraSlot?.id else { return nil }
-        switch slotID {
-        case .camera1: return "C1"
-        case .camera2: return "C2"
-        case .camera3: return "C3"
-        case .camera4: return "C4"
+        guard let slot = snapshot.cameraSlot else { return nil }
+        if let index = CameraSlotID.legacyOrdered.firstIndex(of: slot.id) {
+            return "C\(index + 1)"
         }
+        let name = slot.displayName
+        let trailingDigits = String(name.reversed().prefix { $0.isNumber }.reversed())
+        if !trailingDigits.isEmpty {
+            let shown = String(trailingDigits.suffix(2))
+            if trailingDigits.count == name.count {
+                return shown
+            }
+            return "\(name.first.map(String.init) ?? "")\(shown)".uppercased()
+        }
+        guard !name.isEmpty else { return nil }
+        return String(name.prefix(2)).uppercased()
     }
 
     /// Full slot label used as the leading title segment on the

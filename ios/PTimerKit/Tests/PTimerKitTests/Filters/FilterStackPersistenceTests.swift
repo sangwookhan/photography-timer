@@ -43,7 +43,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         XCTAssertNil(viewModel.applyMounts([.mount(gnd, in: set)]))
         XCTAssertEqual(viewModel.ndStep.stops, 16.6, accuracy: 1e-9)
 
-        let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let slot = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.auxiliaryFilters, [PersistentAuxiliaryFilterSnapshot(filterSetID: set.id.rawValue, itemID: gnd.id.rawValue, kind: "gnd", gndMode: "recordOnly")])
         XCTAssertEqual(slot.candidateFilterSetIDs, [set.id.rawValue])
 
@@ -113,7 +113,7 @@ final class FilterStackPersistenceTests: XCTestCase {
 
         // The migrated shape is what persists from now on.
         viewModel.setNDFilterStep(NDStep(stops: 3), at: 1)
-        let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let slot = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.filterStack?.compactMap(\.rowKind), ["fixed"])
         XCTAssertEqual(slot.auxiliaryFilters?.map(\.kind), ["cpl", "gnd"])
     }
@@ -161,7 +161,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(select(item), at: 1)
 
-        let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let slot = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.ndStack?.compactMap(\.ndStop), [3], "ndStack lists Standard wheels only.")
         XCTAssertEqual(slot.ndStop, 3, "The legacy scalar is the strongest Standard wheel.")
         XCTAssertEqual(slot.filterStack?.count, 2)
@@ -175,7 +175,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         viewModel.setWheelSelection(.standard(NDStep(stops: 0)), at: 1)
         // [item 12, standard 0] keeps the set group first; clean the zero.
         await awaitCleanupFire()
-        let onlyItem = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let onlyItem = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(onlyItem.filterStack?.count, 1)
         XCTAssertEqual(onlyItem.ndStack?.compactMap(\.ndStop), [0])
         XCTAssertEqual(onlyItem.ndStop, 0)
@@ -232,7 +232,7 @@ final class FilterStackPersistenceTests: XCTestCase {
         XCTAssertEqual(viewModel.filterWheels.map(\.source), [.filterSet(nisi.id), .filterSet(lee.id), .filterSet(lee.id), .standard])
 
         // The settled order is what persists and restores.
-        let slot = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let slot = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.filterStack?.map(\.itemID), [nd1000.id.rawValue, nd8.id.rawValue, cpl.id.rawValue, nil])
         let restored = makeViewModel(sessionStore: sessionStore, inventoryModel: FilterInventoryModel(store: inventoryStore))
         XCTAssertEqual(restored.filterWheels, viewModel.filterWheels)
@@ -343,6 +343,24 @@ final class FilterStackPersistenceTests: XCTestCase {
 }
 
 final class InMemoryMixedSessionStore: CameraSlotSessionPersistenceStoring {
+    /// Managed camera list, kept as the schema-checked payload the
+    /// production store would return.
+    var managedList: ManagedCameraListLoadResult = .absent
+
+    func loadManagedList() -> ManagedCameraListLoadResult {
+        managedList
+    }
+
+    func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot) {
+        managedList = .loaded(snapshot)
+    }
+
+    /// The calculator state the managed list persisted for `id`.
+    func persistedCalculator(of id: CameraSlotID) -> PersistentCameraSlotCalculatorSnapshot? {
+        guard case let .loaded(snapshot) = managedList else { return nil }
+        return snapshot.cameras.first { $0.idRaw == id.rawValue }?.calculator
+    }
+
     var stored: PersistentCameraSlotSessionSnapshot?
     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { stored }
     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) { stored = snapshot }

@@ -13,6 +13,9 @@ public struct ViewModelDependencies {
     public let presetFilms: [FilmIdentity]
     public let contextPersistenceStore: ExposureCalculatorContextStoring
     public let cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring
+    /// The dedicated automatic camera-name sequence store. Defaults to an
+    /// in-memory store so existing call sites and tests stay unchanged.
+    public let cameraNameSequenceStore: CameraNameSequenceStoring
     public let metadataPersistenceStore: TimerMetadataPersistenceStoring
     public let displaySettingStore: DisplaySettingStoring
     public let lockScreenTargetExposer: any LockScreenTimerTargetExposing
@@ -30,6 +33,7 @@ public struct ViewModelDependencies {
         presetFilms: [FilmIdentity],
         contextPersistenceStore: ExposureCalculatorContextStoring,
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring,
+        cameraNameSequenceStore: CameraNameSequenceStoring = InMemoryCameraNameSequenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring,
         displaySettingStore: DisplaySettingStoring = NoOpDisplaySettingStore(),
         lockScreenTargetExposer: any LockScreenTimerTargetExposing,
@@ -42,6 +46,7 @@ public struct ViewModelDependencies {
         self.presetFilms = presetFilms
         self.contextPersistenceStore = contextPersistenceStore
         self.cameraSlotSessionPersistenceStore = cameraSlotSessionPersistenceStore
+        self.cameraNameSequenceStore = cameraNameSequenceStore
         self.metadataPersistenceStore = metadataPersistenceStore
         self.displaySettingStore = displaySettingStore
         self.lockScreenTargetExposer = lockScreenTargetExposer

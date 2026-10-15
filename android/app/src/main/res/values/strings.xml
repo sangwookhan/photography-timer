@@ -102,7 +102,6 @@
     <string name="filter_color_pink">Pink</string>
 
     <!-- Filter Set management surface (FILTER-SET-001..005) -->
-    <string name="filter_sets_finish_editing">Finish Editing</string>
     <string name="filter_set_new">New Filter Set</string>
     <string name="filter_set_name">Filter Set name</string>
     <string name="filter_set_section_name">Name</string>

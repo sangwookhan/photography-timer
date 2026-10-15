@@ -47,9 +47,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -67,8 +70,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -493,19 +498,6 @@ private fun FilterSetDetailLevel(
                         )
                     }
                 },
-                actions = {
-                    // No items, nothing to reorder or delete: no no-op
-                    // Edit control (FILTER-SET-001).
-                    if (filterSet.items.isNotEmpty()) {
-                        TextButton(onClick = { isEditing = !isEditing }) {
-                            Text(
-                                stringResource(
-                                    if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
-                                ),
-                            )
-                        }
-                    }
-                },
             )
         },
     ) { padding ->
@@ -542,7 +534,22 @@ private fun FilterSetDetailLevel(
             FooterText(stringResource(R.string.filter_set_identity_footer))
 
             Spacer(Modifier.height(24.dp))
-            SectionLabel(stringResource(R.string.filter_set_section_filters))
+            // Edit belongs to the filter list, not the whole screen, and
+            // keeps the same compact text as Done (FILTER-ITEM-011). No
+            // items, nothing to delete: no no-op Edit control.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    SectionLabel(stringResource(R.string.filter_set_section_filters))
+                }
+                if (filterSet.items.isNotEmpty()) {
+                    TextButton(
+                        onClick = { isEditing = !isEditing },
+                        modifier = Modifier.testTag("filter-set-edit-filters"),
+                    ) {
+                        Text(stringResource(if (isEditing) R.string.action_done else R.string.action_edit))
+                    }
+                }
+            }
             // One physical-item list, ND first, then Color, Effect, CPL,
             // GND, each kind by name, with no manual reorder (FILTER-SET-001,
             // FILTER-ITEM-001).
@@ -648,6 +655,7 @@ private fun FilterSetDetailLevel(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterItemRow(
     item: FilterItem,
@@ -656,10 +664,60 @@ private fun FilterItemRow(
     onDelete: () -> Unit,
 ) {
     val detail = filterItemDetailText(item)
+    val deleteLabel = stringResource(R.string.filter_delete_named, item.name)
+    // The trailing swipe only reveals `Delete`; passing the threshold opens
+    // the confirmation and the row settles back, as in camera management.
+    val swipe = rememberSwipeToDismissBoxState(
+        confirmValueChange = { target ->
+            if (target == SwipeToDismissBoxValue.EndToStart) onDelete()
+            false
+        },
+        positionalThreshold = { total -> total * SwipeDeleteThreshold },
+    )
+    SwipeToDismissBox(
+        state = swipe,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            if (swipe.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.error)
+                        .padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.onError,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        },
+    ) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            FilterItemRowContent(item, detail, deleteLabel, isEditing, onOpen, onDelete)
+        }
+    }
+}
+
+@Composable
+private fun FilterItemRowContent(
+    item: FilterItem,
+    detail: String,
+    deleteLabel: String,
+    isEditing: Boolean,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpen)
+            // The swipe has no TalkBack path of its own; offer the same
+            // delete as an action on the row.
+            .semantics { customActions = listOf(CustomAccessibilityAction(deleteLabel) { onDelete(); true }) }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -681,10 +739,13 @@ private fun FilterItemRow(
             )
         }
         if (isEditing) {
-            IconButton(onClick = onDelete) {
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.testTag("filter-item-delete-${item.id.rawValue}"),
+            ) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.action_delete),
+                    contentDescription = deleteLabel,
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

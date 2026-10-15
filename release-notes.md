@@ -9,13 +9,17 @@ title: Release Notes
 
 Common changes:
 
-- Added Filter Sets to organize ND, CPL, GND, color, and effect filters.
-- Select Filter Sets per camera and combine their filters with the standard ND stack for each shot.
-- Added example Filter Sets to help start a new filter inventory.
+- **Filter Sets**
+  - Create named Filter Sets for the physical filters you own, such as 2-, 3-, 6-, and 10-stop ND filters.
+  - Add CPL, GND, color filters such as red, orange, and yellow, and effect filters to a set.
+  - Select only the sets relevant to each camera, so its filter choices reflect the equipment you have with you.
+  - Choose ND filters directly from a selected Filter Set, and keep each camera's selected sets and filter setup when you return to the app.
+  - Keep standard ND filters from 1 to 30 stops available for common values.
+  - Start with example Filter Sets, then edit them to match your equipment.
 
 Android:
 
-- Improved typography in the main shooting flow, mini timer, timer list, and reciprocity details for clearer information at different system font sizes.
+- Keep the main shooting screen, mini timer, timer list, and reciprocity details readable across system font sizes.
 
 ## 0.8.0
 

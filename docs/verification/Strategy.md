@@ -74,7 +74,89 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
 
 (b)와의 차이: (c)는 spec-curated, 영구. (b)는 작업 시점의 현재 동작 snapshot.
 
-**언제**: 시맨틱 변경 가능성이 있는 모든 구조 변경 PR.
+관리형 카메라 persistence는 release migration fixture를 추가로 유지한다.
+이 절은 정확한 릴리즈 버전, fixture 내용, migration 경로, 설치 업그레이드
+절차의 단일 source of truth이다. Requirements와 Living Specs는 이 절을
+참조하며 해당 세부사항을 반복하지 않는다.
+
+- 0.8.0 기준 fixture는 플랫폼별 실제 release source에서 만든다.
+  iOS는 marketing version 0.8.0, build 1의 마지막 iOS 변경
+  `bedd9e107679437baec4ea68d3e1300cf2aaf535`를 사용한다. Android는
+  versionName 0.8.0, versionCode 5의 Play 업로드 준비가 합쳐진
+  `35f5fce6c2970b70845df7747c54fe76343c8ef3`를 사용한다. 두 커밋 사이의
+  변경은 Android 파일에만 있으며 iOS 저장 형식은 같다. 각 플랫폼의 release
+  configuration으로 생성한 네 슬롯 원본 payload를 보존한다. Camera 1은
+  `Nikon Z7`(film 없음, Target Shutter 2분), Camera 2는
+  `Hasselblad 503CX`(`Kodak TMAX 100`, Target Shutter 30분),
+  Camera 3은 `Nikon F2`(`Kentmere 100`, Target Shutter 없음)로
+  설정하고 Camera 4는 출고 기본 상태로 둔다. 0.8.0에는 Sample Filter
+  Set이 없으므로 이 fixture에는 Sample inventory/selection을 넣지 않는다.
+- 과거 0.8.0 release source에는 불변 tag
+  `release/ios/0.8.0`과 `release/android/0.8.0`을 각각 위 커밋에
+  생성한다. 과거 submission tag는 소급 생성하지 않는다.
+- 앞으로 스토어에 업로드할 때마다
+  `submission/<platform>/<version>-build<build>` annotated tag를 즉시
+  생성한다. 거절되거나 교체된 submission tag도 보존하고, 다음 업로드는 새
+  build 번호의 tag를 사용한다. 스토어 승인 후 같은 커밋에
+  `release/<platform>/<version>` annotated tag를 한 번 생성한다. 공유된
+  submission/release tag는 삭제하거나 다른 커밋으로 이동하지 않는다. Tag
+  message는 플랫폼, version, build 번호, 업로드 또는 승인 날짜를 기록한다.
+- 릴리즈와 migration fixture의 source 단위는 항상 GitHub에서 합쳐진 PR의
+  merge commit이다. PR 내부 중간 커밋은 source로 사용하지 않는다. 플랫폼별
+  릴리즈 준비가 서로 다른 PR에서 끝나면 iOS와 Android release tag는 서로
+  다른 merge commit을 가리킬 수 있다.
+- 플랫폼별 원본 저장 형식은 따로 보관할 수 있지만 기대하는 semantic state는
+  공유한다.
+- 지원되는 두 경로인 0.8.0 → 현재 개발 schema와 0.9.1 → 현재 개발
+  schema를 iOS와 Android 단위 테스트로 각각 검증한다. 0.8.0 migration
+  과정에서 Sample Filter Set inventory가 seed되더라도 migration만으로
+  카메라에 자동 선택되지 않는지 확인한다.
+- 0.9.1 migration fixture test는 시험을 시작할 때의 최신 `main` PR
+  merge commit으로 iOS와 Android에서 먼저 수행한다. 현재 기준 source는
+  `9213f12a4ddd81334f304a10e491bba96216a806`(#74)이다. 이 시험 fixture는
+  PTIMER-234 개발 검증용이며 현재 iOS MARKETING_VERSION과 README가
+  0.9.0인 사실 때문에 공식 iOS 0.9.1 release fixture라고 주장하지 않는다.
+  시험 전에 `main`이 다른 PR merge commit으로 전진했다면 두 플랫폼 모두
+  그 최신 merge commit에서 fixture를 다시 만든다. 플랫폼별 스토어 승인 후
+  불변 tag `release/ios/0.9.1`과 `release/android/0.9.1`이 생기면 각
+  tag가 가리키는 merge commit으로 공식 fixture와 설치 업그레이드 증거를
+  다시 생성하여 개발 fixture를 대체한다. `Nikon Z7`은
+  `Digital Magnetic Filters`를 선택한다. 두 필름 카메라
+  `Hasselblad 503CX`와 `Nikon F2`는 공용으로
+  `Film Square ND/GND`와 `Film Color Filters`를 모두 선택한다.
+  Camera 4는 기본 상태로 둔다. 이후 버전으로 migration할 때 Sample Set
+  stable id와 카메라별 선택을 보존한다.
+- 현재 release가 지원하는 fixed-slot 저장 형식은 위의 공식 0.8.0과 0.9.1
+  fixture가 대표한다. Pre-release Draft, 수동 수정, 오염된 개발 데이터는
+  migration fixture가 아니며 개발·시험 기기에서 앱 데이터 삭제 또는
+  재설치로 제거한다.
+- 자동 이름 sequence가 없거나 읽히지 않는 경우의 fixture는 첫 Add가 일반
+  할당 경로로 `Camera 5`를 만들기 전에 6을 저장하고, 다음 Add가
+  `Camera 6`을 만드는지 양 플랫폼에서 검증한다. 기존에 같은 표시 이름이
+  있어도 새 camera identity를 사용하는지 확인한다.
+- 인식 가능한 shape의 누락 필드 fixture는 새 identity, `Camera`, shown,
+  fresh calculator state, 첫 shown active 기본값과 정규화 저장을 검증한다.
+  keyed record가 아닌 entry는 제외하고, duplicate identity의 첫 record는
+  유지하며 이후 record에는 새 identity를 발급한다.
+- 저장 내용은 성공적으로 읽었지만 version, camera collection 또는 전체
+  managed payload를 decode할 수 없는 fixture는 새 opaque identity 네 개를
+  사용한 fresh state로 한 번에 교체되는지, 교체 사이에 legacy migration이
+  실행되지 않는지, timer snapshot이 보존되는지 검증한다. 독립 sequence가
+  유효한 값 12인 fixture는 replacement sequence 12를 보존하고, sequence가
+  없거나 읽히지 않는 fixture는 5를 사용하는지 각각 검증한다. 저장소 read가
+  content 없이 실패하는 fixture는 delete/write/legacy migration이 모두 없고
+  camera action이 비활성화되며 `Camera data couldn't be loaded. Restart the
+  app.` 설명이 표시되고 다음 launch에서 initialization을 재시도하는지
+  별도로 검증한다.
+- 첫 공식 managed-camera release 이후의 모든 공식 릴리즈는 해당 릴리즈
+  코드나 설치 앱에서 생성한 fixture를 추가한다. 이후 테스트는 보존된 모든
+  공식 fixture를 현재 schema까지 migration하여 stable id, 이름,
+  디지털/필름 계산 상태, Filter Set inventory/selection, 순서, 표시 상태,
+  active camera와 자동 이름 sequence를 검증한다.
+- 사람이 현재 schema를 보고 과거 fixture JSON을 다시 작성하지 않는다.
+
+**언제**: 시맨틱 변경 가능성이 있는 모든 구조 변경 PR과 managed-camera
+schema/migration 변경 PR.
 
 ---
 
@@ -140,9 +222,32 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 × 필름 모드 on/off (Tri-X 1s, Velvia 4s, PORTRA 2s 케이스 포함)
 × 잠금화면 widget on/off (단일·다중 타이머)
 
-**소요**: 분할 PR 마다 5분. PR 본문에 스크린샷 1장 첨부.
+**설치 업그레이드 검증**: 공식 0.8.0과 0.9.1 fixture가 iOS와 Android
+단위 테스트에서 현재 schema까지 통과하면, 설치된 실제 데이터의 업그레이드
+시험은 최신 공식 릴리즈 → 후보 릴리즈 경로만 수행한다. 0.9.1 설치 데이터는
+0.8.0에서 위의 Nikon Z7 + Hasselblad 503CX + Nikon F2 구성을 만든 뒤
+업그레이드하여 준비한다. fixture가 실패하면 영향을 받는 설치 업그레이드
+경로를 추가로 재현한다. Draft 또는 오염된 개발 데이터는 이 검증의 입력으로
+사용하지 않는다.
 
-**언제**: View가 닿는 모든 PR
+Managed-camera UI 변경은 iOS와 Android에서 같은 fixture와 같은 언어로
+utility page, all-hidden empty state, management normal mode, management edit
+mode, delete confirmation을 각각 캡처한다. 두 플랫폼의 native container 차이는
+허용하되, row 정보 순서, visible actions, swipe-to-delete, drag reorder, bottom
+actions, 문구의 동일성을 나란히 검토한다.
+
+Cameras 화면의 시각 위계는 각 플랫폼이 지원하는 appearance에서 확인한다.
+iOS는 light와 dark, 현재 dark-only인 Android는 dark를 캡처한다. Close, Edit,
+Done이 다른 시트와 같은 플랫폼 표준 모양인지, 대비와 터치 영역이 충분한지
+확인한다. Add camera는 채움 없는 테두리 버튼인지, 라벨 대비 4.5:1, 테두리
+대비 3:1, 높이 44~48을 만족하는지 측정한다. 라벨은 중립색이고 accent 색은
+leading plus에만 쓰이는지, 투명도 감소 없이 활성 버튼으로 보이는지, 모든
+Add camera의 접근성 이름이 `Add camera`로 유지되는지도 확인한다.
+
+**소요**: 분할 PR 마다 5분. PR 본문에 스크린샷 1장 이상 첨부.
+
+**언제**: View가 닿는 모든 PR. Managed-camera release 후보는 최신 공식
+릴리즈에서의 설치 업그레이드 증거를 추가한다.
 
 ---
 

@@ -54,20 +54,19 @@ canceled — and moves between them only along a fixed set of transitions.
 A timer's identity is a bundle of associations describing which shot it
 belongs to, captured once at start time and frozen thereafter.
 
-- **TIMER-IDENTITY-001** — A timer's identity is the union of: the camera
-  slot it started from (id and display label as they stood at start time);
+- **TIMER-IDENTITY-001** — A timer's identity is the union of: the managed camera it started from (id and display label as they stood at start time);
   a film descriptor (canonical stock name and profile qualifier, or an
   explicit "no film" marker); and the exposure source that produced its
   duration.
 - **TIMER-IDENTITY-002** — The defined exposure sources are: digital result
   (no film selected); film Adjusted Shutter; film Corrected Exposure;
   Target Shutter; and manual (an externally supplied duration). A manual
-  timer does not capture any camera-slot or film identity and presents a
+  timer does not capture any camera or film identity and presents a
   generic basis label rather than borrowing whatever happens to be active.
 - **TIMER-IDENTITY-003** — Identity is captured once, at start time, and is
   invariant for the timer's entire lifetime — across running, paused,
   completed, reordered, focused, inspected, and restored states. Later
-  changes to the active camera slot, its display name, the active film, or
+  changes to the active managed camera, its display name, the active film, or
   the active reciprocity profile shall not retroactively rewrite an
   existing timer's identity.
 - **TIMER-IDENTITY-004** — Changing the active ND display notation

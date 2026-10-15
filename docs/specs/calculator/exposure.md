@@ -126,7 +126,7 @@ current release (see Non-goals).
 ## Persistence
 
 - **EXPOSURE-050** — The selected film identity, Base Shutter, ND, and
-  exposure scale token are part of each camera slot's persisted state (see
+  exposure scale token are part of each managed camera's persisted state (see
   `shooting/camera-slots.md`).
 - **EXPOSURE-051** — On restore, a persisted film id that no longer matches
   any catalog entry drops the selection and falls back to digital workflow,

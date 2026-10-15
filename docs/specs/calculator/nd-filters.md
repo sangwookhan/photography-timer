@@ -197,7 +197,7 @@ construction rather than by clamping after the fact.
 
 ## Persistence
 
-- **ND-PERSIST-001** — Each camera slot shall persist its complete committed
+- **ND-PERSIST-001** — Each managed camera shall persist its complete committed
   ND stack.
 - **ND-PERSIST-002** — On restore, a persisted stack is validated as a
   whole: wheel count in [1, 4], every value on the shipping ladder or a retained legacy fractional Standard value under ND-PERSIST-005, and a

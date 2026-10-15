@@ -5,29 +5,23 @@ package com.sangwook.ptimer.core.persistence
 
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
- * Fixed-slot to managed-list migration over the two supported fixed-slot
- * storage shapes (CAMERA-PERSIST-002/003/006, PERSIST-005,
- * PERSIST-CAMERA-SEQUENCE-003), driven by the fixtures under
+ * Fixed-slot to managed-list migration over the supported fixed-slot storage
+ * shape (CAMERA-PERSIST-002/003/006, PERSIST-005,
+ * PERSIST-CAMERA-SEQUENCE-003), driven by the fixture under
  * `shared/test-fixtures/camera-migration/`.
  *
- * Fixture provenance is recorded next to the files in
+ * Fixture provenance is recorded next to the file in
  * `android-provenance.txt`. `0.8.0-35f5fce6` comes from the exact Android
- * 0.8.0 (versionCode 5) release source `35f5fce6`. `0.9.1-dev-9213f12a` is a
- * DEVELOPMENT verification fixture generated from the latest `main` PR merge
- * commit `9213f12a` (#74, Android versionName 0.9.1) under the Strategy.md
- * latest-main rule; it is not an official release fixture and is replaced by
- * the one regenerated from `release/android/0.9.1` once that tag exists. Each
- * file is the output of that build's own `CalculatorController.exportSession()`
- * encoded by `SlotSessionCodec`, after applying the Strategy.md configuration;
- * neither was hand-written. The 0.8.0 payload predates the Filter Stack fields,
- * so it also proves migration of the older shape.
+ * 0.8.0 (versionCode 5) release source `35f5fce6`. The file is the output of
+ * that build's own `CalculatorController.exportSession()` encoded by
+ * `SlotSessionCodec`, after applying the Strategy.md configuration; it was not
+ * hand-written. The 0.8.0 payload predates the Filter Stack fields.
  */
 class FixedSlotMigrationFixtureTest {
 
@@ -127,41 +121,21 @@ class FixedSlotMigrationFixtureTest {
     }
 
     @Test
-    fun the091DevelopmentFixedSlotShapeMigratesAndKeepsEachCamerasFilterSetSelection() {
-        val m = Migrated(fixtureText("android-slot-session-0.9.1-dev-9213f12a.json"))
-        assertCommonShape(m)
-        val snapshots = m.restored.list.snapshots
-        val z7 = snapshots.getValue(CameraSlotId.camera1).candidateFilterSetIds
-        val hasselblad = snapshots.getValue(CameraSlotId.camera2).candidateFilterSetIds
-        val f2 = snapshots.getValue(CameraSlotId.camera3).candidateFilterSetIds
-        // Z7 selects one Set; the two film cameras share the other two; Camera 4 selects none.
-        assertEquals(1, z7?.size)
-        assertEquals(2, hasselblad?.size)
-        assertEquals(hasselblad, f2)
-        assertTrue(z7!!.intersect(hasselblad!!.toSet()).isEmpty())
-        assertNull(snapshots.getValue(CameraSlotId.camera4).candidateFilterSetIds)
-        assertNotNull(snapshots.getValue(CameraSlotId.camera2).filterStack)
-        assertDurableAndRepeatable(m)
-    }
-
-    @Test
-    fun anInterruptedMigrationRetriesIdempotentlyForBothShapes() {
-        listOf("android-slot-session-0.8.0-35f5fce6.json", "android-slot-session-0.9.1-dev-9213f12a.json").forEach { name ->
-            val session = requireNotNull(SlotSessionCodec.decode(fixtureText(name)))
-            val legacy = FixtureLegacy(session)
-            val sequence = InMemoryCameraNameSequenceStore()
-            // The managed write never lands (a kill after the sequence write).
-            val lossy = object : ManagedCameraListStoring {
-                override fun load() = ManagedCameraListLoadResult.Absent
-                override fun save(payload: PersistentManagedCameraList) = true
-            }
-            val first = CameraListPersistenceController(lossy, legacy, sequence)
-            val a = first.restore()
-            first.save(a.list)
-            val b = CameraListPersistenceController(lossy, legacy, sequence).restore()
-            assertEquals(a.list, b.list)
-            assertEquals(4, b.list.cameras.size)
-            assertEquals(CameraNameSequenceLoadResult.Value(5), sequence.result)
+    fun anInterruptedMigrationRetriesIdempotently() {
+        val session = requireNotNull(SlotSessionCodec.decode(fixtureText("android-slot-session-0.8.0-35f5fce6.json")))
+        val legacy = FixtureLegacy(session)
+        val sequence = InMemoryCameraNameSequenceStore()
+        // The managed write never lands (a kill after the sequence write).
+        val lossy = object : ManagedCameraListStoring {
+            override fun load() = ManagedCameraListLoadResult.Absent
+            override fun save(payload: PersistentManagedCameraList) = true
         }
+        val first = CameraListPersistenceController(lossy, legacy, sequence)
+        val a = first.restore()
+        first.save(a.list)
+        val b = CameraListPersistenceController(lossy, legacy, sequence).restore()
+        assertEquals(a.list, b.list)
+        assertEquals(4, b.list.cameras.size)
+        assertEquals(CameraNameSequenceLoadResult.Value(5), sequence.result)
     }
 }

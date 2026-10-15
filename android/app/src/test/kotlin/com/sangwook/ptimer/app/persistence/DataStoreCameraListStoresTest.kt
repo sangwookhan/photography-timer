@@ -166,32 +166,30 @@ class DataStoreCameraListStoresTest {
     }
 
     @Test
-    fun bothFixedSlotFixturesMigrateThroughTheRealStoresAndSurviveRelaunch() {
-        listOf("android-slot-session-0.8.0-35f5fce6.json", "android-slot-session-0.9.1-dev-9213f12a.json").forEachIndexed { index, name ->
-            val managedDs = newDataStore("migration_managed_$index.preferences_pb")
-            val sequenceDs = newDataStore("migration_sequence_$index.preferences_pb")
-            val legacyDs = newDataStore("migration_legacy_$index.preferences_pb")
-            val legacyText = fixtureText(name)
-            legacyDs.put("slot_session_json", legacyText)
-            fun controller() = CameraListPersistenceController(
-                DataStoreManagedCameraListStore(managedDs),
-                DataStoreSlotSessionStore(legacyDs),
-                DataStoreCameraNameSequenceStore(sequenceDs),
-            )
+    fun theReleaseFixedSlotFixtureMigratesThroughTheRealStoresAndSurvivesRelaunch() {
+        val managedDs = newDataStore("migration_managed.preferences_pb")
+        val sequenceDs = newDataStore("migration_sequence.preferences_pb")
+        val legacyDs = newDataStore("migration_legacy.preferences_pb")
+        val legacyText = fixtureText("android-slot-session-0.8.0-35f5fce6.json")
+        legacyDs.put("slot_session_json", legacyText)
+        fun controller() = CameraListPersistenceController(
+            DataStoreManagedCameraListStore(managedDs),
+            DataStoreSlotSessionStore(legacyDs),
+            DataStoreCameraNameSequenceStore(sequenceDs),
+        )
 
-            val first = controller()
-            val restored = first.restore()
-            assertEquals(listOf("Nikon Z7", "Hasselblad 503CX", "Nikon F2", "Camera 4"), restored.list.cameras.map { it.name })
-            assertTrue(first.save(restored.list))
-            assertEquals(CameraNameSequenceLoadResult.Value(5), DataStoreCameraNameSequenceStore(sequenceDs).load())
+        val first = controller()
+        val restored = first.restore()
+        assertEquals(listOf("Nikon Z7", "Hasselblad 503CX", "Nikon F2", "Camera 4"), restored.list.cameras.map { it.name })
+        assertTrue(first.save(restored.list))
+        assertEquals(CameraNameSequenceLoadResult.Value(5), DataStoreCameraNameSequenceStore(sequenceDs).load())
 
-            val relaunched = controller().restore()
-            assertFalse(relaunched.needsInitialSave)
-            assertEquals(restored.list, relaunched.list)
-            // The legacy payload is still there, untouched.
-            val stored = runBlocking { legacyDs.data.firstOrNull()?.get(stringPreferencesKey("slot_session_json")) }
-            assertEquals(legacyText, stored)
-        }
+        val relaunched = controller().restore()
+        assertFalse(relaunched.needsInitialSave)
+        assertEquals(restored.list, relaunched.list)
+        // The legacy payload is still there, untouched.
+        val stored = runBlocking { legacyDs.data.firstOrNull()?.get(stringPreferencesKey("slot_session_json")) }
+        assertEquals(legacyText, stored)
     }
 
     private fun managedWithOneCamera(name: String): DataStore<Preferences> {

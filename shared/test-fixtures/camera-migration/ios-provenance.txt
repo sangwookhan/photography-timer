@@ -21,11 +21,6 @@ ios-slot-session-0.8.0-build1-bedd9e10.json  (official 0.8.0 fixture)
   not a capture from an installed App Store build; the configuration is applied through the
   view-model API, not through the screens.
 
-ios-slot-session-dev-main-9213f12a.json  (development verification fixture)
-  Source: the exact merged PR commit at the head of main at test start,
-  9213f12a4ddd81334f304a10e491bba96216a806 (#74); iOS marketing version 0.9.0, build 1 and
-  README 0.9.0 there, so this is not an official iOS 0.9.1 release fixture.
-  Generation: throwaway worktree, FIXTURE_OUT=<path> swift test --package-path ios/PTimerKit
-  --filter ZZFixtureGenerator (debug configuration, in-memory session store, Sample Filter
-  Sets seeded through initialFilterInventory).
-  To be replaced by a fixture generated from release/ios/0.9.1 once that tag exists.
+The development fixture for the cancelled 0.9.x release (dev-main 9213f12a) was
+removed. That version was never released, so only the 0.8.0 upgrade path is
+tested.

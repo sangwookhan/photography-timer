@@ -40,17 +40,16 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * FILTER-A11Y-003 on the affected-camera messages: the default slot
- * label is the app's own word and must be the user's language, while a
- * photographer-supplied camera name is the photographer's text and must
- * survive byte for byte. The state layer keeps the default label
- * locale-stable because it has no resources, so the substitution
- * happens here, at the display boundary.
+ * FILTER-A11Y-003 on the affected-camera messages: a camera's name is
+ * stored text — the photographer's own, or the `Camera N` generated and
+ * frozen when the camera was created — so it survives byte for byte in
+ * whatever language the message is rendered. The sentence around the
+ * names is the app's own and follows the user's language.
  *
  * Three surfaces interpolate a camera name — deleting a Filter Set,
  * deleting a Filter Item, and a refused item save — and each is driven
- * here for real, in English and in Korean, with one default slot name
- * and one custom name in the same message.
+ * here for real, in English and in Korean, with one generated name and
+ * one custom name in the same message.
  *
  * Every one of the three lives inside a Compose `Dialog`, which hosts
  * its own `AndroidComposeView` and re-provides `LocalContext`,
@@ -80,9 +79,9 @@ class AffectedCameraNameTest {
     /** Resources of the activity that is rendering, in its own locale. */
     private lateinit var rendered: Resources
 
-    /** One default slot label and one photographer-supplied name. */
+    /** One generated, frozen name and one photographer-supplied name. */
     private val cameras = listOf(
-        CameraSlotIdentity(CameraSlotId.camera1),
+        CameraSlotIdentity(CameraSlotId.camera1, GENERATED_CAMERA_NAME),
         CameraSlotIdentity(CameraSlotId.camera3, CUSTOM_CAMERA_NAME),
     )
 
@@ -158,41 +157,28 @@ class AffectedCameraNameTest {
     // ---- the formatter, directly -------------------------------------
 
     @Test
-    fun theDefaultSlotLabelIsLocalizedAndACustomNameIsNot() {
+    fun storedNamesPassThroughByteForByteInEveryLanguage() {
         val english = resourcesFor(Locale.US)
         val korean = resourcesFor(Locale.KOREA)
-        val default = listOf(CameraSlotIdentity(CameraSlotId.camera1))
+        val generated = listOf(CameraSlotIdentity(CameraSlotId.camera1, "카메라 1"))
         val custom = listOf(CameraSlotIdentity(CameraSlotId.camera2, "Hasselblad 500C/M"))
 
-        assertEquals("Camera 1", localizedCameraNames(default, english))
-        assertEquals("카메라 1", localizedCameraNames(default, korean))
-
-        // A photographer's own text is not the app's word to translate.
+        // A name is stored text, frozen when it was created: no locale changes it.
+        assertEquals("카메라 1", localizedCameraNames(generated, english))
+        assertEquals("카메라 1", localizedCameraNames(generated, korean))
         assertEquals("Hasselblad 500C/M", localizedCameraNames(custom, english))
         assertEquals("Hasselblad 500C/M", localizedCameraNames(custom, korean))
     }
 
     @Test
-    fun aMixedListLocalizesOnlyTheDefaultLabel() {
+    fun aMixedListKeepsEveryStoredName() {
         assertEquals(
-            "카메라 1, Rolleiflex 2.8F",
+            "Camera 1, Rolleiflex 2.8F",
             localizedCameraNames(
                 listOf(
-                    CameraSlotIdentity(CameraSlotId.camera1),
+                    CameraSlotIdentity(CameraSlotId.camera1, "Camera 1"),
                     CameraSlotIdentity(CameraSlotId.camera3, "Rolleiflex 2.8F"),
                 ),
-                resourcesFor(Locale.KOREA),
-            ),
-        )
-    }
-
-    /** A blank or whitespace custom name falls back to the default. */
-    @Test
-    fun aBlankCustomNameFallsBackToTheLocalizedDefault() {
-        assertEquals(
-            "카메라 4",
-            localizedCameraNames(
-                listOf(CameraSlotIdentity(CameraSlotId.camera4, "   ")),
                 resourcesFor(Locale.KOREA),
             ),
         )
@@ -334,7 +320,10 @@ class AffectedCameraNameTest {
 private const val ENGLISH = "en-US"
 private const val KOREAN = "ko-KR"
 private const val CUSTOM_CAMERA_NAME = "Rolleiflex 2.8F"
-private const val ENGLISH_CAMERAS = "Camera 1, $CUSTOM_CAMERA_NAME"
-private const val KOREAN_CAMERAS = "카메라 1, $CUSTOM_CAMERA_NAME"
+private const val GENERATED_CAMERA_NAME = "Camera 1"
+
+// Names are stored text: the same list reads the same in both languages.
+private const val ENGLISH_CAMERAS = "$GENERATED_CAMERA_NAME, $CUSTOM_CAMERA_NAME"
+private const val KOREAN_CAMERAS = ENGLISH_CAMERAS
 private const val LOCALE_TIMEOUT_MILLIS = 5_000L
 private const val LOCALE_POLL_MILLIS = 50L

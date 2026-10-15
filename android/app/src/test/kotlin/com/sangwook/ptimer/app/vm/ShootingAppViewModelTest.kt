@@ -15,10 +15,17 @@ import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.persistence.FilterInventoryStoring
 import com.sangwook.ptimer.core.persistence.PersistentFilterInventorySnapshot
-import com.sangwook.ptimer.core.persistence.PersistentSlotSession
+import com.sangwook.ptimer.core.persistence.CameraListPersistenceController
+import com.sangwook.ptimer.core.persistence.CameraNameSequenceLoadResult
+import com.sangwook.ptimer.core.persistence.InMemoryCameraNameSequenceStore
+import com.sangwook.ptimer.core.persistence.InMemoryManagedCameraListStore
+import com.sangwook.ptimer.core.persistence.ManagedCameraListCodec
+import com.sangwook.ptimer.core.persistence.ManagedCameraListLoadResult
+import com.sangwook.ptimer.core.persistence.ManagedCameraListStoring
+import com.sangwook.ptimer.core.persistence.PersistentManagedCameraList
 import com.sangwook.ptimer.core.persistence.PersistentWorkspaceSnapshot
-import com.sangwook.ptimer.core.persistence.SlotSessionStoring
 import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
+import com.sangwook.ptimer.core.slots.CameraListSnapshot
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.timer.TimerIdentity
 import com.sangwook.ptimer.core.timer.TimerStatus
@@ -33,6 +40,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -80,12 +88,14 @@ class ShootingAppViewModelTest {
         override fun clearSnapshot() { saved = null }
     }
 
-    private class FakeSlotStore : SlotSessionStoring {
-        val saved = mutableListOf<PersistentSlotSession>()
-        override fun loadSession(): PersistentSlotSession? = null
-        override fun saveSession(session: PersistentSlotSession) { saved += session }
-        override fun clearSession() {}
+    /** Records every managed-list write the owner submits. */
+    private class FakeSlotStore : ManagedCameraListStoring {
+        val saved = mutableListOf<PersistentManagedCameraList>()
+        override fun load(): ManagedCameraListLoadResult = ManagedCameraListLoadResult.Absent
+        override fun save(payload: PersistentManagedCameraList): Boolean { saved += payload; return true }
     }
+
+    private fun PersistentManagedCameraList.calculator(id: String) = cameras.first { it.id == id }.calculator
 
     private class FakeInventoryStore : FilterInventoryStoring {
         val saved = mutableListOf<PersistentFilterInventorySnapshot>()
@@ -108,20 +118,26 @@ class ShootingAppViewModelTest {
 
     private fun holder(
         timerStore: WorkspacePersistenceStoring = FakeWorkspaceStore(),
-        slotStore: SlotSessionStoring = FakeSlotStore(),
-        initialSession: PersistentSlotSession? = null,
+        slotStore: ManagedCameraListStoring = FakeSlotStore(),
+        initialCameraList: CameraListSnapshot? = null,
         completionNotifier: TimerCompletionNotifier = TimerCompletionNotifier {},
         clock: () -> Instant = { t0 },
         inventoryStore: FilterInventoryStoring = FakeInventoryStore(),
         initialInventory: FilterInventory? = null,
         initialInventoryIsStoreRead: Boolean = initialInventory != null,
+        cameraListPersistence: CameraListPersistenceController = CameraListPersistenceController(
+            managedStore = slotStore,
+            sequenceStore = InMemoryCameraNameSequenceStore(CameraNameSequenceLoadResult.Value(5)),
+        ),
+        needsInitialCameraListSave: Boolean = false,
     ): ShootingAppViewModel = ShootingAppViewModel(
         films = emptyList(),
         library = CustomFilmLibrary(),
-        initialSession = initialSession,
+        initialCameraList = initialCameraList,
         timerStore = timerStore,
         alarmPlayer = FakeAlarmPlayer(),
-        slotStore = slotStore,
+        cameraListPersistence = cameraListPersistence,
+        needsInitialCameraListSave = needsInitialCameraListSave,
         completionNotifier = completionNotifier,
         inventoryStore = inventoryStore,
         initialInventory = initialInventory,
@@ -162,6 +178,32 @@ class ShootingAppViewModelTest {
     }
 
     @Test
+    fun timersAndTheirCapturedCameraIdentitySurviveCameraDataRecovery() {
+        listOf(ManagedCameraListLoadResult.Undecodable, ManagedCameraListLoadResult.ReadFailed).forEach { stored ->
+            val timerStore = FakeWorkspaceStore().apply { toLoad = seededWorkspaceSnapshot() }
+            val persistence = CameraListPersistenceController(
+                managedStore = InMemoryManagedCameraListStore(stored),
+                sequenceStore = InMemoryCameraNameSequenceStore(CameraNameSequenceLoadResult.Value(5)),
+            )
+            val restored = persistence.restore()
+            val sut = holder(
+                timerStore = timerStore,
+                initialCameraList = restored.list,
+                cameraListPersistence = persistence,
+                needsInitialCameraListSave = restored.needsInitialSave,
+                clock = { t0.plusSeconds(40) },
+            )
+            scheduler.runCurrent()
+
+            val timer = sut.timers.uiState.value.active.single()
+            assertEquals(identity, timer.identity)
+            assertEquals(60.0, timer.remainingSeconds, 1e-6)
+            // Timer persistence is independent: whatever it rewrites keeps the captured identity.
+            timerStore.saved?.let { assertEquals(identity, it.timers.single().identity) }
+        }
+    }
+
+    @Test
     fun calculatorChangePersistsOnlyAfterTheDebounceWindow() {
         val slotStore = FakeSlotStore()
         val sut = holder(slotStore = slotStore)
@@ -175,7 +217,7 @@ class ShootingAppViewModelTest {
         scheduler.advanceTimeBy(1)
         scheduler.advanceUntilIdle()
         assertEquals(1, slotStore.saved.size)
-        assertEquals(5, slotStore.saved.single().snapshots[CameraSlotId.camera1]?.shutterIndex)
+        assertEquals(5, slotStore.saved.single().calculator("camera1")?.shutterIndex)
     }
 
     @Test
@@ -191,7 +233,7 @@ class ShootingAppViewModelTest {
         scheduler.advanceUntilIdle()
 
         assertEquals(1, slotStore.saved.size)
-        assertEquals(7, slotStore.saved.single().snapshots[CameraSlotId.camera1]?.shutterIndex)
+        assertEquals(7, slotStore.saved.single().calculator("camera1")?.shutterIndex)
     }
 
     @Test
@@ -360,7 +402,7 @@ class ShootingAppViewModelTest {
         assertSame(gen1, gen2)
         assertEquals(1, built)
 
-        val session = gen2.calculator.exportSession()
+        val session = gen2.calculator.exportCameraList()
         assertEquals(CameraSlotId.camera2, session.activeSlotId)
         assertEquals(3, session.snapshots[CameraSlotId.camera1]?.shutterIndex)
         assertEquals(9, session.snapshots[CameraSlotId.camera2]?.shutterIndex)
@@ -372,8 +414,8 @@ class ShootingAppViewModelTest {
         // closes with the latest committed state.
         scheduler.advanceTimeBy(400)
         scheduler.advanceUntilIdle()
-        assertEquals(CameraSlotId.camera2, slotStore.saved.last().activeSlotId)
-        assertEquals(9, slotStore.saved.last().snapshots[CameraSlotId.camera2]?.shutterIndex)
+        assertEquals("camera2", slotStore.saved.last().activeCameraId)
+        assertEquals(9, slotStore.saved.last().calculator("camera2")?.shutterIndex)
 
         vmStore.clear()
     }
@@ -392,11 +434,16 @@ class ShootingAppViewModelTest {
         first.calculator.setShutterIndex(9)
         scheduler.advanceTimeBy(400)
         scheduler.advanceUntilIdle()
-        val durable = slotStore.saved.last()
+        val durable = CameraListPersistenceController(
+            managedStore = InMemoryManagedCameraListStore(
+                ManagedCameraListCodec.decode(ManagedCameraListCodec.encode(slotStore.saved.last())),
+            ),
+            sequenceStore = InMemoryCameraNameSequenceStore(CameraNameSequenceLoadResult.Value(5)),
+        ).restore().list
 
-        val second = holder(initialSession = durable)
+        val second = holder(initialCameraList = durable)
         scheduler.advanceUntilIdle()
-        val restored = second.calculator.exportSession()
+        val restored = second.calculator.exportCameraList()
         assertEquals(CameraSlotId.camera2, restored.activeSlotId)
         assertEquals(9, restored.snapshots[CameraSlotId.camera2]?.shutterIndex)
     }
@@ -487,6 +534,6 @@ class ShootingAppViewModelTest {
         store.clear()
         scheduler.advanceUntilIdle()
 
-        assertEquals(9, slotStore.saved.last().snapshots[CameraSlotId.camera1]?.shutterIndex)
+        assertEquals(9, slotStore.saved.last().calculator("camera1")?.shutterIndex)
     }
 }

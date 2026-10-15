@@ -340,17 +340,12 @@ internal fun localizedFilterReferenceText(summary: List<FilterSummaryEntry>): St
     )
 
 /**
- * Camera names for an affected-camera message, in the user's language
- * (FILTER-A11Y-003). A photographer-supplied name is the photographer's
- * text and passes through byte for byte; only the default `Camera N`
- * label, which the state layer keeps locale-stable because it has no
- * resources, is localized here.
+ * Camera names for an affected-camera message (FILTER-A11Y-003). A camera's
+ * name is stored text — typed by the photographer or the `Camera N` generated
+ * and frozen when the camera was created — so it passes through byte for byte.
  */
 internal fun localizedCameraNames(cameras: List<CameraSlotIdentity>, resources: Resources): String =
-    cameras.joinToString(CAMERA_NAME_SEPARATOR) { identity ->
-        identity.customDisplayName?.trim()?.takeIf { it.isNotEmpty() }
-            ?: resources.getString(R.string.camera_default_name, identity.id.ordinal + 1)
-    }
+    cameras.joinToString(CAMERA_NAME_SEPARATOR) { it.displayName }
 
 /** Composable form of [localizedCameraNames]. */
 @Composable

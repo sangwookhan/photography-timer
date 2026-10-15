@@ -151,10 +151,10 @@
     <string name="filter_item_save_blocked_nd_wheels">This filter is mounted on %1$s, where the ND wheels are already full. Remove an ND wheel there first, or keep this filter\'s kind.</string>
     <string name="reset_shooting_title">Reset shooting setup?</string>
     <string name="reset_settings">Reset settings</string>
-    <string name="reset_settings_and_name">Reset settings and name</string>
     <string name="rename_camera_title">Rename camera</string>
     <!-- Default slot label when the photographer has not named the camera -->
     <string name="camera_default_name">Camera %1$d</string>
+    <string name="camera_record_fallback_name">Camera</string>
     <string name="camera_name">Camera name</string>
     <string name="shooting_choose_film_cd">Choose film</string>
     <!-- Pager position under the camera-slot dots (%1$s = 1-based current, %2$s = total) -->

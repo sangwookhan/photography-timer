@@ -13,10 +13,10 @@ import com.sangwook.ptimer.core.customfilm.CustomFilmLibrary
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.persistence.FilterInventoryStoring
 import com.sangwook.ptimer.core.persistence.NoOpFilterInventoryStore
-import com.sangwook.ptimer.core.persistence.PersistentSlotSession
-import com.sangwook.ptimer.core.persistence.SlotSessionStoring
+import com.sangwook.ptimer.core.persistence.CameraListPersistenceController
 import com.sangwook.ptimer.core.persistence.WorkspacePersistenceStoring
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.slots.CameraListSnapshot
 import com.sangwook.ptimer.core.timer.TimerStatus
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +27,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Quiet window between the last calculator change and its slot-session write,
+ * Quiet window between the last calculator change and its camera-list write,
  * keeping persistence off the hot wheel-tick path. Owned by [viewModelScope]
  * (PTIMER-223), so a configuration change no longer interrupts the window —
  * the collector keeps running and the pending write still lands.
@@ -76,10 +76,10 @@ class ShootingAppViewModel(
     films: List<FilmIdentity>,
     /** Custom film library; retained here so UI generations share one instance. */
     val library: CustomFilmLibrary,
-    initialSession: PersistentSlotSession?,
+    /** The restored managed camera list; `null` seeds the fresh-install list. */
+    initialCameraList: CameraListSnapshot?,
     timerStore: WorkspacePersistenceStoring,
     alarmPlayer: TimerAlarmPlayer,
-    private val slotStore: SlotSessionStoring,
     private val completionNotifier: TimerCompletionNotifier,
     /** Durable store for the user's Filter Sets and physical items. */
     inventoryStore: FilterInventoryStoring = NoOpFilterInventoryStore(),
@@ -99,6 +99,12 @@ class ShootingAppViewModel(
         FilterReferenceVocabulary.canonicalEnglish
     },
     private val persistence: OrderedPersistenceWriter = AppPersistenceWriter,
+    /** Camera-list persistence (managed list, legacy migration, name sequence). */
+    cameraListPersistence: CameraListPersistenceController = CameraListPersistenceController(),
+    /** The restored list still has to be written (fresh install or legacy migration). */
+    needsInitialCameraListSave: Boolean = false,
+    /** Localized `Camera N`, frozen as stored text when a camera is created. */
+    defaultCameraName: (Int) -> String = { "Camera $it" },
 ) : ViewModel() {
 
     /** Timer workspace state holder (unchanged pure Kotlin type). */
@@ -133,7 +139,8 @@ class ShootingAppViewModel(
         onStart = { duration, identity ->
             timers.onEvent(ShootingIntent.StartTimer(duration, identity))
         },
-        initialSession = initialSession,
+        initialCameraList = initialCameraList,
+        defaultCameraName = defaultCameraName,
         inventoryModel = filterInventoryModel,
         // The ND cleanup timer lives with the state it judges
         // (PTIMER-199 M3 follow-up, PTIMER-223's remaining scope):
@@ -142,6 +149,9 @@ class ShootingAppViewModel(
         ndCleanupScope = viewModelScope,
         referenceVocabulary = referenceVocabulary,
     )
+
+    /** Camera-list commands: apply to the calculator and persist the whole list. */
+    val cameras = CameraListManager(calculator, cameraListPersistence, persistence, defaultCameraName)
 
     private val coordinator = AndroidTimerCoordinator(viewModelScope, timers, clock)
 
@@ -157,15 +167,19 @@ class ShootingAppViewModel(
             timers.restore(snapshot)
         }
 
-        // Persist the slot session off the hot wheel-tick path: debounce the
-        // state stream and write the latest exported session. `drop(1)` skips
+        // A fresh install or a legacy migration writes the managed list once
+        // up front (the sequence first, then the payload), so the data is
+        // deterministic from the first launch.
+        if (needsInitialCameraListSave) cameras.persistCalculatorContext()
+
+        // Persist the camera list off the hot wheel-tick path: debounce the
+        // state stream and write the latest exported list. `drop(1)` skips
         // the initial emission so a fresh launch does not immediately rewrite
         // the restored state. The write goes through the shared ordered writer,
         // so a later bootstrap read observes it.
         viewModelScope.launch {
             calculator.state.drop(1).debounce(SLOT_SESSION_DEBOUNCE_MILLIS).collect {
-                val session = calculator.exportSession()
-                persistence.submit { runCatching { slotStore.saveSession(session) } }
+                cameras.persistCalculatorContext()
             }
         }
 
@@ -212,12 +226,11 @@ class ShootingAppViewModel(
     }
 
     /**
-     * Flushes a pending debounced slot-session write when the owner goes away
+     * Flushes a pending debounced camera-list write when the owner goes away
      * for good (Activity finish, not a configuration change), so a calculator
      * change committed inside the debounce window is not lost with the scope.
      */
     override fun onCleared() {
-        val session = calculator.exportSession()
-        persistence.submit { runCatching { slotStore.saveSession(session) } }
+        cameras.persistCalculatorContext()
     }
 }

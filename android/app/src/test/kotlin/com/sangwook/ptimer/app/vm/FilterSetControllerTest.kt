@@ -81,6 +81,7 @@ class FilterSetControllerTest {
     private class Fixture(
         inventory: FilterInventory,
         session: PersistentSlotSession? = null,
+        cameraList: com.sangwook.ptimer.core.slots.CameraListSnapshot? = null,
     ) {
         val started = mutableListOf<Pair<Double, TimerIdentity>>()
         val model = FilterInventoryModel(
@@ -96,6 +97,7 @@ class FilterSetControllerTest {
             films = emptyList(),
             onStart = { duration, identity -> started += duration to identity },
             initialSession = session,
+            initialCameraList = cameraList,
             inventoryModel = model,
             referenceVocabulary = { vocabulary },
         )
@@ -128,9 +130,9 @@ class FilterSetControllerTest {
     private fun plusOption(c: CalculatorController, source: FilterSource, state: CalculatorUiState = c.state.value) =
         state.plus.sources.first { it.source == source }
 
-    /** [CalculatorUiState.slotStates] is in `availableSlots` order. */
+    /** [CalculatorUiState.slotStates] is in displayed-camera (global list) order. */
     private fun page(c: CalculatorController, slot: CameraSlotId) =
-        c.state.value.slotStates[CameraSlotId.allOrdered.indexOf(slot)]
+        c.state.value.slotStates[CameraSlotId.legacyOrdered.indexOf(slot)]
 
     private fun committed(c: CalculatorController, slot: CameraSlotId): List<FilterWheelSelection> =
         page(c, slot).filterWheels.map { it.rows[it.committedIndex].selection }
@@ -804,7 +806,7 @@ class FilterSetControllerTest {
         }
         assertEquals(
             listOf(CameraSlotId.camera1, CameraSlotId.camera2),
-            c.camerasAffectedByDeletingItem(item.id).map { it.id }.sorted(),
+            c.camerasAffectedByDeletingItem(item.id).map { it.id }.sortedBy { it.raw },
         )
 
         c.deleteFilterItem(item.id)
@@ -1014,7 +1016,7 @@ class FilterSetControllerTest {
         val before = committed(c)
         val sources = wheels(c).map { it.source }
 
-        val restored = Fixture(f.model.inventory.value, c.exportSession()).controller
+        val restored = Fixture(f.model.inventory.value, cameraList = c.exportCameraList()).controller
 
         assertEquals(sources, wheels(restored).map { it.source })
         assertEquals(before, committed(restored))

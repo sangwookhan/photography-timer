@@ -163,18 +163,18 @@ class CalculatorControllerTest {
             ),
         )
         val c = CalculatorController(films = films, initialSession = session)
-        val exported = c.exportSession().snapshots.getValue(CameraSlotId.camera1)
+        val exported = c.exportCameraList().snapshots.getValue(CameraSlotId.camera1)
         assertEquals(16.6, exported.canonicalNdStackStops().single(), 1e-9)
 
-        val relaunched = CalculatorController(films = films, initialSession = c.exportSession())
-        assertEquals(16.6, relaunched.exportSession().snapshots.getValue(CameraSlotId.camera1).canonicalNdStackStops().single(), 1e-9)
+        val relaunched = CalculatorController(films = films, initialCameraList = c.exportCameraList())
+        assertEquals(16.6, relaunched.exportCameraList().snapshots.getValue(CameraSlotId.camera1).canonicalNdStackStops().single(), 1e-9)
     }
 
     @Test
     fun wholeStopSelectionLeavesExactFieldNull() {
         val c = controller()
         c.setNdIndex(ladderIndexOf(7.0))
-        val exported = c.exportSession().snapshots.getValue(CameraSlotId.camera1)
+        val exported = c.exportCameraList().snapshots.getValue(CameraSlotId.camera1)
         assertNull(exported.ndStops)
         assertEquals(7, exported.ndIndex)
     }
@@ -343,20 +343,6 @@ class CalculatorControllerTest {
     }
 
     @Test
-    fun resetActiveSlotSettingsAndNameClearsFilmInputsAndName() {
-        val c = controller()
-        c.selectFilm("ilford-pan-f-plus-50")
-        c.setNdIndex(6)
-        c.renameActiveSlot("Leica")
-        c.resetActiveSlotSettingsAndName()
-        val s = c.state.value
-        assertEquals("No film", s.selectedFilmName)
-        assertEquals(0, s.ndIndex)
-        assertEquals("Camera 1", s.activeSlotName)
-        assertFalse(s.hasFilm)
-    }
-
-    @Test
     fun canResetIsFalseAtDefaultsAndTrueAfterChanges() {
         val c = controller()
         assertFalse(c.state.value.canReset)
@@ -365,12 +351,12 @@ class CalculatorControllerTest {
     }
 
     @Test
-    fun canResetIsTrueWhenOnlyCustomNameSet() {
+    fun canResetIsFalseWhenOnlyTheNameChanged() {
         val c = controller()
         c.renameActiveSlot("Leica")
-        // Settings are still at defaults, but the custom name is
-        // resettable via "Reset settings and name".
-        assertTrue(c.state.value.canReset)
+        // A reset never changes a camera's name (RESET-012 retired), so a
+        // renamed camera at default settings has nothing to reset.
+        assertFalse(c.state.value.canReset)
     }
 
     @Test
@@ -506,10 +492,10 @@ class CalculatorControllerTest {
         origin.setTargetShutter(45.0)
         origin.selectSlot(CameraSlotId.camera2)
         origin.setNdIndex(2)
-        val exported = origin.exportSession()
+        val exported = origin.exportCameraList()
 
         // Rebuild from the exported session: active slot + per-slot state survive.
-        val restored = CalculatorController(films = films, initialSession = exported)
+        val restored = CalculatorController(films = films, initialCameraList = exported)
         val camera2 = restored.state.value
         assertEquals("Camera 2", camera2.activeSlotName)
         assertEquals(2, camera2.ndIndex)
@@ -526,16 +512,16 @@ class CalculatorControllerTest {
     fun restoreNormalizesStaleFilmSelectionWhenFilmNoLongerExists() {
         val origin = controller()
         origin.selectFilm("ilford-pan-f-plus-50")
-        val exported = origin.exportSession()
+        val exported = origin.exportCameraList()
 
         // Rebuild with the selected film removed from the catalog (e.g. a
         // deleted custom film). The stale selection is normalized to a safe
         // state, not re-persisted as a broken reference.
         val reduced = films.filterNot { it.id == "ilford-pan-f-plus-50" }
-        val restored = CalculatorController(films = reduced, initialSession = exported)
+        val restored = CalculatorController(films = reduced, initialCameraList = exported)
 
         assertEquals("No film", restored.state.value.selectedFilmName)
-        val activeSnapshot = restored.exportSession().snapshots[CameraSlotId.camera1]
+        val activeSnapshot = restored.exportCameraList().snapshots[CameraSlotId.camera1]
         assertNull(activeSnapshot?.selectedFilmId)
         assertNull(activeSnapshot?.selectedProfileId)
     }
@@ -571,7 +557,7 @@ class CalculatorControllerTest {
         assertEquals(2, ui.ndIndex)
         assertTrue(ui.targetDisplay is com.sangwook.ptimer.core.target.TargetShutterDisplayState.Unavailable)
 
-        val persisted = c.exportSession().snapshots.getValue(CameraSlotId.camera2)
+        val persisted = c.exportCameraList().snapshots.getValue(CameraSlotId.camera2)
         assertNull(persisted.selectedFilmId)
         assertNull(persisted.selectedProfileId)
         assertTrue(persisted.shutterIndex in ui.shutterLabels.indices)

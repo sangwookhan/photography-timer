@@ -112,10 +112,12 @@ fun ShootingApp(
         ShootingAppViewModel(
             films = bootstrap.presetFilms + bootstrap.library.customFilms,
             library = bootstrap.library,
-            initialSession = bootstrap.initialSession,
+            initialCameraList = bootstrap.initialCameraList,
             timerStore = DataStoreTimerWorkspaceStore.create(context),
             alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
-            slotStore = bootstrap.slotStore,
+            cameraListPersistence = bootstrap.cameraListPersistence,
+            needsInitialCameraListSave = bootstrap.needsInitialCameraListSave,
+            defaultCameraName = bootstrap.defaultCameraName,
             inventoryStore = bootstrap.inventoryStore,
             initialInventory = bootstrap.initialInventory,
             // The bootstrap always reads the store: `null` is a fresh install.
@@ -431,14 +433,16 @@ fun ShootingApp(
                     onSelectFilm = controller::selectFilm,
                     onSelectProfile = controller::selectProfile,
                     onSelectSlot = controller::selectSlot,
-                    onRenameSlot = controller::renameActiveSlot,
+                    onRenameSlot = { name ->
+                        controller.state.value.slots.firstOrNull { it.isActive }
+                            ?.let { holder.cameras.renameCamera(it.id, name.orEmpty()) }
+                    },
                     onSetTarget = controller::setTargetShutter,
                     onStartTarget = controller::startFromTarget,
                     onStartAdjusted = controller::startFromAdjusted,
                     onStartCorrected = controller::startFromCorrected,
                     onOpenDetails = { details = controller.detailsState() },
                     onResetSettings = controller::resetActiveSlotSettings,
-                    onResetSettingsAndName = controller::resetActiveSlotSettingsAndName,
                     onCreateCustomFilm = { input, editId ->
                         // editId set → update that film in place (reuse its ids); else new.
                         val film = CustomFilmBuilder.buildFormulaFilm(

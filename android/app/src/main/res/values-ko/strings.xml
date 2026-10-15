@@ -142,10 +142,10 @@
 
     <string name="reset_shooting_title">촬영 설정을 초기화할까요?</string>
     <string name="reset_settings">설정 초기화</string>
-    <string name="reset_settings_and_name">설정과 이름 초기화</string>
     <string name="rename_camera_title">카메라 이름 변경</string>
     <!-- Default slot label when the photographer has not named the camera -->
     <string name="camera_default_name">카메라 %1$d</string>
+    <string name="camera_record_fallback_name">카메라</string>
     <string name="camera_name">카메라 이름</string>
     <string name="shooting_choose_film_cd">필름 선택</string>
     <string name="pager_position_format">%2$d개 중 %1$d번째</string>

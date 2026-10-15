@@ -146,7 +146,6 @@ fun ShootingScreen(
     onStartCorrected: () -> Unit,
     onOpenDetails: () -> Unit,
     onResetSettings: () -> Unit,
-    onResetSettingsAndName: () -> Unit,
     onCreateCustomFilm: (CustomFormulaFilmInput, editFilmId: String?) -> Boolean,
     onCreateCustomTableFilm: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onEditCustomFilm: (String) -> CustomFilmDraft?,
@@ -563,18 +562,13 @@ fun ShootingScreen(
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
             title = { CappedFontScale { Text(stringResource(R.string.reset_shooting_title)) } },
-            // Two destructive choices: keep the camera name, or clear it
-            // too. Stacked in the confirm slot (with Cancel) so the
-            // single Reset entry point still gates the wipe behind a
-            // deliberate choice.
+            // One destructive choice, "Reset settings"; the camera's name
+            // is never changed by a reset (RESET-010, RESET-012 retired).
             confirmButton = {
                 CappedFontScale {
                     Column(horizontalAlignment = Alignment.End) {
                         TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
                             Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
-                        }
-                        TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
-                            Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
                         }
                         TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                     }

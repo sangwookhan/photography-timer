@@ -76,13 +76,13 @@ class FilterResetTest {
         assertEquals("The inventory is unchanged.", inventoryBefore, model.inventory.value)
         assertFalse("Selected Filter Sets alone do not show Reset.", c.state.value.canReset)
 
-        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        val restored = CalculatorController(films = emptyList(), initialCameraList = c.exportCameraList(), inventoryModel = model)
         assertTrue("The reset is saved.", restored.state.value.mountedAuxiliaryFilters.isEmpty())
         assertEquals(listOf(kit.id), restored.state.value.candidateFilterSetIds)
         assertEquals(FilterSource.FilterSet(kit.id), plusSource(restored))
     }
 
-    @Test fun resetSettingsAndNameClearsEveryAuxiliaryKindAndLeavesOtherCamerasAlone() {
+    @Test fun resetSettingsClearsEveryAuxiliaryKindKeepsTheNameAndLeavesOtherCamerasAlone() {
         val (c, _) = camera()
         c.selectSlot(CameraSlotId.camera2)
         assertNull(c.applyShootingFilters(listOf(kit.id), listOf(mount(red))))
@@ -95,12 +95,12 @@ class FilterResetTest {
         c.setNdWheelActive(wheel.id, false)
         assertEquals("8.5", c.state.value.filterStatus.totalStopsText)
 
-        c.resetActiveSlotSettingsAndName()
+        c.resetActiveSlotSettings()
 
         assertEquals(listOf(FilterWheelSelection.Standard(0.0)), c.state.value.filterWheels.map { it.rows[it.committedIndex].selection })
         assertTrue(c.state.value.mountedAuxiliaryFilters.isEmpty())
         assertEquals(listOf(kit.id), c.state.value.candidateFilterSetIds)
-        assertEquals("Camera 1", c.state.value.activeSlotName)
+        assertEquals("The camera name is kept.", "Field", c.state.value.activeSlotName)
         c.selectSlot(CameraSlotId.camera2)
         assertEquals("Another camera is unchanged.", listOf(mount(red)), c.state.value.mountedAuxiliaryFilters)
     }

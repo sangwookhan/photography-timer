@@ -5,53 +5,108 @@ package com.sangwook.ptimer.core.slots
 
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.NdFilterStack
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import java.util.UUID
 
 /**
- * Stable identity for a shooting-session camera slot. The MVP ships
- * Camera 1 through Camera 4; identities stay stable across slot switches
- * and persist into timer metadata so a timer can be associated with the
- * camera that started it. (iOS: CameraSlotID.)
+ * Stable identity for a managed camera. It never changes for the life of
+ * a camera, is never reassigned to a different camera after deletion, and
+ * persists into timer metadata so a timer can be associated with the camera
+ * that started it. The four identities of the fixed-slot product
+ * (`camera1` ... `camera4`) are kept verbatim as the migrated cameras'
+ * identities; every other identity is generated and is not derived from a
+ * list position or a display name. Serialized as a plain string, so legacy
+ * payloads keyed by `camera1` ... `camera4` read unchanged.
+ * (iOS: CameraSlotID.)
  */
-@Serializable
-enum class CameraSlotId {
-    camera1,
-    camera2,
-    camera3,
-    camera4;
+@Serializable(with = CameraSlotIdSerializer::class)
+data class CameraSlotId(val raw: String) {
+    init {
+        require(raw.isNotBlank()) { "Camera id must not be blank." }
+    }
 
-    /** Canonical, locale-stable label tied to the slot id. */
-    val defaultDisplayName: String
-        get() = when (this) {
-            camera1 -> "Camera 1"
-            camera2 -> "Camera 2"
-            camera3 -> "Camera 3"
-            camera4 -> "Camera 4"
-        }
-
-    /** Compact label for timer metadata / pager chips ("C1".."C4"). */
-    val shortLabel: String
-        get() = "C${ordinal + 1}"
+    /** `Camera N` number for a legacy identity; `null` for any other. */
+    val legacyNumber: Int? get() = legacyOrdered.indexOf(this).takeIf { it >= 0 }?.plus(1)
 
     companion object {
-        /** Default order surfaced by the session model and slot pager. */
-        val allOrdered: List<CameraSlotId> = entries.toList()
+        val camera1 = CameraSlotId("camera1")
+        val camera2 = CameraSlotId("camera2")
+        val camera3 = CameraSlotId("camera3")
+        val camera4 = CameraSlotId("camera4")
+
+        /** The identities of the fixed-slot product, in their original order. */
+        val legacyOrdered: List<CameraSlotId> = listOf(camera1, camera2, camera3, camera4)
+
+        /**
+         * A new, collision-free identity. UUID-based so it is never derived
+         * from a position or a name and cannot collide with a legacy
+         * `cameraN` raw value.
+         */
+        fun generate(): CameraSlotId = CameraSlotId("camera-${UUID.randomUUID().toString().lowercase()}")
+    }
+}
+
+object CameraSlotIdSerializer : KSerializer<CameraSlotId> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("CameraSlotId", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: CameraSlotId) = encoder.encodeString(value.raw)
+
+    override fun deserialize(decoder: Decoder): CameraSlotId {
+        val raw = decoder.decodeString()
+        return try {
+            CameraSlotId(raw)
+        } catch (_: IllegalArgumentException) {
+            throw SerializationException("Empty camera id")
+        }
     }
 }
 
 /**
- * View-facing pair of stable id + display label. The display layer reads
- * [displayName], which prefers a non-blank [customDisplayName] and
- * otherwise falls back to the canonical `Camera N`. The rename / reset
- * surface writes only [customDisplayName]; clearing it restores the
- * default without touching slot identity. (iOS: CameraSlotIdentity.)
+ * View-facing pair of stable id + display name. Timer metadata captures it
+ * at timer start, so a later rename, hide, reorder, or delete of the camera
+ * never changes what an existing timer shows. (iOS: CameraSlotIdentity.)
  */
 data class CameraSlotIdentity(
     val id: CameraSlotId,
-    val customDisplayName: String? = null,
+    /** The camera's stored name (trimmed, non-empty). */
+    val displayName: String,
 ) {
-    val displayName: String
-        get() = customDisplayName?.trim()?.takeIf { it.isNotEmpty() } ?: id.defaultDisplayName
+    /** Identity named by the legacy `Camera N` label (or the raw identity
+     *  for any other camera), for callers that hold only an id. */
+    constructor(id: CameraSlotId) : this(id, id.legacyNumber?.let { "Camera $it" } ?: id.raw)
+}
+
+/** Camera naming rules shared by seeding, migration, rename, and add. */
+object CameraNaming {
+    /** Trimmed name, or `null` for a blank / whitespace-only value. */
+    fun trimmedName(name: String?): String? = name?.trim()?.takeIf { it.isNotEmpty() }
+
+    /**
+     * Compact camera badge for timer cards, derived only from what the
+     * timer captured so it never depends on the current camera list.
+     * Legacy identities keep `C1`...`C4`; any other camera uses the first
+     * letter plus the last two digits of a trailing number (`Leica M6` ->
+     * `L6`, `Camera 123` -> `C23`), the last two digits of a name made only
+     * of digits (`35` -> `35`), otherwise the first two letters. (iOS:
+     * TimerCardIdentityPresenter.compactCameraLabel.)
+     */
+    fun compactLabel(id: CameraSlotId, name: String): String {
+        id.legacyNumber?.let { return "C$it" }
+        val trailingDigits = name.takeLastWhile { it.isDigit() }
+        if (trailingDigits.isNotEmpty()) {
+            val shown = trailingDigits.takeLast(2)
+            if (trailingDigits.length == name.length) return shown
+            return (name.first().toString() + shown).uppercase()
+        }
+        return name.take(2).uppercase()
+    }
 }
 
 /**
@@ -153,119 +208,3 @@ fun SlotCalculatorSnapshot.canonicalNdStackStops(): List<Double> =
     } else {
         listOf(canonicalNDStops())
     }
-
-/**
- * Owns the camera-slot session state: which slot is active and a stable
- * calculator snapshot for *every* slot. Each slot's snapshot lives here for
- * the life of the session, so switching the active slot is a pure change of
- * [activeSlotId] with no cross-slot capture/restore side effect — the caller
- * (the calculator controller) reads and mutates the active slot's snapshot in
- * place through [activeSnapshot] / [updateActiveSnapshot]. (iOS keeps the
- * active slot's live state on its calc/film models; the Android controller has
- * no such split, so the session is the single per-slot owner here.)
- */
-class CameraSlotSession(
-    val availableSlots: List<CameraSlotId> = CameraSlotId.allOrdered,
-    initialActiveSlotId: CameraSlotId = CameraSlotId.camera1,
-    defaultSnapshot: SlotCalculatorSnapshot,
-    initialSnapshots: Map<CameraSlotId, SlotCalculatorSnapshot> = emptyMap(),
-    initialCustomNames: Map<CameraSlotId, String> = emptyMap(),
-) {
-    init {
-        require(availableSlots.size >= 2) { "Camera slot session must expose at least two slots." }
-        require(availableSlots.size <= CameraSlotId.entries.size) {
-            "Camera slot session must expose at most ${CameraSlotId.entries.size} slots."
-        }
-        require(availableSlots.toSet().size == availableSlots.size) {
-            "Camera slot session must expose unique slot ids."
-        }
-        require(initialActiveSlotId in availableSlots) {
-            "Initial active slot must be one of the available slots."
-        }
-    }
-
-    var activeSlotId: CameraSlotId = initialActiveSlotId
-        private set
-
-    // One stable snapshot per available slot (active included). Missing entries
-    // seed from the default so every slot has an owner from construction.
-    private val snapshots: MutableMap<CameraSlotId, SlotCalculatorSnapshot> =
-        availableSlots.associateWith { initialSnapshots[it] ?: defaultSnapshot }.toMutableMap()
-
-    private val customNames: MutableMap<CameraSlotId, String> =
-        sanitizeCustomNames(initialCustomNames).toMutableMap()
-
-    /** Identity for an arbitrary slot, merging default + custom name. */
-    fun identity(slotId: CameraSlotId): CameraSlotIdentity =
-        CameraSlotIdentity(slotId, customNames[slotId])
-
-    val activeIdentity: CameraSlotIdentity get() = identity(activeSlotId)
-
-    /** Identities for every available slot, in pager order. */
-    fun identities(): List<CameraSlotIdentity> = availableSlots.map { identity(it) }
-
-    /**
-     * Sets a slot's photographer-supplied name. Whitespace is trimmed; an
-     * empty / blank / null value clears the custom entry.
-     */
-    fun setCustomName(name: String?, slotId: CameraSlotId) {
-        if (slotId !in availableSlots) return
-        val trimmed = name?.trim()
-        if (!trimmed.isNullOrEmpty()) customNames[slotId] = trimmed else customNames.remove(slotId)
-    }
-
-    fun resetCustomName(slotId: CameraSlotId) {
-        if (slotId !in availableSlots) return
-        customNames.remove(slotId)
-    }
-
-    /** Snapshot for any available slot (active or not); null for an unknown slot. */
-    fun snapshot(slotId: CameraSlotId): SlotCalculatorSnapshot? =
-        if (slotId in availableSlots) snapshots.getValue(slotId) else null
-
-    /** The active slot's stable snapshot. */
-    val activeSnapshot: SlotCalculatorSnapshot get() = snapshots.getValue(activeSlotId)
-
-    /** Replaces the active slot's snapshot in place; other slots are untouched. */
-    fun updateActiveSnapshot(transform: (SlotCalculatorSnapshot) -> SlotCalculatorSnapshot) {
-        snapshots[activeSlotId] = transform(snapshots.getValue(activeSlotId))
-    }
-
-    /**
-     * Replaces any available slot's snapshot in place (active included);
-     * an unknown slot is a no-op. Used when a change outside the calculator
-     * — an inventory edit — has to be applied to every slot, not just the
-     * active one. (iOS: `updateInactiveSnapshots`.)
-     */
-    fun updateSnapshot(slotId: CameraSlotId, transform: (SlotCalculatorSnapshot) -> SlotCalculatorSnapshot) {
-        if (slotId !in availableSlots) return
-        snapshots[slotId] = transform(snapshots.getValue(slotId))
-    }
-
-    /**
-     * Makes [targetSlotId] the active slot. Each slot keeps its own snapshot
-     * entry, so no capture/restore crosses slots. Returns false for a no-op
-     * (unknown target, or the slot is already active) so the caller can skip
-     * a redundant republish.
-     */
-    fun switchActiveSlot(targetSlotId: CameraSlotId): Boolean {
-        if (targetSlotId !in availableSlots || targetSlotId == activeSlotId) return false
-        activeSlotId = targetSlotId
-        return true
-    }
-
-    /** Snapshot of every available slot (active included). */
-    fun currentSnapshots(): Map<CameraSlotId, SlotCalculatorSnapshot> = snapshots.toMap()
-
-    /** Current photographer-supplied display names, keyed by slot. */
-    fun currentCustomNames(): Map<CameraSlotId, String> = customNames.toMap()
-
-    private fun sanitizeCustomNames(names: Map<CameraSlotId, String>): Map<CameraSlotId, String> {
-        val allowed = availableSlots.toSet()
-        return names.mapNotNull { (slot, value) ->
-            if (slot !in allowed) return@mapNotNull null
-            val trimmed = value.trim()
-            if (trimmed.isEmpty()) null else slot to trimmed
-        }.toMap()
-    }
-}

@@ -5,7 +5,7 @@ title: Release Notes
 
 # Release Notes
 
-## 0.9.1 — Unreleased beta
+## 0.9.1 — Unreleased
 
 Common changes:
 

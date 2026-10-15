@@ -278,6 +278,24 @@ private final class InMemoryCalculatorContextStore: ExposureCalculatorContextSto
 
 @MainActor
 private final class InMemoryCameraSlotSessionStore: CameraSlotSessionPersistenceStoring {
+    /// Managed camera list, kept as the schema-checked payload the
+    /// production store would return.
+    var managedList: ManagedCameraListLoadResult = .absent
+
+    func loadManagedList() -> ManagedCameraListLoadResult {
+        managedList
+    }
+
+    func saveManagedList(_ snapshot: PersistentManagedCameraListSnapshot) {
+        managedList = .loaded(snapshot)
+    }
+
+    /// The calculator state the managed list persisted for `id`.
+    func persistedCalculator(of id: CameraSlotID) -> PersistentCameraSlotCalculatorSnapshot? {
+        guard case let .loaded(snapshot) = managedList else { return nil }
+        return snapshot.cameras.first { $0.idRaw == id.rawValue }?.calculator
+    }
+
     private var snapshot: PersistentCameraSlotSessionSnapshot?
     func loadSnapshot() -> PersistentCameraSlotSessionSnapshot? { snapshot }
     func saveSnapshot(_ snapshot: PersistentCameraSlotSessionSnapshot) { self.snapshot = snapshot }

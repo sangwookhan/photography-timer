@@ -1,0 +1,31 @@
+iOS migration fixtures: provenance
+===================================
+
+ios-slot-session-0.8.0-build1-bedd9e10.json  (official 0.8.0 fixture)
+  Release source: tag release/ios/0.8.0 -> commit bedd9e107679437baec4ea68d3e1300cf2aaf535
+  (iOS marketing version 0.8.0, build 1).
+  Build configuration: Release (xcodebuild -configuration Release, ENABLE_TESTABILITY=YES so
+  the app-hosted test can import the app module), iOS Simulator, iPhone 17.
+  Persistence path: production. The one-off app-hosted test builds the view model from
+  ViewModelDependencyFactory.production(), i.e. the real UserDefaultsCameraSlotSessionStore
+  over UserDefaults.standard, applies the Strategy.md configuration through the view-model
+  API (rename, film, Target Shutter), waits for the production store to write, and writes the
+  raw bytes read back from UserDefaults under "ptimer.camera-slot-session.snapshot".
+  The payload is those raw bytes, unmodified.
+  Command (run from a throwaway worktree of the tag target):
+    FIXTURE_OUT=<path> TEST_RUNNER_FIXTURE_OUT=<path> xcodebuild -project PTimer.xcodeproj \
+      -scheme PTimer -configuration Release -derivedDataPath <dd> \
+      -destination 'platform=iOS Simulator,id=<iPhone 17>' -parallel-testing-enabled NO \
+      ENABLE_TESTABILITY=YES -only-testing PTimerTests/ZZOfficialFixtureGenerator test
+  Limits: a Release-configuration test host on the simulator, not the store-signed binary and
+  not a capture from an installed App Store build; the configuration is applied through the
+  view-model API, not through the screens.
+
+ios-slot-session-dev-main-9213f12a.json  (development verification fixture)
+  Source: the exact merged PR commit at the head of main at test start,
+  9213f12a4ddd81334f304a10e491bba96216a806 (#74); iOS marketing version 0.9.0, build 1 and
+  README 0.9.0 there, so this is not an official iOS 0.9.1 release fixture.
+  Generation: throwaway worktree, FIXTURE_OUT=<path> swift test --package-path ios/PTimerKit
+  --filter ZZFixtureGenerator (debug configuration, in-memory session store, Sample Filter
+  Sets seeded through initialFilterInventory).
+  To be replaced by a fixture generated from release/ios/0.9.1 once that tag exists.

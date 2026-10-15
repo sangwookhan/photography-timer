@@ -51,7 +51,7 @@ struct PTimerAboutView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    SheetCloseButton {
                         dismiss()
                     }
                 }

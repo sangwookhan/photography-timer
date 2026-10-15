@@ -15,6 +15,7 @@
 		F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
+		B3C1FFC9B64BE426D19A513E /* SheetCloseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */; };
 		A00000000000000000000A84 /* PTimerAboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000A83 /* PTimerAboutView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
 		A00000000000000000000005 /* TimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* TimerManager.swift */; };
@@ -42,6 +43,7 @@
 		A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014A /* WheelPickerContinuousObserver.swift */; };
 		A0000000000000000000014D /* NDWheelPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000014C /* NDWheelPickerView.swift */; };
 		A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000203 /* CameraSlotPagerIndicator.swift */; };
+		A00000000000000000234A04 /* CameraManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000234A03 /* CameraManagementView.swift */; };
 		A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000021E /* CameraSlotRenameSheet.swift */; };
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
 		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
@@ -58,6 +60,11 @@
 		A00000000000000000000908 /* TimerManagerPauseResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */; };
 		A0000000000000000000090A /* TimerManagerPersistenceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */; };
 		A00000000000000000000D03 /* TimerPersistenceQuarantineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */; };
+		B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */; };
+		B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */; };
+		B3A6DC75BC0B7A2BEF2BA814 /* CameraDataUnavailableScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */; };
+		B32717057DB6829867D20977 /* UserDefaultsCameraSlotSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2772717057DB6829867D209 /* UserDefaultsCameraSlotSessionStoreTests.swift */; };
+		B34676CCD0494A730F584AEB /* UserDefaultsCameraNameSequenceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2EF4676CCD0494A730F584A /* UserDefaultsCameraNameSequenceStoreTests.swift */; };
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
@@ -85,6 +92,7 @@
 		EE0000000000000000000007 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
 		EE0000000000000000000008 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
 		EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */; };
+		B31E9B9F060479C0C502910B /* UserDefaultsCameraNameSequenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21F1E9B9F060479C0C50291 /* UserDefaultsCameraNameSequenceStore.swift */; };
 		EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */; };
 		EE0000000000000000000C92 /* CustomFilmTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000C93 /* CustomFilmTestSupport.swift */; };
 		EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */; };
@@ -131,6 +139,7 @@
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButton.swift; sourceTree = "<group>"; };
 		A00000000000000000000A83 /* PTimerAboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerAboutView.swift; sourceTree = "<group>"; };
 		A00000000000000000000013 /* ExposureCalculatorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorScreen.swift; sourceTree = "<group>"; };
 		A00000000000000000000015 /* TimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManager.swift; sourceTree = "<group>"; };
@@ -163,6 +172,7 @@
 		A0000000000000000000014C /* NDWheelPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerView.swift; sourceTree = "<group>"; };
 		A00000000000000000000200 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = docs; path = ../docs; sourceTree = "<group>"; };
 		A00000000000000000000203 /* CameraSlotPagerIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotPagerIndicator.swift; sourceTree = "<group>"; };
+		A00000000000000000234A03 /* CameraManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagementView.swift; sourceTree = "<group>"; };
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
@@ -176,6 +186,11 @@
 		A00000000000000000000909 /* TimerManagerPauseResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPauseResumeTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000090B /* TimerManagerPersistenceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerPersistenceRestoreTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000D04 /* TimerPersistenceQuarantineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerPersistenceQuarantineTests.swift; sourceTree = "<group>"; };
+		B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButtonTests.swift; sourceTree = "<group>"; };
+		B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagementAccessibilityTests.swift; sourceTree = "<group>"; };
+		B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDataUnavailableScreenTests.swift; sourceTree = "<group>"; };
+		B2772717057DB6829867D209 /* UserDefaultsCameraSlotSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStoreTests.swift; sourceTree = "<group>"; };
+		B2EF4676CCD0494A730F584A /* UserDefaultsCameraNameSequenceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraNameSequenceStoreTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
@@ -199,6 +214,7 @@
 		A0000000000000000000EF01 /* Config/Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = "<group>"; };
 		A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorFittedFormulaSection.swift; sourceTree = "<group>"; };
 		EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCalculatorContextStore.swift; sourceTree = "<group>"; };
+		B21F1E9B9F060479C0C50291 /* UserDefaultsCameraNameSequenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraNameSequenceStore.swift; sourceTree = "<group>"; };
 		EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStore.swift; sourceTree = "<group>"; };
 		EE0000000000000000000C93 /* CustomFilmTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmTestSupport.swift; sourceTree = "<group>"; };
 		EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsDisplaySettingStore.swift; sourceTree = "<group>"; };
@@ -329,6 +345,11 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */,
+				B2EF4676CCD0494A730F584A /* UserDefaultsCameraNameSequenceStoreTests.swift */,
+				B2772717057DB6829867D209 /* UserDefaultsCameraSlotSessionStoreTests.swift */,
+				B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */,
+				B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */,
+				B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */,
 				A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */,
 				A0000000000000000000096D /* PersistentCustomFilmLibraryTests.swift */,
 				A00000000000000000000D02 /* CustomFilmLibraryQuarantineTests.swift */,
@@ -343,6 +364,7 @@
 				A00000000000000000000011 /* PTimerApp.swift */,
 				A00000000000000000000012 /* ContentView.swift */,
 				A00000000000000000000A83 /* PTimerAboutView.swift */,
+				B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */,
 				A000000000000000000000D0 /* Workspace */,
 			);
 			path = App;
@@ -477,7 +499,9 @@
 			children = (
 				A00000000000000000000203 /* CameraSlotPagerIndicator.swift */,
 				EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */,
+				B21F1E9B9F060479C0C50291 /* UserDefaultsCameraNameSequenceStore.swift */,
 				A0000000000000000000021E /* CameraSlotRenameSheet.swift */,
+				A00000000000000000234A03 /* CameraManagementView.swift */,
 			);
 			path = CameraSlot;
 			sourceTree = "<group>";
@@ -647,8 +671,10 @@
 				EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */,
 				EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */,
 				EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */,
+				B31E9B9F060479C0C502910B /* UserDefaultsCameraNameSequenceStore.swift in Sources */,
 				A00000000000000000000002 /* ContentView.swift in Sources */,
 				A00000000000000000000A84 /* PTimerAboutView.swift in Sources */,
+				B3C1FFC9B64BE426D19A513E /* SheetCloseButton.swift in Sources */,
 				A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */,
 				A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */,
 				A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */,
@@ -679,6 +705,7 @@
 				A0000000000000000000014D /* NDWheelPickerView.swift in Sources */,
 				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,
 				A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */,
+				A00000000000000000234A04 /* CameraManagementView.swift in Sources */,
 				A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -704,6 +731,11 @@
 				A0000000000000000000011C /* RecordReplayHarness.swift in Sources */,
 				A0000000000000000000011E /* RecordReplayBaselineSmokeTests.swift in Sources */,
 				A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */,
+				B34676CCD0494A730F584AEB /* UserDefaultsCameraNameSequenceStoreTests.swift in Sources */,
+				B32717057DB6829867D20977 /* UserDefaultsCameraSlotSessionStoreTests.swift in Sources */,
+				B3A6DC75BC0B7A2BEF2BA814 /* CameraDataUnavailableScreenTests.swift in Sources */,
+				B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */,
+				B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
 				A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */,

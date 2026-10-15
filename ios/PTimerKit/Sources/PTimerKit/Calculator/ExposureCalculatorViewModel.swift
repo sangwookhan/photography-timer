@@ -109,13 +109,23 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// The slot picker UI binds to this so a slot switch driven by
     /// any path (UI tap, test action, future deep-link) flows through
     /// the same observed surface.
-    @Published public private(set) var activeCameraSlotID: CameraSlotID = .camera1
-    /// Photographer-supplied display names keyed by slot id, mirrored
-    /// from `cameraSlotSessionModel.$customDisplayNames`. Republishing
-    /// here lets SwiftUI views observing the facade redraw the slot
-    /// title and pager labels when the rename surface fires, without
-    /// adding a second observed-model dependency in the screen.
-    @Published public private(set) var cameraSlotCustomDisplayNames: [CameraSlotID: String] = [:]
+    /// `nil` when no camera is displayed (the empty-pager state).
+    @Published public private(set) var activeCameraSlotID: CameraSlotID? = .camera1
+    /// The managed camera list in global order, mirrored from
+    /// `cameraSlotSessionModel.$cameras`. Republishing here lets
+    /// SwiftUI views observing the facade redraw the pager and the
+    /// management screen when the list changes, without adding a
+    /// second observed-model dependency in the screen.
+    @Published public private(set) var cameraList: [CameraListEntry] = []
+    /// Bumped by every camera-list edit. The pager keys its `TabView`
+    /// on it, so an edit that removes the selected page re-seeds the
+    /// pager from the active camera the model resolved instead of the
+    /// pager's own fallback page overwriting that decision.
+    @Published public private(set) var cameraListRevision = 0
+    /// Whether camera-list edits may be applied and persisted. `false`
+    /// for the whole session after a failed storage read: camera state
+    /// is not made authoritative and nothing is written (CAMERA-PERSIST-004).
+    @Published public private(set) var isCameraListEditable = true
     /// Custom films, mirrored from `customFilmLibrary`.
     @Published public private(set) var customFilms: [FilmIdentity] = []
     /// The user's filter inventory, mirrored from `filterInventoryModel`
@@ -284,6 +294,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         self.targetShutterModel = targetShutterModel ?? TargetShutterModel()
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: dependencies.cameraSlotSessionPersistenceStore,
+            sequenceStore: dependencies.cameraNameSequenceStore,
             presetFilms: dependencies.presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
             // The calculator's mirror, not the inventory model: an
@@ -298,7 +309,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.applyFilterInventory(resolvedInventory.inventory)
         self.displaySettingStore = dependencies.displaySettingStore
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
-        self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
+        self.cameraList = resolvedSlotSession.cameras
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: dependencies.lockScreenTargetExposer
         )
@@ -315,8 +326,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$activeCalculatorContext)
         resolvedSlotSession.$activeSlotID
             .assign(to: &$activeCameraSlotID)
-        resolvedSlotSession.$customDisplayNames
-            .assign(to: &$cameraSlotCustomDisplayNames)
+        resolvedSlotSession.$cameras
+            .assign(to: &$cameraList)
         resolvedCustomLibrary.$customFilms
             .assign(to: &$customFilms)
         restoreDisplaySettings()
@@ -331,6 +342,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         presetFilms: [FilmIdentity] = LaunchPresetFilmCatalogV2.films,
         contextPersistenceStore: ExposureCalculatorContextStoring = NoOpCalculatorContextStore(),
         cameraSlotSessionPersistenceStore: CameraSlotSessionPersistenceStoring = NoOpCameraSlotSessionPersistenceStore(),
+        cameraNameSequenceStore: CameraNameSequenceStoring = InMemoryCameraNameSequenceStore(),
         metadataPersistenceStore: TimerMetadataPersistenceStoring = NoOpTimerMetadataPersistenceStore(),
         displaySettingStore: DisplaySettingStoring = NoOpDisplaySettingStore(),
         lockScreenTargetExposer: LockScreenTimerTargetExposing = NoOpLockScreenTimerTargetExposer(),
@@ -366,6 +378,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         self.targetShutterModel = targetShutterModel ?? TargetShutterModel()
         self.sessionPersistence = CameraSlotSessionPersistenceController(
             sessionStore: cameraSlotSessionPersistenceStore,
+            sequenceStore: cameraNameSequenceStore,
             presetFilms: presetFilms,
             currentCustomFilms: { resolvedCustomLibrary.customFilms },
             // The calculator's mirror, not the inventory model: an
@@ -380,7 +393,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.applyFilterInventory(resolvedInventory.inventory)
         self.displaySettingStore = displaySettingStore
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
-        self.cameraSlotCustomDisplayNames = resolvedSlotSession.customDisplayNames
+        self.cameraList = resolvedSlotSession.cameras
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
             exposer: lockScreenTargetExposer
         )
@@ -391,8 +404,8 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             .assign(to: &$activeCalculatorContext)
         resolvedSlotSession.$activeSlotID
             .assign(to: &$activeCameraSlotID)
-        resolvedSlotSession.$customDisplayNames
-            .assign(to: &$cameraSlotCustomDisplayNames)
+        resolvedSlotSession.$cameras
+            .assign(to: &$cameraList)
         resolvedCustomLibrary.$customFilms
             .assign(to: &$customFilms)
         restoreDisplaySettings()
@@ -487,11 +500,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public var canResetFilmModeWorkingContext: Bool {
-        // A custom camera name alone is resettable too: the reset
-        // affordance offers a "settings and name" choice, so the
-        // button must stay reachable when only the name is custom.
-        activeCameraSlot.customDisplayName != nil
-            || selectedPresetFilm != nil
+        selectedPresetFilm != nil
             || abs(baseShutter - defaultFilmModeBaseShutter) > ExposureCalculator.stabilityEpsilon
             // Compare the canonical `NDStep.stops`, not the integer
             // wrapper — otherwise a reserved-path fractional ND
@@ -897,68 +906,28 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         reexamineNDWheelCleanup()
     }
 
-    /// Resets the active slot's working context *and* clears its
-    /// custom camera name, returning the slot to a fully blank state.
-    /// The settings-only reset (`resetFilmModeWorkingContext`) keeps
-    /// the name; this variant is the "Reset settings and name" choice.
-    public func resetFilmModeWorkingContextAndCameraName() {
-        resetFilmModeWorkingContext()
-        resetCameraSlotCustomName(cameraSlotSessionModel.activeSlotID)
-    }
-
     // MARK: - Camera slots
 
-    /// Slots exposed to the slot picker in shipping order. The first
-    /// implementation surfaces all four slots through this same array;
-    /// a future configuration step can return a subset (still
-    /// honoring the "minimum two" requirement enforced by the
-    /// session model itself).
+    /// Cameras included in the shooting pager, in global order.
     public var availableCameraSlots: [CameraSlotID] {
-        cameraSlotSessionModel.availableSlots
+        cameraList.filter(\.isDisplayed).map(\.id)
     }
 
-    /// Identity for the currently active slot. Includes the stable id
-    /// and the user-facing display label.
-    public var activeCameraSlot: CameraSlotIdentity {
+    /// Identity for the active camera, or `nil` when none is active.
+    public var activeCameraSlot: CameraSlotIdentity? {
         cameraSlotSessionModel.activeSlot
     }
 
-    /// Identity for an arbitrary slot id. Used by the slot picker to
-    /// render the display label without reaching into the session
-    /// model directly.
-    public func cameraSlotIdentity(for slotID: CameraSlotID) -> CameraSlotIdentity {
+    /// Identity for a camera in the list; `nil` for an unknown id.
+    public func cameraSlotIdentity(for slotID: CameraSlotID) -> CameraSlotIdentity? {
         cameraSlotSessionModel.identity(for: slotID)
     }
 
-    /// Sets the photographer-supplied display name for `slotID`.
-    /// Whitespace is trimmed; empty/whitespace-only/`nil` input
-    /// clears the custom name (resetting back to the canonical
-    /// `Camera N` label). Persists the session snapshot so the
-    /// rename survives a relaunch.
-    ///
-    /// Renaming does not touch any calculator/film state and does
-    /// not change `CameraSlotID` raw values; already-started timers
-    /// keep the slot label captured at start time
-    /// (`RunningTimerItem.cameraSlot.displayName`).
-    public func setCameraSlotCustomName(_ name: String?, for slotID: CameraSlotID) {
-        cameraSlotSessionModel.setCustomDisplayName(name, for: slotID)
-        persistCalculatorContext()
-    }
-
-    /// Clears any photographer-supplied display name for `slotID`,
-    /// restoring the canonical `Camera N` label. Persists the change
-    /// so the reset survives a relaunch. No calculator/film state is
-    /// touched.
-    public func resetCameraSlotCustomName(_ slotID: CameraSlotID) {
-        cameraSlotSessionModel.resetCustomDisplayName(for: slotID)
-        persistCalculatorContext()
-    }
-
-    /// Switches the active camera slot, preserving the previous slot's
-    /// calculator state and loading the target slot's preserved
-    /// snapshot (or a fresh default if the slot has not been visited
-    /// yet). The transition does not call any film/calc reset path,
-    /// so inactive slots stay intact.
+    /// Switches the active camera, preserving the previous camera's
+    /// calculator state and loading the target's preserved snapshot
+    /// (or a fresh default if it has not been visited yet). The
+    /// transition does not call any film/calc reset path, so inactive
+    /// cameras stay intact.
     public func selectCameraSlot(_ targetSlotID: CameraSlotID) {
         guard targetSlotID != cameraSlotSessionModel.activeSlotID else {
             return
@@ -973,26 +942,27 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         applyCameraSlotSnapshot(incoming)
     }
 
-    /// Zero-based index of the active slot inside `availableCameraSlots`.
-    /// Drives the page indicator dot rendering and clamps the pager's
-    /// horizontal offset.
+    /// Zero-based index of the active camera inside
+    /// `availableCameraSlots`. Drives the page indicator dot rendering
+    /// and clamps the pager's horizontal offset.
     public var activeCameraSlotIndex: Int {
-        availableCameraSlots.firstIndex(of: activeCameraSlotID) ?? 0
+        activeCameraSlotID.flatMap { availableCameraSlots.firstIndex(of: $0) } ?? 0
     }
 
-    /// VoiceOver value text for the slot pager. Format: `"Camera 2, 2 of 4"`
-    /// — slot identity followed by position in the bounded set so a
-    /// blind user can hear both at once.
+    /// VoiceOver value text for the pager. Format: `"Camera 2, 2 of 4"`
+    /// — camera name followed by position in the shown set so a blind
+    /// user can hear both at once. Empty when no camera is active.
     public var activeCameraSlotPageText: String {
+        guard let active = activeCameraSlot else {
+            return ""
+        }
         let count = availableCameraSlots.count
         let position = activeCameraSlotIndex + 1
-        return "\(activeCameraSlot.displayName), \(position) of \(count)"
+        return "\(active.displayName), \(position) of \(count)"
     }
 
-    /// Advances to the next slot in `availableCameraSlots`. No-op when
-    /// the active slot is already the last available slot — the pager
-    /// is bounded, not wrapping, so a swipe past the edge is rejected
-    /// rather than silently looping back to the first slot.
+    /// Advances to the next displayed camera. No-op at the last one —
+    /// the pager is bounded, not wrapping.
     public func selectNextCameraSlot() {
         let slots = availableCameraSlots
         let index = activeCameraSlotIndex
@@ -1002,8 +972,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         selectCameraSlot(slots[index + 1])
     }
 
-    /// Reverses to the previous slot in `availableCameraSlots`. No-op
-    /// at the first slot for the same bounded-pager reason.
+    /// Reverses to the previous displayed camera. No-op at the first.
     public func selectPreviousCameraSlot() {
         let slots = availableCameraSlots
         let index = activeCameraSlotIndex
@@ -1011,6 +980,98 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             return
         }
         selectCameraSlot(slots[index - 1])
+    }
+
+    // MARK: - Camera list management
+
+    /// Adds a camera named from the durable automatic-name sequence
+    /// (`Camera 5` first, then increasing); it joins the pager at the
+    /// end and becomes active. Returns `nil` when the list is not
+    /// editable or the number could not be reserved.
+    @discardableResult
+    public func addCamera() -> CameraSlotID? {
+        guard isCameraListEditable,
+              let number = sessionPersistence?.reserveNextCameraNumber() else {
+            return nil
+        }
+        // The number is reserved durably before the camera record is
+        // committed; a failure after this point leaves a gap, never a reuse.
+        var added: CameraSlotID?
+        applyCameraListEdit {
+            added = $0.addCamera(named: CameraNaming.defaultName(number: number))
+        }
+        return added
+    }
+
+    /// Renames a camera. A blank name is rejected and leaves the stored
+    /// name unchanged; the result says whether the rename applied.
+    /// Already-started timers keep the name captured at start time.
+    @discardableResult
+    public func renameCamera(_ slotID: CameraSlotID, to name: String) -> Bool {
+        guard isCameraListEditable,
+              CameraNaming.trimmedName(name) != nil,
+              cameraSlotSessionModel.entry(for: slotID) != nil else {
+            return false
+        }
+        var applied = false
+        applyCameraListEdit { applied = $0.renameCamera(slotID, to: name) }
+        return applied
+    }
+
+    /// Where assistive-technology focus belongs after a camera-list
+    /// change: the resulting active camera, or the empty-state message
+    /// when no camera is active (CAMERA-PAGER-006).
+    public var accessibilityFocusTarget: CameraAccessibilityFocusTarget {
+        activeCameraSlotID.map(CameraAccessibilityFocusTarget.camera) ?? .emptyState
+    }
+
+    public func setCameraDisplayed(_ isDisplayed: Bool, for slotID: CameraSlotID) {
+        applyCameraListEdit { $0.setDisplayed(isDisplayed, for: slotID) }
+    }
+
+    public func moveCameras(fromOffsets source: IndexSet, toOffset destination: Int) {
+        applyCameraListEdit { $0.moveCameras(fromOffsets: source, toOffset: destination) }
+    }
+
+    /// Non-drag reorder: moves one camera `delta` positions.
+    public func moveCamera(_ slotID: CameraSlotID, by delta: Int) {
+        applyCameraListEdit { $0.moveCamera(slotID, by: delta) }
+    }
+
+    public func hideCameras(_ slotIDs: Set<CameraSlotID>) {
+        applyCameraListEdit { $0.hideCameras(slotIDs) }
+    }
+
+    /// Deletes cameras and their calculator state. The caller confirms
+    /// with the user first; there is no undo.
+    public func deleteCameras(_ slotIDs: Set<CameraSlotID>) {
+        applyCameraListEdit { $0.deleteCameras(slotIDs) }
+    }
+
+    /// One camera-list change applied as a single resulting state:
+    /// the outgoing active camera's live state is stored first, the
+    /// edit runs on the session model, the (possibly new) active
+    /// camera's state is loaded, and everything persists in one write.
+    private func applyCameraListEdit(_ edit: (CameraSlotSessionModel) -> Void) {
+        guard isCameraListEditable else { return }
+        defer { cameraListRevision += 1 }
+        let previousActive = cameraSlotSessionModel.activeSlotID
+        if let previousActive {
+            cameraSlotSessionModel.storeSnapshot(currentCameraSlotSnapshot(), for: previousActive)
+        }
+        edit(cameraSlotSessionModel)
+        let newActive = cameraSlotSessionModel.activeSlotID
+        if newActive == previousActive {
+            // Still active (or still none): the live models stay the
+            // source of truth.
+            if let newActive {
+                _ = cameraSlotSessionModel.takeSnapshot(for: newActive)
+            }
+            persistCalculatorContext()
+            return
+        }
+        let incoming = newActive.map { cameraSlotSessionModel.takeSnapshot(for: $0) } ?? .initial
+        applyCameraSlotSnapshot(incoming)
     }
 
     /// Builds the per-slot page state the workspace TabView consumes.
@@ -1021,13 +1082,13 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// the active slot's data leaking across pages.
     public func cameraSlotPageState(for slotID: CameraSlotID) -> CameraSlotPageState {
         let isActive = slotID == cameraSlotSessionModel.activeSlotID
-        let identity = cameraSlotSessionModel.identity(for: slotID)
+        let cameraName = cameraSlotSessionModel.identity(for: slotID)?.displayName ?? slotID.rawValue
 
         let inputs: CameraSlotPageStateBuilder.PageStateInputs
         if isActive {
             inputs = CameraSlotPageStateBuilder.PageStateInputs(
                 slotID: slotID,
-                cameraDisplayName: identity.displayName,
+                cameraDisplayName: cameraName,
                 isActive: true,
                 baseShutter: calculatorModel.baseShutterSeconds,
                 ndStep: calculatorModel.ndStep,
@@ -1040,7 +1101,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             let snapshot = cameraSlotSessionModel.snapshot(forInactiveSlot: slotID) ?? .initial
             inputs = CameraSlotPageStateBuilder.PageStateInputs(
                 slotID: slotID,
-                cameraDisplayName: identity.displayName,
+                cameraDisplayName: cameraName,
                 isActive: false,
                 baseShutter: snapshot.baseShutterSeconds,
                 ndStep: snapshot.ndStep,
@@ -1550,6 +1611,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // mixture of live total and committed summary.
         let capturedStack = calculatorModel.effectiveFilterStack
         if result != nil, capturedStack == nil {
+            return
+        }
+        // A calculator-bound timer needs a displayed active camera
+        // (CAMERA-PAGER-004); the manual path is independent of cameras.
+        if case .manual = startSource {} else if cameraSlotSessionModel.activeSlot == nil {
             return
         }
         let payload = timerStartComposer.compose(
@@ -2778,16 +2844,39 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     private func restorePersistedCalculatorContext() {
+        // Precedence (CAMERA-PERSIST-006): a readable managed payload
+        // wins; an undecodable one is atomically replaced by the
+        // controller; legacy data migrates only when no managed payload
+        // exists. A failed storage read leaves no editable camera state.
+        let managedRestore = sessionPersistence?.loadManagedList() ?? .absent
+        switch managedRestore {
+        case let .restored(managed):
+            applyManagedList(managed)
+            return
+        case .readFailed:
+            isCameraListEditable = false
+            applyManagedList(
+                CameraSlotSessionPersistenceController.RestoredManagedList(
+                    cameras: [], activeSlotID: nil, issuedIDs: [], snapshotsBySlotID: [:]
+                )
+            )
+            return
+        case .absent:
+            break
+        }
+
         let planBuilder = CalculatorContextRestorePlanBuilder()
         let plan: CalculatorContextRestorePlanBuilder.RestorePlan
 
-        // Prefer the new multi-slot session snapshot when present.
-        // No session snapshot falls back to the legacy single-
-        // context restore path — covers (a) first launch after
-        // upgrade from a session-unaware build and (b) test setups
-        // that wire the legacy store directly.
+        // The legacy camera-slot session snapshot migrates into the
+        // managed list. With neither, the legacy single-context path
+        // covers (a) first launch after upgrade from a session-unaware
+        // build and (b) test setups that wire the legacy store directly.
         if let session = sessionPersistence?.loadSession() {
-            plan = planBuilder.plan(from: session)
+            if let migrated = sessionPersistence?.migratedList(from: session) {
+                applyManagedList(migrated)
+            }
+            return
         } else if let restored = filmSelectionModel.restoreContext() {
             plan = planBuilder.plan(fromLegacy: restored)
         } else {
@@ -2797,46 +2886,57 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         applyRestorePlan(plan)
     }
 
-    /// Applies a planned restore. **Side-effect order matters** on
-    /// the session branch: `applyCameraSlotSnapshot` runs a deferred
-    /// `persistCalculatorContext()` at its end, which reads
-    /// `cameraSlotSessionModel.currentInactiveSnapshots()` to write
-    /// the full session. If the active snapshot is applied before
-    /// the inactive map is loaded, the trailing persist would
-    /// overwrite a valid 4-slot session with active-only state and
-    /// silently destroy the photographer's other three slots on the
-    /// first relaunch. Restore the inactive map first so the persist
-    /// captures the full session.
+    /// Applies a restored managed list. **Side-effect order matters**:
+    /// the session model is loaded before the live models, because
+    /// `applyCameraSlotSnapshot` ends with a `persistCalculatorContext()`
+    /// that writes the full list from the session model.
+    private func applyManagedList(_ managed: CameraSlotSessionPersistenceController.RestoredManagedList) {
+        cameraSlotSessionModel.restore(
+            cameras: managed.cameras,
+            activeSlotID: managed.activeSlotID,
+            issuedIDs: managed.issuedIDs,
+            snapshots: managed.snapshotsBySlotID
+        )
+        // The session model holds only inactive snapshots, so the active
+        // camera's state comes straight from the restored payload.
+        let activeSnapshot = cameraSlotSessionModel.activeSlotID
+            .flatMap { managed.snapshotsBySlotID[$0] } ?? .initial
+        applyCameraSlotSnapshot(activeSnapshot)
+    }
+
+    /// Applies a planned legacy single-context restore: the migrated
+    /// four-camera list is the seeded default list, with the legacy
+    /// active camera active.
     private func applyRestorePlan(
         _ plan: CalculatorContextRestorePlanBuilder.RestorePlan
     ) {
-        switch plan.source {
-        case let .session(sessionPlan):
-            cameraSlotSessionModel.restoreActiveSlot(to: sessionPlan.activeSlotID)
-            cameraSlotSessionModel.restoreInactiveSnapshots(sessionPlan.inactiveSnapshots)
-            cameraSlotSessionModel.restoreCustomDisplayNames(sessionPlan.customDisplayNames)
-            applyCameraSlotSnapshot(sessionPlan.activeSlotSnapshot)
-
-        case let .legacy(legacy):
-            if let restoredSlotID = legacy.activeCameraSlotID {
-                cameraSlotSessionModel.restoreActiveSlot(to: restoredSlotID)
-            }
-            guard !legacy.hadInvalidFilmReference else {
-                return
-            }
-            scaleMode = legacy.scaleMode
-            baseShutter = legacy.baseShutterSeconds ?? defaultFilmModeBaseShutter
-            if let sanitized = legacy.ndStep {
-                if let wholeStops = sanitized.wholeStops {
-                    ndStop = wholeStops
-                } else {
-                    ndStep = sanitized
-                }
-            } else {
-                ndStop = defaultFilmModeNDStop
-            }
-            persistCalculatorContext()
+        guard case let .legacy(legacy) = plan.source else {
+            return
         }
+        if let restoredSlotID = legacy.activeCameraSlotID,
+           CameraSlotID.legacyOrdered.contains(restoredSlotID) {
+            cameraSlotSessionModel.restore(
+                cameras: cameraSlotSessionModel.cameras,
+                activeSlotID: restoredSlotID,
+                issuedIDs: cameraSlotSessionModel.issuedIDs,
+                snapshots: [:]
+            )
+        }
+        guard !legacy.hadInvalidFilmReference else {
+            return
+        }
+        scaleMode = legacy.scaleMode
+        baseShutter = legacy.baseShutterSeconds ?? defaultFilmModeBaseShutter
+        if let sanitized = legacy.ndStep {
+            if let wholeStops = sanitized.wholeStops {
+                ndStop = wholeStops
+            } else {
+                ndStep = sanitized
+            }
+        } else {
+            ndStop = defaultFilmModeNDStop
+        }
+        persistCalculatorContext()
     }
 
     /// Helper exposed for the +CustomFilm extension. Scrubs
@@ -2888,17 +2988,22 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // forward compat with older app versions reading the legacy
         // key. The new session store is the source of truth on
         // restore; this write is idempotent with that.
-        filmSelectionModel.persistContext()
+        // With no active camera the live models hold no camera's state.
+        if cameraSlotSessionModel.activeSlotID != nil {
+            filmSelectionModel.persistContext()
+        }
 
-        // Multi-slot session store: capture every slot's current
-        // snapshot (active reads from live models, inactive from the
-        // session model) and write the full session shape, including
-        // photographer-supplied custom display names.
+        // Managed camera list: one write capturing the list, order,
+        // pager inclusion, active camera, and every camera's snapshot
+        // (active reads from live models, inactive from the session
+        // model).
         sessionPersistence?.save(
+            cameras: cameraSlotSessionModel.cameras,
             activeSlotID: cameraSlotSessionModel.activeSlotID,
-            activeSlotSnapshot: currentCameraSlotSnapshot(),
-            inactiveSnapshots: cameraSlotSessionModel.currentInactiveSnapshots(),
-            customDisplayNames: cameraSlotSessionModel.customDisplayNames
+            issuedIDs: cameraSlotSessionModel.issuedIDs,
+            activeSlotSnapshot: cameraSlotSessionModel.activeSlotID == nil
+                ? nil : currentCameraSlotSnapshot(),
+            inactiveSnapshots: cameraSlotSessionModel.currentInactiveSnapshots()
         )
     }
 

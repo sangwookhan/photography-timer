@@ -252,7 +252,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 0))], "One Standard 0-stop wheel is left.")
         XCTAssertEqual(viewModel.filterSet(withID: kit.id), kitSet, "The set and its items stay in the inventory.")
 
-        let slot = try XCTUnwrap(store.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let slot = try XCTUnwrap(store.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.candidateFilterSetIDs, [other.id.rawValue], "The applied selection is persisted.")
     }
 
@@ -558,7 +558,7 @@ final class ShootingFilterSetSelectionTests: XCTestCase {
         let sample = try XCTUnwrap(inventory.filterSets.first)
         XCTAssertNil(viewModel.applyShootingFilters(selectedFilterSetIDs: [sample.id], mounts: []))
         XCTAssertNil(viewModel.applyShootingFilters(selectedFilterSetIDs: [], mounts: []))
-        let slot = try XCTUnwrap(store.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let slot = try XCTUnwrap(store.persistedCalculator(of: .camera1))
         XCTAssertEqual(slot.candidateFilterSetIDs, [], "An emptied selection is stored as an empty list.")
         XCTAssertTrue(makeViewModel(sessionStore: store, inventoryModel: inventory).candidateFilterSetIDs.isEmpty)
     }

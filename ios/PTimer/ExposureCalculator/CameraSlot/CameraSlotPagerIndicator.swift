@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import SwiftUI
+import PTimerKit
 
 /// Minimal page indicator for the camera-slot pager. Renders a row of
 /// dots (active dot is wider + darker) followed by a small "N of M"
@@ -17,42 +18,41 @@ import SwiftUI
 /// through the workspace's named "Next/Previous camera slot"
 /// accessibility actions, not through this view.
 struct CameraSlotPagerIndicator: View {
-    let count: Int
-    let activeIndex: Int
+    /// Dots include the trailing utility page; the position text counts
+    /// cameras only and is absent on the utility page.
+    let indicator: CameraPagerNavigation.Indicator
 
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 4) {
-                ForEach(0..<count, id: \.self) { index in
+                ForEach(0..<indicator.dotCount, id: \.self) { index in
                     Capsule(style: .continuous)
                         .fill(
-                            index == activeIndex
+                            index == indicator.activeDot
                                 ? Color.primary.opacity(0.7)
                                 : Color.primary.opacity(0.18)
                         )
                         .frame(
-                            width: index == activeIndex ? 12 : 5,
+                            width: index == indicator.activeDot ? 12 : 5,
                             height: 5
                         )
-                        .animation(.easeInOut(duration: 0.18), value: activeIndex)
+                        .animation(.easeInOut(duration: 0.18), value: indicator.activeDot)
                 }
             }
 
-            Text(pageText)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .accessibilityIdentifier("camera-slot-page-counter")
+            if let positionText = indicator.positionText {
+                Text(positionText)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("camera-slot-page-counter")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Camera slot")
-        .accessibilityValue(pageText)
+        .accessibilityLabel("Camera")
+        .accessibilityValue(indicator.accessibilityValue)
         .accessibilityIdentifier("camera-slot-page-indicator")
-    }
-
-    private var pageText: String {
-        "\(activeIndex + 1) of \(count)"
     }
 }

@@ -1,0 +1,78 @@
+{
+  "activeSlotIDRaw" : "camera1",
+  "schemaVersion" : 1,
+  "slots" : [
+    {
+      "baseShutterSeconds" : 0.03333333333333333,
+      "candidateFilterSetIDs" : [
+        "93CDA289-2545-4FC2-86D5-57A0E4665242"
+      ],
+      "customDisplayName" : "Nikon Z7",
+      "filterStack" : [
+        {
+          "filterSetID" : "93CDA289-2545-4FC2-86D5-57A0E4665242",
+          "sourceKind" : "filterSet"
+        }
+      ],
+      "lastFilterSetID" : "93CDA289-2545-4FC2-86D5-57A0E4665242",
+      "lastFilterSourceKind" : "filterSet",
+      "ndStack" : [
+        {
+          "ndStop" : 0
+        }
+      ],
+      "ndStop" : 0,
+      "slotIDRaw" : "camera1",
+      "targetShutterSeconds" : 120
+    },
+    {
+      "baseShutterSeconds" : 0.03333333333333333,
+      "candidateFilterSetIDs" : [
+        "BAA54436-6F0C-4D90-8125-2BD995C2A11F",
+        "8D53C2FC-4E79-418E-AAB7-99A09473BF2F"
+      ],
+      "customDisplayName" : "Hasselblad 503CX",
+      "filterStack" : [
+        {
+          "filterSetID" : "BAA54436-6F0C-4D90-8125-2BD995C2A11F",
+          "sourceKind" : "filterSet"
+        }
+      ],
+      "lastFilterSetID" : "BAA54436-6F0C-4D90-8125-2BD995C2A11F",
+      "lastFilterSourceKind" : "filterSet",
+      "ndStack" : [
+        {
+          "ndStop" : 0
+        }
+      ],
+      "ndStop" : 0,
+      "selectedPresetFilmID" : "kodak-tmax-100",
+      "slotIDRaw" : "camera2",
+      "targetShutterSeconds" : 1800
+    },
+    {
+      "baseShutterSeconds" : 0.03333333333333333,
+      "candidateFilterSetIDs" : [
+        "BAA54436-6F0C-4D90-8125-2BD995C2A11F",
+        "8D53C2FC-4E79-418E-AAB7-99A09473BF2F"
+      ],
+      "customDisplayName" : "Nikon F2",
+      "filterStack" : [
+        {
+          "filterSetID" : "BAA54436-6F0C-4D90-8125-2BD995C2A11F",
+          "sourceKind" : "filterSet"
+        }
+      ],
+      "lastFilterSetID" : "BAA54436-6F0C-4D90-8125-2BD995C2A11F",
+      "lastFilterSourceKind" : "filterSet",
+      "ndStack" : [
+        {
+          "ndStop" : 0
+        }
+      ],
+      "ndStop" : 0,
+      "selectedPresetFilmID" : "ilford-kentmere-pan-100",
+      "slotIDRaw" : "camera3"
+    }
+  ]
+}

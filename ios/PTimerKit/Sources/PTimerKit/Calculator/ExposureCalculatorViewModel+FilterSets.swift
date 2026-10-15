@@ -349,13 +349,13 @@ extension ExposureCalculatorViewModel {
             candidate.filterSets[setIndex].items.append(item)
         }
         var conflicts: [FilterItemSaveConflict] = []
-        for slotID in cameraSlotSessionModel.availableSlots {
+        for slotID in cameraSlotSessionModel.cameras.map(\.id) {
             guard let stack = cameraStack(for: slotID) else {
                 continue
             }
             if let reason = Self.stackConflict(stack, itemID: item.id, candidate: candidate) {
                 conflicts.append(FilterItemSaveConflict(
-                    cameraName: cameraSlotSessionModel.identity(for: slotID).displayName,
+                    cameraName: cameraSlotSessionModel.identity(for: slotID)?.displayName ?? slotID.rawValue,
                     reason: reason
                 ))
             }
@@ -467,12 +467,12 @@ extension ExposureCalculatorViewModel {
 
     private func cameraNames(where predicate: ([FilterWheel], [MountedAuxiliaryFilter]) -> Bool) -> [String] {
         var names: [String] = []
-        for slotID in cameraSlotSessionModel.availableSlots {
+        for slotID in cameraSlotSessionModel.cameras.map(\.id) {
             guard let stack = cameraStack(for: slotID) else {
                 continue
             }
             if predicate(stack.wheels, stack.auxiliaryFilters) {
-                names.append(cameraSlotSessionModel.identity(for: slotID).displayName)
+                names.append(cameraSlotSessionModel.identity(for: slotID)?.displayName ?? slotID.rawValue)
             }
         }
         return names

@@ -64,7 +64,7 @@ final class FilterRestoreReconciliationTests: XCTestCase {
         viewModel.addFilterWheel()
         viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd8.id, choice: .fixed)), at: 1)
         XCTAssertEqual(viewModel.filterWheels.count, 2)
-        XCTAssertNotNil(sessionStore.stored)
+        XCTAssertNotNil(sessionStore.persistedCalculator(of: .camera1))
         return SavedCamera(sessionStore: sessionStore, inventoryStore: inventoryStore, kit: kit, pouch: pouch, total: total(viewModel), wheels: viewModel.filterWheels)
     }
 
@@ -181,7 +181,7 @@ final class FilterRestoreReconciliationTests: XCTestCase {
         XCTAssertEqual(viewModel.saveFilterItem(FilterItem(id: cpl.id, name: cpl.name, behavior: .color(FilterExposureLoss(stops: 1), .yellow)), in: kit.id), .saved)
         let live = Set(viewModel.mountedAuxiliaryFilters.map(\.mount))
         XCTAssertEqual(live, [.mount(nd8, in: kit, .registeredLoss), .mount(cpl, in: kit, .registeredLoss)])
-        let saved = try XCTUnwrap(sessionStore.stored?.slots.first { $0.slotIDRaw == CameraSlotID.camera1.rawValue })
+        let saved = try XCTUnwrap(sessionStore.persistedCalculator(of: .camera1))
         XCTAssertEqual(Set(saved.auxiliaryFilters?.map(\.kind) ?? []), ["color"], "Saved with the new kind.")
 
         let restored = makeViewModel(sessionStore: sessionStore, inventoryStore: inventoryStore)

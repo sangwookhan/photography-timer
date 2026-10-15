@@ -2179,12 +2179,322 @@
         }
       }
     },
-    "Camera slot" : {
+    "Camera %lld" : {
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "카메라 슬롯"
+            "value" : "카메라 %lld"
+          }
+        }
+      }
+    },
+    "Cameras" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라"
+          }
+        }
+      }
+    },
+    "Hide" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "숨기기"
+          }
+        }
+      }
+    },
+    "Add camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 추가"
+          }
+        }
+      }
+    },
+    "Shown" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표시 중"
+          }
+        }
+      }
+    },
+    "Hidden" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "숨김"
+          }
+        }
+      }
+    },
+    "Hide camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 숨기기"
+          }
+        }
+      }
+    },
+    "Show camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 표시"
+          }
+        }
+      }
+    },
+    "Rename camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 이름 변경"
+          }
+        }
+      }
+    },
+    "Move up" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "위로 이동"
+          }
+        }
+      }
+    },
+    "Move down" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아래로 이동"
+          }
+        }
+      }
+    },
+    "Delete camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 삭제"
+          }
+        }
+      }
+    },
+    "Delete cameras?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라를 삭제할까요?"
+          }
+        }
+      }
+    },
+    "Delete camera?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라를 삭제할까요?"
+          }
+        }
+      }
+    },
+    "No cameras shown" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표시 중인 카메라 없음"
+          }
+        }
+      }
+    },
+    "No cameras. Add a camera to start shooting." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라가 없습니다. 촬영을 시작하려면 카메라를 추가하세요."
+          }
+        }
+      }
+    },
+    "Manage cameras" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 관리"
+          }
+        }
+      }
+    },
+    "Camera name" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 이름"
+          }
+        }
+      }
+    },
+    "Opens a sheet to rename the camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 이름을 변경하는 시트를 엽니다"
+          }
+        }
+      }
+    },
+    "Show or add a camera to calculate exposures. Running timers are not affected." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "노출을 계산하려면 카메라를 표시하거나 추가하세요. 실행 중인 타이머에는 영향이 없습니다."
+          }
+        }
+      }
+    },
+    "Deletes %lld cameras and their calculator settings. This cannot be undone." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 %lld대와 계산 설정을 삭제합니다. 되돌릴 수 없습니다."
+          }
+        }
+      }
+    },
+    "Deletes %@ and its calculator settings. A new camera with the same name will not reconnect them or this camera's timers. This cannot be undone." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 및 계산 설정을 삭제합니다. 같은 이름의 새 카메라를 만들어도 설정이나 이 카메라의 타이머와 다시 연결되지 않습니다. 되돌릴 수 없습니다."
+          }
+        }
+      }
+    },
+    "Active camera: %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "활성 카메라: %@"
+          }
+        }
+      }
+    },
+    "%@, %@, %lld of %lld" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, %@, %lld / %lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld · %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld / %lld · %@"
+          }
+        }
+      }
+    },
+    "Moved to position %lld of %lld" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld / %lld 번째로 이동"
+          }
+        }
+      }
+    },
+    "Next camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 카메라"
+          }
+        }
+      }
+    },
+    "Previous camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이전 카메라"
+          }
+        }
+      }
+    },
+    "Camera data couldn't be loaded. Restart the app." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 데이터를 불러오지 못했습니다. 앱을 다시 시작하세요."
+          }
+        }
+      }
+    },
+    "Camera management" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 관리"
+          }
+        }
+      }
+    },
+    "Manage existing cameras or add a new one." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기존 카메라를 관리하거나 새 카메라를 추가하세요."
+          }
+        }
+      }
+    },
+    "Camera" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라"
           }
         }
       }
@@ -3292,16 +3602,6 @@
         }
       }
     },
-    "Next camera slot" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다음 카메라 슬롯"
-          }
-        }
-      }
-    },
     "No active timers" : {
       "localizations" : {
         "ko" : {
@@ -3813,16 +4113,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "미리보기 대기 중"
-          }
-        }
-      }
-    },
-    "Previous camera slot" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이전 카메라 슬롯"
           }
         }
       }

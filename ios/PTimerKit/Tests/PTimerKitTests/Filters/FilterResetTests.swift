@@ -77,13 +77,13 @@ final class FilterResetTests: XCTestCase {
         XCTAssertEqual(restored.candidateFilterSetIDs, [camera.kit.id])
     }
 
-    func testResetSettingsAndNameClearsEveryAuxiliaryKindAndLeavesOtherCamerasAlone() throws {
+    func testResetSettingsClearsEveryAuxiliaryKindKeepsNameAndLeavesOtherCamerasAlone() throws {
         let camera = try camera()
         let viewModel = camera.viewModel
         viewModel.selectCameraSlot(.camera2)
         XCTAssertNil(viewModel.applyShootingFilters(selectedFilterSetIDs: [camera.kit.id], mounts: [.mount(red, in: camera.kit)]))
         viewModel.selectCameraSlot(.camera1)
-        viewModel.setCameraSlotCustomName("Field", for: .camera1)
+        viewModel.renameCamera(.camera1, to: "Field")
         XCTAssertNil(viewModel.applyShootingFilters(
             selectedFilterSetIDs: [camera.kit.id],
             mounts: [.mount(cpl, in: camera.kit, .cplLoss(1.5)), .mount(red, in: camera.kit), .mount(night, in: camera.kit), .mount(gnd, in: camera.kit)]
@@ -91,12 +91,12 @@ final class FilterResetTests: XCTestCase {
         viewModel.setWheelSelection(.item(FilterRowSelection(itemID: nd8.id, choice: .fixed)), at: 0)
         XCTAssertEqual(viewModel.ndStep.stops, 3 + 1.5 + 3 + 1, accuracy: 1e-9)
 
-        viewModel.resetFilmModeWorkingContextAndCameraName()
+        viewModel.resetFilmModeWorkingContext()
 
         XCTAssertEqual(viewModel.filterWheels, [.standard(NDStep(stops: 0))])
         XCTAssertTrue(viewModel.mountedAuxiliaryFilters.isEmpty)
         XCTAssertEqual(viewModel.candidateFilterSetIDs, [camera.kit.id])
-        XCTAssertNil(viewModel.activeCameraSlot.customDisplayName)
+        XCTAssertEqual(viewModel.activeCameraSlot?.displayName, "Field", "Reset keeps the camera name.")
         viewModel.selectCameraSlot(.camera2)
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), [.mount(red, in: camera.kit)], "Another camera is unchanged.")
     }

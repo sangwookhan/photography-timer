@@ -512,7 +512,7 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
         let viewModel = makeViewModel(contextStore: store)
 
         XCTAssertEqual(viewModel.activeCameraSlotID, .camera3)
-        XCTAssertEqual(viewModel.activeCameraSlot.displayName, "Camera 3")
+        XCTAssertEqual(viewModel.activeCameraSlot?.displayName, "Camera 3")
         XCTAssertEqual(viewModel.baseShutter, 1.0 / 60.0, accuracy: 1e-9)
         XCTAssertEqual(viewModel.ndStop, 4)
     }
@@ -528,7 +528,7 @@ final class CalculatorViewModelCameraSlotsTests: XCTestCase {
     func testSingleSlotBehaviorMatchesSingleSlotBaseline() throws {
         let viewModel = makeViewModel()
         XCTAssertEqual(viewModel.activeCameraSlotID, .camera1)
-        XCTAssertEqual(viewModel.activeCameraSlot.displayName, "Camera 1")
+        XCTAssertEqual(viewModel.activeCameraSlot?.displayName, "Camera 1")
 
         viewModel.baseShutter = 1.0 / 60.0
         viewModel.ndStop = 6

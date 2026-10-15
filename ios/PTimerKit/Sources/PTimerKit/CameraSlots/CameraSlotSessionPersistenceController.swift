@@ -4,20 +4,28 @@
 import Foundation
 import PTimerCore
 
-/// Bridges the runtime camera-slot session and the on-disk
-/// `PersistentCameraSlotSessionSnapshot` format. Owns the
-/// serialise/deserialise logic so the ViewModel stays a thin facade
-/// and the camera-slot persistence rules live in one testable place.
+/// Bridges the runtime managed camera list and its on-disk formats.
+/// Owns the serialise/deserialise logic so the ViewModel stays a thin
+/// facade and the camera-list persistence rules live in one testable
+/// place.
 ///
-/// First-launch-after-upgrade migration is handled implicitly: when
-/// no session snapshot exists, `loadSession()` returns nil and the
-/// ViewModel falls back to the legacy single-context restore path
-/// (which already sanitises out-of-range stored values). That same
-/// path then calls `save(...)` on this controller, persisting the
-/// migrated state under the new schema. From the second launch on,
-/// the session snapshot is the source of truth and the legacy store
-/// is ignored.
+/// Sources, in precedence order (CAMERA-PERSIST-006):
+/// 1. A readable managed payload always wins; missing fields take their
+///    documented defaults and the normalized list is persisted.
+/// 2. Content that was read but cannot be decoded is replaced by one
+///    atomic write of fresh camera state with new identities. No
+///    absent-payload interval exists, so legacy data is never used.
+/// 3. A storage read that supplies no content performs no delete or
+///    write: the session stays read-only and initialization retries on
+///    the next launch.
+/// 4. With no managed payload, the legacy camera-slot session snapshot
+///    (or, failing that, the legacy single-context snapshot, handled
+///    by the ViewModel) migrates into the managed list. The legacy
+///    stores are never modified or removed by migration, so a retry
+///    after an interruption repeats the same idempotent migration.
 public struct CameraSlotSessionPersistenceController {
+    /// Holds the managed camera list and, read-only, the legacy
+    /// camera-slot session snapshot that migrates into it.
     public let sessionStore: CameraSlotSessionPersistenceStoring
     public let presetFilms: [FilmIdentity]
     /// Closure that surfaces the photographer's custom
@@ -25,7 +33,7 @@ public struct CameraSlotSessionPersistenceController {
     /// resolves persisted film ids against the preset catalog first
     /// (cheaper, immutable) and falls back to this closure so a
     /// custom film selected before relaunch is restored on the right
-    /// slot. Default `{ [] }` preserves the legacy
+    /// camera. Default `{ [] }` preserves the legacy
     /// empty-list behavior for callers that pre-date custom films.
     public let currentCustomFilms: () -> [FilmIdentity]
     /// Live filter inventory at restore time (Filter Set contract).
@@ -33,27 +41,47 @@ public struct CameraSlotSessionPersistenceController {
     /// unresolved reference is skipped safely rather than fabricated.
     public let currentFilterInventory: () -> FilterInventory
 
+    /// The dedicated automatic-name sequence store (CAMERA-PERSIST-001).
+    public let sequenceStore: CameraNameSequenceStoring
+
+    /// Shared by copies of this struct.
+    private let state = SessionState()
+
     public init(
         sessionStore: CameraSlotSessionPersistenceStoring,
+        sequenceStore: CameraNameSequenceStoring = InMemoryCameraNameSequenceStore(),
         presetFilms: [FilmIdentity],
         currentCustomFilms: @escaping () -> [FilmIdentity] = { [] },
         currentFilterInventory: @escaping () -> FilterInventory = { .empty }
     ) {
         self.sessionStore = sessionStore
+        self.sequenceStore = sequenceStore
         self.presetFilms = presetFilms
         self.currentCustomFilms = currentCustomFilms
         self.currentFilterInventory = currentFilterInventory
     }
 
-    /// Restored session ready to apply to the runtime. The active
-    /// slot's snapshot is included in `inactiveSnapshots` even though
-    /// it logically lives on the live calc/film models — the caller
-    /// pulls it out and applies it to those models, then loads the
-    /// remaining entries via
-    /// `CameraSlotSessionModel.restoreInactiveSnapshots(_:)`.
-    /// `customDisplayNames` is loaded into the session model in
-    /// bulk via `restoreCustomDisplayNames(_:)` so a relaunch does
-    /// not have to re-derive labels from runtime defaults.
+    private final class SessionState {
+        /// Fresh install, legacy migration, or corrupt-content
+        /// replacement: the sequence is written (at least 5) before the
+        /// first managed-list payload is committed.
+        var needsSequenceInitialization = false
+        /// Set when the storage read failed: nothing is written this
+        /// session.
+        var isReadOnly = false
+    }
+
+    /// Whether camera state may be written this session. `false` after
+    /// a failed storage read (CAMERA-PERSIST-004).
+    public var isWritable: Bool {
+        !state.isReadOnly
+    }
+
+    /// The first automatic number after the four legacy cameras.
+    public static let initialSequenceValue = 5
+
+    /// Restored legacy session, ready to migrate. The active slot's
+    /// snapshot is included in `snapshotsBySlotID`.
     public struct RestoredSession {
         public let activeSlotID: CameraSlotID
         public let snapshotsBySlotID: [CameraSlotID: CameraSlotCalculatorSnapshot]
@@ -65,11 +93,125 @@ public struct CameraSlotSessionPersistenceController {
         }
     }
 
-    /// Loads the new session snapshot, or `nil` when none exists.
-    /// First-launch-after-upgrade migration is the caller's
-    /// responsibility (it falls back to the legacy restore path,
-    /// which sanitises bad values; subsequent `save(...)` calls
-    /// from this controller capture the migrated state).
+    /// Restored managed list. `snapshotsBySlotID` includes the active
+    /// camera's snapshot.
+    public struct RestoredManagedList {
+        public let cameras: [CameraListEntry]
+        public let activeSlotID: CameraSlotID?
+        public let issuedIDs: Set<CameraSlotID>
+        public let snapshotsBySlotID: [CameraSlotID: CameraSlotCalculatorSnapshot]
+        public init(cameras: [CameraListEntry], activeSlotID: CameraSlotID?, issuedIDs: Set<CameraSlotID>, snapshotsBySlotID: [CameraSlotID: CameraSlotCalculatorSnapshot]) {
+            self.cameras = cameras
+            self.activeSlotID = activeSlotID
+            self.issuedIDs = issuedIDs
+            self.snapshotsBySlotID = snapshotsBySlotID
+        }
+    }
+
+    public enum ManagedRestore {
+        /// No managed payload: the caller may migrate legacy data.
+        case absent
+        case restored(RestoredManagedList)
+        /// The storage read failed: no editable camera state exists
+        /// this session and nothing is written.
+        case readFailed
+    }
+
+    /// Loads the managed payload (CAMERA-PERSIST-001/004/006).
+    public func loadManagedList() -> ManagedRestore {
+        switch sessionStore.loadManagedList() {
+        case .absent:
+            // Fresh install or legacy migration: the sequence is
+            // initialized before the first managed payload is written.
+            state.needsSequenceInitialization = true
+            return .absent
+        case .readFailed:
+            state.isReadOnly = true
+            return .readFailed
+        case .undecodable:
+            // One atomic write replaces the unreadable content, so no
+            // absent-payload interval lets stale legacy data migrate.
+            state.needsSequenceInitialization = true
+            let fresh = Self.replacementList()
+            persist(fresh)
+            return .restored(fresh)
+        case let .loaded(snapshot):
+            return .restored(normalizedList(from: snapshot))
+        }
+    }
+
+    /// Four default cameras with newly generated identities, shown in
+    /// order, the first active (CAMERA-PERSIST-004).
+    private static func replacementList() -> RestoredManagedList {
+        let ids = (0..<4).map { _ in CameraSlotID.generate() }
+        return RestoredManagedList(
+            cameras: ids.enumerated().map { index, id in
+                CameraListEntry(id: id, name: CameraNaming.defaultName(number: index + 1))
+            },
+            activeSlotID: ids[0],
+            issuedIDs: Set(ids),
+            snapshotsBySlotID: Dictionary(uniqueKeysWithValues: ids.map { ($0, .initial) })
+        )
+    }
+
+    /// Applies the per-record defaults and duplicate-identity handling,
+    /// and persists the result when anything changed.
+    private func normalizedList(from snapshot: PersistentManagedCameraListSnapshot) -> RestoredManagedList {
+        var normalized = snapshot.isNormalized
+        var cameras: [CameraListEntry] = []
+        var snapshots: [CameraSlotID: CameraSlotCalculatorSnapshot] = [:]
+        var usedIDs = Set<CameraSlotID>()
+        for entry in snapshot.cameras {
+            var id = CameraSlotID(rawValue: entry.idRaw)
+            if id == nil || usedIDs.contains(id!) {
+                // The first occurrence keeps an identity; later ones get
+                // a new opaque identity.
+                id = CameraSlotID.generate()
+                normalized = true
+            }
+            guard let id else { continue }
+            usedIDs.insert(id)
+            let name = CameraNaming.trimmedName(entry.name) ?? {
+                normalized = true
+                return String(localized: "Camera")
+            }()
+            cameras.append(CameraListEntry(id: id, name: name, isDisplayed: entry.isDisplayed))
+            snapshots[id] = entry.calculator.map(runtimeSnapshot(from:)) ?? .initial
+        }
+        let storedActive = snapshot.activeCameraIDRaw.flatMap { CameraSlotID(rawValue: $0) }
+        let active: CameraSlotID?
+        if let storedActive, cameras.contains(where: { $0.id == storedActive && $0.isDisplayed }) {
+            active = storedActive
+        } else {
+            active = cameras.first(where: \.isDisplayed)?.id
+        }
+        if active?.rawValue != snapshot.activeCameraIDRaw {
+            normalized = true
+        }
+        let restored = RestoredManagedList(
+            cameras: cameras,
+            activeSlotID: active,
+            issuedIDs: Set(snapshot.issuedIDRaws.compactMap { CameraSlotID(rawValue: $0) }).union(usedIDs),
+            snapshotsBySlotID: snapshots
+        )
+        if normalized {
+            persist(restored)
+        }
+        return restored
+    }
+
+    private func persist(_ list: RestoredManagedList) {
+        save(
+            cameras: list.cameras,
+            activeSlotID: list.activeSlotID,
+            issuedIDs: list.issuedIDs,
+            activeSlotSnapshot: nil,
+            inactiveSnapshots: list.snapshotsBySlotID
+        )
+    }
+
+    /// Loads the legacy camera-slot session snapshot, or `nil` when
+    /// none exists. Migration source only; never written again.
     public func loadSession() -> RestoredSession? {
         guard let session = sessionStore.loadSnapshot() else {
             return nil
@@ -77,56 +219,108 @@ public struct CameraSlotSessionPersistenceController {
         return restoredSession(from: session)
     }
 
-    /// Persists the current runtime session. Always writes the new
-    /// schema; the legacy store stays read-only after first launch
-    /// (its writer in `FilmSelectionModel` continues for the active
-    /// slot, but session restore now ignores it).
-    ///
-    /// `customDisplayNames` carries the photographer-supplied slot
-    /// labels keyed by slot id. Slots with no entry persist no
-    /// custom name (Optional field stays `nil`), so a session that
-    /// never used the rename surface round-trips byte-for-byte with
-    /// the pre-PTIMER-123 shape.
-    public func save(
-        activeSlotID: CameraSlotID,
-        activeSlotSnapshot: CameraSlotCalculatorSnapshot,
-        inactiveSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot],
-        customDisplayNames: [CameraSlotID: String] = [:]
-    ) {
-        var allSnapshots = inactiveSnapshots
-        allSnapshots[activeSlotID] = activeSlotSnapshot
-
-        // A slot the photographer renamed but never visited has no
-        // calc snapshot in `inactiveSnapshots`. Without this fallback
-        // the rename would silently drop on the next save — promote
-        // those slots to a `.initial` calc snapshot so the persisted
-        // entry can carry the custom name. Visited slots already
-        // have a snapshot above and skip this branch.
-        for slotID in customDisplayNames.keys where allSnapshots[slotID] == nil {
-            allSnapshots[slotID] = .initial
-        }
-
-        let persistentSlots = allSnapshots
-            .map { slotID, snapshot in
-                persistentSnapshot(
-                    for: slotID,
-                    snapshot: snapshot,
-                    customDisplayName: customDisplayNames[slotID]
-                )
-            }
-            .sorted { $0.slotIDRaw < $1.slotIDRaw }
-
-        sessionStore.saveSnapshot(
-            PersistentCameraSlotSessionSnapshot(
-                schemaVersion: PersistentCameraSlotSessionSnapshot.currentSchemaVersion,
-                activeSlotIDRaw: activeSlotID.rawValue,
-                slots: persistentSlots
+    /// CAMERA-PERSIST-002/003: the four legacy cameras migrate in their
+    /// existing order with their identities, names, and calculator
+    /// state, all shown in the pager. An unnamed slot freezes its
+    /// resolved `Camera N` string.
+    public func migratedList(from session: RestoredSession) -> RestoredManagedList {
+        let cameras = CameraSlotID.legacyOrdered.enumerated().map { index, id in
+            CameraListEntry(
+                id: id,
+                name: session.customDisplayNames[id] ?? CameraNaming.defaultName(number: index + 1)
             )
+        }
+        return RestoredManagedList(
+            cameras: cameras,
+            activeSlotID: CameraSlotID.legacyOrdered.contains(session.activeSlotID)
+                ? session.activeSlotID : .camera1,
+            issuedIDs: Set(CameraSlotID.legacyOrdered),
+            snapshotsBySlotID: session.snapshotsBySlotID
         )
     }
 
-    public func clear() {
-        sessionStore.clearSnapshot()
+    /// Reserves the next automatic number durably before the camera is
+    /// committed (CAMERA-003, PERSIST-CAMERA-SEQUENCE-002). A missing
+    /// or unreadable sequence uses the normal allocation at 5
+    /// (CAMERA-PERSIST-007), so a display number may repeat after that
+    /// fallback while camera identities never do. A failed or
+    /// interrupted creation may leave a gap. Returns `nil` when the
+    /// session is read-only or the reservation could not be written.
+    public func reserveNextCameraNumber() -> Int? {
+        guard isWritable else { return nil }
+        let number = Self.usableSequenceValue(sequenceStore.load()) ?? Self.initialSequenceValue
+        guard sequenceStore.save(nextNumber: number + 1) else {
+            return nil
+        }
+        return number
+    }
+
+    /// A stored next number the allocator can issue: at least 5 and
+    /// small enough to advance. Anything else (below the first automatic
+    /// number, or one that would overflow when advanced) cannot be a value
+    /// this app stored, and is treated like a missing one.
+    private static func usableSequenceValue(_ result: CameraNameSequenceLoadResult) -> Int? {
+        guard case let .value(stored) = result,
+              stored >= initialSequenceValue,
+              stored < Int.max else {
+            return nil
+        }
+        return stored
+    }
+
+    /// Writes the initial sequence value before the first managed payload
+    /// (fresh install, legacy migration, corrupt-content replacement).
+    /// Advance-only: a readable value of at least 5 is never lowered or
+    /// replaced. Returns whether the managed payload may now be written.
+    private func ensureSequenceInitialized() -> Bool {
+        guard state.needsSequenceInitialization else { return true }
+        if case let .value(stored) = sequenceStore.load(), stored >= Self.initialSequenceValue {
+            state.needsSequenceInitialization = false
+            return true
+        }
+        guard sequenceStore.save(nextNumber: Self.initialSequenceValue) else { return false }
+        state.needsSequenceInitialization = false
+        return true
+    }
+
+    /// Persists the whole managed list in one write, so list entries,
+    /// order, pager inclusion, active camera, and calculator states
+    /// land together (CAMERA-PERSIST-005). Skipped for the whole
+    /// session after a failed storage read.
+    public func save(
+        cameras: [CameraListEntry],
+        activeSlotID: CameraSlotID?,
+        issuedIDs: Set<CameraSlotID>,
+        activeSlotSnapshot: CameraSlotCalculatorSnapshot?,
+        inactiveSnapshots: [CameraSlotID: CameraSlotCalculatorSnapshot]
+    ) {
+        guard isWritable else { return }
+        // Sequence before payload (CAMERA-PERSIST-001/002): without it the
+        // managed list is not committed, so a retry stays consistent.
+        guard ensureSequenceInitialized() else { return }
+        var allSnapshots = inactiveSnapshots
+        if let activeSlotID, let activeSlotSnapshot {
+            allSnapshots[activeSlotID] = activeSlotSnapshot
+        }
+        let persistentCameras = cameras.map { camera in
+            PersistentManagedCamera(
+                idRaw: camera.id.rawValue,
+                name: camera.name,
+                isDisplayed: camera.isDisplayed,
+                calculator: persistentSnapshot(
+                    for: camera.id,
+                    snapshot: allSnapshots[camera.id] ?? .initial,
+                    customDisplayName: nil
+                )
+            )
+        }
+        sessionStore.saveManagedList(
+            PersistentManagedCameraListSnapshot(
+                issuedIDRaws: issuedIDs.map(\.rawValue).sorted(),
+                activeCameraIDRaw: activeSlotID?.rawValue,
+                cameras: persistentCameras
+            )
+        )
     }
 
     // MARK: - Restore helpers
@@ -138,15 +332,13 @@ public struct CameraSlotSessionPersistenceController {
         var resolved: [CameraSlotID: CameraSlotCalculatorSnapshot] = [:]
         var customNames: [CameraSlotID: String] = [:]
         for entry in session.slots {
-            guard let slotID = CameraSlotID(rawValue: entry.slotIDRaw) else {
+            guard let slotID = CameraSlotID(rawValue: entry.slotIDRaw),
+                  CameraSlotID.legacyOrdered.contains(slotID) else {
                 continue
             }
             resolved[slotID] = runtimeSnapshot(from: entry)
-            if let raw = entry.customDisplayName {
-                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    customNames[slotID] = trimmed
-                }
+            if let trimmed = CameraNaming.trimmedName(entry.customDisplayName) {
+                customNames[slotID] = trimmed
             }
         }
         return RestoredSession(

@@ -366,7 +366,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         )
         XCTAssertNil(viewModel.applyMounts([.mount(cpl, in: set, .cplLoss(1.5))]))
         let cameraOneMounts = viewModel.mountedAuxiliaryFilters.map(\.mount)
-        let persistedBefore = sessionStore.stored
+        let persistedBefore = sessionStore.managedList
         let inventoryBefore = viewModel.filterInventory
 
         // One camera affected.
@@ -376,7 +376,7 @@ final class ExposureCalculatorFilterSetTests: XCTestCase {
         XCTAssertEqual(viewModel.saveFilterItem(withoutOnePointFive, in: set.id), .blocked(affectedCameras: ["Camera 1"], reason: .removesSelectedChoice))
         XCTAssertEqual(viewModel.mountedAuxiliaryFilters.map(\.mount), cameraOneMounts, "The previous valid state stays intact.")
         XCTAssertEqual(viewModel.filterInventory, inventoryBefore, "The previous inventory stays intact.")
-        XCTAssertEqual(sessionStore.stored, persistedBefore, "A blocked save persists nothing.")
+        XCTAssertEqual(sessionStore.managedList, persistedBefore, "A blocked save persists nothing.")
         XCTAssertEqual(viewModel.ndStep.stops, 1.5, accuracy: 1e-9)
 
         // Two cameras affected: camera 2 mounts the same CPL at 2.

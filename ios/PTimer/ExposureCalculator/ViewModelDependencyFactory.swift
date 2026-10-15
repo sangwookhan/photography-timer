@@ -24,6 +24,7 @@ enum ViewModelDependencyFactory {
             presetFilms: LaunchPresetFilmCatalogV2.userSelectableFilms,
             contextPersistenceStore: UserDefaultsCalculatorContextStore(),
             cameraSlotSessionPersistenceStore: UserDefaultsCameraSlotSessionStore(),
+            cameraNameSequenceStore: UserDefaultsCameraNameSequenceStore(),
             metadataPersistenceStore: UserDefaultsTimerMetadataStore(),
             displaySettingStore: UserDefaultsDisplaySettingStore(),
             lockScreenTargetExposer: ActivityKitLockScreenTimerTargetExposer(),

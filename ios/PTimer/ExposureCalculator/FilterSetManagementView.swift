@@ -447,7 +447,10 @@ struct FilterSetDetailView: View {
                 presenting: pendingItemDeletion
             ) { item in
                 Button(role: .destructive) {
-                    viewModel.deleteFilterItem(id: item.id)
+                    // The row was kept until now, so animate its removal.
+                    withAnimation {
+                        viewModel.deleteFilterItem(id: item.id)
+                    }
                     pendingItemDeletion = nil
                 } label: {
                     Text("Delete \(item.name)")

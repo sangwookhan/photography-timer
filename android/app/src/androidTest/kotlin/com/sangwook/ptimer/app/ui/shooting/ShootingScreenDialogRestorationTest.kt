@@ -83,7 +83,6 @@ class ShootingScreenDialogRestorationTest {
                     onStartCorrected = {},
                     onOpenDetails = {},
                     onResetSettings = {},
-                    onResetSettingsAndName = {},
                     onCreateCustomFilm = { _, _ -> true },
                     onCreateCustomTableFilm = { _, _ -> true },
                     onEditCustomFilm = { null },

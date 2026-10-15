@@ -79,6 +79,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -97,6 +99,9 @@ import com.sangwook.ptimer.app.ui.mainLabelSizeSp
 import com.sangwook.ptimer.app.ui.localizedCoreText
 import com.sangwook.ptimer.app.ui.localizedFilmName
 import com.sangwook.ptimer.app.vm.CalculatorUiState
+import com.sangwook.ptimer.app.vm.CameraManagementOrigin
+import com.sangwook.ptimer.app.vm.CameraPagerNavigation
+import com.sangwook.ptimer.app.vm.CameraPagerReturnTarget
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
@@ -139,14 +144,14 @@ fun ShootingScreen(
     onSelectFilm: (String?) -> Unit,
     onSelectProfile: (String) -> Unit,
     onSelectSlot: (CameraSlotId) -> Unit,
-    onRenameSlot: (String?) -> Unit,
+    /** Renames the active camera; the name is trimmed and a blank one is rejected upstream. */
+    onRenameSlot: (String) -> Unit,
     onSetTarget: (Double?) -> Unit,
     onStartTarget: () -> Unit,
     onStartAdjusted: () -> Unit,
     onStartCorrected: () -> Unit,
     onOpenDetails: () -> Unit,
     onResetSettings: () -> Unit,
-    onResetSettingsAndName: () -> Unit,
     onCreateCustomFilm: (CustomFormulaFilmInput, editFilmId: String?) -> Boolean,
     onCreateCustomTableFilm: (CustomTableFilmInput, editFilmId: String?) -> Boolean,
     onEditCustomFilm: (String) -> CustomFilmDraft?,
@@ -167,6 +172,8 @@ fun ShootingScreen(
     // navigation bar, so reserving its inset here left a dead band between
     // the page dots and the peek and cost the result card that height.
     reserveNavigationBarInset: Boolean = true,
+    /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
+    cameraActions: CameraManagementActions = CameraManagementActions.None,
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -186,19 +193,50 @@ fun ShootingScreen(
     var showResetConfirm by rememberSaveable { mutableStateOf(false) }
 
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = activeIndex) { state.slots.size }
+    val displayedCount = state.slots.size
+    // The pager holds the displayed cameras plus one trailing utility page
+    // (CAMERA-PAGER-007); with no displayed camera it holds nothing.
+    val pagerState = rememberPagerState(initialPage = activeIndex) { CameraPagerNavigation.pageCount(displayedCount) }
+    val isUtilityPageShowing = CameraPagerNavigation.isUtilityPage(pagerState.settledPage, displayedCount)
 
-    // The pager is the single source of truth for slot switching:
-    // swiping settles on a page → that camera becomes the active slot
-    // (capture-on-switch). There is deliberately NO reverse effect
-    // driving the pager from the controller's active slot — two-way
-    // sync could fight (a late signal while the controller still saw
-    // the previous slot could snap the pager back mid-swipe). A
-    // restored session is covered by rememberPagerState(initialPage),
-    // and nothing else changes the active slot outside this handler.
+    // Where camera management was opened from (null: closed), and where the
+    // pager returns to once it closes. Saved so a recreation reopens it.
+    var managementOrigin by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingReturn by remember { mutableStateOf<CameraPagerReturnTarget?>(null) }
+    fun openManagement(origin: CameraManagementOrigin) { managementOrigin = origin.name }
+    // Add from the utility page or the empty state: the same action as Add in
+    // camera management, so the resulting camera is announced the same way.
+    val addCamera = rememberAddCameraAction(cameraActions)
+
+    // Swiping settles on a page → that camera becomes the active slot
+    // (capture-on-switch); settling on the utility page changes no camera,
+    // calculator, or timer (CAMERA-PAGER-007). A restored session is covered
+    // by rememberPagerState(initialPage).
     LaunchedEffect(pagerState.settledPage) {
         val idx = pagerState.settledPage
         if (idx in state.slots.indices) onSelectSlot(state.slots[idx].id)
+    }
+
+    // A change of the active camera or of the displayed list that did not
+    // come from a swipe (add, hide, delete, show, reorder in camera
+    // management) re-seats the pager on the active camera; a swipe has
+    // already settled there, so nothing moves. Adding settles on the new
+    // camera. Under management the move is immediate.
+    val displayedIds = state.slots.map { it.id }
+    LaunchedEffect(displayedIds, state.slots.getOrNull(activeIndex)?.id) {
+        if (displayedIds.isEmpty()) return@LaunchedEffect
+        if (pagerState.settledPage == activeIndex && !pagerState.isScrollInProgress) return@LaunchedEffect
+        if (managementOrigin != null) pagerState.scrollToPage(activeIndex) else pagerState.animateScrollToPage(activeIndex)
+    }
+
+    // Closing camera management returns by entry route (CAMERA-PAGER-007).
+    LaunchedEffect(pendingReturn) {
+        when (pendingReturn) {
+            CameraPagerReturnTarget.UtilityPage -> pagerState.scrollToPage(CameraPagerNavigation.utilityPageIndex(displayedCount))
+            CameraPagerReturnTarget.ActiveCamera -> pagerState.scrollToPage(activeIndex)
+            CameraPagerReturnTarget.EmptyState, null -> Unit
+        }
+        pendingReturn = null
     }
 
     // The shooting surface is laid out at 1x whatever the system font
@@ -218,7 +256,37 @@ fun ShootingScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            HorizontalPager(
+            if (displayedCount == 0) {
+                // No camera is displayed: no calculator and no pager. Settings
+                // stays reachable, and so do the existing timers below.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (showExactAlarmSettingsAction) {
+                        IconButton(onClick = onOpenExactAlarmSettings) {
+                            Icon(
+                                Icons.Outlined.Warning,
+                                contentDescription = stringResource(R.string.alarm_warning_title),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    SettingsMenuButton(
+                        canManageCameras = cameraActions.isEditable,
+                        onManageCameras = { openManagement(CameraManagementOrigin.Settings) },
+                        onOpenFilterManagement = onOpenFilterManagement,
+                        onOpenAbout = onOpenAbout,
+                    )
+                }
+                EmptyCameraPager(
+                    isEditable = cameraActions.isEditable,
+                    onManageCameras = { openManagement(CameraManagementOrigin.EmptyState) },
+                    onAddCamera = addCamera,
+                    modifier = Modifier.weight(1f),
+                )
+            } else HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 // The default page connection lets CHILD scrolls steer the
@@ -232,6 +300,14 @@ fun ShootingScreen(
                 // unaffected.
                 pageNestedScrollConnection = remember { object : NestedScrollConnection {} },
             ) { page ->
+                if (page >= state.slots.size) {
+                    CameraManagementUtilityPage(
+                        isEditable = cameraActions.isEditable,
+                        onManageCameras = { openManagement(CameraManagementOrigin.UtilityPage) },
+                        onAddCamera = addCamera,
+                    )
+                    return@HorizontalPager
+                }
                 // Each page renders its OWN slot's state so a swipe reveals the
                 // destination camera immediately (no clone-until-settle). Editing
                 // controls still target the active slot, which the settle handler
@@ -313,6 +389,8 @@ fun ShootingScreen(
                                 }
                             }
                             SettingsMenuButton(
+                                canManageCameras = cameraActions.isEditable,
+                                onManageCameras = { openManagement(CameraManagementOrigin.Settings) },
                                 onOpenFilterManagement = onOpenFilterManagement,
                                 onOpenAbout = onOpenAbout,
                             )
@@ -489,8 +567,21 @@ fun ShootingScreen(
                 }
             }
 
-            // Page dots + "N of M" at the bottom; swipe to change camera.
-            PagerDots(count = state.slots.size, current = pagerState.currentPage)
+            // Page dots at the bottom; swipe to change camera. The dots include
+            // the utility page; the "N of M" text counts cameras only and is
+            // absent on the utility page (CAMERA-PAGER-007).
+            val indicator = CameraPagerNavigation.indicator(
+                displayedCameraCount = displayedCount,
+                activeCameraIndex = activeIndex,
+                isUtilityPageShowing = isUtilityPageShowing,
+            )
+            if (indicator != null) {
+                PagerDots(
+                    count = indicator.dotCount,
+                    current = pagerState.currentPage.coerceIn(0, indicator.dotCount - 1),
+                    position = indicator.position,
+                )
+            }
             // The peek sits right below; the gap is only for the bare screen.
             if (reserveNavigationBarInset) Spacer(Modifier.height(8.dp))
         }
@@ -539,7 +630,7 @@ fun ShootingScreen(
     }
 
     if (showRename) {
-        RenameSlotDialog(
+        RenameCameraDialog(
             initial = state.activeSlotName,
             onConfirm = { name -> onRenameSlot(name); showRename = false },
             onDismiss = { showRename = false },
@@ -555,6 +646,19 @@ fun ShootingScreen(
         )
     }
 
+    managementOrigin?.let { originName ->
+        val origin = CameraManagementOrigin.valueOf(originName)
+        CameraManagementScreen(
+            cameras = state.cameras,
+            activeId = state.slots.firstOrNull { it.isActive }?.id,
+            actions = cameraActions,
+            onDismiss = {
+                managementOrigin = null
+                pendingReturn = CameraPagerNavigation.returnTarget(origin, displayedCount)
+            },
+        )
+    }
+
     if (showResetConfirm) {
         // AlertDialog composes each slot inside its own dialog window, which
         // re-derives LocalDensity from the system Configuration rather than
@@ -563,18 +667,13 @@ fun ShootingScreen(
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
             title = { CappedFontScale { Text(stringResource(R.string.reset_shooting_title)) } },
-            // Two destructive choices: keep the camera name, or clear it
-            // too. Stacked in the confirm slot (with Cancel) so the
-            // single Reset entry point still gates the wipe behind a
-            // deliberate choice.
+            // One destructive choice, "Reset settings"; the camera's name
+            // is never changed by a reset (RESET-010, RESET-012 retired).
             confirmButton = {
                 CappedFontScale {
                     Column(horizontalAlignment = Alignment.End) {
                         TextButton(onClick = { onResetSettings(); showResetConfirm = false }) {
                             Text(stringResource(R.string.reset_settings), color = MaterialTheme.colorScheme.error)
-                        }
-                        TextButton(onClick = { onResetSettingsAndName(); showResetConfirm = false }) {
-                            Text(stringResource(R.string.reset_settings_and_name), color = MaterialTheme.colorScheme.error)
                         }
                         TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
                     }
@@ -607,11 +706,17 @@ internal fun mainLabelStyle(): androidx.compose.ui.text.TextStyle =
     )
 
 /**
- * The global Settings menu beside Reset: Filter management, the shared
- * Filter Set inventory, and About. It holds nothing camera-specific.
+ * The global Settings menu beside Reset: camera management (the Settings
+ * route, CAMERA-PAGER-002), Filter management for the shared Filter Set
+ * inventory, and About.
  */
 @Composable
-private fun SettingsMenuButton(onOpenFilterManagement: () -> Unit, onOpenAbout: () -> Unit) {
+private fun SettingsMenuButton(
+    canManageCameras: Boolean,
+    onManageCameras: () -> Unit,
+    onOpenFilterManagement: () -> Unit,
+    onOpenAbout: () -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.testTag("shooting-settings-menu")) {
@@ -622,6 +727,15 @@ private fun SettingsMenuButton(onOpenFilterManagement: () -> Unit, onOpenAbout: 
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_manage_cameras)) },
+                onClick = {
+                    expanded = false
+                    onManageCameras()
+                },
+                enabled = canManageCameras,
+                modifier = Modifier.testTag("shooting-settings-manage-cameras"),
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.filter_management_title)) },
                 onClick = {
@@ -1254,49 +1368,14 @@ internal fun Pill(text: String) {
     }
 }
 
-/** Manufacturer section header in the film picker (iOS groups films by maker). */
 @Composable
-private fun RenameSlotDialog(
-    initial: String,
-    onConfirm: (String?) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var text by remember { mutableStateOf(initial) }
-    // AlertDialog composes each slot inside its own dialog window, which
-    // re-derives LocalDensity from the system Configuration rather than
-    // inheriting ShootingApp's font-scale cap (PTIMER-219) — every slot
-    // needs its own CappedFontScale wrap, not just the AlertDialog call site.
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { CappedFontScale { Text(stringResource(R.string.rename_camera_title)) } },
-        text = {
-            CappedFontScale {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.camera_name)) },
-                )
-            }
-        },
-        confirmButton = {
-            CappedFontScale {
-                TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.action_save)) }
-            }
-        },
-        dismissButton = {
-            // Empty name clears the custom label back to the canonical default.
-            CappedFontScale {
-                TextButton(onClick = { onConfirm(null) }) { Text(stringResource(R.string.action_reset)) }
-            }
-        },
-    )
-}
-
-@Composable
-internal fun PagerDots(count: Int, current: Int) {
+internal fun PagerDots(count: Int, current: Int, position: Pair<Int, Int>? = (current + 1) to count) {
+    // The camera pager reports its own position (the utility page has none);
+    // the dots stay one element for assistive technology.
+    val spoken = position?.let { stringResource(R.string.pager_position_format, it.first, it.second) }
+        ?: stringResource(R.string.camera_management_page_title)
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = spoken },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1314,12 +1393,14 @@ internal fun PagerDots(count: Int, current: Int) {
                     .background(color),
             )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            stringResource(R.string.pager_position_format, current + 1, count),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (position != null) {
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.pager_position_format, position.first, position.second),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

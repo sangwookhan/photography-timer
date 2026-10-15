@@ -44,10 +44,12 @@ import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersActions
 import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersScreen
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.Manifest
 import android.os.Build
@@ -70,6 +72,7 @@ import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
 import com.sangwook.ptimer.app.ui.shooting.FilterManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementActions
 import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
+import com.sangwook.ptimer.app.ui.shooting.CameraManagementActions
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
@@ -112,10 +115,12 @@ fun ShootingApp(
         ShootingAppViewModel(
             films = bootstrap.presetFilms + bootstrap.library.customFilms,
             library = bootstrap.library,
-            initialSession = bootstrap.initialSession,
+            initialCameraList = bootstrap.initialCameraList,
             timerStore = DataStoreTimerWorkspaceStore.create(context),
             alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
-            slotStore = bootstrap.slotStore,
+            cameraListPersistence = bootstrap.cameraListPersistence,
+            needsInitialCameraListSave = bootstrap.needsInitialCameraListSave,
+            defaultCameraName = bootstrap.defaultCameraName,
             inventoryStore = bootstrap.inventoryStore,
             initialInventory = bootstrap.initialInventory,
             // The bootstrap always reads the store: `null` is a fresh install.
@@ -211,6 +216,25 @@ fun ShootingApp(
     val timerState by viewModel.uiState.collectAsStateWithLifecycle()
     val soundingAlarmId by viewModel.soundingAlarmTimerId.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
+
+    // Camera management and the pager's utility page (CAMERA-PAGER-002/007).
+    val cameraActions = remember(holder) {
+        CameraManagementActions(
+            isEditable = holder.cameras.isEditable,
+            // Reserving the next `Camera N` is durable I/O: it runs on the
+            // owner's scope, so a recreation does not cancel it half-way.
+            add = { holder.viewModelScope.async { holder.cameras.addCamera() }.await() },
+            rename = holder.cameras::renameCamera,
+            setDisplayed = holder.cameras::setCameraDisplayed,
+            move = holder.cameras::moveCamera,
+            hide = holder.cameras::hideCameras,
+            delete = holder.cameras::deleteCameras,
+            activeCamera = {
+                controller.state.value.slots.firstOrNull { it.isActive }
+                    ?.let { controller.cameraIdentity(it.id) }
+            },
+        )
+    }
 
     // Persisted ND notation display mode (PTIMER-187): seed from the bootstrap
     // read, then observe the store. Keep the controller (picker labels) in sync
@@ -431,14 +455,16 @@ fun ShootingApp(
                     onSelectFilm = controller::selectFilm,
                     onSelectProfile = controller::selectProfile,
                     onSelectSlot = controller::selectSlot,
-                    onRenameSlot = controller::renameActiveSlot,
+                    onRenameSlot = { name ->
+                        controller.state.value.slots.firstOrNull { it.isActive }
+                            ?.let { holder.cameras.renameCamera(it.id, name) }
+                    },
                     onSetTarget = controller::setTargetShutter,
                     onStartTarget = controller::startFromTarget,
                     onStartAdjusted = controller::startFromAdjusted,
                     onStartCorrected = controller::startFromCorrected,
                     onOpenDetails = { details = controller.detailsState() },
                     onResetSettings = controller::resetActiveSlotSettings,
-                    onResetSettingsAndName = controller::resetActiveSlotSettingsAndName,
                     onCreateCustomFilm = { input, editId ->
                         // editId set → update that film in place (reuse its ids); else new.
                         val film = CustomFilmBuilder.buildFormulaFilm(
@@ -517,6 +543,7 @@ fun ShootingApp(
                     showExactAlarmSettingsAction = exactAlarmWarningRelevant,
                     onOpenExactAlarmSettings = { showExactAlarmInfo = true },
                     reserveNavigationBarInset = !hasTimers,
+                    cameraActions = cameraActions,
                 )
         }
             // Overlay, not part of the Column above: the calculator's

@@ -9,13 +9,17 @@ import com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStore
 import com.sangwook.ptimer.app.persistence.DataStoreCustomFilmLibraryStore
 import com.sangwook.ptimer.app.persistence.DataStoreDisplaySettingsStore
 import com.sangwook.ptimer.app.persistence.DataStoreFilterInventoryStore
+import com.sangwook.ptimer.app.persistence.DataStoreCameraNameSequenceStore
+import com.sangwook.ptimer.app.persistence.DataStoreManagedCameraListStore
 import com.sangwook.ptimer.app.persistence.DataStoreSlotSessionStore
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.customfilm.CustomFilmLibrary
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.NDNotationMode
-import com.sangwook.ptimer.core.persistence.PersistentSlotSession
+import com.sangwook.ptimer.core.persistence.CameraListPersistenceController
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.slots.CameraListSnapshot
+import com.sangwook.ptimer.R
 
 /**
  * Everything [ShootingApp] needs that used to block the main thread during
@@ -39,8 +43,14 @@ class ShootingAppBootstrap(
     val presetFilms: List<FilmIdentity>,
     /** Custom film library, constructor-loaded from its store during [load]. */
     val library: CustomFilmLibrary,
-    val initialSession: PersistentSlotSession?,
-    val slotStore: DataStoreSlotSessionStore,
+    /** The managed camera list restored (or migrated, or seeded) during [load]. */
+    val initialCameraList: CameraListSnapshot,
+    /** The restored list still has to be written (fresh install or legacy migration). */
+    val needsInitialCameraListSave: Boolean,
+    /** Owns the managed-list, sequence, and legacy stores read during [load]. */
+    val cameraListPersistence: CameraListPersistenceController,
+    /** Localized `Camera N`, frozen as stored text when a camera is created. */
+    val defaultCameraName: (Int) -> String,
     /** The user's Filter Sets and physical items, read during [load];
      *  `null` when nothing is saved yet (a fresh installation). */
     val initialInventory: FilterInventory?,
@@ -58,7 +68,14 @@ class ShootingAppBootstrap(
          * write the replaced generation already submitted (PTIMER-217).
          */
         suspend fun load(context: Context): ShootingAppBootstrap {
-            val slotStore = DataStoreSlotSessionStore.create(context)
+            // The legacy slot-session store is only a migration source here.
+            val cameraListPersistence = CameraListPersistenceController(
+                managedStore = DataStoreManagedCameraListStore.create(context),
+                legacyStore = DataStoreSlotSessionStore.create(context),
+                sequenceStore = DataStoreCameraNameSequenceStore.create(context),
+                defaultName = { context.getString(R.string.camera_default_name, it) },
+                recordFallbackName = context.getString(R.string.camera_record_fallback_name),
+            )
             val displaySettingsStore = DataStoreDisplaySettingsStore.create(context)
             val inventoryStore = DataStoreFilterInventoryStore.create(context)
             // Library writes happen in main-thread UI callbacks; the async-write
@@ -68,11 +85,14 @@ class ShootingAppBootstrap(
             // off-main on the caller's IO dispatcher before the ordered reads.
             val presetFilms = LaunchPresetFilmCatalogV2.userSelectableFilms
             return AppPersistenceWriter.readOrdered {
+                val restored = cameraListPersistence.restore()
                 ShootingAppBootstrap(
                     presetFilms = presetFilms,
                     library = CustomFilmLibrary(store = libraryStore),
-                    initialSession = slotStore.loadSession(),
-                    slotStore = slotStore,
+                    initialCameraList = restored.list,
+                    needsInitialCameraListSave = restored.needsInitialSave,
+                    cameraListPersistence = cameraListPersistence,
+                    defaultCameraName = { context.getString(R.string.camera_default_name, it) },
                     initialInventory = inventoryStore.loadSnapshot()?.restoredInventory,
                     inventoryStore = inventoryStore,
                     displaySettingsStore = displaySettingsStore,

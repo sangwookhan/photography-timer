@@ -50,6 +50,13 @@ data class TimerIdentity(
     @Serializable(with = LossyFilterSummaryListSerializer::class)
     val filterSummary: List<FilterSummaryEntry>? = null,
     val filterReferenceText: String? = null,
+    // Camera identity and name captured at start (CAMERA-TIMER-001), so a
+    // timer renders without resolving against the current camera list and a
+    // later rename, hide, reorder, or delete never changes it. Additive
+    // optional: snapshots written before these fields decode unchanged and
+    // keep rendering from [title] / [slotLabel].
+    val cameraId: String? = null,
+    val cameraName: String? = null,
 )
 
 /**

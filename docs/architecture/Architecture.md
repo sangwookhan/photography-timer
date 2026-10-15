@@ -8,7 +8,8 @@
 Xcode targets). The Android module structure (`android/`) and the
 cross-platform comparison are documented in
 [`CrossPlatformArchitectureReview.md`](CrossPlatformArchitectureReview.md);
-this document does not describe them.
+this document does not describe them, except the Android managed
+camera list types in §1.7b.
 **Audience**: Engineers working in the codebase who need to know which
 file owns which responsibility, where layer boundaries lie, and how the
 pieces compose at runtime.
@@ -500,6 +501,70 @@ Exposure-calculated timer identity lives in Kit
 The timer runtime layer carries no exposure-source concept on
 its own — those types describe which exposure computation produced
 the timer, which is a calculator-domain concern.
+
+### 1.7b Android managed camera list
+
+The Android counterpart of the camera-slot domain above. Android has no
+SwiftUI facade split: the calculator controller owns the list, and the
+camera-list commands are paired with persistence in one small class.
+Directories: `android/core/.../core/slots`, `.../core/persistence`,
+`android/app/.../app/vm`, `.../app/persistence`, `.../app/ui/shooting`.
+
+- `CameraSlotId` (core) — stable string identity, serialized as a plain
+  string. `camera1` … `camera4` are kept verbatim; every other id is
+  generated (`camera-<uuid>`), never derived from a position or a name.
+  `CameraNaming` holds the name trimming rule and the compact timer
+  badge derived from a captured name.
+- `CameraSlotSession` (core) — owns the ordered managed list
+  (`CameraListEntry`: id, stored name, pager inclusion), the active camera
+  or the explicit absence of one, the set of identities ever issued, and
+  one calculator snapshot per camera (the active one included). It
+  implements add, rename, show/hide, move by one position, and single or
+  bulk hide/delete with the next-active-camera rule computed on the
+  resulting list. `CameraListSnapshot` is the value form used for restore
+  and export.
+- `ManagedCameraListPersistence` (core) — the versioned managed-list
+  payload and `ManagedCameraListCodec` (per-camera decode isolation;
+  an undecodable or unknown-version payload reads as undecodable, and a
+  read that supplies no content reads as read-failed).
+  `ManagedCameraListStoring` is the persistence boundary, with an
+  in-memory implementation for tests.
+- `CameraNameSequencePersistence` (core) — the dedicated versioned
+  automatic-name sequence (`CameraNameSequenceStoring`,
+  `CameraNameSequenceCodec`). Only a next number from 5 through
+  `Int.MAX_VALUE - 1` is usable (`CameraNameSequenceRange`); a missing,
+  undecodable, or out-of-range value (negative, 0 to 4, `Int.MAX_VALUE`)
+  starts the normal allocator at 5, and a failed read supplies no value.
+- `CameraListPersistenceController` (core) — restore (managed payload with
+  per-record defaults, atomic replacement of content that was read but
+  cannot be decoded, legacy `PersistentSlotSession` migration, or the
+  fresh-install seed), the sequence rules (max(5, usable value) written
+  before the first managed payload, advance-only, durable reservation
+  before a camera is committed, allocator at 5 storing 6 when no usable
+  sequence can be read), and the whole-list save. A read that failed without
+  content sets `isReadFailed`: no delete, write, or legacy fallback for
+  the launch. The legacy slot-session store is read only.
+- `CalculatorController` (app) — applies list edits to the session,
+  re-points the active camera, builds per-camera page states
+  (`slotStates` for the displayed cameras, `cameras` for the whole
+  list), and captures the camera id and name into `TimerIdentity` at
+  timer start. With no active camera calculator-bound starts are refused.
+- `CameraListManager` (app) — the command surface used by the UI. Each
+  explicit edit applies to the controller and submits one whole-list write
+  on the shared persistence writer; `addCamera` reserves the next number
+  first. After a failed read every edit is ignored (`isEditable` is false) and
+  the camera surface shows the failed-read explanation with its actions
+  disabled for that launch.
+- `DataStoreManagedCameraListStore`, `DataStoreCameraNameSequenceStore`
+  (app) — the two DataStore adapters, each in its own DataStore file.
+- `CameraPagerNavigation` (app) — pure pager rules: the trailing utility
+  page, the return target by management entry route, and the indicator
+  counts.
+- `CameraManagement.kt` (app UI) — `CameraManagementScreen` (normal and
+  edit modes: eye control, tap-to-rename, trailing-swipe delete with
+  confirmation, drag-handle reorder, bottom `Add camera` or `Hide`/`Delete`),
+  the pager's utility page, and the empty state. `CameraIcons.kt` draws the
+  camera, eye, eye-slash, and drag-handle glyphs.
 
 ### 1.8 Film catalog
 

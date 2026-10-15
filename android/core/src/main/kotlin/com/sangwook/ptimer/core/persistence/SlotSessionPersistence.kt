@@ -10,9 +10,10 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-// Persistence for the camera-slot session so each slot's calculator context
-// (wheel indices, film/profile, target) and custom name survive a relaunch
-// (closes the unit-8 / unit-10 "deferred to 5b" notes).
+// Legacy persistence of the fixed four-slot session. The managed camera list
+// (ManagedCameraListPersistence) replaced it as the live store; this payload
+// is now read-only migration input (CAMERA-PERSIST-006) and is never written
+// by the app.
 
 @Serializable
 data class PersistentSlotSession(
@@ -27,9 +28,27 @@ data class PersistentSlotSession(
     }
 }
 
+/** Outcome of reading the legacy slot session for migration. */
+sealed interface SlotSessionLoadResult {
+    /** No legacy payload is stored. */
+    data object Absent : SlotSessionLoadResult
+
+    data class Loaded(val session: PersistentSlotSession) : SlotSessionLoadResult
+
+    /** Content was read but is not a supported fixed-slot shape. */
+    data object Unsupported : SlotSessionLoadResult
+
+    /** The read failed and supplied no content: no migration, no fallback (CAMERA-PERSIST-006). */
+    data object ReadFailed : SlotSessionLoadResult
+}
+
 /** Persistence boundary for the camera-slot session. */
 interface SlotSessionStoring {
     fun loadSession(): PersistentSlotSession?
+
+    /** Distinguishes an absent or unsupported payload from a failed read. */
+    fun load(): SlotSessionLoadResult = loadSession()?.let { SlotSessionLoadResult.Loaded(it) } ?: SlotSessionLoadResult.Absent
+
     fun saveSession(session: PersistentSlotSession)
     fun clearSession()
 }

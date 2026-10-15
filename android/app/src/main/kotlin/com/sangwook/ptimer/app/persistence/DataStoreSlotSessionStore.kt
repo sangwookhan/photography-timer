@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.persistence.SlotSessionCodec
+import com.sangwook.ptimer.core.persistence.SlotSessionLoadResult
 import com.sangwook.ptimer.core.persistence.SlotSessionStoring
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
@@ -42,6 +43,19 @@ class DataStoreSlotSessionStore(
             SlotSessionCodec.decode(json)
         }
     }.getOrNull()
+
+    override fun load(): SlotSessionLoadResult = try {
+        val preferences = runBlocking { dataStore.data.firstOrNull() }
+        val text = preferences?.get(SESSION_KEY)
+        when {
+            preferences == null -> SlotSessionLoadResult.ReadFailed
+            text == null -> SlotSessionLoadResult.Absent
+            else -> SlotSessionCodec.decode(text)?.let { SlotSessionLoadResult.Loaded(it) }
+                ?: SlotSessionLoadResult.Unsupported
+        }
+    } catch (_: Exception) {
+        SlotSessionLoadResult.ReadFailed
+    }
 
     override fun saveSession(session: PersistentSlotSession) {
         runCatching {

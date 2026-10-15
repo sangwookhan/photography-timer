@@ -251,7 +251,6 @@ internal fun ShootingScreenHarness(state: CalculatorUiState) {
         onStartCorrected = {},
         onOpenDetails = {},
         onResetSettings = {},
-        onResetSettingsAndName = {},
         onCreateCustomFilm = { _, _ -> true },
         onCreateCustomTableFilm = { _, _ -> true },
         onEditCustomFilm = { null },

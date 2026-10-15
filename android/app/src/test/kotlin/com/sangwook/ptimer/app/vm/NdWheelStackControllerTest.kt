@@ -30,11 +30,13 @@ class NdWheelStackControllerTest {
 
     private val films = LaunchPresetFilmCatalogV2.films
 
-    private fun controller(initial: PersistentSlotSession? = null) =
-        CalculatorController(films = films, initialSession = initial)
+    private fun controller(
+        initial: PersistentSlotSession? = null,
+        cameraList: com.sangwook.ptimer.core.slots.CameraListSnapshot? = null,
+    ) = CalculatorController(films = films, initialSession = initial, initialCameraList = cameraList)
 
     private fun wheelStops(c: CalculatorController): List<Double> =
-        c.exportSession().snapshots.getValue(c.state.value.slots.first { it.isActive }.id)
+        c.exportCameraList().snapshots.getValue(c.state.value.slots.first { it.isActive }.id)
             .canonicalNdStackStops()
 
     /** Ladder index of [stops] on wheel [wheel] of the CURRENT state. */
@@ -563,13 +565,13 @@ class NdWheelStackControllerTest {
         commitStops(c, 0, "10")
         commitStops(c, 1, "6")
 
-        val exported = c.exportSession()
+        val exported = c.exportCameraList()
         val snapshot = exported.snapshots.getValue(CameraSlotId.camera1)
         assertEquals(listOf(10.0, 6.0), snapshot.ndStack)
         assertEquals(10, snapshot.ndIndex)
 
         // Relaunch: the stack restores wholesale.
-        val restored = controller(initial = exported)
+        val restored = controller(cameraList = exported)
         assertEquals(listOf(10.0, 6.0), wheelStops(restored))
         assertEquals(2, restored.state.value.filterWheels.size)
     }

@@ -221,7 +221,7 @@ class ShootingFilterSetSelectionTest {
         assertFalse(c.isFilterSetInUseOnActiveCamera(kit.id))
         assertEquals("The set and its items stay in the inventory.", kit, model.inventory.value.filterSet(kit.id))
 
-        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        val restored = CalculatorController(films = emptyList(), initialCameraList = c.exportCameraList(), inventoryModel = model)
         assertEquals("The applied selection is persisted.", listOf(other.id), restored.state.value.candidateFilterSetIds)
         assertEquals(listOf(cpl.id), restored.state.value.mountedAuxiliaryFilters.map { it.itemId })
     }
@@ -301,7 +301,7 @@ class ShootingFilterSetSelectionTest {
 
         assertNull(c.applyShootingFilters(listOf(samples.filterSets.first().id), emptyList()))
         assertNull(c.applyShootingFilters(emptyList(), emptyList()))
-        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        val restored = CalculatorController(films = emptyList(), initialCameraList = c.exportCameraList(), inventoryModel = model)
         assertTrue("An emptied selection stays empty.", restored.state.value.candidateFilterSetIds.isEmpty())
     }
 
@@ -518,7 +518,7 @@ class ShootingFilterSetSelectionTest {
         assertEquals("0", c.state.value.filterStatus.totalStopsText)
 
         // A restart restores the same.
-        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        val restored = CalculatorController(films = emptyList(), initialCameraList = c.exportCameraList(), inventoryModel = model)
         assertTrue(restored.state.value.mountedAuxiliaryFilters.isEmpty())
         assertEquals(listOf(bag.id), restored.state.value.candidateFilterSetIds)
         restored.selectSlot(CameraSlotId.camera2)
@@ -678,7 +678,7 @@ class ShootingFilterSetSelectionTest {
         assertEquals(listOf(FilterSource.FilterSet(fresh.id)), c.state.value.filterWheels.map { it.source })
         assertEquals(FilterSource.FilterSet(fresh.id), plusSource(c))
 
-        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        val restored = CalculatorController(films = emptyList(), initialCameraList = c.exportCameraList(), inventoryModel = model)
         assertEquals("The remembered source survives a restore.", FilterSource.FilterSet(fresh.id), plusSource(restored))
         assertEquals(listOf(FilterWheelSelection.Empty), wheels(restored))
         assertEquals(listOf(FilterSource.FilterSet(fresh.id)), restored.state.value.filterWheels.map { it.source })
@@ -806,7 +806,7 @@ class ShootingFilterSetSelectionTest {
         assertEquals(listOf(kit.id), c.state.value.candidateFilterSetIds)
         assertEquals(FilterSource.Standard, plusSource(c))
 
-        val restored = CalculatorController(films = emptyList(), initialSession = c.exportSession(), inventoryModel = model)
+        val restored = CalculatorController(films = emptyList(), initialCameraList = c.exportCameraList(), inventoryModel = model)
         assertEquals(FilterSource.Standard, plusSource(restored))
     }
 

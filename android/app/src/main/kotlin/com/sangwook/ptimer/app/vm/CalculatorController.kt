@@ -35,8 +35,12 @@ import com.sangwook.ptimer.core.reciprocity.FilmIdentity
 import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenter
+import com.sangwook.ptimer.core.persistence.CameraListPersistenceController
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
 import com.sangwook.ptimer.core.reciprocity.ReciprocityProfile
+import com.sangwook.ptimer.core.slots.CameraListEntry
+import com.sangwook.ptimer.core.slots.CameraListSnapshot
+import com.sangwook.ptimer.core.slots.CameraNaming
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.CameraSlotIdentity
 import com.sangwook.ptimer.core.slots.CameraSlotSession
@@ -79,7 +83,9 @@ data class SlotTab(val id: CameraSlotId, val displayName: String, val isActive: 
 
 /** Immutable state the shooting calculator surface renders. */
 data class CalculatorUiState(
+    /** The pager's cameras: the displayed subset in global order. */
     val slots: List<SlotTab>,
+    /** The active camera's name; empty when no camera is displayed. */
     val activeSlotName: String,
     val shutterLabels: List<String>,
     val shutterIndex: Int,
@@ -113,9 +119,8 @@ data class CalculatorUiState(
     val hasFilm: Boolean,
     /**
      * True when the slot has anything a reset would clear: non-default
-     * settings (film, ND, shutter, target) or a custom camera name.
-     * Gates the Reset affordance so it shows only when actionable
-     * (matches iOS).
+     * settings (film, ND, shutter, target). Gates the Reset affordance so
+     * it shows only when actionable (matches iOS).
      */
     val canReset: Boolean,
     /** Current ND notation display mode; drives the wheel labels + the toggle (PTIMER-187). */
@@ -138,6 +143,11 @@ data class CalculatorUiState(
      * an empty list.
      */
     val slotStates: List<CalculatorUiState> = emptyList(),
+    /**
+     * The whole managed list in global order, hidden cameras included, for
+     * camera management. Populated only on the top-level state.
+     */
+    val cameras: List<CameraListEntry> = emptyList(),
 ) {
     /** The wheel under a finger, found by its stable id so a settled
      *  reorder can never point it at a different wheel; `null` at rest. */
@@ -171,7 +181,14 @@ class CalculatorController(
     private val calculator: ShootingCalculator = ShootingCalculator(),
     private val exposure: ExposureCalculator = ExposureCalculator(),
     private val onStart: (duration: Double, identity: TimerIdentity) -> Unit = { _, _ -> },
+    /** Legacy four-slot session, migrated into the managed list (test and
+     *  compatibility input); [initialCameraList] takes precedence. */
     initialSession: PersistentSlotSession? = null,
+    /** The restored managed camera list; the fresh-install seed when absent. */
+    initialCameraList: CameraListSnapshot? = null,
+    /** Localized `Camera N` name frozen into seeded and migrated cameras. */
+    defaultCameraName: (Int) -> String = { "Camera $it" },
+    generateCameraId: () -> CameraSlotId = { CameraSlotId.generate() },
     /** The user's Filter Sets and physical items (FILTER-SET / FILTER-ITEM). */
     private val inventoryModel: FilterInventoryModel = FilterInventoryModel(),
     /** Scope that owns the filter cleanup timer (PTIMER-199 §4.2.2 /
@@ -861,14 +878,12 @@ class CalculatorController(
             session.snapshot(slotId)?.let { filterStackOf(it) }
         }
 
-    /** Identities, not resolved names: only the display boundary knows
-     *  the user's language, and a default slot label has to be spoken in
-     *  it (FILTER-A11Y-003). A photographer-supplied name passes through
-     *  untouched. */
+    /** Identities with their stored names (FILTER-A11Y-003): a name is
+     *  frozen text, whether typed or generated, and passes through untouched. */
     private fun cameraIdentities(predicate: (FilterStack) -> Boolean): List<CameraSlotIdentity> =
-        session.availableSlots
+        session.cameraIds
             .filter { slotId -> stackForSlot(slotId)?.let(predicate) == true }
-            .map { session.identity(it) }
+            .mapNotNull { session.identity(it) }
 
     /**
      * Cameras whose stack would become invalid if [item] were saved as
@@ -897,12 +912,12 @@ class CalculatorController(
                 },
             )
         }
-        return session.availableSlots.mapNotNull { slotId ->
+        return session.cameraIds.mapNotNull { slotId ->
             val stack = stackForSlot(slotId) ?: return@mapNotNull null
             val selected = (if (slotId == session.activeSlotId) session.activeSnapshot else session.snapshot(slotId))
                 ?.storedCandidateFilterSetIds ?: emptyList()
             val reason = stackConflict(stack, selected, item.id, candidate) ?: return@mapNotNull null
-            session.identity(slotId) to reason
+            session.identity(slotId)?.let { it to reason }
         }
     }
 
@@ -964,7 +979,7 @@ class CalculatorController(
         val source = session.activeSnapshot.restoredLastFilterSource(current)
         session.updateActiveSnapshot { it.writingFilterStack(stack, source, candidatesFor(it, stack, current)) }
 
-        for (slotId in session.availableSlots) {
+        for (slotId in session.cameraIds) {
             if (slotId == session.activeSlotId) continue
             session.updateSnapshot(slotId) { snapshot ->
                 val resolved = reresolvedStack(storedReferences(snapshot), snapshot.storedCandidateFilterSetIds, current)
@@ -1239,10 +1254,11 @@ class CalculatorController(
     // active slot's inputs are read/written through [session] in place, not
     // mirrored into controller-level fields.
     private val session = CameraSlotSession(
-        initialActiveSlotId = initialSession?.activeSlotId ?: CameraSlotId.camera1,
+        initial = initialCameraList
+            ?: initialSession?.let { CameraListPersistenceController.migrated(it, defaultCameraName) }
+            ?: CameraListSnapshot.seeded(defaultCameraName),
         defaultSnapshot = defaultSnapshot,
-        initialSnapshots = initialSession?.snapshots ?: emptyMap(),
-        initialCustomNames = initialSession?.customNames ?: emptyMap(),
+        generateId = generateCameraId,
     )
 
     // Read-only views of the active slot's owned state.
@@ -1265,12 +1281,8 @@ class CalculatorController(
     private val _state = MutableStateFlow(compute())
     val state: StateFlow<CalculatorUiState> = _state.asStateFlow()
 
-    /** Serializable snapshot of the whole slot session (every slot's owned state). */
-    fun exportSession(): PersistentSlotSession = PersistentSlotSession(
-        activeSlotId = session.activeSlotId,
-        snapshots = session.currentSnapshots(),
-        customNames = session.currentCustomNames(),
-    )
+    /** The whole managed camera list as a value (every camera's owned state included). */
+    fun exportCameraList(): CameraListSnapshot = session.export()
 
     fun setShutterIndex(index: Int) {
         session.updateActiveSnapshot { it.copy(shutterIndex = index.coerceIn(shutterLabels.indices)) }
@@ -1325,6 +1337,7 @@ class CalculatorController(
 
     /** Starts a timer from the active slot's target duration (no-op when unset). */
     fun startFromTarget() {
+        if (session.activeSlotId == null) return
         val target = targetSeconds ?: return
         val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         onStart(target, identity(result, "Target Exposure", target, includesAdjusted = true))
@@ -1332,6 +1345,7 @@ class CalculatorController(
 
     /** Starts a timer from the ND-adjusted shutter (the digital / pre-reciprocity value). */
     fun startFromAdjusted() {
+        if (session.activeSlotId == null) return
         val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         val d = result.adjustedShutterSeconds
         if (d.isFinite() && d > 0) onStart(d, identity(result, "Adjusted Exposure", d, includesAdjusted = false))
@@ -1340,6 +1354,7 @@ class CalculatorController(
     /** Starts a timer from the reciprocity-corrected exposure, including an
      * out-of-range ("outside guidance") computed value; no-op when truly none. */
     fun startFromCorrected() {
+        if (session.activeSlotId == null) return
         val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         val d = (result.correctedSeconds ?: result.reciprocity?.calculatedCorrectedSeconds) ?: return
         if (d.isFinite() && d > 0) onStart(d, identity(result, "Corrected Exposure", d, includesAdjusted = true))
@@ -1347,22 +1362,11 @@ class CalculatorController(
 
     /**
      * Resets the active slot's shooting settings to defaults: no film,
-     * base 1/30, ND 0, no target. Keeps the custom camera name (the
-     * "Reset settings" choice).
+     * base 1/30, ND 0, no target. The camera's name is never changed
+     * (RESET-012 retired).
      */
     fun resetActiveSlotSettings() {
         resetActiveSlotSettingsFields()
-        publish()
-    }
-
-    /**
-     * Resets the active slot's settings *and* clears its custom camera
-     * name, returning the slot to a fully blank state (the "Reset
-     * settings and name" choice).
-     */
-    fun resetActiveSlotSettingsAndName() {
-        resetActiveSlotSettingsFields()
-        session.resetCustomName(session.activeSlotId)
         publish()
     }
 
@@ -1446,24 +1450,72 @@ class CalculatorController(
      * pre-refactor load-on-switch behavior) without re-persisting a broken ref. */
     fun selectSlot(id: CameraSlotId) {
         if (!session.switchActiveSlot(id)) return
+        activeCameraChanged()
+        publish()
+    }
+
+    /**
+     * The active camera is now a different one (or none): normalize its
+     * stored snapshot, and drop in-flight selections that belonged to the
+     * outgoing camera. The arriving camera gets fresh wheel identities, and
+     * a refusal belongs to the camera that produced it and must not linger
+     * over another.
+     */
+    private fun activeCameraChanged() {
         session.updateActiveSnapshot { normalizeSnapshot(it) }
-        // In-flight selections belong to the outgoing slot; the
-        // arriving slot gets fresh wheel identities. A refusal belongs to
-        // the camera that produced it and must not linger over another.
         clearNdInteraction()
         clearFilterRejectionNotice()
         ndWheelIds = emptyList()
         syncNdWheelIds()
+    }
+
+    /** One camera-list change applied as a single resulting state (CAMERA-PERSIST-005). */
+    private fun editCameraList(edit: () -> Unit) {
+        val previous = session.activeSlotId
+        edit()
+        if (session.activeSlotId != previous) activeCameraChanged()
         publish()
     }
 
-    /** Renames the active slot; a blank name clears the custom name back to `Camera N`. */
-    fun renameActiveSlot(name: String?) {
-        session.setCustomName(name, session.activeSlotId)
-        publish()
+    /** Identity for a camera in the list; `null` for an unknown id. */
+    fun cameraIdentity(id: CameraSlotId): CameraSlotIdentity? = session.identity(id)
+
+    /**
+     * Adds a camera named [name] (the automatic-name sequence's already
+     * reserved `Camera N`) at the end of the list, shown and active, with
+     * fresh calculator defaults.
+     */
+    fun addCamera(name: String): CameraSlotId {
+        var added: CameraSlotId? = null
+        editCameraList { added = session.addCamera(name) }
+        return added!!
     }
+
+    /**
+     * Renames a camera. A blank name is rejected and leaves the stored name
+     * unchanged; the result says whether the rename applied. Timers already
+     * started keep the name captured at start time.
+     */
+    fun renameCamera(id: CameraSlotId, name: String): Boolean {
+        if (CameraNaming.trimmedName(name) == null || session.entry(id) == null) return false
+        var applied = false
+        editCameraList { applied = session.renameCamera(id, name) }
+        return applied
+    }
+
+    fun setCameraDisplayed(id: CameraSlotId, isDisplayed: Boolean) =
+        editCameraList { session.setDisplayed(id, isDisplayed) }
+
+    /** Non-drag reorder: moves one camera [delta] positions in the global order. */
+    fun moveCamera(id: CameraSlotId, delta: Int) = editCameraList { session.moveCamera(id, delta) }
+
+    fun hideCameras(ids: Set<CameraSlotId>) = editCameraList { session.hideCameras(ids) }
+
+    /** Deletes cameras and their calculator state. The caller confirms with the user first. */
+    fun deleteCameras(ids: Set<CameraSlotId>) = editCameraList { session.deleteCameras(ids) }
 
     fun start() {
+        if (session.activeSlotId == null) return
         val result = calculator.result(shutterIndex, currentNdStops, resolvedProfile())
         val duration = result.startDurationSeconds ?: return
         // Digital/no-film start uses the same shape as Adjusted (the digital
@@ -1546,7 +1598,7 @@ class CalculatorController(
     ): TimerIdentity {
         val film = selectedFilm()
         val filmName = film?.canonicalStockName ?: "No film"
-        val slot = session.activeIdentity
+        val slot = requireNotNull(session.activeIdentity) { "A calculator-bound timer needs an active camera." }
         val ladder = ExposureScale.oneThirdStop.shutterSteps
         val base = ladder[shutterIndex.coerceIn(ladder.indices)].seconds
         val stack = activeFilterStack()
@@ -1554,7 +1606,9 @@ class CalculatorController(
         return TimerIdentity(
             title = "${slot.displayName} · $filmName",
             subtitle = "$source ${exposure.formatExtendedClock(finalSeconds)}",
-            slotLabel = slot.id.shortLabel,
+            slotLabel = CameraNaming.compactLabel(slot.id, slot.displayName),
+            cameraId = slot.id.raw,
+            cameraName = slot.displayName,
             ndStops = stack.effectiveStops,
             baseShutterSeconds = base,
             adjustedShutterSeconds = result.adjustedShutterSeconds,
@@ -1600,15 +1654,18 @@ class CalculatorController(
      * reads its own session-owned snapshot.
      */
     private fun compute(): CalculatorUiState {
-        val perSlot = session.availableSlots.map { slotId ->
+        val perSlot = session.displayedIds.map { slotId ->
             computeSlot(session.snapshot(slotId) ?: defaultSnapshot, slotId)
         }
-        val activeIndex = session.availableSlots.indexOf(session.activeSlotId).coerceAtLeast(0)
-        return perSlot[activeIndex].copy(slotStates = perSlot)
+        val activeIndex = session.displayedIds.indexOf(session.activeSlotId)
+        // No displayed camera: the defaults stand in; the surface shows the
+        // empty state instead of a calculator.
+        val top = if (activeIndex >= 0) perSlot[activeIndex] else computeSlot(defaultSnapshot, null)
+        return top.copy(slotStates = perSlot, cameras = session.cameras)
     }
 
     /** Builds a slot's read-only calculator state from its snapshot inputs. */
-    private fun computeSlot(snapshot: SlotCalculatorSnapshot, slotId: CameraSlotId): CalculatorUiState {
+    private fun computeSlot(snapshot: SlotCalculatorSnapshot, slotId: CameraSlotId?): CalculatorUiState {
         val current = inventory
         val film = snapshot.selectedFilmId?.let { id -> films.firstOrNull { it.id == id } }
         val profile = resolvedProfileFor(film, snapshot.selectedProfileId)
@@ -1700,14 +1757,13 @@ class CalculatorController(
             committedStack.wheels.any { it.mountedItemId != null || (it.standardStops ?: 0.0) != 0.0 } ||
             committedStack.hasAuxiliaryFilters ||
             film != null ||
-            snapshot.targetSeconds != null ||
-            slotId in session.currentCustomNames()
+            snapshot.targetSeconds != null
 
         return CalculatorUiState(
-            slots = session.availableSlots.map {
-                SlotTab(it, session.identity(it).displayName, it == session.activeSlotId)
+            slots = session.displayedCameras.map {
+                SlotTab(it.id, it.name, it.id == session.activeSlotId)
             },
-            activeSlotName = session.identity(slotId).displayName,
+            activeSlotName = slotId?.let { session.identity(it)?.displayName }.orEmpty(),
             shutterLabels = shutterLabels,
             shutterIndex = snapshot.shutterIndex,
             ndLabels = ndLabels(),

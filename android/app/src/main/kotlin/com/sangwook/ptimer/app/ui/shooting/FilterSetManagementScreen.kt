@@ -60,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -85,6 +86,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.vm.FilterItemDeletionState
 import com.sangwook.ptimer.app.vm.FilterItemEditorSessionMemory
 import com.sangwook.ptimer.app.vm.FilterSetItemOrder
 import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
@@ -458,9 +460,10 @@ private fun FilterSetDetailLevel(
 ) {
     var isDeletionPending by remember { mutableStateOf(false) }
     var nameDraft by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(filterSet.name) }
-    var isEditing by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(false) }
+    var itemDeletion by rememberSaveable(filterSet.id.rawValue, stateSaver = FilterItemDeletionSaver) {
+        mutableStateOf(FilterItemDeletionState())
+    }
     var editorTarget by remember { mutableStateOf<FilterItemEditorTarget?>(null) }
-    var pendingDeletion by remember { mutableStateOf<FilterItem?>(null) }
     // Session memory for the notation of consecutive new items. Plain
     // `remember`, keyed on the set: leaving the Filter Set or restarting
     // the app resets the next new item to Stops (FILTER-ITEM-007).
@@ -484,7 +487,7 @@ private fun FilterSetDetailLevel(
     }
     // Same rule as the list level: deleting the last Filter Item ends
     // edit mode along with the control that exits it.
-    LaunchedEffect(filterSet.items.isEmpty()) { if (filterSet.items.isEmpty()) isEditing = false }
+    LaunchedEffect(filterSet.items.size) { itemDeletion = itemDeletion.afterItemsChanged(filterSet.items.size) }
 
     Scaffold(
         topBar = {
@@ -541,12 +544,12 @@ private fun FilterSetDetailLevel(
                 Box(Modifier.weight(1f)) {
                     SectionLabel(stringResource(R.string.filter_set_section_filters))
                 }
-                if (filterSet.items.isNotEmpty()) {
+                if (FilterItemDeletionState.showsEditAction(filterSet.items.size)) {
                     TextButton(
-                        onClick = { isEditing = !isEditing },
+                        onClick = { itemDeletion = itemDeletion.toggledEditing() },
                         modifier = Modifier.testTag("filter-set-edit-filters"),
                     ) {
-                        Text(stringResource(if (isEditing) R.string.action_done else R.string.action_edit))
+                        Text(stringResource(if (itemDeletion.isEditing) R.string.action_done else R.string.action_edit))
                     }
                 }
             }
@@ -564,9 +567,9 @@ private fun FilterSetDetailLevel(
             orderedItems.forEach { item ->
                 FilterItemRow(
                     item = item,
-                    isEditing = isEditing,
+                    isEditing = itemDeletion.isEditing,
                     onOpen = { editorTarget = FilterItemEditorTarget.Existing(item) },
-                    onDelete = { pendingDeletion = item },
+                    onDelete = { itemDeletion = itemDeletion.requestingDeletion(item) },
                 )
                 HorizontalDivider()
             }
@@ -636,7 +639,7 @@ private fun FilterSetDetailLevel(
         )
     }
 
-    pendingDeletion?.let { item ->
+    itemDeletion.pendingItem?.let { item ->
         val cameras = actions.camerasAffectedByDeletingItem(item.id)
         ConfirmDeleteDialog(
             title = stringResource(R.string.filter_item_delete_title),
@@ -648,9 +651,9 @@ private fun FilterSetDetailLevel(
             confirmLabel = stringResource(R.string.filter_delete_named, item.name),
             onConfirm = {
                 actions.deleteFilterItem(item.id)
-                pendingDeletion = null
+                itemDeletion = itemDeletion.cancelled()
             },
-            onDismiss = { pendingDeletion = null },
+            onDismiss = { itemDeletion = itemDeletion.cancelled() },
         )
     }
 }
@@ -915,3 +918,9 @@ private fun filterCountText(count: Int): String =
 
 // Eleven palette colors read in hue order over two rows.
 private const val COLOR_GRID_COLUMNS = 6
+
+/** Edit mode survives recreation like before; an open confirmation does not. */
+private val FilterItemDeletionSaver = Saver<FilterItemDeletionState, Boolean>(
+    save = { it.isEditing },
+    restore = { FilterItemDeletionState(isEditing = it) },
+)

@@ -17,27 +17,8 @@ import PTimerCore
 ///   the Release configuration, applied the Strategy.md configuration through
 ///   `ViewModelDependencyFactory.production()`. Not a capture from a
 ///   store-installed binary.
-/// - `ios-slot-session-dev-main-9213f12a.json`: DEVELOPMENT VERIFICATION
-///   fixture for the 0.9.1 migration path (Strategy.md, Spec SHA 8aafc382).
-///   Source: the exact merged PR commit at the head of `main` at test start,
-///   `9213f12a4ddd81334f304a10e491bba96216a806` (#74), where the iOS
-///   MARKETING_VERSION is 0.9.0 / build 1 and the README says 0.9.0, so it is
-///   not an official iOS 0.9.1 release fixture. Generated in a throwaway
-///   worktree of that commit with
-///   `FIXTURE_OUT=<path> swift test --package-path ios/PTimerKit --filter ZZFixtureGenerator`
-///   (a one-off XCTest, debug configuration, in-memory session store, Sample
-///   Filter Sets seeded through `initialFilterInventory`). It replaces the
-///   earlier `8b3b6cdb` payload; the two have the same shape apart from the
-///   generated Filter Set ids. When `release/ios/0.9.1` exists, the official
-///   fixture and installed-upgrade evidence are regenerated from its target
-///   and replace this one.
 @MainActor
 final class ReleaseFixtureMigrationTests: XCTestCase {
-
-    /// Sample Filter Set ids recorded in the development payload.
-    private static let magneticSetID = "93CDA289-2545-4FC2-86D5-57A0E4665242"
-    private static let squareSetID = "BAA54436-6F0C-4D90-8125-2BD995C2A11F"
-    private static let colorSetID = "8D53C2FC-4E79-418E-AAB7-99A09473BF2F"
 
     private static func fixture(_ name: String) throws -> String {
         var url = URL(fileURLWithPath: #filePath)
@@ -47,7 +28,6 @@ final class ReleaseFixtureMigrationTests: XCTestCase {
     }
 
     private static func release080() throws -> String { try fixture("ios-slot-session-0.8.0-build1-bedd9e10.json") }
-    private static func releaseDevelopmentMain() throws -> String { try fixture("ios-slot-session-dev-main-9213f12a.json") }
 
     func testRelease080MigratesToTheManagedList() throws {
         // The 0.8.0 build had no Sample Filter Sets; a later build seeds them,
@@ -77,48 +57,24 @@ final class ReleaseFixtureMigrationTests: XCTestCase {
         }
     }
 
-    func testDevelopmentMainFixtureMigrationPreservesFilterSetSelections() throws {
-        let inventory = FilterInventory(filterSets: [
-            FilterSet(id: FilterSetID(rawValue: Self.magneticSetID), name: "Digital Magnetic Filters", color: .teal),
-            FilterSet(id: FilterSetID(rawValue: Self.squareSetID), name: "Film Square ND/GND", color: .purple),
-            FilterSet(id: FilterSetID(rawValue: Self.colorSetID), name: "Film Color Filters", color: .orange),
-        ])
-
-        let migrated = try migrate(Self.releaseDevelopmentMain(), inventory: inventory)
-
-        XCTAssertEqual(migrated.cameras.map(\.name), ["Nikon Z7", "Hasselblad 503CX", "Nikon F2", "Camera 4"])
-        XCTAssertEqual(migrated.snapshotsBySlotID[.camera1]?.candidateFilterSetIDs.map(\.rawValue), [Self.magneticSetID])
-        XCTAssertEqual(
-            migrated.snapshotsBySlotID[.camera2]?.candidateFilterSetIDs.map(\.rawValue),
-            [Self.squareSetID, Self.colorSetID]
+    func testRelease080InitializesTheSequenceAtFiveAndNamesTheNextCameraCameraFive() throws {
+        let payload = try Self.release080()
+        let session = InMemoryCameraListSessionStore()
+        session.legacy = try JSONDecoder().decode(PersistentCameraSlotSessionSnapshot.self, from: Data(payload.utf8))
+        let sequence = InMemoryCameraNameSequenceStore()
+        let viewModel = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(),
+            timerManager: FakeTimerManaging(),
+            cameraSlotSessionPersistenceStore: session,
+            cameraNameSequenceStore: sequence
         )
-        XCTAssertEqual(
-            migrated.snapshotsBySlotID[.camera3]?.candidateFilterSetIDs.map(\.rawValue),
-            [Self.squareSetID, Self.colorSetID]
-        )
-        XCTAssertNil(migrated.snapshotsBySlotID[.camera4], "Camera 4 stays at its default.")
-        XCTAssertEqual(migrated.snapshotsBySlotID[.camera2]?.targetShutterSeconds, 1800)
-    }
 
-    func testBothReleasesInitializeTheSequenceAtFiveAndNameTheNextCameraCameraFive() throws {
-        for payload in [try Self.release080(), try Self.releaseDevelopmentMain()] {
-            let session = InMemoryCameraListSessionStore()
-            session.legacy = try JSONDecoder().decode(PersistentCameraSlotSessionSnapshot.self, from: Data(payload.utf8))
-            let sequence = InMemoryCameraNameSequenceStore()
-            let viewModel = ExposureCalculatorViewModel(
-                calculator: ExposureCalculator(),
-                timerManager: FakeTimerManaging(),
-                cameraSlotSessionPersistenceStore: session,
-                cameraNameSequenceStore: sequence
-            )
+        XCTAssertEqual(viewModel.cameraList.map(\.name), ["Nikon Z7", "Hasselblad 503CX", "Nikon F2", "Camera 4"])
+        let added = try XCTUnwrap(viewModel.addCamera())
 
-            XCTAssertEqual(viewModel.cameraList.map(\.name), ["Nikon Z7", "Hasselblad 503CX", "Nikon F2", "Camera 4"])
-            let added = try XCTUnwrap(viewModel.addCamera())
-
-            XCTAssertEqual(viewModel.cameraSlotIdentity(for: added)?.displayName, "Camera 5")
-            XCTAssertEqual(sequence.result, .value(6))
-            XCTAssertEqual(session.legacy, try JSONDecoder().decode(PersistentCameraSlotSessionSnapshot.self, from: Data(payload.utf8)), "The legacy source is never modified.")
-        }
+        XCTAssertEqual(viewModel.cameraSlotIdentity(for: added)?.displayName, "Camera 5")
+        XCTAssertEqual(sequence.result, .value(6))
+        XCTAssertEqual(session.legacy, try JSONDecoder().decode(PersistentCameraSlotSessionSnapshot.self, from: Data(payload.utf8)), "The legacy source is never modified.")
     }
 
     // MARK: - Helpers

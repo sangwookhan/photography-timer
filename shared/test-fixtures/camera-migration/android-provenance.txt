@@ -42,44 +42,8 @@ android-slot-session-0.8.0-35f5fce6.json
           the installed release APK was used for upgrade evidence only (names
           and active camera, through plain taps).
 
-android-slot-session-0.9.1-dev-9213f12a.json   (DEVELOPMENT verification fixture)
-  Label: development verification only. Not an official release fixture. It
-         stands in for the 0.9.1 path until the immutable tag
-         release/android/0.9.1 exists; then the official fixture and the
-         installed-upgrade evidence are regenerated from that tag's target
-         and this file is replaced.
-  Source: 9213f12a4ddd81334f304a10e491bba96216a806, the merged PR commit at the
-          head of main when testing started ("Android typography: Main label
-          size, Mini Timer, Timers and Details (#74)"); Android versionName
-          0.9.1, versionCode 5. Never an internal PR commit.
-  Capture: a throwaway git worktree at that commit
-             git worktree add --detach <dir> 9213f12a
-           and, in module :app of that worktree, a JVM unit test run with
-             ./gradlew :app:testDebugUnitTest --tests 'gen.GenFixture'
-           (debug variant; the project defines no release-variant unit-test
-           task). The test builds a CalculatorController over the launch
-           preset catalog with FilterInventorySamples as the first-launch
-           inventory, applies the Strategy.md configuration through its public
-           commands (renameActiveSlot, selectFilm, setTargetShutter,
-           applyShootingFilters) and writes
-           SlotSessionCodec.encode(exportSession()).
-  Payload: the file itself. Camera 1 "Nikon Z7" (no film, Target Shutter
-           120 s, selects Digital Magnetic Filters); Camera 2 "Hasselblad
-           503CX" (kodak-tmax-100, 1800 s, selects Film Square ND/GND and
-           Film Color Filters); Camera 3 "Nikon F2" (ilford-kentmere-pan-100,
-           no target, same two Sets); Camera 4 default; active camera 1.
-           The Filter Set ids are the ones generated in that run.
-  Migration result (candidate, FixedSlotMigrationFixtureTest and
-           DataStoreCameraListStoresTest): camera1..camera4 keep their
-           identities, names (Camera 4 gains its resolved name), order, shown
-           state and active camera; per-camera snapshots and Filter Set
-           selections are preserved; sequence 5 is written before the managed
-           payload; the legacy source is untouched; retry is idempotent; the
-           first added camera is Camera 5, then Camera 6.
-  Not an installed-app capture and not a signed release APK.
-
-The superseded 0.9.0 (cbb0119a) fixture was removed: the approved contract no
-longer lists 0.9.0. Its shape (the optional Filter Stack fields) is covered by
-the 0.9.1 development fixture.
+Development fixtures for the cancelled 0.9.x releases (0.9.0 cbb0119a and
+0.9.1-dev 9213f12a) were removed. Those versions were never released, so
+only the 0.8.0 upgrade path is tested.
 
 No release tag was created, moved, or deleted for these files.

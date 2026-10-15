@@ -174,7 +174,6 @@ fun ShootingScreen(
     reserveNavigationBarInset: Boolean = true,
     /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
     cameraActions: CameraManagementActions = CameraManagementActions.None,
-    /** Whether `Add camera` can create a camera (CAMERA-PERSIST-009). */
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -205,6 +204,9 @@ fun ShootingScreen(
     var managementOrigin by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingReturn by remember { mutableStateOf<CameraPagerReturnTarget?>(null) }
     fun openManagement(origin: CameraManagementOrigin) { managementOrigin = origin.name }
+    // Add from the utility page or the empty state: the same action as Add in
+    // camera management, so the resulting camera is announced the same way.
+    val addCamera = rememberAddCameraAction(cameraActions)
 
     // Swiping settles on a page → that camera becomes the active slot
     // (capture-on-switch); settling on the utility page changes no camera,
@@ -281,7 +283,7 @@ fun ShootingScreen(
                 EmptyCameraPager(
                     isEditable = cameraActions.isEditable,
                     onManageCameras = { openManagement(CameraManagementOrigin.EmptyState) },
-                    onAddCamera = cameraActions.add,
+                    onAddCamera = addCamera,
                     modifier = Modifier.weight(1f),
                 )
             } else HorizontalPager(
@@ -302,7 +304,7 @@ fun ShootingScreen(
                     CameraManagementUtilityPage(
                         isEditable = cameraActions.isEditable,
                         onManageCameras = { openManagement(CameraManagementOrigin.UtilityPage) },
-                        onAddCamera = cameraActions.add,
+                        onAddCamera = addCamera,
                     )
                     return@HorizontalPager
                 }

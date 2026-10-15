@@ -7,8 +7,10 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -46,6 +48,24 @@ class CameraPagesTest {
         composeTestRule.onNodeWithText("Add camera").performClick()
         assertEquals(1, manage)
         assertEquals(1, add)
+    }
+
+    @Test
+    fun everyAddCameraActionHasADecorativePlusAndKeepsItsAccessibleName() {
+        composeTestRule.setContent {
+            PTimerTheme {
+                androidx.compose.foundation.layout.Column {
+                    CameraManagementUtilityPage(isEditable = true, onManageCameras = {}, onAddCamera = {})
+                    EmptyCameraPager(isEditable = true, onManageCameras = {}, onAddCamera = {})
+                }
+            }
+        }
+        composeTestRule.onAllNodesWithTag("camera-add-plus", useUnmergedTree = true).assertCountEquals(2)
+        for (prefix in listOf("utility-page", "empty-pager")) {
+            val config = composeTestRule.onNodeWithTag("$prefix-add-camera").fetchSemanticsNode().config
+            assertEquals(listOf("Add camera"), config[SemanticsProperties.Text].map { it.text })
+            assertTrue("The plus adds no accessible description", SemanticsProperties.ContentDescription !in config)
+        }
     }
 
     @Test

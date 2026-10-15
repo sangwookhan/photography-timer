@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersActions
 import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersScreen
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -222,7 +223,7 @@ fun ShootingApp(
             isEditable = holder.cameras.isEditable,
             // Reserving the next `Camera N` is durable I/O: it runs on the
             // owner's scope, so a recreation does not cancel it half-way.
-            add = { holder.viewModelScope.launch { holder.cameras.addCamera() } },
+            add = { holder.viewModelScope.async { holder.cameras.addCamera() }.await() },
             rename = holder.cameras::renameCamera,
             setDisplayed = holder.cameras::setCameraDisplayed,
             move = holder.cameras::moveCamera,

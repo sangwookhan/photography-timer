@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import com.sangwook.ptimer.app.persistence.OrderedPersistenceWriter
+import com.sangwook.ptimer.app.ui.AccessibilityTest
 import com.sangwook.ptimer.app.vm.CalculatorController
 import com.sangwook.ptimer.app.vm.CameraListManager
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
@@ -29,7 +30,6 @@ import com.sangwook.ptimer.core.persistence.ManagedCameraListLoadResult
 import com.sangwook.ptimer.core.slots.CameraListSnapshot
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 import androidx.compose.ui.graphics.asAndroidBitmap
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -69,7 +69,7 @@ class CameraPagerFlowTest {
         manager = CameraListManager(controller, persistence, ImmediateWriter) { "Camera $it" }
         val actions = CameraManagementActions(
             isEditable = manager.isEditable,
-            add = { runBlocking { manager.addCamera() } },
+            add = { manager.addCamera() },
             rename = manager::renameCamera,
             setDisplayed = manager::setCameraDisplayed,
             move = manager::moveCamera,
@@ -231,5 +231,44 @@ class CameraPagerFlowTest {
         val file = java.io.File(directory, "failed-read-shooting-screen.png")
         file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         assertTrue(file.length() > 0)
+    }
+
+    /** Collects the accessibility announcements the screen makes (TYPE_ANNOUNCEMENT events). */
+    private fun listenForAnnouncements(): java.util.concurrent.CopyOnWriteArrayList<String> {
+        val texts = java.util.concurrent.CopyOnWriteArrayList<String>()
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            .getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+            .setOnAccessibilityEventListener { event ->
+                if (event.eventType == android.view.accessibility.AccessibilityEvent.TYPE_ANNOUNCEMENT) {
+                    texts += event.text.joinToString(" ")
+                }
+            }
+        return texts
+    }
+
+    /** Add from the trailing utility page announces the new camera like Add in management (CAMERA-PAGER-006). */
+    @Test
+    @AccessibilityTest
+    fun addFromTheUtilityPageAnnouncesTheNewlyActiveCamera() {
+        showShootingScreen()
+        swipeToUtilityPage()
+        val announcements = listenForAnnouncements()
+
+        composeTestRule.onNodeWithTag("utility-page-add-camera").performClick()
+        composeTestRule.waitUntil(5_000) { announcements.any { it.contains("Active camera: Camera 5") } }
+    }
+
+    /** Add from the all-hidden empty state announces the new camera like Add in management (CAMERA-PAGER-006). */
+    @Test
+    @AccessibilityTest
+    fun addFromTheAllHiddenEmptyStateAnnouncesTheNewlyActiveCamera() {
+        showShootingScreen()
+        composeTestRule.runOnUiThread { manager.hideCameras(controller.exportCameraList().cameras.map { it.id }.toSet()) }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("empty-camera-pager").assertIsDisplayed()
+        val announcements = listenForAnnouncements()
+
+        composeTestRule.onNodeWithTag("empty-pager-add-camera").performClick()
+        composeTestRule.waitUntil(5_000) { announcements.any { it.contains("Active camera: Camera 5") } }
     }
 }

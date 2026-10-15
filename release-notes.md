@@ -5,6 +5,15 @@ title: Release Notes
 
 # Release Notes
 
+## 1.0.0 — Unreleased
+
+Common changes:
+
+- **Your own camera list**
+  - No more four-camera limit: add as many cameras as you use, and give each one its own name.
+  - Each camera remembers its own film, base shutter, filters, and target shutter.
+  - Reorder, hide, or delete cameras. Hidden cameras keep their settings.
+
 ## 0.9.1 — Unreleased
 
 Common changes:

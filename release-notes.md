@@ -5,6 +5,18 @@ title: Release Notes
 
 # Release Notes
 
+## 0.9.1 (Beta)
+
+Common changes:
+
+- Added Filter Sets to organize ND, CPL, GND, color, and effect filters.
+- Select Filter Sets per camera and combine their filters with the standard ND stack for each shot.
+- Added example Filter Sets to help start a new filter inventory.
+
+Android:
+
+- Improved typography in the main shooting flow, mini timer, timer list, and reciprocity details for clearer information at different system font sizes.
+
 ## 0.8.0
 
 Common changes:

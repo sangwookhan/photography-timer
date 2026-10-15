@@ -478,6 +478,30 @@ only after every platform named in its scope is complete. If later platform
 work is intentionally split into a separate ticket, that separate ticket owns
 its completion.
 
+### 10.6 Release branch lifecycle
+
+When a release line enters beta distribution, create a branch named
+`release/<major>.<minor>` (for example, `release/0.9`) at the exact commit or
+tag distributed to beta testers. If that distributed build matches the latest
+`main` commit, `main` is the valid source. When a beta build includes manual
+release changes not yet committed, commit those documented release changes on
+`release/<version>` so the branch reproduces the distributed build. Keep the
+`release/<version>` branch for the entire release window, from the first beta
+through the final merge back to `main`. A deployment candidate may be
+identified with a prerelease version such as `0.9.0-beta.1`.
+
+Release-stabilization fixes use PRs whose target is the applicable
+`release/<version>` branch. The default final integration is a PR from
+`release/<version>` to `main`; its description must include the user test
+procedures and the actual verification results obtained for the release.
+
+Use cherry-picks only for urgent fixes needed on both `release/<version>` and
+`main`. Each PR created by such a cherry-pick must identify the original PR
+and explain why the fix must be applied to both branches.
+
+Every release-policy and release-state commit made by ChatGPT must end with
+the trailer `Co-Authored-By: ChatGPT <support@openai.com>`.
+
 ## 11. PR checklist (candidate, no CI enforcement yet)
 
 These are lightweight, human-reviewed checklist items, not automated gates.

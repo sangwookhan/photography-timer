@@ -600,6 +600,8 @@ When creating or amending commits for this repository:
 - follow standard Git subject/body formatting with a short
   imperative summary
 - keep body paragraphs wrapped consistently
+- release-policy and release-state commits made by ChatGPT must end with
+  `Co-Authored-By: ChatGPT <support@openai.com>`
 - when recording ticket context at the bottom, use `TICKET-ID Title`
   format
 - ticket context lines must use a hanging indent on wrapped lines —

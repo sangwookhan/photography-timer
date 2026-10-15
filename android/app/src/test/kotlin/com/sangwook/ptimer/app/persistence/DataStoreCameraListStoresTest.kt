@@ -18,8 +18,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -151,6 +153,45 @@ class DataStoreCameraListStoresTest {
         assertEquals(SlotSessionLoadResult.Absent, store.load())
         ds.put("slot_session_json", "{not json")
         assertEquals(SlotSessionLoadResult.Unsupported, store.load())
+    }
+
+    private fun fixtureText(name: String): String {
+        var dir: File? = File(System.getProperty("user.dir")).absoluteFile
+        while (dir != null) {
+            val candidate = File(dir, "shared/test-fixtures/camera-migration/$name")
+            if (candidate.exists()) return candidate.readText()
+            dir = dir.parentFile
+        }
+        error("Fixture $name not found")
+    }
+
+    @Test
+    fun bothFixedSlotFixturesMigrateThroughTheRealStoresAndSurviveRelaunch() {
+        listOf("android-slot-session-0.8.0-35f5fce6.json", "android-slot-session-0.9.1-dev-9213f12a.json").forEachIndexed { index, name ->
+            val managedDs = newDataStore("migration_managed_$index.preferences_pb")
+            val sequenceDs = newDataStore("migration_sequence_$index.preferences_pb")
+            val legacyDs = newDataStore("migration_legacy_$index.preferences_pb")
+            val legacyText = fixtureText(name)
+            legacyDs.put("slot_session_json", legacyText)
+            fun controller() = CameraListPersistenceController(
+                DataStoreManagedCameraListStore(managedDs),
+                DataStoreSlotSessionStore(legacyDs),
+                DataStoreCameraNameSequenceStore(sequenceDs),
+            )
+
+            val first = controller()
+            val restored = first.restore()
+            assertEquals(listOf("Nikon Z7", "Hasselblad 503CX", "Nikon F2", "Camera 4"), restored.list.cameras.map { it.name })
+            assertTrue(first.save(restored.list))
+            assertEquals(CameraNameSequenceLoadResult.Value(5), DataStoreCameraNameSequenceStore(sequenceDs).load())
+
+            val relaunched = controller().restore()
+            assertFalse(relaunched.needsInitialSave)
+            assertEquals(restored.list, relaunched.list)
+            // The legacy payload is still there, untouched.
+            val stored = runBlocking { legacyDs.data.firstOrNull()?.get(stringPreferencesKey("slot_session_json")) }
+            assertEquals(legacyText, stored)
+        }
     }
 
     private fun managedWithOneCamera(name: String): DataStore<Preferences> {

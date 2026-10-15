@@ -348,6 +348,17 @@ struct FilterSetDetailView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
+                        // The swipe only asks; the row stays until the
+                        // deletion is confirmed. `onDelete` and a
+                        // destructive role both remove the row first.
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                pendingItemDeletion = item
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(.red)
+                        }
                     }
                     .onDelete { offsets in
                         // One row per delete gesture; see the set list.
@@ -436,7 +447,10 @@ struct FilterSetDetailView: View {
                 presenting: pendingItemDeletion
             ) { item in
                 Button(role: .destructive) {
-                    viewModel.deleteFilterItem(id: item.id)
+                    // The row was kept until now, so animate its removal.
+                    withAnimation {
+                        viewModel.deleteFilterItem(id: item.id)
+                    }
                     pendingItemDeletion = nil
                 } label: {
                     Text("Delete \(item.name)")

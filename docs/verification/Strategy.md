@@ -107,27 +107,13 @@ spec의 대표 케이스를 `shared/test-fixtures/`의 JSON으로 영구 저장.
   다른 merge commit을 가리킬 수 있다.
 - 플랫폼별 원본 저장 형식은 따로 보관할 수 있지만 기대하는 semantic state는
   공유한다.
-- 지원되는 두 경로인 0.8.0 → 현재 개발 schema와 0.9.1 → 현재 개발
-  schema를 iOS와 Android 단위 테스트로 각각 검증한다. 0.8.0 migration
-  과정에서 Sample Filter Set inventory가 seed되더라도 migration만으로
-  카메라에 자동 선택되지 않는지 확인한다.
-- 0.9.1 migration fixture test는 시험을 시작할 때의 최신 `main` PR
-  merge commit으로 iOS와 Android에서 먼저 수행한다. 현재 기준 source는
-  `9213f12a4ddd81334f304a10e491bba96216a806`(#74)이다. 이 시험 fixture는
-  PTIMER-234 개발 검증용이며 현재 iOS MARKETING_VERSION과 README가
-  0.9.0인 사실 때문에 공식 iOS 0.9.1 release fixture라고 주장하지 않는다.
-  시험 전에 `main`이 다른 PR merge commit으로 전진했다면 두 플랫폼 모두
-  그 최신 merge commit에서 fixture를 다시 만든다. 플랫폼별 스토어 승인 후
-  불변 tag `release/ios/0.9.1`과 `release/android/0.9.1`이 생기면 각
-  tag가 가리키는 merge commit으로 공식 fixture와 설치 업그레이드 증거를
-  다시 생성하여 개발 fixture를 대체한다. `Nikon Z7`은
-  `Digital Magnetic Filters`를 선택한다. 두 필름 카메라
-  `Hasselblad 503CX`와 `Nikon F2`는 공용으로
-  `Film Square ND/GND`와 `Film Color Filters`를 모두 선택한다.
-  Camera 4는 기본 상태로 둔다. 이후 버전으로 migration할 때 Sample Set
-  stable id와 카메라별 선택을 보존한다.
-- 현재 release가 지원하는 fixed-slot 저장 형식은 위의 공식 0.8.0과 0.9.1
-  fixture가 대표한다. Pre-release Draft, 수동 수정, 오염된 개발 데이터는
+- 지원되는 경로인 0.8.0 → 현재 개발 schema를 iOS와 Android 단위 테스트로
+  각각 검증한다. 0.8.0 migration 과정에서 Sample Filter Set inventory가
+  seed되더라도 migration만으로 카메라에 자동 선택되지 않는지 확인한다.
+- 0.9.x 릴리즈는 취소되어 출시되지 않았으므로 0.9.x migration fixture와
+  그 경로의 시험은 두지 않는다.
+- 현재 release가 지원하는 fixed-slot 저장 형식은 위의 공식 0.8.0 fixture가
+  대표한다. Pre-release Draft, 수동 수정, 오염된 개발 데이터는
   migration fixture가 아니며 개발·시험 기기에서 앱 데이터 삭제 또는
   재설치로 제거한다.
 - 자동 이름 sequence가 없거나 읽히지 않는 경우의 fixture는 첫 Add가 일반
@@ -222,11 +208,9 @@ emit하는 `Equatable` display state의 결정적 직렬화를 lock한다.
 × 필름 모드 on/off (Tri-X 1s, Velvia 4s, PORTRA 2s 케이스 포함)
 × 잠금화면 widget on/off (단일·다중 타이머)
 
-**설치 업그레이드 검증**: 공식 0.8.0과 0.9.1 fixture가 iOS와 Android
+**설치 업그레이드 검증**: 공식 0.8.0 fixture가 iOS와 Android
 단위 테스트에서 현재 schema까지 통과하면, 설치된 실제 데이터의 업그레이드
-시험은 최신 공식 릴리즈 → 후보 릴리즈 경로만 수행한다. 0.9.1 설치 데이터는
-0.8.0에서 위의 Nikon Z7 + Hasselblad 503CX + Nikon F2 구성을 만든 뒤
-업그레이드하여 준비한다. fixture가 실패하면 영향을 받는 설치 업그레이드
+시험은 최신 공식 릴리즈(0.8.0) → 후보 릴리즈 경로만 수행한다. fixture가 실패하면 영향을 받는 설치 업그레이드
 경로를 추가로 재현한다. Draft 또는 오염된 개발 데이터는 이 검증의 입력으로
 사용하지 않는다.
 

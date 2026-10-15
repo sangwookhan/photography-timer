@@ -227,9 +227,8 @@ its independent calculator setup.
   becomes authoritative only after the sequence write succeeds. An explicit
   empty persisted managed list remains empty and is never reseeded; the
   independent sequence remains monotonic.
-- **CAMERA-PERSIST-002** — This release supports the fixed-slot storage shapes
-  represented by the official 0.8.0 platform fixtures and the latest
-  pre-PTIMER-234 official 0.9.1 platform fixtures identified by
+- **CAMERA-PERSIST-002** — This release supports the fixed-slot storage shape
+  represented by the official 0.8.0 platform fixtures identified by
   `docs/verification/Strategy.md`. Each migration shall
   preserve the four camera identities, stored or resolved names, calculator
   states, order, pager inclusion, and active camera. It shall persist sequence

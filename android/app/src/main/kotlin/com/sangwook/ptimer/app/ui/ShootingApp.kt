@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.Manifest
 import android.os.Build
@@ -70,6 +71,7 @@ import com.sangwook.ptimer.app.ui.details.ReciprocityDetailsScreen
 import com.sangwook.ptimer.app.ui.shooting.FilterManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementActions
 import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
+import com.sangwook.ptimer.app.ui.shooting.CameraManagementActions
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
@@ -213,6 +215,25 @@ fun ShootingApp(
     val timerState by viewModel.uiState.collectAsStateWithLifecycle()
     val soundingAlarmId by viewModel.soundingAlarmTimerId.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
+
+    // Camera management and the pager's utility page (CAMERA-PAGER-002/007).
+    val cameraActions = remember(holder) {
+        CameraManagementActions(
+            isEditable = holder.cameras.isEditable,
+            // Reserving the next `Camera N` is durable I/O: it runs on the
+            // owner's scope, so a recreation does not cancel it half-way.
+            add = { holder.viewModelScope.launch { holder.cameras.addCamera() } },
+            rename = holder.cameras::renameCamera,
+            setDisplayed = holder.cameras::setCameraDisplayed,
+            move = holder.cameras::moveCamera,
+            hide = holder.cameras::hideCameras,
+            delete = holder.cameras::deleteCameras,
+            activeCamera = {
+                controller.state.value.slots.firstOrNull { it.isActive }
+                    ?.let { controller.cameraIdentity(it.id) }
+            },
+        )
+    }
 
     // Persisted ND notation display mode (PTIMER-187): seed from the bootstrap
     // read, then observe the store. Keep the controller (picker labels) in sync
@@ -435,7 +456,7 @@ fun ShootingApp(
                     onSelectSlot = controller::selectSlot,
                     onRenameSlot = { name ->
                         controller.state.value.slots.firstOrNull { it.isActive }
-                            ?.let { holder.cameras.renameCamera(it.id, name.orEmpty()) }
+                            ?.let { holder.cameras.renameCamera(it.id, name) }
                     },
                     onSetTarget = controller::setTargetShutter,
                     onStartTarget = controller::startFromTarget,
@@ -521,6 +542,7 @@ fun ShootingApp(
                     showExactAlarmSettingsAction = exactAlarmWarningRelevant,
                     onOpenExactAlarmSettings = { showExactAlarmInfo = true },
                     reserveNavigationBarInset = !hasTimers,
+                    cameraActions = cameraActions,
                 )
         }
             // Overlay, not part of the Column above: the calculator's

@@ -150,6 +150,35 @@
     <string name="shooting_choose_film_cd">필름 선택</string>
     <string name="pager_position_format">%2$d개 중 %1$d번째</string>
 
+    <!-- Managed camera list -->
+    <string name="camera_management_title">카메라</string>
+    <string name="camera_management_page_title">카메라 관리</string>
+    <string name="camera_management_page_message">기존 카메라를 관리하거나 새 카메라를 추가하세요.</string>
+    <string name="action_manage_cameras">카메라 관리</string>
+    <string name="action_add_camera">카메라 추가</string>
+    <string name="camera_empty_title">표시 중인 카메라 없음</string>
+    <string name="camera_empty_message">노출을 계산하려면 카메라를 표시하거나 추가하세요. 실행 중인 타이머에는 영향이 없습니다.</string>
+    <string name="camera_data_load_failed">카메라 데이터를 불러오지 못했습니다. 앱을 다시 시작하세요.</string>
+    <string name="camera_list_empty">카메라가 없습니다. 촬영을 시작하려면 카메라를 추가하세요.</string>
+    <string name="camera_state_shown">표시 중</string>
+    <string name="camera_state_hidden">숨김</string>
+    <string name="camera_row_detail">%2$d개 중 %1$d번째 · %3$s</string>
+    <string name="camera_row_cd">%1$s, %2$s, %4$d개 중 %3$d번째</string>
+    <string name="camera_hide">카메라 숨기기</string>
+    <string name="camera_show">카메라 표시</string>
+    <string name="camera_delete">카메라 삭제</string>
+    <string name="action_hide">숨기기</string>
+    <string name="action_show">표시</string>
+    <string name="camera_move_up">위로 이동</string>
+    <string name="camera_move_down">아래로 이동</string>
+    <string name="camera_select_cd">%1$s 선택</string>
+    <string name="camera_moved_announcement">%2$d개 중 %1$d번째로 이동</string>
+    <string name="camera_active_announcement">활성 카메라: %1$s</string>
+    <string name="camera_delete_title_one">카메라를 삭제할까요?</string>
+    <string name="camera_delete_title_many">카메라를 삭제할까요?</string>
+    <string name="camera_delete_message_one">%1$s 및 계산 설정을 삭제합니다. 같은 이름의 새 카메라를 만들어도 설정이나 이 카메라의 타이머와 다시 연결되지 않습니다. 되돌릴 수 없습니다.</string>
+    <string name="camera_delete_message_many">카메라 %1$d대와 계산 설정을 삭제합니다. 되돌릴 수 없습니다.</string>
+
     <!-- Target shutter -->
     <string name="target_shutter_label">목표 셔터</string>
     <string name="target_use">목표 셔터 사용</string>

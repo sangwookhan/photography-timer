@@ -59,9 +59,8 @@ be mistaken for first use.
   Initialization retries on the next launch. Timer persistence remains
   independent and unchanged.
 - **PERSIST-005** — The current managed-camera release supports the fixed-slot
-  storage shapes represented by the official 0.8.0 platform fixtures and the latest
-  pre-PTIMER-234 official 0.9.1 platform fixtures identified by
-  `docs/verification/Strategy.md`.
+  storage shape represented by the official 0.8.0 platform fixtures identified
+  by `docs/verification/Strategy.md`.
   Beginning with the first official release of a versioned managed-camera
   payload, each later official schema adds an ordered path to the current
   schema and activates it only after required companion state is ready.

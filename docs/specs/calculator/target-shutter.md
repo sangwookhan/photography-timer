@@ -11,7 +11,7 @@ exposure or reciprocity calculation.
 
 ## Current behavior
 
-Target Shutter is optional and scoped to the active camera slot. It sits on
+Target Shutter is optional and scoped to the active camera. It sits on
 top of the calculator and reciprocity results; enabling, disabling, or
 editing it never feeds back into either.
 
@@ -45,12 +45,12 @@ editing it never feeds back into either.
   shutter, ND, film selection, or reciprocity results change; only editing
   the target shall mutate it.
 - **TARGET-021** — Target Shutter state shall be scoped to the active camera
-  slot on the same terms as other calculator inputs. Switching the active
-  slot shall replace the target along with the rest of the slot's inputs;
-  an inactive slot's stored target shall not surface on another slot.
-- **TARGET-022** — Per-slot Target Shutter persistence shall not be seeded
+  camera on the same terms as other calculator inputs. Switching the active
+  camera shall replace the target along with the rest of the camera's inputs;
+  an inactive camera's stored target shall not surface on another camera.
+- **TARGET-022** — Per-camera Target Shutter persistence shall not be seeded
   from a session-global "last used target" value; doing so would leak one
-  slot's value into another.
+  camera's value into another.
 
 ## UI presentation
 
@@ -61,10 +61,10 @@ editing it never feeds back into either.
 - **TARGET-031** — The main row shall not present a destructive Clear
   affordance or an enable/disable switch; removal and disabling live only in
   the input sheet.
-- **TARGET-032** — The input sheet opens seeded from the active slot's
+- **TARGET-032** — The input sheet opens seeded from the active camera's
   currently committed target when one exists (showing that committed
   value), or from a clean default when none exists — never leaking another
-  slot's committed value. From there it edits a draft. Mutations to the
+  camera's committed value. From there it edits a draft. Mutations to the
   draft shall not affect the committed target until the user confirms;
   Confirm commits the draft, Cancel discards it, and any dismissal that is
   not an explicit Confirm (drag, tap-outside) shall behave as Cancel,
@@ -90,7 +90,7 @@ editing it never feeds back into either.
 
 ## Persistence
 
-- **TARGET-050** — Target Shutter shall be persisted per camera slot.
+- **TARGET-050** — Target Shutter shall be persisted per camera.
 - **TARGET-051** — A missing, non-finite, zero, or negative persisted target
   shall restore as no target.
 

@@ -5,7 +5,8 @@
 
 | Prefix | Owns |
 | --- | --- |
-| PERSIST | Version gating and additive evolution |
+| PERSIST | Version gating, release migration, and additive evolution |
+| PERSIST-CAMERA-SEQUENCE | Independent camera automatic-name allocation |
 | PERSIST-RECORD | Per-record decode isolation within a collection |
 | PERSIST-QUARANTINE | Preserving a failed payload for later inspection |
 
@@ -21,8 +22,9 @@ Every persisted collection whose records embed an evolving enum or a
 sum-type discriminator — the custom film library, the timer-state
 collection, the timer-metadata collection, and the timer workspace
 snapshot — follows one uniform decode policy, applied identically on both
-platforms. The camera-slot session follows a related but distinct policy
-(see below) because it has its own legacy-migration path. Filter inventory
+platforms. The managed-camera session follows a related but distinct policy
+(see below) because it retains the former camera-slot session's legacy-
+migration path. Filter inventory
 uses the saved-state exception below so empty or failed recovery cannot
 be mistaken for first use.
 
@@ -41,11 +43,46 @@ be mistaken for first use.
   decodes with it treated as absent. A breaking change (renaming or
   removing a field, or changing what an existing field means) requires a
   coordinated version increment and a documented migration step.
-- **PERSIST-004** — The camera-slot session uses its own version-and-
-  fallback rule: an unrecognized session-schema version is rejected and the
-  runtime falls back to the legacy single-context migration path (see
-  `shooting/camera-slots.md`) rather than the uniform per-record policy
-  below, because a slot session has no per-record structure to isolate.
+- **PERSIST-004** — The managed-camera session uses its own documented
+  version-and-migration rule (see `shooting/camera-slots.md`). A valid managed
+  payload wins over every remaining legacy payload. Legacy migration runs only
+  when no managed payload exists and keeps its source usable until the full
+  managed state persists successfully, so retry is idempotent and cannot
+  duplicate cameras. When stored content is read successfully but its version,
+  camera collection, or whole managed payload cannot be decoded, one atomic
+  write replaces it with fresh camera state using new opaque identities; the
+  unreadable content is thereby deleted without exposing an absent-payload
+  interval or running legacy migration. If the storage read supplies no content
+  because it failed, camera persistence performs no delete or write, disables
+  camera actions for that launch, and shows `Camera data couldn't be loaded.
+  Restart the app.` on both platforms (or its localized equivalent).
+  Initialization retries on the next launch. Timer persistence remains
+  independent and unchanged.
+- **PERSIST-005** — The current managed-camera release supports the fixed-slot
+  storage shapes represented by the official 0.8.0 platform fixtures and the latest
+  pre-PTIMER-234 official 0.9.1 platform fixtures identified by
+  `docs/verification/Strategy.md`.
+  Beginning with the first official release of a versioned managed-camera
+  payload, each later official schema adds an ordered path to the current
+  schema and activates it only after required companion state is ready.
+  Development-only Draft and contaminated payloads are cleared from test
+  installations instead of becoming product migration sources.
+- **PERSIST-CAMERA-SEQUENCE-001** — The automatic `Camera N` sequence shall
+  use a dedicated versioned store. The managed camera list, its names,
+  identities, count, order, and timer records are not sources for its next
+  value.
+- **PERSIST-CAMERA-SEQUENCE-002** — Reserving an automatic number durably
+  advances the sequence before the new camera record is committed. A crash may
+  skip a reserved number but does not make it available again while the stored
+  sequence remains readable. If it cannot be read, the fallback in
+  PERSIST-CAMERA-SEQUENCE-003 may repeat a display number without reusing camera
+  identity.
+- **PERSIST-CAMERA-SEQUENCE-003** — Migration from either supported fixed-slot
+  shape shall persist sequence value 5 before activating the migrated camera
+  payload. Later official managed-camera migrations carry the stored next value
+  forward before activation. When no next value can be read, the normal camera-
+  addition allocator starts at 5, persists 6 before committing `Camera 5`, and
+  continues from that stored value without inspecting camera or timer data.
 
 ### Per-record isolation
 
@@ -100,7 +137,8 @@ be mistaken for first use.
 
 ## Non-goals
 
-- A general migration framework or versioned-dispatch table beyond the
-  simple equality-gate-plus-fallback described above.
+- A general migration framework for domains outside managed-camera
+  persistence. Managed cameras use the explicit release-to-release migration
+  chain required by PERSIST-005.
 - Cross-platform byte-identical persistence formats.
 - A user-facing recovery UI for quarantined or degraded data.

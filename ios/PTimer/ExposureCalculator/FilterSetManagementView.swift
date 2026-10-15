@@ -302,6 +302,7 @@ struct FilterSetDetailView: View {
     @FocusState private var isNameFieldFocused: Bool
     @State private var editingItem: FilterItemEditorContext?
     @State private var pendingItemDeletion: FilterItem?
+    @State private var isEditingItems = false
     /// This open editing session's memory (FILTER-ITEM-007): the
     /// notation of the last saved new Fixed or GND item, offered to
     /// the next new item. It lives and dies with this detail view, so
@@ -341,13 +342,30 @@ struct FilterSetDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     ForEach(orderedItems) { item in
-                        Button {
-                            editingItem = FilterItemEditorContext(filterSetID: filterSetID, item: item)
-                        } label: {
-                            FilterItemRow(item: item)
+                        HStack(spacing: 12) {
+                            // Edit shows a delete control on every row at
+                            // once; it asks like the swipe (FILTER-ITEM-011).
+                            if isEditingItems {
+                                Button {
+                                    pendingItemDeletion = item
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(.red)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel(Text("Delete \(item.name)"))
+                                .accessibilityIdentifier("filter-item-delete-\(item.id.rawValue)")
+                            }
+                            Button {
+                                editingItem = FilterItemEditorContext(filterSetID: filterSetID, item: item)
+                            } label: {
+                                FilterItemRow(item: item)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
                         // The swipe only asks; the row stays until the
                         // deletion is confirmed. `onDelete` and a
                         // destructive role both remove the row first.
@@ -359,12 +377,6 @@ struct FilterSetDetailView: View {
                             }
                             .tint(.red)
                         }
-                    }
-                    .onDelete { offsets in
-                        // One row per delete gesture; see the set list.
-                        guard offsets.count == 1, let index = offsets.first,
-                              orderedItems.indices.contains(index) else { return }
-                        pendingItemDeletion = orderedItems[index]
                     }
                     // One Add Filter action; the new filter starts as ND
                     // in this set, and its type and set are chosen in the
@@ -380,7 +392,21 @@ struct FilterSetDetailView: View {
                     }
                     .accessibilityIdentifier("filter-item-add-button")
                 } header: {
-                    Text("Filters")
+                    // Edit belongs to the filter list, not the whole
+                    // screen, and stays the same compact text as Done.
+                    HStack {
+                        Text("Filters")
+                        Spacer()
+                        if !filterSet.items.isEmpty {
+                            Button(isEditingItems ? "Done" : "Edit") {
+                                isEditingItems.toggle()
+                            }
+                            .textCase(nil)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                            .accessibilityIdentifier("filter-item-edit-button")
+                        }
+                    }
                 } footer: {
                     Text("Register each physical filter separately, even two filters of the same strength, so both can be mounted together.")
                 }
@@ -396,9 +422,9 @@ struct FilterSetDetailView: View {
             }
             .navigationTitle(filterSet.name)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    EditButton()
+            .onChange(of: filterSet.items.isEmpty) { _, isEmpty in
+                if isEmpty {
+                    isEditingItems = false
                 }
             }
             .onAppear { nameDraft = filterSet.name }

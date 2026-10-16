@@ -301,7 +301,7 @@ struct FilterSetDetailView: View {
     @State private var nameDraft: String = ""
     @FocusState private var isNameFieldFocused: Bool
     @State private var editingItem: FilterItemEditorContext?
-    @State private var pendingItemDeletion: FilterItem?
+    @State private var itemDeletion = FilterItemDeletionState()
     /// This open editing session's memory (FILTER-ITEM-007): the
     /// notation of the last saved new Fixed or GND item, offered to
     /// the next new item. It lives and dies with this detail view, so
@@ -341,30 +341,41 @@ struct FilterSetDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     ForEach(orderedItems) { item in
-                        Button {
-                            editingItem = FilterItemEditorContext(filterSetID: filterSetID, item: item)
-                        } label: {
-                            FilterItemRow(item: item)
+                        HStack(spacing: 12) {
+                            // Edit shows a delete control on every row at
+                            // once; it asks like the swipe (FILTER-ITEM-011).
+                            if itemDeletion.isEditing {
+                                Button {
+                                    itemDeletion.requestDeletion(of: item)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(.red)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel(Text("Delete \(item.name)"))
+                                .accessibilityIdentifier("filter-item-delete-\(item.id.rawValue)")
+                            }
+                            Button {
+                                editingItem = FilterItemEditorContext(filterSetID: filterSetID, item: item)
+                            } label: {
+                                FilterItemRow(item: item)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("filter-item-row-\(item.id.rawValue)")
                         // The swipe only asks; the row stays until the
                         // deletion is confirmed. `onDelete` and a
                         // destructive role both remove the row first.
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
-                                pendingItemDeletion = item
+                                itemDeletion.requestDeletion(of: item)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
                             .tint(.red)
                         }
-                    }
-                    .onDelete { offsets in
-                        // One row per delete gesture; see the set list.
-                        guard offsets.count == 1, let index = offsets.first,
-                              orderedItems.indices.contains(index) else { return }
-                        pendingItemDeletion = orderedItems[index]
                     }
                     // One Add Filter action; the new filter starts as ND
                     // in this set, and its type and set are chosen in the
@@ -380,7 +391,21 @@ struct FilterSetDetailView: View {
                     }
                     .accessibilityIdentifier("filter-item-add-button")
                 } header: {
-                    Text("Filters")
+                    // Edit belongs to the filter list, not the whole
+                    // screen, and stays the same compact text as Done.
+                    HStack {
+                        Text("Filters")
+                        Spacer()
+                        if FilterItemDeletionState.showsEditAction(itemCount: filterSet.items.count) {
+                            Button(itemDeletion.isEditing ? "Done" : "Edit") {
+                                itemDeletion.toggleEditing()
+                            }
+                            .textCase(nil)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                            .accessibilityIdentifier("filter-item-edit-button")
+                        }
+                    }
                 } footer: {
                     Text("Register each physical filter separately, even two filters of the same strength, so both can be mounted together.")
                 }
@@ -396,10 +421,8 @@ struct FilterSetDetailView: View {
             }
             .navigationTitle(filterSet.name)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    EditButton()
-                }
+            .onChange(of: filterSet.items.count) { _, count in
+                itemDeletion.itemsDidChange(count: count)
             }
             .onAppear { nameDraft = filterSet.name }
             .onChange(of: filterSet.name) { _, newValue in
@@ -440,22 +463,23 @@ struct FilterSetDetailView: View {
             .confirmationDialog(
                 Text("Delete filter?"),
                 isPresented: Binding(
-                    get: { pendingItemDeletion != nil },
-                    set: { if !$0 { pendingItemDeletion = nil } }
+                    get: { itemDeletion.pendingItem != nil },
+                    set: { if !$0 { itemDeletion.cancel() } }
                 ),
                 titleVisibility: .visible,
-                presenting: pendingItemDeletion
+                presenting: itemDeletion.pendingItem
             ) { item in
                 Button(role: .destructive) {
                     // The row was kept until now, so animate its removal.
-                    withAnimation {
-                        viewModel.deleteFilterItem(id: item.id)
+                    if let confirmed = itemDeletion.confirm() {
+                        withAnimation {
+                            viewModel.deleteFilterItem(id: confirmed.id)
+                        }
                     }
-                    pendingItemDeletion = nil
                 } label: {
                     Text("Delete \(item.name)")
                 }
-                Button("Cancel", role: .cancel) { pendingItemDeletion = nil }
+                Button("Cancel", role: .cancel) { itemDeletion.cancel() }
             } message: { item in
                 Text(itemDeletionMessage(for: item))
             }

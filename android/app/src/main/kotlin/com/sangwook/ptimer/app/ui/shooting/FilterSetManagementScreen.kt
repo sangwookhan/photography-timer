@@ -14,6 +14,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -57,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,8 +83,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -80,6 +98,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
+import com.sangwook.ptimer.app.vm.FilterItemDeletionState
 import com.sangwook.ptimer.app.vm.FilterItemEditorSessionMemory
 import com.sangwook.ptimer.app.vm.FilterSetItemOrder
 import com.sangwook.ptimer.app.vm.FilterItemSaveOutcome
@@ -453,9 +472,10 @@ private fun FilterSetDetailLevel(
 ) {
     var isDeletionPending by remember { mutableStateOf(false) }
     var nameDraft by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(filterSet.name) }
-    var isEditing by rememberSaveable(filterSet.id.rawValue) { mutableStateOf(false) }
+    var itemDeletion by rememberSaveable(filterSet.id.rawValue, stateSaver = FilterItemDeletionSaver) {
+        mutableStateOf(FilterItemDeletionState())
+    }
     var editorTarget by remember { mutableStateOf<FilterItemEditorTarget?>(null) }
-    var pendingDeletion by remember { mutableStateOf<FilterItem?>(null) }
     // Session memory for the notation of consecutive new items. Plain
     // `remember`, keyed on the set: leaving the Filter Set or restarting
     // the app resets the next new item to Stops (FILTER-ITEM-007).
@@ -479,7 +499,7 @@ private fun FilterSetDetailLevel(
     }
     // Same rule as the list level: deleting the last Filter Item ends
     // edit mode along with the control that exits it.
-    LaunchedEffect(filterSet.items.isEmpty()) { if (filterSet.items.isEmpty()) isEditing = false }
+    LaunchedEffect(filterSet.items.size) { itemDeletion = itemDeletion.afterItemsChanged(filterSet.items.size) }
 
     Scaffold(
         topBar = {
@@ -491,19 +511,6 @@ private fun FilterSetDetailLevel(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.action_close),
                         )
-                    }
-                },
-                actions = {
-                    // No items, nothing to reorder or delete: no no-op
-                    // Edit control (FILTER-SET-001).
-                    if (filterSet.items.isNotEmpty()) {
-                        TextButton(onClick = { isEditing = !isEditing }) {
-                            Text(
-                                stringResource(
-                                    if (isEditing) R.string.filter_sets_finish_editing else R.string.action_edit,
-                                ),
-                            )
-                        }
                     }
                 },
             )
@@ -542,7 +549,22 @@ private fun FilterSetDetailLevel(
             FooterText(stringResource(R.string.filter_set_identity_footer))
 
             Spacer(Modifier.height(24.dp))
-            SectionLabel(stringResource(R.string.filter_set_section_filters))
+            // Edit belongs to the filter list, not the whole screen, and
+            // keeps the same compact text as Done (FILTER-ITEM-011). No
+            // items, nothing to delete: no no-op Edit control.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    SectionLabel(stringResource(R.string.filter_set_section_filters))
+                }
+                if (FilterItemDeletionState.showsEditAction(filterSet.items.size)) {
+                    TextButton(
+                        onClick = { itemDeletion = itemDeletion.toggledEditing() },
+                        modifier = Modifier.testTag("filter-set-edit-filters"),
+                    ) {
+                        Text(stringResource(if (itemDeletion.isEditing) R.string.action_done else R.string.action_edit))
+                    }
+                }
+            }
             // One physical-item list, ND first, then Color, Effect, CPL,
             // GND, each kind by name, with no manual reorder (FILTER-SET-001,
             // FILTER-ITEM-001).
@@ -557,9 +579,9 @@ private fun FilterSetDetailLevel(
             orderedItems.forEach { item ->
                 FilterItemRow(
                     item = item,
-                    isEditing = isEditing,
+                    isEditing = itemDeletion.isEditing,
                     onOpen = { editorTarget = FilterItemEditorTarget.Existing(item) },
-                    onDelete = { pendingDeletion = item },
+                    onDelete = { itemDeletion = itemDeletion.requestingDeletion(item) },
                 )
                 HorizontalDivider()
             }
@@ -629,7 +651,7 @@ private fun FilterSetDetailLevel(
         )
     }
 
-    pendingDeletion?.let { item ->
+    itemDeletion.pendingItem?.let { item ->
         val cameras = actions.camerasAffectedByDeletingItem(item.id)
         ConfirmDeleteDialog(
             title = stringResource(R.string.filter_item_delete_title),
@@ -641,13 +663,14 @@ private fun FilterSetDetailLevel(
             confirmLabel = stringResource(R.string.filter_delete_named, item.name),
             onConfirm = {
                 actions.deleteFilterItem(item.id)
-                pendingDeletion = null
+                itemDeletion = itemDeletion.cancelled()
             },
-            onDismiss = { pendingDeletion = null },
+            onDismiss = { itemDeletion = itemDeletion.cancelled() },
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterItemRow(
     item: FilterItem,
@@ -656,10 +679,88 @@ private fun FilterItemRow(
     onDelete: () -> Unit,
 ) {
     val detail = filterItemDetailText(item)
+    val deleteLabel = stringResource(R.string.filter_delete_named, item.name)
+    // The trailing swipe settles open on a `Delete` action; only that action
+    // opens the confirmation, and the row closes again (FILTER-ITEM-011).
+    val revealPx = with(LocalDensity.current) { SwipeDeleteRevealWidth.toPx() }
+    val towardStart = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1f else -1f
+    val swipe = remember(revealPx, towardStart) {
+        AnchoredDraggableState(
+            initialValue = FilterRowSwipe.Closed,
+            anchors = DraggableAnchors {
+                FilterRowSwipe.Closed at 0f
+                FilterRowSwipe.Open at towardStart * revealPx
+            },
+        )
+    }
+    val scope = rememberCoroutineScope()
+    Box(modifier = Modifier.height(IntrinsicSize.Min)) {
+        // Drawn behind the row at all times so the red shows from the first
+        // pixel of a drag; the action only exists for taps and screen
+        // readers once the row is open (settled state, not per-frame offset).
+        val isOpen = swipe.currentValue == FilterRowSwipe.Open
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.error),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(SwipeDeleteRevealWidth)
+                    .then(
+                        if (isOpen) {
+                            Modifier.clickable {
+                                onDelete()
+                                scope.launch { swipe.animateTo(FilterRowSwipe.Closed) }
+                            }
+                        } else {
+                            Modifier.clearAndSetSemantics {}
+                        },
+                    )
+                    .testTag("filter-item-swipe-delete-${item.id.rawValue}"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.action_delete),
+                    color = MaterialTheme.colorScheme.onError,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier
+                .offset { IntOffset(swipe.requireOffset().roundToInt(), 0) }
+                .anchoredDraggable(swipe, Orientation.Horizontal)
+                .testTag("filter-item-row-${item.id.rawValue}"),
+        ) {
+            FilterItemRowContent(item, detail, deleteLabel, isEditing, onOpen, onDelete)
+        }
+    }
+}
+
+private enum class FilterRowSwipe { Closed, Open }
+
+private val SwipeDeleteRevealWidth = 96.dp
+
+@Composable
+private fun FilterItemRowContent(
+    item: FilterItem,
+    detail: String,
+    deleteLabel: String,
+    isEditing: Boolean,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onOpen)
+            // The swipe has no TalkBack path of its own; offer the same
+            // delete as an action on the row.
+            .semantics { customActions = listOf(CustomAccessibilityAction(deleteLabel) { onDelete(); true }) }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -681,10 +782,13 @@ private fun FilterItemRow(
             )
         }
         if (isEditing) {
-            IconButton(onClick = onDelete) {
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.testTag("filter-item-delete-${item.id.rawValue}"),
+            ) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.action_delete),
+                    contentDescription = deleteLabel,
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -854,3 +958,9 @@ private fun filterCountText(count: Int): String =
 
 // Eleven palette colors read in hue order over two rows.
 private const val COLOR_GRID_COLUMNS = 6
+
+/** Edit mode survives recreation like before; an open confirmation does not. */
+private val FilterItemDeletionSaver = Saver<FilterItemDeletionState, Boolean>(
+    save = { it.isEditing },
+    restore = { FilterItemDeletionState(isEditing = it) },
+)

@@ -350,6 +350,29 @@ unchanged under the localization contract.
   Filter Item values and selected destination; creation and Cancel semantics
   are unchanged.
 
+- **FILTER-ITEM-011** — In a user-created Filter Set's editor, Filter Item
+  deletion shall use the same interaction on iOS and Android, one item at a
+  time. Tapping an item row opens its item editor, and a trailing swipe on the
+  row reveals **Delete**. While the Set contains at least one Filter Item, the
+  Filters list heading shall show a compact **Edit** text action (Korean
+  **편집**) at its trailing edge; the editor's top bar shall not carry an Edit
+  action. Tapping Edit shows a delete control on every item row at once and
+  replaces Edit with **Done** (Korean **완료**) at the same position and the same
+  compact size; Done hides the row delete controls. Both actions shall be text
+  labels rather than icon-only glyphs and shall meet the platform's minimum
+  touch target. Edit mode shall not provide reordering or multi-selection, and
+  each row delete control targets only its own item. Edit mode changes no other
+  editor behavior: item rows still open the item editor, and Add Filter, name
+  and color editing, Delete Filter Set and dismissal remain available. The
+  swipe Delete and a row delete control shall open the same confirmation;
+  neither shall remove the row before the user confirms. The confirmation
+  shall name the targeted item and identify affected cameras under
+  FILTER-ITEM-006. Confirming deletes only that item; Cancel or dismiss shall
+  leave the item, the list and all camera state unchanged. Deleting the last
+  Filter Item ends Edit mode. Row delete controls shall be reachable by
+  VoiceOver and TalkBack without the swipe gesture, and each shall be announced
+  with its item's name.
+
 ### CPL exposure-loss choices
 
 - **FILTER-CPL-001** — A CPL item shall expose three decimal input fields for
@@ -1016,7 +1039,7 @@ they do not prescribe native navigation components or a new app shell.
 | --- | --- |
 | 1. Main | Existing camera/film and Target controls; Base Shutter → optional auxiliary summary → ND wheels → Plus; one status row with prominent Total; existing results and timers. ND selection and ND-wheel creation stay here. |
 | 2. Shooting Filters | Fixed-height Selected filters panel with selected count, exposure reduction, and a vertically scrollable complete selected-item list; Standard first, then selected user Filter Sets grouped ND-only, mixed, auxiliary-only, then empty, with one compact header per Set and an indented free-scrolling strip of equal-width controls only for Sets containing auxiliary items; inline ND on Sets with ND items; item name and type shown separately; direct CPL/GND secondary choices; Available Filter Sets alphabetically with name-to-edit and trailing add-to-selected; ordinary Add Filter and Add Filter Set actions; a visually separated secondary Add Example Filter Sets action; Apply/Cancel for the whole working session. No ND tab, ND-wheel-add action, manual Set/item reorder, or separate Manage Filter Sets entry. |
-| 3. Filter Set editor | Standard opens a read-only ND list. User Sets: name and source color; one physical-item list ordered ND, Color, Effect, CPL, GND; ND and GND sort by canonical stops descending, while Color, Effect and CPL sort by name; Add Filter; delete items; destructive Delete Filter Set for user-created Sets only. |
+| 3. Filter Set editor | Standard opens a read-only ND list. User Sets: name and source color; one physical-item list ordered ND, Color, Effect, CPL, GND; ND and GND sort by canonical stops descending, while Color, Effect and CPL sort by name; Add Filter; delete one item at a time by row swipe or by the row delete controls that the Filters heading's Edit/Done action shows; destructive Delete Filter Set for user-created Sets only. |
 | 5. Global Settings / Filter management | Gear beside Reset opens Filter management and About. Global inventory editing has no current-camera selection controls. Filter management provides **Add Example Filter Sets** for manually appending fresh ordinary example copies without changing camera selections. |
 | 4. Filter Item editor | Name, explicit kind, registered exposure metadata, and enabled Filter Set selection for both new and existing items; inline Add Filter Set; display color for Color, CPL choices, or GND full density as applicable. |
 
@@ -1276,3 +1299,20 @@ Additional regression checks:
 - Relaunch after the move, including a saved camera snapshot that still uses
   the original owner, and verify the same per-camera outcome without
   automatically selecting the destination. Captured timer records stay unchanged.
+
+### Filter Item deletion verification
+
+- Open a user-created Filter Set with several items on iOS and Android. The
+  Filters heading shows a compact Edit text action at its trailing edge and
+  the top bar shows none. Tap Edit: every item row shows a delete control at
+  once, and Done replaces Edit at the same position and size. Tap Done: the
+  controls disappear. No reorder handle or selection mark appears.
+- Swipe an item row and tap Delete, then repeat from an Edit-mode row delete
+  control. Both open the same confirmation naming the item and its affected
+  cameras, and the row stays in the list while the confirmation is shown.
+  Cancel and dismiss leave the item and every camera unchanged; confirming
+  removes only that item and reconciles cameras under FILTER-ITEM-006.
+- Delete the last item in Edit mode: Edit mode ends and Edit is hidden while
+  the Set is empty. Standard shows neither Edit nor delete controls.
+- With VoiceOver and TalkBack, reach and activate a row delete control without
+  swiping; it is announced with the item's name.

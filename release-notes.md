@@ -5,6 +5,8 @@ title: Release Notes
 
 # Release Notes
 
+{% include platform-toggle.html %}
+
 ## 1.0.0 — Unreleased
 
 This release includes the changes beta-tested in 0.9.1, documented below.
@@ -15,6 +17,11 @@ Common changes:
   - No more four-camera limit: add as many cameras as you use, and give each one its own name.
   - Each camera remembers its own film, base shutter, filters, and target shutter.
   - Reorder, hide, or delete cameras. Hidden cameras keep their settings.
+
+<div class="gallery">
+{% include shot.html name="home-shooting-503" alt="Shooting screen in 1.0" caption="The 1.0 shooting screen" %}
+{% include shot.html name="rn-1.0.0-camera-list" alt="Camera list with five named cameras" caption="Your camera list" %}
+</div>
 
 ## 0.9.1 — Beta tested; included in 1.0.0
 
@@ -30,6 +37,10 @@ Common changes:
   - Keep standard ND filters from 1 to 30 stops available for common values.
   - Start with example Filter Sets, then edit them to match your equipment.
 
+<div class="gallery">
+{% include shot.html name="home-filters" alt="Shooting filters from two Filter Sets" caption="Choose filters from your Filter Sets" %}
+</div>
+
 Android:
 
 - Keep the main shooting screen, mini timer, timer list, and reciprocity details readable across system font sizes.
@@ -41,6 +52,10 @@ Common changes:
 - Stack up to four standard filters for exposure calculations.
 - Added accurate fractional-stop support for ND100, ND200, and ND100k filters.
 - Improved the reliability of saved data, timer restoration, and overall app behavior.
+
+<div class="gallery">
+{% include shot.html name="rn-0.8.0-filter-stack" alt="Two stacked ND filters, ND200 and 3 stops, in 0.8.0" caption="Stacked standard filters" %}
+</div>
 
 Android:
 
@@ -54,3 +69,9 @@ Android:
 - Target shutter support
 - Multi-camera shooting timers
 - VoiceOver (iOS) and TalkBack (Android) accessibility support
+
+<div class="gallery">
+{% include shot.html name="rn-0.7.4-shooting" alt="Shooting screen in 0.7.4" caption="Exposure with film reciprocity correction" %}
+{% include shot.html name="rn-0.7.4-reciprocity" alt="Reciprocity details in 0.7.4" caption="Reciprocity details" %}
+{% include shot.html name="rn-0.7.4-custom-film" alt="New custom film in 0.7.4" caption="Your own custom film" %}
+</div>

@@ -14,6 +14,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -47,12 +62,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -668,42 +680,70 @@ private fun FilterItemRow(
 ) {
     val detail = filterItemDetailText(item)
     val deleteLabel = stringResource(R.string.filter_delete_named, item.name)
-    // The trailing swipe only reveals `Delete`; passing the threshold opens
-    // the confirmation and the row settles back, as in camera management.
-    val swipe = rememberSwipeToDismissBoxState(
-        confirmValueChange = { target ->
-            if (target == SwipeToDismissBoxValue.EndToStart) onDelete()
-            false
-        },
-        positionalThreshold = { total -> total * SwipeDeleteThreshold },
-    )
-    SwipeToDismissBox(
-        state = swipe,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            if (swipe.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.error)
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.action_delete),
-                        color = MaterialTheme.colorScheme.onError,
-                        style = MaterialTheme.typography.labelLarge,
+    // The trailing swipe settles open on a `Delete` action; only that action
+    // opens the confirmation, and the row closes again (FILTER-ITEM-011).
+    val revealPx = with(LocalDensity.current) { SwipeDeleteRevealWidth.toPx() }
+    val towardStart = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1f else -1f
+    val swipe = remember(revealPx, towardStart) {
+        AnchoredDraggableState(
+            initialValue = FilterRowSwipe.Closed,
+            anchors = DraggableAnchors {
+                FilterRowSwipe.Closed at 0f
+                FilterRowSwipe.Open at towardStart * revealPx
+            },
+        )
+    }
+    val scope = rememberCoroutineScope()
+    Box(modifier = Modifier.height(IntrinsicSize.Min)) {
+        // Drawn behind the row at all times so the red shows from the first
+        // pixel of a drag; the action only exists for taps and screen
+        // readers once the row is open (settled state, not per-frame offset).
+        val isOpen = swipe.currentValue == FilterRowSwipe.Open
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.error),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(SwipeDeleteRevealWidth)
+                    .then(
+                        if (isOpen) {
+                            Modifier.clickable {
+                                onDelete()
+                                scope.launch { swipe.animateTo(FilterRowSwipe.Closed) }
+                            }
+                        } else {
+                            Modifier.clearAndSetSemantics {}
+                        },
                     )
-                }
+                    .testTag("filter-item-swipe-delete-${item.id.rawValue}"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.action_delete),
+                    color = MaterialTheme.colorScheme.onError,
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
-        },
-    ) {
-        Surface(color = MaterialTheme.colorScheme.background) {
+        }
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier
+                .offset { IntOffset(swipe.requireOffset().roundToInt(), 0) }
+                .anchoredDraggable(swipe, Orientation.Horizontal)
+                .testTag("filter-item-row-${item.id.rawValue}"),
+        ) {
             FilterItemRowContent(item, detail, deleteLabel, isEditing, onOpen, onDelete)
         }
     }
 }
+
+private enum class FilterRowSwipe { Closed, Open }
+
+private val SwipeDeleteRevealWidth = 96.dp
 
 @Composable
 private fun FilterItemRowContent(

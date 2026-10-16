@@ -721,7 +721,7 @@ private fun CameraRow(
     }
 }
 
-internal const val SwipeDeleteThreshold = 0.4f
+private const val SwipeDeleteThreshold = 0.4f
 private const val DropSettleMillis = 400L
 
 

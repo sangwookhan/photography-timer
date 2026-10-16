@@ -7,6 +7,8 @@ title: Release Notes
 
 ## 1.0.0 — Unreleased
 
+This release includes the changes beta-tested in 0.9.1, documented below.
+
 Common changes:
 
 - **Your own camera list**
@@ -14,7 +16,9 @@ Common changes:
   - Each camera remembers its own film, base shutter, filters, and target shutter.
   - Reorder, hide, or delete cameras. Hidden cameras keep their settings.
 
-## 0.9.1 — Unreleased
+## 0.9.1 — Beta tested; included in 1.0.0
+
+Retained here as beta testing history. These changes ship together in 1.0.0.
 
 Common changes:
 

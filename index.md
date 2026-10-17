@@ -33,6 +33,20 @@ Photography Timer is available now on iOS and Android.
 - Target shutter support
 - Multi-camera shooting timers
 
+## Screenshots
+
+{% include platform-toggle.html %}
+
+<div class="gallery">
+{% include shot.html name="home-shooting-z7" alt="Nikon Z7 with ND filters from a Filter Set and a CPL" caption="ND filters from a Filter Set and a CPL, with timers running" %}
+{% include shot.html name="home-shooting-gfx" alt="Fujifilm GFX100RF with two standard ND filters" caption="Standard ND filters matched to a target shutter" %}
+{% include shot.html name="home-shooting-503" alt="Hasselblad 503cx with film reciprocity correction" caption="Film reciprocity correction with ND and color filters" %}
+{% include shot.html name="home-filters" alt="Shooting filters from two Filter Sets" caption="Choose filters from your Filter Sets" %}
+{% include shot.html name="home-reciprocity" alt="Reciprocity details for RPX 400" caption="Reciprocity details with the published source data" %}
+{% include shot.html name="home-custom-film" alt="New custom film for Rollei RETRO 400S" caption="Add your own film with a reciprocity formula" %}
+{% include shot.html name="home-custom-film-preview" alt="Custom film reciprocity preview" caption="Preview the curve before you save it" %}
+</div>
+
 ## Film Data & Attribution
 
 Photography Timer includes selected official film reciprocity data derived from publicly available manufacturer publications and source references.

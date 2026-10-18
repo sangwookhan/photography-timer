@@ -43,6 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -311,19 +313,26 @@ fun ShootingApp(
         }
     }
 
-    var details by remember { mutableStateOf<com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState?>(null) }
-    var showAbout by remember { mutableStateOf(false) }
+    // The open destinations are saved so a recreation reopens them
+    // (SHELL-021/053). Details keeps only whether it is open; its content
+    // is derived again from the restored shooting state.
+    var detailsOpen by rememberSaveable { mutableStateOf(false) }
+    var details by remember {
+        mutableStateOf(if (detailsOpen) controller.detailsState() else null)
+    }
+    LaunchedEffect(details != null) { detailsOpen = details != null }
+    var showAbout by rememberSaveable { mutableStateOf(false) }
     // Filter management from the Settings menu: the shared inventory,
     // with no camera selection.
-    var showFilterManagement by remember { mutableStateOf(false) }
+    var showFilterManagement by rememberSaveable { mutableStateOf(false) }
     // Shooting Filters (FILTER-FLOW-002), opened from the Select Filters
     // button, the Plus Shooting filters action, and the mounted summary.
-    var showShootingFilters by remember { mutableStateOf(false) }
+    var showShootingFilters by rememberSaveable { mutableStateOf(false) }
     // The Filter Set whose editor is open above Shooting Filters; it reads
     // the inventory live so an edit inside it redraws the list.
-    var editedFilterSetId by remember { mutableStateOf<FilterSetId?>(null) }
+    var editedFilterSetId by rememberSaveable(stateSaver = FilterSetIdSaver) { mutableStateOf<FilterSetId?>(null) }
     val filterInventory by holder.filterInventory.collectAsStateWithLifecycle()
-    var showExactAlarmInfo by remember { mutableStateOf(false) }
+    var showExactAlarmInfo by rememberSaveable { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()
     // Exact alarms are gated + denied, so completion-alert reliability is
@@ -390,7 +399,7 @@ fun ShootingApp(
         lastRoom[0]?.let { sideRail = prefersRail(it) }
     }
     // The mini card a user tapped to open the full list, so it can be focused.
-    var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
+    var focusTimerId by rememberSaveable { mutableStateOf<java.util.UUID?>(null) }
     // A compact card (bottom strip or side rail) opens the full Timers list
     // focused on that timer, or unfocused for the overflow entry.
     val openTimers: (java.util.UUID?) -> Unit = { id ->
@@ -424,8 +433,15 @@ fun ShootingApp(
     // the sheet closes instead of leaving an empty list open. Tapping a
     // compact card is the only expand path.
     // Skipped while a notification open is pending, so the two don't fight.
+    // Only a real change counts: the presence last acted on is saved, so a
+    // recreation, which runs this effect again, leaves a restored open list
+    // open (SHELL-021).
+    var settledHasTimers by rememberSaveable { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(hasTimers) {
-        if (!pendingOpenTimers) scaffoldState.bottomSheetState.partialExpand()
+        if (settledHasTimers != hasTimers && !pendingOpenTimers) {
+            scaffoldState.bottomSheetState.partialExpand()
+        }
+        settledHasTimers = hasTimers
     }
 
     // Focus follows a newly started active timer so Clone (and a calculator
@@ -894,3 +910,9 @@ private fun ExactAlarmInfoDialog(onOpenSettings: () -> Unit, onDismiss: () -> Un
         },
     )
 }
+
+/** Saves a Filter Set id by its raw value. */
+private val FilterSetIdSaver = Saver<FilterSetId?, String>(
+    save = { it?.rawValue },
+    restore = { FilterSetId(it) },
+)

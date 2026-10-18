@@ -164,4 +164,52 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
             print("BUDGET_TOTALS \(style) total=\(budget.total) statusRegion=\(budget.statusRegion) picker=\(budget.picker) labelRow=\(budget.wheelLabelRow)")
         }
     }
+
+    // MARK: - Arrangement (SHELL-057/059)
+
+    private typealias Metrics = ExposureWorkspaceLayoutMetrics
+
+    /// Width at which two readable columns fit for a tier.
+    private func sideBySideWidth(_ style: ExposureWorkspaceMainLayoutStyle) -> CGFloat {
+        2 * Metrics.minimumColumnWidth + Metrics.columnGap + 2 * style.horizontalPadding
+    }
+
+    func testSingleColumnKeepsTheHeightOnlyTierWheneverATierFits() {
+        for style in [ExposureWorkspaceMainLayoutStyle.regular, .compact, .dense] {
+            let height = style.worstCaseContentBudget.total
+            let layout = Metrics.layout(forAvailableWidth: 1400, height: height)
+            XCTAssertEqual(layout, ExposureWorkspaceLayout(style: Metrics.style(forAvailableHeight: height), arrangement: .singleColumn))
+        }
+    }
+
+    func testSideBySideWhenNoSingleColumnFitsAndTwoColumnsDo() {
+        let height = ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total - 1
+        let regular = ExposureWorkspaceMainLayoutStyle.regular
+        XCTAssertLessThanOrEqual(regular.worstCaseContentBudget.sideBySideTotal, height, "The side-by-side budget is lower than the stacked one.")
+        XCTAssertEqual(
+            Metrics.layout(forAvailableWidth: sideBySideWidth(regular), height: height),
+            ExposureWorkspaceLayout(style: .regular, arrangement: .sideBySide)
+        )
+    }
+
+    func testNarrowWindowThatFitsNothingStaysDenseSingleColumn() {
+        let height = ExposureWorkspaceMainLayoutStyle.dense.worstCaseContentBudget.total - 1
+        let width = sideBySideWidth(.dense) - 1
+        XCTAssertEqual(
+            Metrics.layout(forAvailableWidth: width, height: height),
+            ExposureWorkspaceLayout(style: .dense, arrangement: .singleColumn)
+        )
+    }
+
+    func testSideBySideBudgetTakesTheTallerColumn() {
+        var budget = ExposureWorkspaceMainLayoutStyle.regular.worstCaseContentBudget
+        let inputs = budget.targetCard + budget.variableCard
+        // A result card taller than the inputs column sets the requirement.
+        budget.filmResultBlock = inputs + 50
+        XCTAssertEqual(
+            budget.sideBySideTotal,
+            budget.topPadding + budget.headerCard + max(inputs, budget.resultCard) + budget.resultSpacer + budget.bottomPadding,
+            accuracy: 0.001
+        )
+    }
 }

@@ -194,7 +194,11 @@ struct ExposureCalculatorScreen: View {
             let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
                 workspaceArea: geometry.size.height
             )
-            let style = layoutStyle(for: workspaceHeight)
+            let layout = ExposureWorkspaceLayoutMetrics.layout(
+                forAvailableWidth: geometry.size.width,
+                height: workspaceHeight
+            )
+            let style = layout.style
 
             ZStack(alignment: .bottom) {
                 Color(.systemGroupedBackground)
@@ -202,6 +206,7 @@ struct ExposureCalculatorScreen: View {
 
                 ExposureWorkspaceMainContent(
                     style: style,
+                    arrangement: layout.arrangement,
                     viewModel: viewModel,
                     availableHeight: workspaceHeight,
                     onToggleFilmSelector: {
@@ -635,14 +640,11 @@ struct ExposureCalculatorScreen: View {
         )
         isUtilityPageShowing = target == .utilityPage
     }
-
-    private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
-        ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: availableHeight)
-    }
 }
 
 private struct ExposureWorkspaceMainContent: View {
     let style: ExposureWorkspaceMainLayoutStyle
+    let arrangement: ExposureWorkspaceArrangement
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let availableHeight: CGFloat
     let onToggleFilmSelector: () -> Void
@@ -670,6 +672,7 @@ private struct ExposureWorkspaceMainContent: View {
                         pageState: viewModel.cameraSlotPageState(for: slotID),
                         viewModel: viewModel,
                         style: style,
+                        arrangement: arrangement,
                         onToggleFilmSelector: onToggleFilmSelector,
                         onShowFilmDetails: onShowFilmDetails,
                         onRequestRename: {
@@ -782,6 +785,7 @@ private struct CameraSlotCalculatorPage: View {
     let pageState: CameraSlotPageState
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let style: ExposureWorkspaceMainLayoutStyle
+    let arrangement: ExposureWorkspaceArrangement
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     /// Tap handler for the slot title rename affordance. Wired
@@ -804,7 +808,10 @@ private struct CameraSlotCalculatorPage: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ExposureWorkspacePageArrangement(
+            arrangement: arrangement,
+            resultSpacerMinLength: style.resultFlowSpacerMinLength
+        ) {
             HeaderView(
                 cameraSlotTitle: pageState.cameraDisplayName,
                 activeCameraSlotID: pageState.slotID,
@@ -832,7 +839,7 @@ private struct CameraSlotCalculatorPage: View {
             // and film selector), so it shares the priority of the
             // Target Shutter and result cards.
             .layoutPriority(1)
-
+        } inputs: {
             // Target Shutter goal row — sits between the film/profile
             // card and the Base Shutter / ND Filter controls because
             // the target is a shooting input, not a secondary read of
@@ -958,7 +965,7 @@ private struct CameraSlotCalculatorPage: View {
                     ),
                 style: style
             )
-
+        } results: {
             ResultSectionView(
                 isFilmWorkflowActive: pageState.isFilmWorkflowActive,
                 calculationResult: viewModel.calculationResult(forPage: pageState),
@@ -987,8 +994,6 @@ private struct CameraSlotCalculatorPage: View {
             // `ResultSectionView` keeps the 3-row film hierarchy
             // from being compressed past its inner clipShape.
             .layoutPriority(1)
-
-            Spacer(minLength: style.resultFlowSpacerMinLength)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .allowsHitTesting(pageState.isActive)

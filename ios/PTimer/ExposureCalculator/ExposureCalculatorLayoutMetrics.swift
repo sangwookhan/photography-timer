@@ -99,6 +99,63 @@ struct ExposureWorkspaceLayoutMetrics {
         }
         return .dense
     }
+
+    // MARK: - Arrangement
+
+    /// The narrowest readable input column: the smallest supported
+    /// iPhone width (375pt) less the page padding, where the filter
+    /// row, wheels and notation header were designed to fit. Side by
+    /// side needs two of these.
+    static let minimumColumnWidth: CGFloat = 343
+
+    /// Space between the inputs and results columns when side by side.
+    static let columnGap: CGFloat = 16
+
+    /// Arrangement and tier for the workspace room (SHELL-057/059).
+    /// The single column keeps the height-only tier choice whenever a
+    /// tier fits, so existing windows are unchanged. Otherwise, when
+    /// two readable columns fit the width, the inputs and results sit
+    /// side by side at the roomiest tier whose side-by-side budget fits
+    /// the height. When neither fits, the Dense single column is used
+    /// as before.
+    static func layout(forAvailableWidth width: CGFloat, height: CGFloat) -> ExposureWorkspaceLayout {
+        let tiers: [ExposureWorkspaceMainLayoutStyle] = [.regular, .compact, .dense]
+        for style in tiers where height >= style.worstCaseContentBudget.total {
+            return ExposureWorkspaceLayout(style: style, arrangement: .singleColumn)
+        }
+        for style in tiers
+        where width - 2 * style.horizontalPadding >= 2 * minimumColumnWidth + columnGap
+            && height >= style.worstCaseContentBudget.sideBySideTotal {
+            return ExposureWorkspaceLayout(style: style, arrangement: .sideBySide)
+        }
+        return ExposureWorkspaceLayout(style: .dense, arrangement: .singleColumn)
+    }
+}
+
+/// How a camera page places its inputs and results (SHELL-057/059).
+enum ExposureWorkspaceArrangement: Equatable {
+    /// Header, inputs and results stacked in one bounded column.
+    case singleColumn
+    /// Header across the top; the inputs and the results side by side
+    /// below it.
+    case sideBySide
+
+    /// Upper bound for the page width so it never stretches without
+    /// limit on a wide window.
+    var maximumWidth: CGFloat {
+        switch self {
+        case .singleColumn:
+            return 600
+        case .sideBySide:
+            return 1000
+        }
+    }
+}
+
+/// The tier and arrangement a camera page renders with.
+struct ExposureWorkspaceLayout: Equatable {
+    let style: ExposureWorkspaceMainLayoutStyle
+    let arrangement: ExposureWorkspaceArrangement
 }
 
 /// The complete worst-case visible content of one density tier
@@ -165,5 +222,11 @@ struct ExposureWorkspaceContentBudget: Equatable {
     /// The tier's eligibility requirement.
     var total: CGFloat {
         topPadding + headerCard + targetCard + variableCard + resultCard + resultSpacer + bottomPadding
+    }
+
+    /// The requirement when the inputs (Target Shutter and variable
+    /// cards) and the result card sit side by side under the header.
+    var sideBySideTotal: CGFloat {
+        topPadding + headerCard + max(targetCard + variableCard, resultCard) + resultSpacer + bottomPadding
     }
 }

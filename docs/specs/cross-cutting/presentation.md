@@ -66,6 +66,16 @@ compact presence, not folded into the shooting screen itself.
   These device outcomes are consequences of the derived budgets, not separate
   device-specific thresholds.
 
+### System-reserved areas and keyboard
+
+- **SHELL-051** — System bars, display cutouts, reserved camera regions,
+  and window controls shall not hide required content or interactive
+  targets without a way to reach and use them. Decorative backgrounds
+  may extend into system areas.
+- **SHELL-052** — When the keyboard is shown, the active input and its
+  required validation and commit/cancel actions shall remain reachable.
+  Resizing or scrolling to reach them shall not commit or discard input.
+
 ### Large text and constrained height
 
 - **SHELL-020** — Required shooting-flow controls and corrected-exposure

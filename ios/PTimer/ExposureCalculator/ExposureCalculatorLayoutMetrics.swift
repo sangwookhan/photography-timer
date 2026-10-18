@@ -17,7 +17,9 @@ enum ExposureWorkspaceLayoutDensity {
 /// marker-to-rail gap → timer preview rail → rail bottom margin.
 /// The rail footprint is reserved unconditionally so timer presence
 /// never reflows the camera workspace; only the rail's *contents*
-/// (`CompactTimerCardStripView`) are conditional.
+/// (`CompactTimerCardStripView`) are conditional. When the system side
+/// area holds the compact timers as a side rail instead, no strip band
+/// is reserved (WORKSPACE-032).
 ///
 /// The screen-level `GeometryReader` is hosted inside the default
 /// safe area, so `geometry.size.height` is already safe-area-trimmed
@@ -56,8 +58,11 @@ struct ExposureWorkspaceLayoutMetrics {
     /// Bottom-anchored y-offset of the page marker. The marker
     /// always sits above the rail's reserved band; its position is
     /// independent of timer presence.
-    static func pageMarkerBottomOffset() -> CGFloat {
-        timerStripBottomMargin
+    static func pageMarkerBottomOffset(withSideRail: Bool = false) -> CGFloat {
+        if withSideRail {
+            return timerStripBottomMargin
+        }
+        return timerStripBottomMargin
             + timerStripHeight
             + pageMarkerToStripGap
     }
@@ -76,9 +81,18 @@ struct ExposureWorkspaceLayoutMetrics {
     /// trimmed `workspaceArea` minus the unconditional bottom
     /// reservation. Safe-area insets are already excluded from
     /// `workspaceArea` and must not be subtracted again here.
-    static func availableMainContentHeight(workspaceArea: CGFloat) -> CGFloat {
-        workspaceArea - bottomReservation
+    static func availableMainContentHeight(workspaceArea: CGFloat, withSideRail: Bool = false) -> CGFloat {
+        workspaceArea - (withSideRail ? bottomReservationWithSideRail : bottomReservation)
     }
+
+    /// Reservation below the camera workspace when the compact timers sit
+    /// in a side rail: only the marker gap, the marker and the bottom
+    /// margin, so the rail's placement gives the page that height
+    /// (WORKSPACE-032).
+    static let bottomReservationWithSideRail: CGFloat =
+        timerStripBottomMargin
+        + pageMarkerHeight
+        + workspaceMarkerGap
 
     /// Minimum workspace budget at which the given density tier is
     /// allowed to render the page without overflowing required

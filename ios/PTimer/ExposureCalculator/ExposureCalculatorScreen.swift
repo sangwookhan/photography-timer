@@ -40,6 +40,8 @@ struct ExposureCalculatorScreen: View {
     /// The pager's trailing utility page is showing (transient; relaunch
     /// returns to the active camera, CAMERA-PAGER-007).
     @State private var isUtilityPageShowing = false
+    /// The window's reserved regions, for the side rail's placement.
+    @State private var reservedRegions = ReservedRegionSnapshot()
     /// Where camera management was opened from, to choose where closing
     /// it returns to.
     @State private var cameraManagementOrigin: CameraManagementOrigin = .settings
@@ -191,8 +193,19 @@ struct ExposureCalculatorScreen: View {
             // it as the workspace area without re-subtracting safe
             // insets. The ZStack below lives in the same trimmed
             // region; bottom paddings measure from its bottom edge.
+            // The system side area holds the compact timers when it is
+            // wide and long enough (WORKSPACE-032/034); the page then
+            // keeps the strip's height.
+            let contentFrame = geometry.frame(in: .global)
+            let sideRail = reservedRegions.window.isEmpty ? nil : CompactTimerRailPlacement.placement(
+                content: contentFrame,
+                window: reservedRegions.window,
+                reserved: reservedRegions.occlusions,
+                cardHeight: BottomSheetCompactDockMetrics.timerCardHeight
+            )
             let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-                workspaceArea: geometry.size.height
+                workspaceArea: geometry.size.height,
+                withSideRail: sideRail != nil
             )
             let layout = ExposureWorkspaceLayoutMetrics.layout(
                 forAvailableWidth: geometry.size.width,
@@ -203,6 +216,10 @@ struct ExposureCalculatorScreen: View {
             ZStack(alignment: .bottom) {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
+
+                ReservedRegionReader { reservedRegions = $0 }
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
 
                 ExposureWorkspaceMainContent(
                     style: style,
@@ -245,49 +262,84 @@ struct ExposureCalculatorScreen: View {
                     CameraSlotPagerIndicator(indicator: indicator)
                     .padding(
                         .bottom,
-                        ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
+                        ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(withSideRail: sideRail != nil)
                     )
                     .frame(maxWidth: .infinity)
                 }
 
-                // Running timer preview rail boundary. Always
-                // rendered so the area reads as a preview surface
-                // even when no cards are present.
-                TimerPreviewRailBackground()
-                    .padding(
-                        .bottom,
-                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
-                    )
-                    .frame(maxWidth: .infinity)
+                if let sideRail {
+                    if hasTimers {
+                        CompactTimerCardRailView(
+                            snapshot: snapshot,
+                            availableHeight: sideRail.height,
+                            cardWidth: sideRail.cardWidth,
+                            onItemTap: { id in
+                                Self.handleCompactCardTap(
+                                    id: id,
+                                    in: snapshot,
+                                    store: bottomSheetStateStore
+                                )
+                            },
+                            onOverflowTap: {
+                                Self.handleOverflowTap(
+                                    in: snapshot,
+                                    store: bottomSheetStateStore
+                                )
+                            },
+                            soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+                            onStopAlarm: { alarmPlayer.stop() }
+                        )
+                        .frame(width: sideRail.width)
+                        .padding(.top, sideRail.top - contentFrame.minY)
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: .infinity,
+                            alignment: sideRail.side == .trailing ? .topTrailing : .topLeading
+                        )
+                        // Into the side area beside the safe area.
+                        .offset(x: sideRail.side == .trailing ? sideRail.width : -sideRail.width)
+                        .allowsHitTesting(!isFilmSelectorPresented)
+                    }
+                } else {
+                    // Running timer preview rail boundary. Always
+                    // rendered so the area reads as a preview surface
+                    // even when no cards are present.
+                    TimerPreviewRailBackground()
+                        .padding(
+                            .bottom,
+                            ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
+                        )
+                        .frame(maxWidth: .infinity)
 
-                // Compact timer cards — rendered inside the rail
-                // band when timers exist.
-                if hasTimers {
-                    CompactTimerCardStripView(
-                        snapshot: snapshot,
-                        onItemTap: { id in
-                            Self.handleCompactCardTap(
-                                id: id,
-                                in: snapshot,
-                                store: bottomSheetStateStore
-                            )
-                        },
-                        onOverflowTap: {
-                            Self.handleOverflowTap(
-                                in: snapshot,
-                                store: bottomSheetStateStore
-                            )
-                        },
-                        soundingAlarmTimerID: alarmPlayer.soundingTimerID,
-                        onStopAlarm: { alarmPlayer.stop() }
-                    )
-                    .padding(
-                        .bottom,
-                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
-                    )
-                    .frame(maxWidth: .infinity)
-                    .allowsHitTesting(!isFilmSelectorPresented)
-                    .accessibilityIdentifier("main-screen-timer-strip-container")
+                    // Compact timer cards — rendered inside the rail
+                    // band when timers exist.
+                    if hasTimers {
+                        CompactTimerCardStripView(
+                            snapshot: snapshot,
+                            onItemTap: { id in
+                                Self.handleCompactCardTap(
+                                    id: id,
+                                    in: snapshot,
+                                    store: bottomSheetStateStore
+                                )
+                            },
+                            onOverflowTap: {
+                                Self.handleOverflowTap(
+                                    in: snapshot,
+                                    store: bottomSheetStateStore
+                                )
+                            },
+                            soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+                            onStopAlarm: { alarmPlayer.stop() }
+                        )
+                        .padding(
+                            .bottom,
+                            ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
+                        )
+                        .frame(maxWidth: .infinity)
+                        .allowsHitTesting(!isFilmSelectorPresented)
+                        .accessibilityIdentifier("main-screen-timer-strip-container")
+                    }
                 }
 
                 if isFilmSelectorPresented {

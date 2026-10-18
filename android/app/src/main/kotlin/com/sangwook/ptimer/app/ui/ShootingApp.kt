@@ -10,10 +10,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
@@ -392,12 +398,24 @@ fun ShootingApp(
         scope.launch { scaffoldState.bottomSheetState.partialExpand() }
     }
 
+    // The window draws behind the system bars (PTIMER-231): the peek keeps the
+    // mini cards above the navigation bar, the expanded list starts below the
+    // status or caption bar, and side bars or cutouts pad the content
+    // horizontally.
+    // systemBars covers the status, navigation and caption (window-control)
+    // bars, so a free-form window's title bar is reserved too.
+    val barsAndCutout = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+    val topInsets = barsAndCutout.only(WindowInsetsSides.Top)
+    val bottomInsets = barsAndCutout.only(WindowInsetsSides.Bottom)
+    val bottomInset = bottomInsets.asPaddingValues().calculateBottomPadding()
+    val sideInsets = barsAndCutout.only(WindowInsetsSides.Horizontal)
+
     // Timers live in a peeking bottom sheet so starting one adds it without
     // leaving the shooting surface (the sheet appears once any timer exists).
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (hasTimers) MiniTimerBarHeight else 0.dp,
+        sheetPeekHeight = if (hasTimers) MiniTimerBarHeight + bottomInset else 0.dp,
         sheetDragHandle = null,
         sheetContent = {
             if (expanded) {
@@ -408,7 +426,11 @@ fun ShootingApp(
                         onCollapse = { scope.launch { scaffoldState.bottomSheetState.partialExpand() } },
                         focusId = focusTimerId,
                         ndNotationMode = ndNotationMode,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(sideInsets)
+                            .windowInsetsPadding(topInsets),
+                        contentPadding = PaddingValues(bottom = bottomInset),
                         soundingAlarmId = soundingAlarmId,
                         onStopAlarm = { viewModel.stopAlarm() },
                     )
@@ -421,7 +443,10 @@ fun ShootingApp(
                             focusTimerId = id
                             scope.launch { scaffoldState.bottomSheetState.expand() }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(sideInsets)
+                            .windowInsetsPadding(bottomInsets),
                         soundingAlarmId = soundingAlarmId,
                         onStopAlarm = { viewModel.stopAlarm() },
                     )
@@ -430,13 +455,14 @@ fun ShootingApp(
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize()) {
-        // Apply + consume the status-bar inset here so the warning banner sits
-        // below the status bar; consuming it stops ShootingScreen's own Scaffold
-        // from insetting the top a second time.
+        // Apply + consume the top and side insets here so the warning banner sits
+        // below the status or caption bar; consuming them stops ShootingScreen's
+        // own Scaffold from insetting them a second time.
         Column(
             Modifier
                 .padding(innerPadding)
-                .windowInsetsPadding(WindowInsets.statusBars),
+                .windowInsetsPadding(topInsets)
+                .windowInsetsPadding(sideInsets),
         ) {
             ShootingScreen(
                     modifier = Modifier.weight(1f),
@@ -554,7 +580,8 @@ fun ShootingApp(
                 Box(
                     Modifier
                         .padding(innerPadding)
-                        .windowInsetsPadding(WindowInsets.statusBars),
+                        .windowInsetsPadding(topInsets)
+                        .windowInsetsPadding(sideInsets),
                 ) {
                     CappedFontScale {
                         ExactAlarmWarningBanner(

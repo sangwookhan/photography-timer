@@ -178,6 +178,7 @@ fun FullTimerList(
     focusId: UUID?,
     ndNotationMode: NDNotationMode = NDNotationMode.DEFAULT,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     soundingAlarmId: UUID? = null,
     onStopAlarm: () -> Unit = {},
 ) {
@@ -211,6 +212,7 @@ fun FullTimerList(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
+        contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Header with a leading close (X) that collapses the sheet to the peek.

@@ -176,6 +176,7 @@ fun ShootingScreen(
     reserveNavigationBarInset: Boolean = true,
     /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
     cameraActions: CameraManagementActions = CameraManagementActions.None,
+    onPageRoom: (ShootingPageRoom) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -337,6 +338,9 @@ fun ShootingScreen(
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 ShootingPageArrangement(
                     availableHeight = pageHeight,
+                    // Only the page being edited decides where the compact
+                    // timers go; neighbouring pages are display-only.
+                    onRoom = if (writesActiveSlot) onPageRoom else { _ -> },
                     header = {
                     // Header: camera name (tap to rename) + Reset.
                     Row(

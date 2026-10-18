@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -85,9 +87,13 @@ import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
 import com.sangwook.ptimer.app.ui.shooting.CameraManagementActions
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
+import com.sangwook.ptimer.app.ui.shooting.CompactTimerRailWidth
+import com.sangwook.ptimer.app.ui.shooting.PageSpace
+import com.sangwook.ptimer.app.ui.shooting.prefersSideRail
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBar
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBarHeight
+import com.sangwook.ptimer.app.ui.timer.MiniTimerRail
 import com.sangwook.ptimer.app.vm.FilterInventorySamples
 import com.sangwook.ptimer.app.vm.ShootingAppViewModel
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
@@ -330,9 +336,23 @@ fun ShootingApp(
     // (PTIMER-219: it only opens by tapping a compact card, never by
     // dragging).
     val expanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
+    // The Timers destination counts as open from the moment the sheet starts
+    // opening until it has fully closed; the side rail hides meanwhile.
+    val timersOpen = expanded ||
+        scaffoldState.bottomSheetState.targetValue == SheetValue.Expanded
+    // Bottom strip or trailing side rail for the compact summary, decided
+    // from the active page's room and content (WORKSPACE-032). Without timers
+    // there is no summary, so nothing is reserved.
+    var sideRail by remember { mutableStateOf(false) }
+    if (!hasTimers && sideRail) sideRail = false
+    val bottomStrip = hasTimers && !sideRail
+    // The page's room as measured with each placement, kept per window size
+    // so a placement that was tried and does not fit is not tried again.
+    val windowSize = LocalWindowInfo.current.containerSize
+    val measuredRooms = remember(windowSize) { arrayOfNulls<PageSpace>(2) }
     // The mini card a user tapped to open the full list, so it can be focused.
     var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
-    // A compact card opens the full Timers list
+    // A compact card (bottom strip or side rail) opens the full Timers list
     // focused on that timer, or unfocused for the overflow entry.
     val openTimers: (java.util.UUID?) -> Unit = { id ->
         focusTimerId = id
@@ -426,7 +446,7 @@ fun ShootingApp(
         // The sheet is only the full-screen Timers destination: it has no
         // peek and always holds the full list, so opening it slides the list
         // straight up (WORKSPACE-003/035). The compact summary is drawn below
-        // as a bottom strip.
+        // as a bottom strip or a side rail.
         sheetPeekHeight = 0.dp,
         sheetDragHandle = null,
         // The destination covers the whole window, however few timers it
@@ -462,12 +482,25 @@ fun ShootingApp(
         Column(
             Modifier
                 .padding(innerPadding)
-                .padding(bottom = if (hasTimers) MiniTimerBarHeight + bottomInset else 0.dp)
+                .padding(bottom = if (bottomStrip) MiniTimerBarHeight + bottomInset else 0.dp)
                 .windowInsetsPadding(topInsets)
                 .windowInsetsPadding(sideInsets),
         ) {
             ShootingScreen(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = if (sideRail) CompactTimerRailWidth else 0.dp),
+                    onPageRoom = { room ->
+                        measuredRooms[if (sideRail) 1 else 0] = PageSpace(room.width, room.height)
+                        if (hasTimers) {
+                            sideRail = prefersSideRail(
+                                bottom = measuredRooms[0],
+                                rail = measuredRooms[1],
+                                needed = room.needed,
+                                stripHeight = MiniTimerBarHeight,
+                            )
+                        }
+                    },
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
                     onNdWheelActive = controller::setNdWheelActive,
@@ -570,11 +603,11 @@ fun ShootingApp(
                     onOpenFilterManagement = { showFilterManagement = true },
                     showExactAlarmSettingsAction = exactAlarmWarningRelevant,
                     onOpenExactAlarmSettings = { showExactAlarmInfo = true },
-                    reserveNavigationBarInset = !hasTimers,
+                    reserveNavigationBarInset = !bottomStrip,
                     cameraActions = cameraActions,
                 )
         }
-            if (hasTimers) {
+            if (bottomStrip) {
                 // Drawn like the former sheet peek: same surface, shape and
                 // width limit, so phones look as before.
                 Surface(
@@ -598,6 +631,25 @@ fun ShootingApp(
                             onStopAlarm = { viewModel.stopAlarm() },
                         )
                     }
+                }
+            }
+            if (sideRail && !timersOpen) {
+                CappedFontScale(MaxMiniTimerFontScale) {
+                    MiniTimerRail(
+                        state = timerState,
+                        onOpen = openTimers,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(innerPadding)
+                            .windowInsetsPadding(topInsets)
+                            .windowInsetsPadding(sideInsets)
+                            .windowInsetsPadding(bottomInsets)
+                            .fillMaxHeight()
+                            .width(CompactTimerRailWidth)
+                            .padding(vertical = 8.dp),
+                        soundingAlarmId = soundingAlarmId,
+                        onStopAlarm = { viewModel.stopAlarm() },
+                    )
                 }
             }
             // Overlay, not part of the Column above: the calculator's

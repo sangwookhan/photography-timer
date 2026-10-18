@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -107,6 +108,9 @@ private val TimerListSidePadding = 16.dp
 /** The compact dock shows the top few timers across all statuses (iOS parity). */
 private const val MiniDockLimit = 3
 
+/** Height of a mini card and the overflow tile, in the strip and the rail. */
+private val MiniCardHeight = 116.dp
+
 /**
  * Bottom-strip content: a headerless, horizontally scrollable row of compact
  * portrait timer cards across ALL statuses — active first, then most-recent
@@ -170,6 +174,53 @@ fun MiniTimerBar(
         }
         if (overflow > 0) {
             item { MiniOverflowTile(overflow) { onOpen(null) } }
+        }
+    }
+}
+
+/** Space between the side rail's cards. */
+private val RailCardGap = 8.dp
+
+/**
+ * The compact summary as a trailing side rail (WORKSPACE-032..035): the same
+ * cards and order as the bottom strip, at most three of them, followed by the
+ * overflow entry for the rest. When the rail's height holds fewer complete
+ * cards, fewer are shown and the overflow counts the remainder; cards are
+ * never clipped or compressed, and the rail does not scroll.
+ */
+@Composable
+fun MiniTimerRail(
+    state: ShootingUiState,
+    onOpen: (UUID?) -> Unit,
+    modifier: Modifier = Modifier,
+    soundingAlarmId: UUID? = null,
+    onStopAlarm: () -> Unit = {},
+) {
+    val dock = state.active + state.history
+    val now = rememberPresentationNow(fallback = state.now, enabled = state.history.isNotEmpty())
+    BoxWithConstraints(modifier) {
+        val slots = ((maxHeight + RailCardGap) / (MiniCardHeight + RailCardGap)).toInt().coerceAtLeast(0)
+        val cardCount = if (dock.size <= minOf(MiniDockLimit, slots)) {
+            dock.size
+        } else {
+            minOf(MiniDockLimit, slots - 1).coerceAtLeast(0)
+        }
+        val shown = dock.take(cardCount)
+        val overflow = dock.size - shown.size
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(RailCardGap),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            shown.forEach { card ->
+                val alarmSounding = card.id == soundingAlarmId
+                MiniTimerCard(card, now, isAlarmSounding = alarmSounding) {
+                    if (alarmSounding) onStopAlarm() else onOpen(card.id)
+                }
+            }
+            if (overflow > 0 && slots > shown.size) {
+                MiniOverflowTile(overflow) { onOpen(null) }
+            }
         }
     }
 }
@@ -366,7 +417,7 @@ private val miniPauseIcon: ImageVector by lazy {
 }
 
 /**
- * Compact, display-only card for a timer in the bottom strip:
+ * Compact, display-only card for a timer in the bottom strip or side rail:
  * title + slot, the remaining countdown, and a paused hint. Tapping it expands
  * the sheet to [FullTimerList], where Pause/Resume/Cancel live.
  */
@@ -383,7 +434,7 @@ private fun MiniTimerCard(
     // [status dot+label · compact total cue] / big remaining (or relative
     // terminal) value / film cue / layered progress + slot badge at the foot.
     Card(
-        modifier = Modifier.width(96.dp).height(116.dp).clickable { onClick() },
+        modifier = Modifier.width(96.dp).height(MiniCardHeight).clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         // Alarm-sounding cue: tapping (handled by the caller) stops the alarm.
         colors = CardDefaults.cardColors(
@@ -564,7 +615,7 @@ private fun CompactBar(fraction: Float, fill: Color, track: Color) {
 @Composable
 private fun MiniOverflowTile(count: Int, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.width(86.dp).height(116.dp).clickable { onClick() },
+        modifier = Modifier.width(86.dp).height(MiniCardHeight).clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {

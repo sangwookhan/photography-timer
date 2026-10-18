@@ -31,8 +31,14 @@ data class ShootingContentHeights(val singleColumn: Dp, val sideBySide: Dp) {
     }
 }
 
+/**
+ * The room a camera page gets and the heights its content needs there,
+ * reported to the shell so it can choose the compact timer placement.
+ */
+data class ShootingPageRoom(val width: Dp, val height: Dp, val needed: ShootingContentHeights)
+
 /** Page side padding, shared by both arrangements. */
-private val PageSidePadding = 16.dp
+internal val PageSidePadding = 16.dp
 
 /** Space between the inputs and the results when they are stacked. */
 private val StackGap = 8.dp
@@ -89,7 +95,7 @@ fun shootingContentFits(arrangement: ShootingArrangement, height: Dp, needed: Sh
  * so the choice settles after one pass.
  *
  * [availableHeight] is the room above the compact timer presence. The page
- * reports its needed heights through [onContentHeights] so the shell can
+ * reports its room and needed heights through [onRoom] so the shell can
  * place the compact timers.
  */
 @Composable
@@ -99,9 +105,12 @@ fun ShootingPageArrangement(
     inputs: @Composable () -> Unit,
     results: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    onContentHeights: (ShootingContentHeights) -> Unit = {},
+    onRoom: (ShootingPageRoom) -> Unit = {},
 ) {
     var needed by remember { mutableStateOf(ShootingContentHeights.Unknown) }
+    // Last room reported, kept outside snapshot state so reporting the same
+    // room again neither recomposes nor loops.
+    val reported = remember { arrayOfNulls<ShootingPageRoom>(1) }
     Layout(
         content = {
             Box(Modifier.layoutId(Block.Header)) { header() }
@@ -126,11 +135,11 @@ fun ShootingPageArrangement(
                 val h = headerM.measure(exactWidth(columnWidth))
                 val i = inputsM.measure(exactWidth(columnWidth))
                 val r = resultsM.measure(exactWidth(columnWidth))
-                updateNeeded(h.height, i.height, r.height, gap) {
-                    if (it != needed) {
-                        needed = it
-                        onContentHeights(it)
-                    }
+                updateNeeded(h.height, i.height, r.height, gap) { if (it != needed) needed = it }
+                val room = ShootingPageRoom(width.toDp(), availableHeight, needed)
+                if (reported[0] != room) {
+                    reported[0] = room
+                    onRoom(room)
                 }
                 val total = h.height + i.height + gap + r.height
                 val x = (width - columnWidth) / 2
@@ -146,11 +155,11 @@ fun ShootingPageArrangement(
                 val h = headerM.measure(exactWidth(pairWidth))
                 val i = inputsM.measure(exactWidth(columnWidth))
                 val r = resultsM.measure(exactWidth(columnWidth))
-                updateNeeded(h.height, i.height, r.height, gap) {
-                    if (it != needed) {
-                        needed = it
-                        onContentHeights(it)
-                    }
+                updateNeeded(h.height, i.height, r.height, gap) { if (it != needed) needed = it }
+                val room = ShootingPageRoom(width.toDp(), availableHeight, needed)
+                if (reported[0] != room) {
+                    reported[0] = room
+                    onRoom(room)
                 }
                 val total = h.height + maxOf(i.height, r.height)
                 val x = (width - pairWidth) / 2

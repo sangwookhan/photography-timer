@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -246,14 +248,17 @@ fun ShootingScreen(
     // own caps.
     CappedFontScale(maxFontScale = 1f) {
     Scaffold(
-        modifier = modifier,
-        contentWindowInsets = if (reserveNavigationBarInset) {
-            ScaffoldDefaults.contentWindowInsets
+        // The parent already insets the status bar, and while the peek covers
+        // the navigation bar nothing is left to reserve. That is expressed by
+        // consuming the navigation bar, not by passing other insets: Scaffold
+        // rebuilds its insets when they change and would then reserve the
+        // already consumed status bar again.
+        modifier = if (reserveNavigationBarInset) {
+            modifier
         } else {
-            // The parent already insets the status bar and the peek covers the
-            // navigation bar, so nothing is left to reserve here.
-            WindowInsets(0, 0, 0, 0)
+            modifier.consumeWindowInsets(WindowInsets.navigationBars)
         },
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (displayedCount == 0) {

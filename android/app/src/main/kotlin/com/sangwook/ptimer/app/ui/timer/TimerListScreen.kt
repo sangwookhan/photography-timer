@@ -98,7 +98,7 @@ import java.util.UUID
 
 private val calc = ExposureCalculator()
 
-/** Fixed peek-bar height: tall enough to show one mini card without clipping. */
+/** Fixed bottom-strip height: tall enough to show one mini card without clipping. */
 val MiniTimerBarHeight = 128.dp
 
 /** Side padding of the expanded timer list's cards. */
@@ -108,13 +108,13 @@ private val TimerListSidePadding = 16.dp
 private const val MiniDockLimit = 3
 
 /**
- * Peek-state content: a headerless, horizontally scrollable row of compact
+ * Bottom-strip content: a headerless, horizontally scrollable row of compact
  * portrait timer cards across ALL statuses — active first, then most-recent
  * history — newest first (left), capped with a "+N / View all" overflow tile.
  * Showing terminal timers too means a just-finished or very short timer stays
  * briefly visible instead of vanishing the instant it leaves the active set
  * (matches the iOS compact dock). Cards are display-only; tapping one (or the
- * overflow) expands the sheet to the full list, where the controls live.
+ * overflow) opens the full list, where the controls live.
  */
 @Composable
 fun MiniTimerBar(
@@ -224,7 +224,7 @@ fun FullTimerList(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Header with a leading close (X) that collapses the sheet to the peek.
+        // Header with a leading close (X) that closes the full list.
         // Material places the dismiss control top-left; the trailing side is for
         // actions (History's Clear) only.
         // The same top app bar as the app's other full-screen destinations, so
@@ -255,7 +255,7 @@ fun FullTimerList(
         if (state.active.isEmpty() && state.history.isEmpty()) {
             item { EmptyState() }
         }
-        // Active timers as full cards, newest first to match the peek order.
+        // Active timers as full cards, newest first to match the compact order.
         if (state.active.isNotEmpty()) {
             items(active, key = { it.id }) { card ->
                 TimerCard(
@@ -366,7 +366,7 @@ private val miniPauseIcon: ImageVector by lazy {
 }
 
 /**
- * Compact, display-only card for an active timer in the bottom-sheet peek row:
+ * Compact, display-only card for a timer in the bottom strip:
  * title + slot, the remaining countdown, and a paused hint. Tapping it expands
  * the sheet to [FullTimerList], where Pause/Resume/Cancel live.
  */

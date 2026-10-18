@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -46,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.shooting.ShootingFiltersActions
@@ -322,13 +326,18 @@ fun ShootingApp(
     val showExactAlarmWarning = exactAlarmWarningRelevant &&
         timerState.active.isNotEmpty() && !exactAlarmWarningDismissed
 
-    // Peek shows the compact MiniTimerBar; the full list appears only once the
-    // sheet is expanded. No drag handle is rendered (PTIMER-219: the sheet
-    // only opens by tapping a mini card, never by dragging), so the peek is
-    // just the bar's own height with nothing extra reserved above it.
+    // The sheet holds the full list only. No drag handle is rendered
+    // (PTIMER-219: it only opens by tapping a compact card, never by
+    // dragging).
     val expanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
     // The mini card a user tapped to open the full list, so it can be focused.
     var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
+    // A compact card opens the full Timers list
+    // focused on that timer, or unfocused for the overflow entry.
+    val openTimers: (java.util.UUID?) -> Unit = { id ->
+        focusTimerId = id
+        scope.launch { scaffoldState.bottomSheetState.expand() }
+    }
 
     // Opened from a timer notification: expand straight to the full list once
     // timers are available (restore may land just after the tap). One-shot so a
@@ -351,11 +360,10 @@ fun ShootingApp(
         }
     }
 
-    // Keep the sheet at its partial (mini) anchor whenever the timer set appears
-    // or empties. On the first timer this shows only the compact peek instead of
-    // settling to the full list (the peek height grows from 0). On clearing the
-    // last timer it collapses the sheet to the now-zero peek instead of leaving
-    // an empty expanded list open. Tapping a mini card is the only expand path.
+    // Keep the sheet closed whenever the timer set appears or empties. On the
+    // first timer only the compact summary shows; on clearing the last timer
+    // the sheet closes instead of leaving an empty list open. Tapping a
+    // compact card is the only expand path.
     // Skipped while a notification open is pending, so the two don't fight.
     LaunchedEffect(hasTimers) {
         if (!pendingOpenTimers) scaffoldState.bottomSheetState.partialExpand()
@@ -398,8 +406,8 @@ fun ShootingApp(
         scope.launch { scaffoldState.bottomSheetState.partialExpand() }
     }
 
-    // The window draws behind the system bars (PTIMER-231): the peek keeps the
-    // mini cards above the navigation bar, the expanded list starts below the
+    // The window draws behind the system bars (PTIMER-231): the compact
+    // cards stay above the navigation bar, the expanded list starts below the
     // status or caption bar, and side bars or cutouts pad the content
     // horizontally.
     // systemBars covers the status, navigation and caption (window-control)
@@ -410,15 +418,23 @@ fun ShootingApp(
     val bottomInset = bottomInsets.asPaddingValues().calculateBottomPadding()
     val sideInsets = barsAndCutout.only(WindowInsetsSides.Horizontal)
 
-    // Timers live in a peeking bottom sheet so starting one adds it without
-    // leaving the shooting surface (the sheet appears once any timer exists).
+    // Starting a timer adds it to the compact summary without leaving the
+    // shooting surface; the full Timers list lives in a bottom sheet.
     Box(Modifier.fillMaxSize()) {
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
-        sheetPeekHeight = if (hasTimers) MiniTimerBarHeight + bottomInset else 0.dp,
+        // The sheet is only the full-screen Timers destination: it has no
+        // peek and always holds the full list, so opening it slides the list
+        // straight up (WORKSPACE-003/035). The compact summary is drawn below
+        // as a bottom strip.
+        sheetPeekHeight = 0.dp,
         sheetDragHandle = null,
+        // The destination covers the whole window, however few timers it
+        // lists and however wide the window is (WORKSPACE-001); the list
+        // itself stays bounded and centered.
+        sheetMaxWidth = Dp.Unspecified,
         sheetContent = {
-            if (expanded) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 CappedFontScale(MaxTimersFontScale) {
                     FullTimerList(
                         state = timerState,
@@ -427,26 +443,11 @@ fun ShootingApp(
                         focusId = focusTimerId,
                         ndNotationMode = ndNotationMode,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .windowInsetsPadding(sideInsets)
-                            .windowInsetsPadding(topInsets),
+                            .windowInsetsPadding(topInsets)
+                            .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
+                            .fillMaxHeight(),
                         contentPadding = PaddingValues(bottom = bottomInset),
-                        soundingAlarmId = soundingAlarmId,
-                        onStopAlarm = { viewModel.stopAlarm() },
-                    )
-                }
-            } else {
-                CappedFontScale(MaxMiniTimerFontScale) {
-                    MiniTimerBar(
-                        state = timerState,
-                        onOpen = { id ->
-                            focusTimerId = id
-                            scope.launch { scaffoldState.bottomSheetState.expand() }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(sideInsets)
-                            .windowInsetsPadding(bottomInsets),
                         soundingAlarmId = soundingAlarmId,
                         onStopAlarm = { viewModel.stopAlarm() },
                     )
@@ -461,6 +462,7 @@ fun ShootingApp(
         Column(
             Modifier
                 .padding(innerPadding)
+                .padding(bottom = if (hasTimers) MiniTimerBarHeight + bottomInset else 0.dp)
                 .windowInsetsPadding(topInsets)
                 .windowInsetsPadding(sideInsets),
         ) {
@@ -572,6 +574,32 @@ fun ShootingApp(
                     cameraActions = cameraActions,
                 )
         }
+            if (hasTimers) {
+                // Drawn like the former sheet peek: same surface, shape and
+                // width limit, so phones look as before.
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
+                        .fillMaxWidth(),
+                    shape = BottomSheetDefaults.ExpandedShape,
+                    color = BottomSheetDefaults.ContainerColor,
+                    shadowElevation = BottomSheetDefaults.Elevation,
+                ) {
+                    CappedFontScale(MaxMiniTimerFontScale) {
+                        MiniTimerBar(
+                            state = timerState,
+                            onOpen = openTimers,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(sideInsets)
+                                .windowInsetsPadding(bottomInsets),
+                            soundingAlarmId = soundingAlarmId,
+                            onStopAlarm = { viewModel.stopAlarm() },
+                        )
+                    }
+                }
+            }
             // Overlay, not part of the Column above: the calculator's
             // non-scrolling layout must not reflow while the banner is up
             // (PTIMER-219). It floats over the header until dismissed instead
@@ -612,7 +640,7 @@ fun ShootingApp(
     }
 
         // Reciprocity details is a focused full-screen overlay above the timer
-        // bottom sheet, so the timer peek isn't reachable from within it.
+        // bottom sheet, so the compact timers aren't reachable from within it.
         details?.let { activeDetails ->
             CappedFontScale(MaxDetailsFontScale) {
                 Surface(modifier = Modifier.fillMaxSize()) {

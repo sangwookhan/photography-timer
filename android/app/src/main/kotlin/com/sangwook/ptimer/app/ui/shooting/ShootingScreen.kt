@@ -170,9 +170,9 @@ fun ShootingScreen(
     onOpenFilterManagement: () -> Unit,
     showExactAlarmSettingsAction: Boolean,
     onOpenExactAlarmSettings: () -> Unit,
-    // False while the timer peek is showing: the peek already sits over the
-    // navigation bar, so reserving its inset here left a dead band between
-    // the page dots and the peek and cost the result card that height.
+    // False while the bottom timer strip is showing: the strip already sits
+    // over the navigation bar, so reserving its inset here left a dead band
+    // between the page dots and the strip and cost the result card that height.
     reserveNavigationBarInset: Boolean = true,
     /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
     cameraActions: CameraManagementActions = CameraManagementActions.None,
@@ -248,7 +248,7 @@ fun ShootingScreen(
     // own caps.
     CappedFontScale(maxFontScale = 1f) {
     Scaffold(
-        // The parent already insets the status bar, and while the peek covers
+        // The parent already insets the status bar, and while the strip covers
         // the navigation bar nothing is left to reserve. That is expressed by
         // consuming the navigation bar, not by passing other insets: Scaffold
         // rebuilds its insets when they change and would then reserve the
@@ -591,7 +591,7 @@ fun ShootingScreen(
                     position = indicator.position,
                 )
             }
-            // The peek sits right below; the gap is only for the bare screen.
+            // The strip sits right below; the gap is only otherwise.
             if (reserveNavigationBarInset) Spacer(Modifier.height(8.dp))
         }
     }

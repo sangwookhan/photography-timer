@@ -158,6 +158,7 @@ struct ShootingFilterSelectionView: View {
                     },
                     onDismiss: { editingItem = nil }
                 )
+                .boundedTaskPresentation()
             }
             // Add Filter Set adds the set to the inventory and returns
             // here; it selects and mounts nothing (FILTER-FLOW-005).
@@ -170,6 +171,7 @@ struct ShootingFilterSelectionView: View {
                     },
                     onCancel: { creationDraft = nil }
                 )
+                .boundedTaskPresentation()
             }
             .navigationDestination(item: $editedFilterSetID) { filterSetID in
                 FilterSetDetailView(viewModel: viewModel, filterSetID: filterSetID)

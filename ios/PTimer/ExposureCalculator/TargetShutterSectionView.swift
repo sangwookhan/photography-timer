@@ -71,6 +71,7 @@ struct TargetShutterSectionView: View {
             // readout tracks the wheels live during a spin. The kit stays
             // UIKit-free; the observer implementation lives in the app.
             .wheelTelemetry(.uiKitWheelObserver)
+            .boundedTaskPresentation()
         }
     }
 

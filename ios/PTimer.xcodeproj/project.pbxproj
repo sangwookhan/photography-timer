@@ -41,6 +41,7 @@
 		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
 		A00000000000000000000821 /* ExposureWorkspacePageArrangement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */; };
 		A00000000000000000000841 /* CompactTimerRailPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000840 /* CompactTimerRailPlacement.swift */; };
+		A00000000000000000000861 /* BoundedTaskPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000860 /* BoundedTaskPresentation.swift */; };
 		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
 		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
 		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
@@ -171,6 +172,7 @@
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
 		A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangement.swift; sourceTree = "<group>"; };
 		A00000000000000000000840 /* CompactTimerRailPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacement.swift; sourceTree = "<group>"; };
+		A00000000000000000000860 /* BoundedTaskPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedTaskPresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
 		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
 		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
@@ -334,6 +336,7 @@
 				A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */,
 				A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */,
 				A00000000000000000000840 /* CompactTimerRailPlacement.swift */,
+				A00000000000000000000860 /* BoundedTaskPresentation.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
 				A0000000000000000000014C /* NDWheelPickerView.swift */,
 				A00000000000000000000209 /* CameraSlot */,
@@ -713,6 +716,7 @@
 				A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */,
 				A00000000000000000000821 /* ExposureWorkspacePageArrangement.swift in Sources */,
 				A00000000000000000000841 /* CompactTimerRailPlacement.swift in Sources */,
+				A00000000000000000000861 /* BoundedTaskPresentation.swift in Sources */,
 				A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */,
 				A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */,
 				A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */,

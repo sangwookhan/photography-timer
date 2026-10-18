@@ -436,22 +436,26 @@ struct ExposureCalculatorScreen: View {
                     set: { if !$0 { presentedFilmDetails = nil } }
                 )
             ) {
-                if let details = presentedFilmDetails {
-                    FilmModeDetailsSheet(
-                        details: details,
-                        onSelectProfile: { profileID in
-                            viewModel.selectProfileVariant(profileID: profileID)
-                            // Re-read the recomputed snapshot so the open
-                            // sheet reflects the newly active profile/model.
-                            presentedFilmDetails = viewModel.filmModeDetailsDisplayState
-                        }
-                    )
+                Group {
+                    if let details = presentedFilmDetails {
+                        FilmModeDetailsSheet(
+                            details: details,
+                            onSelectProfile: { profileID in
+                                viewModel.selectProfileVariant(profileID: profileID)
+                                // Re-read the recomputed snapshot so the open
+                                // sheet reflects the newly active profile/model.
+                                presentedFilmDetails = viewModel.filmModeDetailsDisplayState
+                            }
+                        )
+                    }
                 }
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isShootingFilterSelectionPresented) {
                 ShootingFilterSelectionView(viewModel: viewModel) {
                     isShootingFilterSelectionPresented = false
                 }
+                .boundedTaskPresentation()
             }
             .sheet(item: $slotIDPendingRename) { slotID in
                 CameraSlotRenameSheet(
@@ -461,11 +465,13 @@ struct ExposureCalculatorScreen: View {
                         viewModel.renameCamera(slotID, to: newName)
                     }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isCameraManagementPresented, onDismiss: handleCameraManagementDismissed) {
                 CameraManagementView(viewModel: viewModel) {
                     isCameraManagementPresented = false
                 }
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isCustomFilmEditorPresented, onDismiss: presentPendingFormulaSeed) {
                 CustomFilmEditorView(
@@ -487,9 +493,11 @@ struct ExposureCalculatorScreen: View {
                         isCustomFilmEditorPresented = false
                     }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(item: $customFilmBeingEdited, onDismiss: presentPendingFormulaSeed) { editing in
                 customFilmEditorSheet(for: editing)
+                .boundedTaskPresentation()
             }
             .sheet(item: $customFormulaSeed) { seed in
                 CustomFilmEditorView(
@@ -509,14 +517,17 @@ struct ExposureCalculatorScreen: View {
                         customFormulaSeed = nil
                     }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isAboutPresented) {
                 PTimerAboutView()
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isFilterManagementPresented) {
                 FilterManagementView(viewModel: viewModel) {
                     isFilterManagementPresented = false
                 }
+                .boundedTaskPresentation()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in

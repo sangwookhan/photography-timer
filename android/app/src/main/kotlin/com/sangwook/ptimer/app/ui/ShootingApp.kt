@@ -90,6 +90,7 @@ import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
 import com.sangwook.ptimer.app.ui.shooting.CompactTimerRailWidth
 import com.sangwook.ptimer.app.ui.shooting.PageSpace
 import com.sangwook.ptimer.app.ui.shooting.prefersSideRail
+import com.sangwook.ptimer.app.ui.shooting.rememberWindowFold
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBar
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBarHeight
@@ -349,6 +350,8 @@ fun ShootingApp(
     // The page's room as measured with each placement, kept per window size
     // so a placement that was tried and does not fit is not tried again.
     val windowSize = LocalWindowInfo.current.containerSize
+    // A half-open or separating fold places the page around it (SHELL-061).
+    val fold = rememberWindowFold()
     val measuredRooms = remember(windowSize) { arrayOfNulls<PageSpace>(2) }
     // The mini card a user tapped to open the full list, so it can be focused.
     var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
@@ -490,6 +493,7 @@ fun ShootingApp(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = if (sideRail) CompactTimerRailWidth else 0.dp),
+                    fold = fold,
                     onPageRoom = { room ->
                         measuredRooms[if (sideRail) 1 else 0] = PageSpace(room.width, room.height)
                         if (hasTimers) {

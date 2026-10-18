@@ -177,6 +177,8 @@ fun ShootingScreen(
     /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
     cameraActions: CameraManagementActions = CameraManagementActions.None,
     onPageRoom: (ShootingPageRoom) -> Unit = {},
+    /** The fold dividing the window, if any (SHELL-061/062). */
+    fold: WindowFold? = null,
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -338,10 +340,13 @@ fun ShootingScreen(
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 ShootingPageArrangement(
                     availableHeight = pageHeight,
+                    fold = fold,
                     // Only the page being edited decides where the compact
                     // timers go; neighbouring pages are display-only.
                     onRoom = if (writesActiveSlot) onPageRoom else { _ -> },
-                    header = {
+                    // The header carries the camera and film context, which
+                    // stays together above a tabletop fold (SHELL-062).
+                    header = { Column {
                     // Header: camera name (tap to rename) + Reset.
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -405,8 +410,6 @@ fun ShootingScreen(
                         }
                     }
 
-                    },
-                    inputs = { Column {
                     // Film selector. No standalone "Film" label: the "No
                     // film" placeholder value already names it for a
                     // first-time user, and once a film is picked the row's
@@ -459,7 +462,8 @@ fun ShootingScreen(
                             }
                         }
                     }
-
+                    } },
+                    inputs = { Column {
                     Spacer(Modifier.height(8.dp))
 
                     // Target Shutter row (value + stop-diff + ▶), tap to edit.

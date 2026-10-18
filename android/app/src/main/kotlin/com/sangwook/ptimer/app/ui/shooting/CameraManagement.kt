@@ -87,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.sangwook.ptimer.app.ui.BoundedModalSurface
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.vm.CameraAnnouncement
@@ -267,7 +268,7 @@ internal fun CameraManagementScreen(
         ),
     ) {
         CappedFontScale {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            BoundedModalSurface {
                 Scaffold(
                     topBar = {
                         TopAppBar(

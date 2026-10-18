@@ -733,7 +733,7 @@ fun ShootingApp(
         // bottom sheet, so the compact timers aren't reachable from within it.
         details?.let { activeDetails ->
             CappedFontScale(MaxDetailsFontScale) {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                BoundedModalSurface {
                     ReciprocityDetailsScreen(
                         state = activeDetails,
                         onBack = { details = null },

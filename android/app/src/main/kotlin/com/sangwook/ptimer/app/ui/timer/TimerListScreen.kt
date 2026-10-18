@@ -53,6 +53,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
@@ -95,6 +100,9 @@ private val calc = ExposureCalculator()
 
 /** Fixed peek-bar height: tall enough to show one mini card without clipping. */
 val MiniTimerBarHeight = 128.dp
+
+/** Side padding of the expanded timer list's cards. */
+private val TimerListSidePadding = 16.dp
 
 /** The compact dock shows the top few timers across all statuses (iOS parity). */
 private const val MiniDockLimit = 3
@@ -170,6 +178,7 @@ fun MiniTimerBar(
  * Expanded-state content: full Active and History sections with the complete
  * card controls and a Close action. Shown only when the sheet is expanded.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullTimerList(
     state: ShootingUiState,
@@ -211,24 +220,37 @@ fun FullTimerList(
         state = listState,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = TimerListSidePadding),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Header with a leading close (X) that collapses the sheet to the peek.
         // Material places the dismiss control top-left; the trailing side is for
         // actions (History's Clear) only.
+        // The same top app bar as the app's other full-screen destinations, so
+        // "Timers" reads as the screen title rather than a section label. It
+        // spans the list's side padding like a screen-wide bar.
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onCollapse) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
-                }
-                SectionHeader(stringResource(R.string.timers_header))
-            }
+            TopAppBar(
+                title = { Text(stringResource(R.string.timers_header)) },
+                navigationIcon = {
+                    IconButton(onClick = onCollapse) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
+                    }
+                },
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                modifier = Modifier.layout { measurable, constraints ->
+                    val bleed = TimerListSidePadding.roundToPx() * 2
+                    val placeable = measurable.measure(
+                        constraints.copy(
+                            minWidth = constraints.maxWidth + bleed,
+                            maxWidth = constraints.maxWidth + bleed,
+                        ),
+                    )
+                    layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed / 2, 0) }
+                },
+            )
         }
         if (state.active.isEmpty() && state.history.isEmpty()) {
             item { EmptyState() }

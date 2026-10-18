@@ -212,4 +212,65 @@ final class BottomSheetWorkspaceLayoutMetricsTests: XCTestCase {
             accuracy: 0.001
         )
     }
+
+    // MARK: - Fold-aligned layout (SHELL-061/062)
+
+    func testBookAroundAVerticalFoldUsesTheReportedFoldPosition() {
+        let fold = CGRect(x: 460, y: 0, width: 80, height: 900)
+        let layout = Metrics.foldLayout(width: 1000, height: 900, fold: fold)
+        let style = ExposureWorkspaceMainLayoutStyle.regular
+        XCTAssertEqual(layout, ExposureWorkspaceLayout(
+            style: style,
+            arrangement: .book(leadingEnd: 460 - style.horizontalPadding, trailingStart: 540 - style.horizontalPadding)
+        ))
+    }
+
+    func testNoBookWhenOneSideIsNarrowerThanAReadableColumn() {
+        let fold = CGRect(x: 300, y: 0, width: 80, height: 900)
+        XCTAssertNil(Metrics.foldLayout(width: 1000, height: 900, fold: fold))
+    }
+
+    func testTabletopPutsTheInputsBelowAHorizontalFold() {
+        let budget = ExposureWorkspaceMainLayoutStyle.regular.worstCaseContentBudget
+        let style = ExposureWorkspaceMainLayoutStyle.regular
+        let foldTop = style.topPadding + budget.headerCard + budget.resultCard
+        let fold = CGRect(x: 0, y: foldTop, width: 700, height: 80)
+        let height = foldTop + 80 + budget.targetCard + budget.variableCard + style.bottomPadding
+        XCTAssertEqual(
+            Metrics.foldLayout(width: 700, height: height, fold: fold),
+            ExposureWorkspaceLayout(style: .regular, arrangement: .tabletop(lowerStart: foldTop + 80 - style.topPadding))
+        )
+    }
+
+    func testNoTabletopWhenTheInputsDoNotFitBelowTheFold() {
+        let fold = CGRect(x: 0, y: 600, width: 700, height: 80)
+        XCTAssertNil(Metrics.foldLayout(width: 700, height: 800, fold: fold))
+    }
+
+    func testAFoldOutsideThePageIsIgnored() {
+        XCTAssertNil(Metrics.foldLayout(width: 700, height: 800, fold: CGRect(x: 0, y: 900, width: 700, height: 40)))
+        XCTAssertNil(Metrics.foldLayout(width: 700, height: 800, fold: CGRect(x: 720, y: 0, width: 40, height: 800)))
+    }
+
+    /// The results column has its own minimum, derived from the result row
+    /// (label, widest primary at its smallest scale, seconds, start button,
+    /// paddings), independent of the input column's 343pt.
+    func testResultColumnMinimumIsDerivedFromTheResultRow() {
+        for style in [ExposureWorkspaceMainLayoutStyle.regular, .compact, .dense] {
+            let minimum = style.minimumResultColumnWidth
+            let fixed = 2 * style.sectionCardPadding + 2 * style.resultBlockPadding
+                + style.resultLabelColumnWidth + style.resultSecondsColumnWidth + style.timerActionSize + 24
+            XCTAssertGreaterThan(minimum, fixed, "\(style): the primary needs room beyond the fixed columns.")
+        }
+    }
+
+    /// iPhone Duo inner display, half-folded in landscape, as measured: the
+    /// 867x617pt workspace beside the side area, with the fold and its
+    /// system margins at x = 435.5...515.5pt.
+    func testDuoHalfFoldedLandscapeUsesBook() {
+        let layout = Metrics.foldLayout(width: 867, height: 617, fold: CGRect(x: 435.5, y: 0, width: 80, height: 669))
+        guard case .book = layout?.arrangement else {
+            return XCTFail("Expected book, got \(String(describing: layout))")
+        }
+    }
 }

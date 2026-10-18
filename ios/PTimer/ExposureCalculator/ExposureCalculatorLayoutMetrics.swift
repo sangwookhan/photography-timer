@@ -144,24 +144,69 @@ struct ExposureWorkspaceLayoutMetrics {
         }
         return ExposureWorkspaceLayout(style: .dense, arrangement: .singleColumn)
     }
+
+    /// The fold-aligned layout for a workspace of `width` x `height`
+    /// with an active `fold` in the same coordinates (SHELL-061/062), or
+    /// nil when the fold does not cross the page or the content does not
+    /// fit beside it at any tier. The fold rectangle already includes
+    /// the margins the system asks content to keep. Book: header and
+    /// inputs before a vertical fold, results after it; each side needs
+    /// its own group's minimum width. Tabletop: header
+    /// and results above a horizontal fold, inputs below it.
+    static func foldLayout(width: CGFloat, height: CGFloat, fold: CGRect) -> ExposureWorkspaceLayout? {
+        let tiers: [ExposureWorkspaceMainLayoutStyle] = [.regular, .compact, .dense]
+        for style in tiers {
+            let budget = style.worstCaseContentBudget
+            let pageWidth = width - 2 * style.horizontalPadding
+            let pageHeight = height - style.topPadding - style.bottomPadding
+            let local = fold.offsetBy(dx: -style.horizontalPadding, dy: -style.topPadding)
+            if local.height >= local.width {
+                guard local.minX > 0, local.maxX < pageWidth,
+                      local.minX >= minimumColumnWidth,
+                      pageWidth - local.maxX >= style.minimumResultColumnWidth,
+                      budget.headerCard + budget.targetCard + budget.variableCard <= pageHeight,
+                      budget.resultCard <= pageHeight else { continue }
+                return ExposureWorkspaceLayout(
+                    style: style,
+                    arrangement: .book(leadingEnd: local.minX, trailingStart: local.maxX)
+                )
+            }
+            guard local.minY > 0, local.maxY < pageHeight,
+                  pageWidth >= minimumColumnWidth,
+                  budget.headerCard + budget.resultCard <= local.minY,
+                  local.maxY + budget.targetCard + budget.variableCard <= pageHeight else { continue }
+            return ExposureWorkspaceLayout(style: style, arrangement: .tabletop(lowerStart: local.maxY))
+        }
+        return nil
+    }
 }
 
-/// How a camera page places its inputs and results (SHELL-057/059).
+/// How a camera page places its inputs and results (SHELL-057/059/062).
 enum ExposureWorkspaceArrangement: Equatable {
     /// Header, inputs and results stacked in one bounded column.
     case singleColumn
     /// Header across the top; the inputs and the results side by side
     /// below it.
     case sideBySide
+    /// Around a vertical fold: the header and inputs end at
+    /// `leadingEnd` and the results start at `trailingStart`, in page
+    /// coordinates.
+    case book(leadingEnd: CGFloat, trailingStart: CGFloat)
+    /// Around a horizontal fold: the header and results above it, the
+    /// inputs from `lowerStart` down, in page coordinates.
+    case tabletop(lowerStart: CGFloat)
 
     /// Upper bound for the page width so it never stretches without
-    /// limit on a wide window.
+    /// limit on a wide window. Around a fold the page keeps the full
+    /// width so the fold's position stays where the system reports it.
     var maximumWidth: CGFloat {
         switch self {
         case .singleColumn:
             return 600
         case .sideBySide:
             return 1000
+        case .book, .tabletop:
+            return .infinity
         }
     }
 }

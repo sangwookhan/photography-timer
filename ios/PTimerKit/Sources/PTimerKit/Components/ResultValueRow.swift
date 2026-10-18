@@ -90,6 +90,11 @@ public struct ResultValueRow: View {
     private let timerAccessibilityHint: String
     private let layout: ResultRowLayout
 
+    /// Space between the row's columns.
+    public static let columnSpacing: CGFloat = 8
+    /// The smallest scale the primary duration may shrink to.
+    public static let primaryMinimumScaleFactor: CGFloat = 0.75
+
     public init(
         title: String,
         value: Value,
@@ -115,7 +120,7 @@ public struct ResultValueRow: View {
     }
 
     public var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Self.columnSpacing) {
             ResultRowLabel(title: title, labelColumnWidth: layout.labelColumnWidth)
 
             switch value {
@@ -125,7 +130,7 @@ public struct ResultValueRow: View {
                     .foregroundStyle(color)
                     .monospacedDigit()
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(Self.primaryMinimumScaleFactor)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .accessibilityIdentifier(valueAccessibilityIdentifier)
 

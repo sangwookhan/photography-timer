@@ -23,7 +23,10 @@ final class ExposureWorkspacePageArrangementTests: XCTestCase {
         recorder.inputs.last?.setDraft("1/4")
         settle(window)
 
-        for arrangement in [ExposureWorkspaceArrangement.sideBySide, .singleColumn] {
+        let arrangements: [ExposureWorkspaceArrangement] = [
+            .sideBySide, .book(leadingEnd: 380, trailingStart: 420), .tabletop(lowerStart: 320), .singleColumn,
+        ]
+        for arrangement in arrangements {
             model.arrangement = arrangement
             settle(window)
         }
@@ -31,7 +34,7 @@ final class ExposureWorkspacePageArrangementTests: XCTestCase {
         XCTAssertEqual(Set(recorder.inputs.map(\.id)).count, 1, "The inputs keep their state across the round trip.")
         XCTAssertEqual(Set(recorder.results.map(\.id)).count, 1, "The results keep their state across the round trip.")
         XCTAssertEqual(recorder.inputs.last?.draft, "1/4", "The uncommitted draft survives.")
-        XCTAssertGreaterThanOrEqual(recorder.inputs.count, 3, "The inputs rendered in each arrangement.")
+        XCTAssertGreaterThanOrEqual(recorder.inputs.count, 5, "The inputs rendered in each arrangement.")
     }
 
     private func settle(_ window: UIWindow) {

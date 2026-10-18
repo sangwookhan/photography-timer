@@ -197,20 +197,33 @@ struct ExposureCalculatorScreen: View {
             // wide and long enough (WORKSPACE-032/034); the page then
             // keeps the strip's height.
             let contentFrame = geometry.frame(in: .global)
+            // An active fold, in this content area's coordinates.
+            let fold = reservedRegions.fold?.offsetBy(dx: -contentFrame.minX, dy: -contentFrame.minY)
             let sideRail = reservedRegions.window.isEmpty ? nil : CompactTimerRailPlacement.placement(
                 content: contentFrame,
                 window: reservedRegions.window,
-                reserved: reservedRegions.occlusions,
+                reserved: reservedRegions.occlusions + [reservedRegions.fold].compactMap { $0 },
                 cardHeight: BottomSheetCompactDockMetrics.timerCardHeight
             )
             let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
                 workspaceArea: geometry.size.height,
                 withSideRail: sideRail != nil
             )
-            let layout = ExposureWorkspaceLayoutMetrics.layout(
+            // Around an active fold when the content fits beside it
+            // (SHELL-061/062); otherwise by the room alone.
+            let layout = fold.flatMap {
+                ExposureWorkspaceLayoutMetrics.foldLayout(
+                    width: geometry.size.width,
+                    height: workspaceHeight,
+                    fold: $0
+                )
+            } ?? ExposureWorkspaceLayoutMetrics.layout(
                 forAvailableWidth: geometry.size.width,
                 height: workspaceHeight
             )
+            // Beside a vertical fold the page marker stays with the
+            // camera context and the strip takes the larger side.
+            let foldSides = fold.flatMap { FoldSides(fold: $0, width: geometry.size.width) }
             let style = layout.style
 
             ZStack(alignment: .bottom) {
@@ -264,41 +277,12 @@ struct ExposureCalculatorScreen: View {
                         .bottom,
                         ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(withSideRail: sideRail != nil)
                     )
-                    .frame(maxWidth: .infinity)
+                    .within(foldSides?.leading)
                 }
 
                 if let sideRail {
                     if hasTimers {
-                        CompactTimerCardRailView(
-                            snapshot: snapshot,
-                            availableHeight: sideRail.height,
-                            cardWidth: sideRail.cardWidth,
-                            onItemTap: { id in
-                                Self.handleCompactCardTap(
-                                    id: id,
-                                    in: snapshot,
-                                    store: bottomSheetStateStore
-                                )
-                            },
-                            onOverflowTap: {
-                                Self.handleOverflowTap(
-                                    in: snapshot,
-                                    store: bottomSheetStateStore
-                                )
-                            },
-                            soundingAlarmTimerID: alarmPlayer.soundingTimerID,
-                            onStopAlarm: { alarmPlayer.stop() }
-                        )
-                        .frame(width: sideRail.width)
-                        .padding(.top, sideRail.top - contentFrame.minY)
-                        .frame(
-                            maxWidth: .infinity,
-                            maxHeight: .infinity,
-                            alignment: sideRail.side == .trailing ? .topTrailing : .topLeading
-                        )
-                        // Into the side area beside the safe area.
-                        .offset(x: sideRail.side == .trailing ? sideRail.width : -sideRail.width)
-                        .allowsHitTesting(!isFilmSelectorPresented)
+                        sideRailView(sideRail, snapshot: snapshot, contentFrame: contentFrame)
                     }
                 } else {
                     // Running timer preview rail boundary. Always
@@ -309,7 +293,7 @@ struct ExposureCalculatorScreen: View {
                             .bottom,
                             ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
                         )
-                        .frame(maxWidth: .infinity)
+                        .within(foldSides?.larger)
 
                     // Compact timer cards — rendered inside the rail
                     // band when timers exist.
@@ -336,7 +320,7 @@ struct ExposureCalculatorScreen: View {
                             .bottom,
                             ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
                         )
-                        .frame(maxWidth: .infinity)
+                        .within(foldSides?.larger)
                         .allowsHitTesting(!isFilmSelectorPresented)
                         .accessibilityIdentifier("main-screen-timer-strip-container")
                     }
@@ -1446,4 +1430,62 @@ private func assertNoKoreanUIStrings(_ strings: [String]) {
 #if DEBUG
     assert(strings.allSatisfy { !$0.containsKoreanCharacters })
 #endif
+}
+
+/// The horizontal extents on each side of a vertical fold, in the
+/// content area's coordinates, for elements that must not span it
+/// (SHELL-061).
+private struct FoldSides {
+    let leading: ClosedRange<CGFloat>
+    let trailing: ClosedRange<CGFloat>
+
+    var larger: ClosedRange<CGFloat> {
+        leading.upperBound - leading.lowerBound >= trailing.upperBound - trailing.lowerBound ? leading : trailing
+    }
+
+    /// Nil for a horizontal fold or one outside the content area.
+    init?(fold: CGRect, width: CGFloat) {
+        guard fold.height >= fold.width, fold.minX > 0, fold.maxX < width else { return nil }
+        leading = 0...fold.minX
+        trailing = fold.maxX...width
+    }
+}
+
+private extension View {
+    /// Full width, or only `range` of it when given.
+    func within(_ range: ClosedRange<CGFloat>?) -> some View {
+        frame(width: range.map { $0.upperBound - $0.lowerBound })
+            .padding(.leading, range?.lowerBound ?? 0)
+            .frame(maxWidth: .infinity, alignment: range == nil ? .center : .leading)
+    }
+}
+
+private extension ExposureCalculatorScreen {
+    /// The compact timers in the system side area, placed beside the
+    /// safe area at the rail's run (WORKSPACE-033/034).
+    func sideRailView(
+        _ rail: CompactTimerRailPlacement,
+        snapshot: BottomSheetWorkspaceSnapshot,
+        contentFrame: CGRect
+    ) -> some View {
+        CompactTimerCardRailView(
+            snapshot: snapshot,
+            availableHeight: rail.height,
+            cardWidth: rail.cardWidth,
+            onItemTap: { id in
+                Self.handleCompactCardTap(id: id, in: snapshot, store: bottomSheetStateStore)
+            },
+            onOverflowTap: {
+                Self.handleOverflowTap(in: snapshot, store: bottomSheetStateStore)
+            },
+            soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+            onStopAlarm: { alarmPlayer.stop() }
+        )
+        .frame(width: rail.width)
+        .padding(.top, rail.top - contentFrame.minY)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: rail.side == .trailing ? .topTrailing : .topLeading)
+        // Into the side area beside the safe area.
+        .offset(x: rail.side == .trailing ? rail.width : -rail.width)
+        .allowsHitTesting(!isFilmSelectorPresented)
+    }
 }

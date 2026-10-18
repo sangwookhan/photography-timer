@@ -68,11 +68,15 @@ struct CompactTimerRailPlacement: Equatable {
     }
 }
 
-/// The window's bounds and its active occluding reserved regions (cameras
-/// and similar), in window coordinates.
+/// The window's bounds, its active occluding reserved regions (cameras
+/// and similar) and an active fold, in window coordinates.
 struct ReservedRegionSnapshot: Equatable {
     var window: CGRect = .zero
     var occlusions: [CGRect] = []
+    /// The active fold (a half-open hinge), widened by the margins the
+    /// system asks content to keep from it; nil when the window has no
+    /// fold or it lies flat.
+    var fold: CGRect?
 }
 
 /// Reports the window's reserved regions whenever its layout changes
@@ -113,6 +117,14 @@ struct ReservedRegionReader: UIViewRepresentable {
                 snapshot.occlusions = window.reservedRegions(kind: .occlusion)
                     .filter(\.isActive)
                     .map(\.frame)
+                snapshot.fold = window.reservedRegions(kind: .division)
+                    .first(where: \.isActive)
+                    .map { $0.frame.inset(by: UIEdgeInsets(
+                        top: -$0.margins.top,
+                        left: -$0.margins.left,
+                        bottom: -$0.margins.bottom,
+                        right: -$0.margins.right
+                    )) }
             }
             guard snapshot != last else { return }
             last = snapshot

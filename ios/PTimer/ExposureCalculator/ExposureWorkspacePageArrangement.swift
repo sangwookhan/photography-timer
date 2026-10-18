@@ -23,9 +23,16 @@ struct ExposureWorkspacePageArrangement<Header: View, Inputs: View, Results: Vie
     @ViewBuilder let results: () -> Results
 
     var body: some View {
-        let layout = arrangement == .sideBySide
-            ? AnyLayout(SideBySidePageLayout(columnGap: ExposureWorkspaceLayoutMetrics.columnGap))
-            : AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+        let layout: AnyLayout = switch arrangement {
+        case .singleColumn:
+            AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+        case .sideBySide:
+            AnyLayout(SideBySidePageLayout(columnGap: ExposureWorkspaceLayoutMetrics.columnGap))
+        case let .book(leadingEnd, trailingStart):
+            AnyLayout(FoldPageLayout(fold: .book(leadingEnd: leadingEnd, trailingStart: trailingStart)))
+        case let .tabletop(lowerStart):
+            AnyLayout(FoldPageLayout(fold: .tabletop(lowerStart: lowerStart)))
+        }
         layout {
             Group { header() }
                 .layoutValue(key: PageBlockRole.self, value: .header)
@@ -79,6 +86,46 @@ private struct SideBySidePageLayout: Layout {
                 subview.place(at: CGPoint(x: x, y: columnY), proposal: ProposedViewSize(width: columnWidth, height: size.height))
                 columnY += size.height
             }
+        }
+        for subview in subviews where subview[PageBlockRole.self] == .spacer {
+            subview.place(at: CGPoint(x: bounds.minX, y: bounds.maxY), proposal: .zero)
+        }
+    }
+}
+
+/// Places the blocks around a fold (SHELL-062), each at its natural
+/// height: book puts the header and inputs before the fold and the
+/// results after it; tabletop puts the header and results above the fold
+/// and the inputs below it, in one column bounded like the stacked page.
+private struct FoldPageLayout: Layout {
+    let fold: ExposureWorkspaceArrangement
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        func stack(_ roles: [PageBlockRole], x: CGFloat, width: CGFloat, from top: CGFloat) {
+            var y = top
+            for role in roles {
+                for subview in subviews where subview[PageBlockRole.self] == role {
+                    let size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+                    subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(width: width, height: size.height))
+                    y += size.height
+                }
+            }
+        }
+        switch fold {
+        case let .book(leadingEnd, trailingStart):
+            stack([.header, .inputs], x: bounds.minX, width: leadingEnd, from: bounds.minY)
+            stack([.results], x: bounds.minX + trailingStart, width: bounds.width - trailingStart, from: bounds.minY)
+        case let .tabletop(lowerStart):
+            let width = min(bounds.width, ExposureWorkspaceArrangement.singleColumn.maximumWidth)
+            let x = bounds.minX + (bounds.width - width) / 2
+            stack([.header, .results], x: x, width: width, from: bounds.minY)
+            stack([.inputs], x: x, width: width, from: bounds.minY + lowerStart)
+        case .singleColumn, .sideBySide:
+            break
         }
         for subview in subviews where subview[PageBlockRole.self] == .spacer {
             subview.place(at: CGPoint(x: bounds.minX, y: bounds.maxY), proposal: .zero)

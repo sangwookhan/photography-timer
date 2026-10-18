@@ -41,7 +41,17 @@ data class ShootingContentHeights(val singleColumn: Dp, val sideBySide: Dp) {
  * The room a camera page gets and the heights its content needs there,
  * reported to the shell so it can choose the compact timer placement.
  */
-data class ShootingPageRoom(val width: Dp, val height: Dp, val needed: ShootingContentHeights)
+data class ShootingPageRoom(
+    val width: Dp,
+    val height: Dp,
+    val needed: ShootingContentHeights,
+    /** The page's top edge in the window, to place it against a fold. */
+    val top: Dp = 0.dp,
+    /** Height the camera and film context with the results need above a tabletop fold. */
+    val aboveTabletopFold: Dp = 0.dp,
+    /** Height the inputs need below a tabletop fold. */
+    val belowTabletopFold: Dp = 0.dp,
+)
 
 /** Page side padding, shared by both arrangements. */
 internal val PageSidePadding = 16.dp
@@ -200,7 +210,14 @@ fun ShootingPageArrangement(
         fun record(h: Placeable, i: Placeable, r: Placeable) {
             val next = BlockHeights(h.height, i.height, r.height)
             if (next != blocks) blocks = next
-            val room = ShootingPageRoom(width.toDp(), availableHeight, neededHeights(next, gap))
+            val room = ShootingPageRoom(
+                width = width.toDp(),
+                height = availableHeight,
+                needed = neededHeights(next, gap),
+                top = origin.y.toDp(),
+                aboveTabletopFold = (next.header + gap + next.results).toDp(),
+                belowTabletopFold = next.inputs.toDp(),
+            )
             if (reported[0] != room) {
                 reported[0] = room
                 onRoom(room)

@@ -45,3 +45,29 @@ fun prefersSideRail(
     if (railSpace.width - PageSidePadding * 2 < MinShootingColumnWidth) return false
     return fits(railSpace)
 }
+
+/**
+ * Whether a tabletop fold calls for the compact timers as a side rail kept
+ * above the fold (WORKSPACE-032, SHELL-061/062). A bottom strip sits below
+ * a tabletop fold, where it takes the room the inputs need; a rail limited
+ * to the region above the fold leaves that room to them and clears the
+ * fold. It is used when, with the rail, the context and results fit above
+ * the fold, the inputs fit below it, and a readable column remains beside
+ * the rail. All values are in the window's coordinates; [railPageHeight]
+ * is the page's height with the rail instead of the strip.
+ */
+fun prefersTabletopRail(
+    foldTop: Dp,
+    foldBottom: Dp,
+    pageTop: Dp,
+    railPageHeight: Dp,
+    railPageWidth: Dp,
+    aboveFold: Dp,
+    belowFold: Dp,
+    clearance: Dp = FoldClearance,
+): Boolean {
+    if (railPageWidth - PageSidePadding * 2 < MinShootingColumnWidth) return false
+    val upperRoom = foldTop - clearance - pageTop
+    val lowerRoom = pageTop + railPageHeight - (foldBottom + clearance)
+    return aboveFold <= upperRoom && belowFold <= lowerRoom
+}

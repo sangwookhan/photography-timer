@@ -593,11 +593,14 @@ fun ShootingScreen(
                 isUtilityPageShowing = isUtilityPageShowing,
             )
             if (indicator != null) {
-                PagerDots(
-                    count = indicator.dotCount,
-                    current = pagerState.currentPage.coerceIn(0, indicator.dotCount - 1),
-                    position = indicator.position,
-                )
+                // Beside a fold the dots stay with the camera context.
+                Box(Modifier.fillMaxWidth().besideFold(fold, FoldSide.Leading)) {
+                    PagerDots(
+                        count = indicator.dotCount,
+                        current = pagerState.currentPage.coerceIn(0, indicator.dotCount - 1),
+                        position = indicator.position,
+                    )
+                }
             }
             // The strip sits right below; the gap is only otherwise.
             if (reserveNavigationBarInset) Spacer(Modifier.height(8.dp))

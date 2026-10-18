@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -87,9 +88,13 @@ import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
 import com.sangwook.ptimer.app.ui.shooting.CameraManagementActions
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
+import com.sangwook.ptimer.app.ui.shooting.besideFold
 import com.sangwook.ptimer.app.ui.shooting.CompactTimerRailWidth
+import com.sangwook.ptimer.app.ui.shooting.FoldSide
 import com.sangwook.ptimer.app.ui.shooting.PageSpace
 import com.sangwook.ptimer.app.ui.shooting.prefersSideRail
+import com.sangwook.ptimer.app.ui.shooting.prefersTabletopRail
+import com.sangwook.ptimer.app.ui.shooting.ShootingPageRoom
 import com.sangwook.ptimer.app.ui.shooting.rememberWindowFold
 import com.sangwook.ptimer.app.ui.timer.FullTimerList
 import com.sangwook.ptimer.app.ui.timer.MiniTimerBar
@@ -344,15 +349,46 @@ fun ShootingApp(
     // Bottom strip or trailing side rail for the compact summary, decided
     // from the active page's room and content (WORKSPACE-032). Without timers
     // there is no summary, so nothing is reserved.
+    // A half-open or separating fold places the page around it (SHELL-061).
+    // Beside a tabletop fold the rail is kept above the fold, so the strip
+    // does not take the room the inputs need below it.
+    val fold = rememberWindowFold()
+    val tabletop = fold?.isVertical == false
     var sideRail by remember { mutableStateOf(false) }
-    if (!hasTimers && sideRail) sideRail = false
+    if (sideRail && !hasTimers) sideRail = false
     val bottomStrip = hasTimers && !sideRail
     // The page's room as measured with each placement, kept per window size
     // so a placement that was tried and does not fit is not tried again.
     val windowSize = LocalWindowInfo.current.containerSize
-    // A half-open or separating fold places the page around it (SHELL-061).
-    val fold = rememberWindowFold()
     val measuredRooms = remember(windowSize) { arrayOfNulls<PageSpace>(2) }
+    // The last room the active page reported, to decide again when the
+    // fold changes without the room changing.
+    val lastRoom = remember { arrayOfNulls<ShootingPageRoom>(1) }
+    val density = LocalDensity.current
+    fun prefersRail(room: ShootingPageRoom): Boolean {
+        if (!hasTimers) return false
+        val f = fold
+        if (f == null || f.isVertical) {
+            return prefersSideRail(measuredRooms[0], measuredRooms[1], room.needed, MiniTimerBarHeight)
+        }
+        val bottom = measuredRooms[0] ?: PageSpace(room.width, room.height)
+        val rail = measuredRooms[1]
+            ?: PageSpace(bottom.width - CompactTimerRailWidth, bottom.height + MiniTimerBarHeight)
+        return with(density) {
+            prefersTabletopRail(
+                foldTop = f.bounds.top.toDp(),
+                foldBottom = f.bounds.bottom.toDp(),
+                pageTop = room.top,
+                railPageHeight = rail.height,
+                railPageWidth = rail.width,
+                aboveFold = room.aboveTabletopFold,
+                belowFold = room.belowTabletopFold,
+            )
+        }
+    }
+    LaunchedEffect(fold, hasTimers) {
+        lastRoom[0]?.let { sideRail = prefersRail(it) }
+    }
     // The mini card a user tapped to open the full list, so it can be focused.
     var focusTimerId by remember { mutableStateOf<java.util.UUID?>(null) }
     // A compact card (bottom strip or side rail) opens the full Timers list
@@ -466,6 +502,7 @@ fun ShootingApp(
                         focusId = focusTimerId,
                         ndNotationMode = ndNotationMode,
                         modifier = Modifier
+                            .besideFold(fold, FoldSide.Larger, fillsHeight = true)
                             .windowInsetsPadding(sideInsets)
                             .windowInsetsPadding(topInsets)
                             .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
@@ -496,14 +533,8 @@ fun ShootingApp(
                     fold = fold,
                     onPageRoom = { room ->
                         measuredRooms[if (sideRail) 1 else 0] = PageSpace(room.width, room.height)
-                        if (hasTimers) {
-                            sideRail = prefersSideRail(
-                                bottom = measuredRooms[0],
-                                rail = measuredRooms[1],
-                                needed = room.needed,
-                                stripHeight = MiniTimerBarHeight,
-                            )
-                        }
+                        lastRoom[0] = room
+                        sideRail = prefersRail(room)
                     },
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
@@ -617,6 +648,7 @@ fun ShootingApp(
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
+                        .besideFold(fold, FoldSide.Larger)
                         .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
                         .fillMaxWidth(),
                     shape = BottomSheetDefaults.ExpandedShape,
@@ -648,6 +680,8 @@ fun ShootingApp(
                             .windowInsetsPadding(topInsets)
                             .windowInsetsPadding(sideInsets)
                             .windowInsetsPadding(bottomInsets)
+                            // Above a tabletop fold only, so it never runs across it.
+                            .besideFold(if (tabletop) fold else null, FoldSide.Leading, fillsHeight = true)
                             .fillMaxHeight()
                             .width(CompactTimerRailWidth)
                             .padding(vertical = 8.dp),

@@ -3,9 +3,13 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -74,5 +78,42 @@ class FoldPlacementTest {
     fun aFoldOutsideThePageIsIgnored() {
         assertNull(place(IntRect(0, 2300, 1848, 2300), vertical = false, width = 1848, height = 2164, blocks = light))
         assertNull(place(IntRect(2500, 0, 2500, 1848), vertical = true, width = 2448, height = 1500, blocks = busy))
+    }
+
+    // Tabletop with the compact timers kept above the fold (dp, the Fold8
+    // inner display at 420dpi turned to portrait with the fold reported at
+    // the panel centre: fold 466.3dp, page top 52.2dp, page height with the
+    // rail 804.6dp, width with the rail 592dp).
+
+    private fun prefersRail(width: Dp = 592.dp, above: Dp, below: Dp) = prefersTabletopRail(
+        foldTop = 466.3.dp,
+        foldBottom = 466.3.dp,
+        pageTop = 52.2.dp,
+        railPageHeight = 804.6.dp,
+        railPageWidth = width,
+        aboveFold = above,
+        belowFold = below,
+    )
+
+    @Test
+    fun tabletopUsesTheRailAboveTheFoldWhenTheInputsThenFitBelowIt() {
+        // Default page: 266.7dp above, 264dp below.
+        assertTrue(prefersRail(above = 266.7.dp, below = 264.dp))
+    }
+
+    @Test
+    fun noTabletopRailWhenTheInputsStillDoNotFitBelowTheFold() {
+        // Busy page: 380.2dp of inputs against 378.5dp below the fold.
+        assertFalse(prefersRail(above = 314.7.dp, below = 380.2.dp))
+    }
+
+    @Test
+    fun noTabletopRailWhenTheContextAndResultsDoNotFitAboveTheFold() {
+        assertFalse(prefersRail(above = 410.dp, below = 264.dp))
+    }
+
+    @Test
+    fun noTabletopRailWithoutAReadableColumnBesideIt() {
+        assertFalse(prefersRail(width = 350.dp, above = 266.7.dp, below = 264.dp))
     }
 }

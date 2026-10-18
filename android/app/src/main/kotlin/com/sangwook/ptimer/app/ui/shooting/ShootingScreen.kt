@@ -328,17 +328,16 @@ fun ShootingScreen(
                 // display-only.
                 val writesActiveSlot = page == activeIndex
                 val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
-                // Scrolls only when the page is taller than the room above
-                // the timer peek; otherwise nothing moves. Without it the
-                // Column squeezed the result card's rows into the space
-                // left and the Corrected Exposure row was pressed against
-                // the card's bottom edge or hidden.
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
-                ) {
+                // The page places its header, inputs and results in the
+                // arrangement that fits the room above the compact timers
+                // (SHELL-057/059). It scrolls only when no arrangement fits,
+                // as before; otherwise nothing moves.
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                val pageHeight = maxHeight
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                ShootingPageArrangement(
+                    availableHeight = pageHeight,
+                    header = {
                     // Header: camera name (tap to rename) + Reset.
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -402,6 +401,8 @@ fun ShootingScreen(
                         }
                     }
 
+                    },
+                    inputs = { Column {
                     // Film selector. No standalone "Film" label: the "No
                     // film" placeholder value already names it for a
                     // first-time user, and once a film is picked the row's
@@ -561,14 +562,17 @@ fun ShootingScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
-
+                    } },
+                    results = {
                     ResultCard(
                         state = pageState,
                         onStartAdjusted = onStartAdjusted,
                         onStartCorrected = onStartCorrected,
                         onOpenDetails = onOpenDetails,
                     )
+                    },
+                )
+                }
                 }
             }
 

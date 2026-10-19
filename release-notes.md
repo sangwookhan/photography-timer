@@ -19,8 +19,9 @@ Common changes:
   - Folding, unfolding and rotating keep your open screens and edits.
 
 <div class="gallery fold">
-{% include shot.html name="rn-1.1.2-open" alt="Hasselblad 503cx on an unfolded screen in landscape" caption="Unfolded, landscape" %}
-{% include shot.html name="rn-1.1.2-portrait" alt="Hasselblad 503cx on an unfolded screen in portrait" caption="Unfolded, portrait" %}
+{% include shot.html name="rn-1.1.2-book" alt="Shooting screen half open like a book, with results on the other side of the fold" caption="Half open like a book" %}
+{% include shot.html name="rn-1.1.2-tabletop" alt="Shooting screen half open on a table, with results above the fold" caption="Half open on a table" %}
+{% include shot.html name="rn-1.1.2-outer" alt="Shooting screen on the outer display with timers in a side column" caption="Folded, on the outer display" %}
 </div>
 
 ## 1.0.1

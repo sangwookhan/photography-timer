@@ -30,7 +30,7 @@ acting on every timer at once.
 ### Surfaces and structure
 
 - **WORKSPACE-001** — Timers are presented on two surfaces: a compact dock
-  on the shooting screen (a glanceable strip anchored at the bottom;
+  on the shooting screen (a bottom strip or an adaptive side rail;
   calculator remains primary), and a full-screen Timers workspace showing
   the full timer list. The full-screen workspace is a separate destination,
   not a partial-height overlay of the shooting screen.
@@ -39,12 +39,18 @@ acting on every timer at once.
   or independently reorder timers.
 - **WORKSPACE-003** — Tapping a compact card opens the full-screen Timers
   workspace with that timer's relevant section already in focus (its
-  active or terminal group, as applicable). Closing the workspace returns
+  active or terminal group, as applicable), directly without an
+  intermediate expanded bottom list. Closing the workspace returns
   to the shooting screen; opening or closing it never itself mutates any
   timer's state.
-- **WORKSPACE-004** — On the shooting screen, only the compact dock scrolls
-  horizontally; the calculator section above remains pinned. Full-page
-  scrolling on the shooting screen is not permitted.
+- **WORKSPACE-004** — The bottom compact strip supports horizontal browsing;
+  the side rail uses the bounded visible set defined by WORKSPACE-033.
+  The shooting layout may reflow, but ordinary shooting at device-default
+  font size on supported windows shall require no vertical scrolling of
+  the main content or its regions, as governed by SHELL-057/058 in
+  `cross-cutting/presentation.md`. The calculator and compact timer
+  presence shall remain visible and usable without opening full timer
+  management. Reflow shall not change timer state or ordering.
 
 ### Ordering
 
@@ -85,6 +91,32 @@ acting on every timer at once.
   multiple time scales so both a short and a long timer feel responsive; the
   visible layer count is gated by total duration, and only the status icon
   (never a progress bar) may pulse for an active running timer.
+
+- **WORKSPACE-032** — The compact summary shall use a side rail on folded
+  wide outer-display layouts to preserve main shooting height. It shall
+  also move to the side when a bottom strip would prevent the applicable
+  shooting arrangement from fitting. When bottom placement fits without
+  violating the presentation contract, the bottom strip remains available.
+  Only one compact summary shall be visible at a time.
+- **WORKSPACE-033** — The side rail shows at most three timer cards in the
+  same order as the bottom summary and full workspace. If reserved space
+  permits fewer complete readable cards, show fewer rather than clip or
+  compress required card information. Remaining timers are represented
+  by the existing overflow entry, which opens full-screen management.
+  The rail itself shall not require vertical scrolling. Tapping a card
+  follows WORKSPACE-003; no separate partial-height management mode exists.
+- **WORKSPACE-034** — On iOS, a side rail may use the available side area
+  below or beside system-reserved regions without overlapping the camera,
+  Dynamic Island, status, navigation, or system controls. Its side and
+  available length shall follow actual system geometry rather than an
+  unconditional right-edge rule. On Android, reserve a trailing column
+  within the app's usable content and keep it clear of system insets.
+  Both platforms show the same summary information and full-screen entry.
+- **WORKSPACE-035** — Moving between bottom and side summaries shall not
+  change timer identity, order, runtime, or the full-screen destination.
+  Cards and overflow entries shall remain fully visible and tappable,
+  including when folds or system regions change. Rail tap shall not
+  briefly reveal an expanded bottom list before full-screen navigation.
 
 ## Card content (full-screen workspace)
 

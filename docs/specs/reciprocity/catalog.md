@@ -146,9 +146,11 @@ platform copies are expected to be byte-identical.
 
 ## Film picker
 
-- **CATALOG-PICKER-001** — Film selection opens a dedicated modal sheet,
+- **CATALOG-PICKER-001** — Film selection opens a dedicated modal surface,
   never an inline dropdown competing with the calculator for screen room.
-  A row tap immediately applies the selection and dismisses the sheet; a
+  Compact windows use a sheet; wide windows use a bounded modal presentation
+  under `cross-cutting/presentation.md` SHELL-060. A row tap immediately
+  applies the selection and dismisses the surface; a
   separate Cancel action exits without changing the selection.
 - **CATALOG-PICKER-002** — Preset films are grouped visually by
   manufacturer; within a group, films order alphabetically by canonical

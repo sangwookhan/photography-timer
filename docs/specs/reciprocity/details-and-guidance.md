@@ -44,8 +44,11 @@ corrected exposure came from, without cluttering the primary result.
   only for explicitly app-derived models), and a Sources section
   (omitted for user-defined profiles, which carry their own dedicated
   custom-profile metadata card instead).
-- **DETAILS-011** — The sheet shall open at a stable initial height
-  regardless of profile shape.
+- **DETAILS-011** — Details shall open with a stable initial presentation
+  for the current window, regardless of profile shape. Compact windows
+  may use a sheet; wide windows use a bounded modal surface under
+  `cross-cutting/presentation.md` SHELL-060. Resizing shall adapt the
+  surface without dismissing the details task or resetting its context.
 - **DETAILS-012** — The reciprocity graph shall use a stable scale tier so
   it does not visibly rescale around the current metered input; only the
   current-result marker moves as the input changes.

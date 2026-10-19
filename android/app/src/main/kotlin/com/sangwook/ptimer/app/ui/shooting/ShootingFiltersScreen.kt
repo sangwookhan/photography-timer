@@ -55,7 +55,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -93,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.sangwook.ptimer.app.ui.BoundedModalSurface
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.vm.FilterItemEditorSessionMemory
@@ -221,7 +221,7 @@ internal fun ShootingFiltersScreen(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         CappedFontScale {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            BoundedModalSurface {
                 Scaffold(
                     topBar = {
                         TopAppBar(

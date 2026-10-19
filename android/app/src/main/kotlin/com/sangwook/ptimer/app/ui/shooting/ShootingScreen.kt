@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -168,12 +170,15 @@ fun ShootingScreen(
     onOpenFilterManagement: () -> Unit,
     showExactAlarmSettingsAction: Boolean,
     onOpenExactAlarmSettings: () -> Unit,
-    // False while the timer peek is showing: the peek already sits over the
-    // navigation bar, so reserving its inset here left a dead band between
-    // the page dots and the peek and cost the result card that height.
+    // False while the bottom timer strip is showing: the strip already sits
+    // over the navigation bar, so reserving its inset here left a dead band
+    // between the page dots and the strip and cost the result card that height.
     reserveNavigationBarInset: Boolean = true,
     /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
     cameraActions: CameraManagementActions = CameraManagementActions.None,
+    onPageRoom: (ShootingPageRoom) -> Unit = {},
+    /** The fold dividing the window, if any (SHELL-061/062). */
+    fold: WindowFold? = null,
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -246,14 +251,17 @@ fun ShootingScreen(
     // own caps.
     CappedFontScale(maxFontScale = 1f) {
     Scaffold(
-        modifier = modifier,
-        contentWindowInsets = if (reserveNavigationBarInset) {
-            ScaffoldDefaults.contentWindowInsets
+        // The parent already insets the status bar, and while the strip covers
+        // the navigation bar nothing is left to reserve. That is expressed by
+        // consuming the navigation bar, not by passing other insets: Scaffold
+        // rebuilds its insets when they change and would then reserve the
+        // already consumed status bar again.
+        modifier = if (reserveNavigationBarInset) {
+            modifier
         } else {
-            // The parent already insets the status bar and the peek covers the
-            // navigation bar, so nothing is left to reserve here.
-            WindowInsets(0, 0, 0, 0)
+            modifier.consumeWindowInsets(WindowInsets.navigationBars)
         },
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (displayedCount == 0) {
@@ -323,17 +331,22 @@ fun ShootingScreen(
                 // display-only.
                 val writesActiveSlot = page == activeIndex
                 val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
-                // Scrolls only when the page is taller than the room above
-                // the timer peek; otherwise nothing moves. Without it the
-                // Column squeezed the result card's rows into the space
-                // left and the Corrected Exposure row was pressed against
-                // the card's bottom edge or hidden.
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
-                ) {
+                // The page places its header, inputs and results in the
+                // arrangement that fits the room above the compact timers
+                // (SHELL-057/059). It scrolls only when no arrangement fits,
+                // as before; otherwise nothing moves.
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                val pageHeight = maxHeight
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                ShootingPageArrangement(
+                    availableHeight = pageHeight,
+                    fold = fold,
+                    // Only the page being edited decides where the compact
+                    // timers go; neighbouring pages are display-only.
+                    onRoom = if (writesActiveSlot) onPageRoom else { _ -> },
+                    // The header carries the camera and film context, which
+                    // stays together above a tabletop fold (SHELL-062).
+                    header = { Column {
                     // Header: camera name (tap to rename) + Reset.
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -449,7 +462,8 @@ fun ShootingScreen(
                             }
                         }
                     }
-
+                    } },
+                    inputs = { Column {
                     Spacer(Modifier.height(8.dp))
 
                     // Target Shutter row (value + stop-diff + ▶), tap to edit.
@@ -556,14 +570,17 @@ fun ShootingScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
-
+                    } },
+                    results = {
                     ResultCard(
                         state = pageState,
                         onStartAdjusted = onStartAdjusted,
                         onStartCorrected = onStartCorrected,
                         onOpenDetails = onOpenDetails,
                     )
+                    },
+                )
+                }
                 }
             }
 
@@ -576,13 +593,16 @@ fun ShootingScreen(
                 isUtilityPageShowing = isUtilityPageShowing,
             )
             if (indicator != null) {
-                PagerDots(
-                    count = indicator.dotCount,
-                    current = pagerState.currentPage.coerceIn(0, indicator.dotCount - 1),
-                    position = indicator.position,
-                )
+                // Beside a fold the dots stay with the camera context.
+                Box(Modifier.fillMaxWidth().besideFold(fold, FoldSide.Leading)) {
+                    PagerDots(
+                        count = indicator.dotCount,
+                        current = pagerState.currentPage.coerceIn(0, indicator.dotCount - 1),
+                        position = indicator.position,
+                    )
+                }
             }
-            // The peek sits right below; the gap is only for the bare screen.
+            // The strip sits right below; the gap is only otherwise.
             if (reserveNavigationBarInset) Spacer(Modifier.height(8.dp))
         }
     }

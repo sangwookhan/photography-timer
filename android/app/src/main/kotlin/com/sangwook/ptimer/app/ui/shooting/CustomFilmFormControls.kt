@@ -4,6 +4,7 @@
 package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.res.stringResource
+import com.sangwook.ptimer.app.ui.BoundedModalSurface
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.ui.localizedSourceTypeLabel
@@ -117,7 +118,7 @@ internal fun FullScreenFormDialog(
         // font-scale cap set up in ShootingApp does not reach here on its own
         // (PTIMER-219), so it must be reapplied inside every dialog.
         CappedFontScale {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        BoundedModalSurface {
             Scaffold(
                 topBar = {
                     TopAppBar(

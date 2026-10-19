@@ -40,7 +40,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -67,6 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.sangwook.ptimer.app.ui.BoundedModalSurface
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.vm.FilterItemEditorDraft
@@ -193,7 +193,7 @@ internal fun FilterItemEditorDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         CappedFontScale {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            BoundedModalSurface {
                 Scaffold(
                     topBar = {
                         TopAppBar(

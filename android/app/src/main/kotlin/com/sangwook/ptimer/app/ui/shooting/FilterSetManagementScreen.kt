@@ -96,6 +96,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.sangwook.ptimer.app.ui.BoundedModalSurface
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.ui.CappedFontScale
 import com.sangwook.ptimer.app.vm.FilterItemDeletionState
@@ -159,7 +160,7 @@ internal fun FilterSetManagementScreen(
         // Each Dialog hosts its own AndroidComposeView and re-derives
         // LocalDensity, so the app's font-scale cap is reapplied here.
         CappedFontScale {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            BoundedModalSurface {
                 // The rename draft and notation memory are keyed on the
                 // set, so each one starts fresh.
                 FilterSetDetailLevel(
@@ -205,7 +206,7 @@ internal fun FilterManagementScreen(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         CappedFontScale {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            BoundedModalSurface {
                 Scaffold(
                     topBar = {
                         TopAppBar(
@@ -409,7 +410,7 @@ internal fun StandardNdListScreen(onDismiss: () -> Unit) {
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         CappedFontScale {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            BoundedModalSurface {
                 Scaffold(
                     topBar = {
                         TopAppBar(

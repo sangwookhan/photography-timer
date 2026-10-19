@@ -19,5 +19,7 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
 | 07 / 08 | Duo inner, half-folded, landscape (book), Korean and English: context and inputs left of the fold, results right |
 | 09 | The real `ResultValueRow` at the 335.5pt results side, Dense, with the widest primaries (`≈23:59:59` with `≈86399s`, `≈11mo 29d`), Korean and English. Rendered by a temporary test that was not committed |
 | 10 / 11 | Duo outer after folding from inner landscape: before the fix, landscape with the top and bottom cut off; after the fix, it stays portrait (`da0e2887`) |
+| 12 | Duo inner, flat, landscape: the Shooting Filters sheet, main (left) vs new (right). Both are width-limited at this size, so the form size request changes nothing visible here |
+| 13 / 14 | The Rename sheet with an unsaved draft on the inner display; after folding, the outer display (portrait) keeps the sheet, the draft and its Cancel/Save buttons |
 
 `test-log.txt`: app-hosted layout tests, PTimerKit package tests and per-commit build at the head.

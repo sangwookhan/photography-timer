@@ -6,7 +6,7 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
   - Captures were taken against #90 at `a71cf4ca`, the revision in force while they were made.
   - The approved revision is now `ba72ce0e`. Its only change is the Android 360x640dp exclusion, which does not affect these iOS captures.
 - PR head when collected: `9eb31818`.
-- Environment: Xcode 27.1, iOS 27.1 simulators (iPhone 17 and iPhone Duo), default text size.
+- Environment: Xcode 27.1, default text size. Simulators: iPhone 17 on iOS 26.5, and iPhone Duo on iOS 27.1. Reserved regions need iOS 27.1, so only the Duo exercises them.
 - The Duo was driven through DeviceHub (fold, posture, rotation).
 - Captures were taken while the feature was built. Each was made with the build of the commit that introduced the behavior shown.
 

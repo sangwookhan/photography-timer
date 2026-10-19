@@ -1,5 +1,5 @@
 PTIMER-239 iOS #94 test log
-Head: 9eb31818  Date: 2026-10-19 09:36 KST  Xcode 27.1, iPhone 17 simulator (iOS 27.1)
+Head: 9eb31818  Date: 2026-10-19 09:36 KST  Xcode 27.1, iPhone 17 simulator (iOS 26.5; corrected — the first version of this log said 27.1 by mistake)
 
 App-hosted layout suites:
 	 Executed 19 tests, with 0 failures (0 unexpected) in 0.016 (0.020) seconds

@@ -26,6 +26,7 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
 | 15 | iPad Air 11-inch (M4), iPadOS 26.5: the app runs in iPhone compatibility mode (`TARGETED_DEVICE_FAMILY = 1`) as an iPhone-sized window. All required shooting UI is visible |
 | 16 / 17 | iPad compatibility window: in the Target Shutter sheet the lower half of Cancel/Confirm is cut by the window's bottom edge, both on this branch (16) and on main (17). It is not introduced here; Cancel still works |
 | 18 | iPad compatibility window: the Shooting Filters sheet opens with Cancel/Apply at the top, and closes with Cancel |
+| 19–22 | iPhone 17 (iOS 26.5), hardware keyboard off: Rename shows the software keyboard, and the sheet keeps the field and Cancel/Save above it (19). A typed draft (20) is discarded by Cancel (21). A typed draft is applied by Save (22). The name was restored afterwards |
 
 Captures 15–18 are over 1MB at full resolution. Each has a smaller copy, `*_app-window-crop_*.png` (under 200KB): the iPad app window cropped from the original and scaled to 820px wide. The originals are kept.
 

@@ -7,7 +7,7 @@ title: Release Notes
 
 {% include platform-toggle.html %}
 
-## 1.0.0 — Unreleased
+## 1.0.1
 
 This release includes the changes beta-tested in 0.9.1, documented below.
 
@@ -23,9 +23,9 @@ Common changes:
 {% include shot.html name="rn-1.0.0-camera-list" alt="Camera list with five named cameras" caption="Your camera list" %}
 </div>
 
-## 0.9.1 — Beta tested; included in 1.0.0
+## 0.9.1 — Beta tested; included in 1.0.1
 
-Retained here as beta testing history. These changes ship together in 1.0.0.
+Retained here as beta testing history. These changes were released together in 1.0.1.
 
 Common changes:
 

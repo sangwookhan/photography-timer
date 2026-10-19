@@ -26,5 +26,8 @@ Evidence for draft PR #93. It is not product documentation, and this branch is n
 | 17 / 18 | Folding keeps Shooting Filters and its refusal notice; a density recreation reopens it |
 | 19 | Density 420 → 440 → 420: full Timers stays open on the focused timer (`54676280`) |
 | 20 | 360x640dp busy: the existing page scroll path (open #90 question) |
+| 21 / 22 | After correcting the emulator's reported fold to the panel centre (red line): tabletop with context, results and the compact rail above the fold and the inputs below it (21, `186cec51`); book unchanged (22) |
+
+**Emulator note (2026-10-19):** this AVD borrows the Pixel 10 Pro Fold overlay, which reports the fold at 1038px, the centre of that device's 2076px panel, rather than at this 2448px panel's centre. Captures 10–13 were taken with that misplaced fold. The AVD now overrides it with `settings put global display_features "fold-[1224,0,1224,1848]"`.
 
 `test-log.txt`: unit tests, lint and per-commit compile at the head.

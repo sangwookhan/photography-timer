@@ -1,0 +1,53 @@
+PTIMER-239 iOS #94 test log
+Head: 9eb31818  Date: 2026-10-19 09:36 KST  Xcode 27.1, iPhone 17 simulator (iOS 27.1)
+
+App-hosted layout suites:
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.016 (0.020) seconds
+	 Executed 27 tests, with 0 failures (0 unexpected) in 0.627 (0.637) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.003 (0.006) seconds
+** TEST SUCCEEDED ** [9.206 sec]
+BUDGET_TOTALS compact total=637.6357421875 statusRegion=21.7138671875 picker=108.0 labelRow=14.0
+BUDGET_TOTALS dense total=579.30224609375 statusRegion=16.54052734375 picker=92.0 labelRow=14.0
+BUDGET_TOTALS regular total=795.0234375 statusRegion=25.94140625 picker=164.0 labelRow=16.0
+RESULT_COLUMN_MINIMUM compact 330.49615444242954
+RESULT_COLUMN_MINIMUM dense 310.542756408453
+RESULT_COLUMN_MINIMUM regular 364.41283820569515
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testAFoldOutsideThePageIsIgnored]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testBookAroundAVerticalFoldUsesTheReportedFoldPosition]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testContributingValuesMoveTheDerivedRequirement]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDerivedBudgetsMatchTheApprovedReferenceValues]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDerivedTotalsAreReported]' passed (0.005 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testDuoHalfFoldedLandscapeUsesBook]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testIPhone17AndIPhone17ProAndIPhone17ProMaxUseCompact]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testNarrowWindowThatFitsNothingStaysDenseSingleColumn]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testNoBookWhenOneSideIsNarrowerThanAReadableColumn]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testNoTabletopWhenTheInputsDoNotFitBelowTheFold]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testResultColumnMinimumIsDerivedFromTheResultRow]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testShortPhoneBudgetUsesDenseAndDenseFits]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testSideBySideBudgetTakesTheTallerColumn]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testSideBySideWhenNoSingleColumnFitsAndTwoColumnsDo]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testSingleColumnKeepsTheHeightOnlyTierWheneverATierFits]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testStatusRegionIsCountedOnceAsOneRow]' passed (0.001 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTabletopPutsTheInputsBelowAHorizontalFold]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTierSelectionAndThresholdsUseTheProductionBudget]' passed (0.000 seconds).
+Test Case '-[PTimerTests.BottomSheetWorkspaceLayoutMetricsTests testTotalNumeralsMatchTheNDNumeralsAndFitTheRegion]' passed (0.001 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testNoRailWhenNoRunHoldsOneCard]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testNoRailWhenTheSideAreaIsTooNarrowForAReadableCard]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testRailAvoidsAReservedRegionInTheSideArea]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testRailShowsFewerCardsRatherThanClippingThem]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testReservedRegionOutsideTheSideAreaIsIgnored]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testTheWiderSideWinsSoTheRailFollowsRotation]' passed (0.000 seconds).
+Test Case '-[PTimerTests.CompactTimerRailPlacementTests testTrailingSideAreaHoldsTheRailBelowTheStatusArea]' passed (0.000 seconds).
+Test Case '-[PTimerTests.ExposureWorkspacePageArrangementTests testArrangementRoundTripKeepsInputAndResultState]' passed (0.609 seconds).
+
+PTimerKit package (swift test):
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+	 Executed 148 tests, with 0 failures (0 unexpected) in 0.049 (0.058) seconds
+	 Executed 148 tests, with 0 failures (0 unexpected) in 0.049 (0.058) seconds
+
+Per-commit build (generic iOS Simulator, Debug):
+  da0e2887 BUILD SUCCEEDED
+  b3e2e8bc BUILD SUCCEEDED
+  a038b10c BUILD SUCCEEDED
+  44c231de BUILD SUCCEEDED
+  9eb31818 BUILD SUCCEEDED

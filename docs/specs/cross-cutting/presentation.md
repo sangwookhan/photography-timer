@@ -149,6 +149,19 @@ compact presence, not folded into the shooting screen itself.
   inputs in the leading region and results in the trailing region.
   Compact timer placement follows `timers/workspace.md` and shall also
   clear the fold. Transitions preserve the same shot and timer state.
+  One limitation is accepted by product decision for a single case only:
+  tabletop presentation on an Android foldable inner display of about
+  704 × 933dp in portrait, as measured on the Galaxy Fold8-class
+  substitute emulator with the fold reported at the panel centre, with a
+  film offering a model choice, an active Target Shutter, three filter
+  wheels with auxiliary filters, and three result rows. There the inputs
+  need about 380.2dp below the fold while about 378.5dp is available, even
+  with the compact timers kept above the fold, so the stacked arrangement
+  that is used instead crosses the fold. This records a measured shortfall
+  on the substitute emulator, not a physical-device result or a fold-safe
+  outcome. It is separate from the 360 × 640dp exclusion in SHELL-058 and
+  does not exempt lighter content, book presentation, other foldables, or
+  other postures from SHELL-061 and this requirement.
 
 ### Large text and constrained height
 

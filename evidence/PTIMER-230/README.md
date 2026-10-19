@@ -2,7 +2,10 @@
 
 Evidence for draft PR #93. It is not product documentation, and this branch is not meant to be merged.
 
-- Spec: #90 at `a71cf4ca`.
+- Spec baseline:
+  - Captures were taken against #90 at `a71cf4ca`, the revision in force while they were made.
+  - The approved revision is now `ba72ce0e`. Its only change is that SHELL-058 puts the 360x640dp portrait window outside the supported set.
+  - So capture 20 shows a window that is no longer supported. Capture 13 (busy tabletop across the fold) remains an open item under both revisions.
 - PR head when collected: `54676280`.
 - All captures use font_scale 1.0 on API 37 emulators:
   - Fold8 substitute AVD: cover 1248x1972px, inner 2448x1848px, 420dpi.

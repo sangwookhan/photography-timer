@@ -318,6 +318,9 @@ unchanged under the localization contract.
   Compare equivalent kind, language, keyboard state and ordinary text size in
   logical units; adapt to native insets and keyboard geometry rather than copy
   raw screenshot pixels. Existing minimum interaction targets remain required.
+  Other supported windows shall adapt under
+  `cross-cutting/presentation.md` SHELL-052/060; the named phone checks
+  are regression references, not an exclusion of tablet or foldable editors.
   The Filter Set selection field shall show the selected Set's saved source-color
   swatch alongside its name on both platforms, including iOS. Show the same
   source-color cue in destination choices; do not substitute the Filter Item's
@@ -505,16 +508,15 @@ unchanged under the localization contract.
   28 / 24 / 20 points, Compact 23 / 20 / 17 points, and Dense
   18 / 16 / 14 points. Base Shutter and every ND wheel in the row shall
   use the same numeric size. In particular, four wheels in Dense shall use
-  14-point values. These sizes are tier references, not permission to select a
-  denser tier from an obsolete content-height budget. The density decision
-  shall be derived from the geometry actually rendered after FILTER-STACK-008
-  reduces the status region to one row. On an iPhone 17 Pro at the default
-  content size, the worst supported film-result and active-Target-Shutter
-  composition shall fit the Compact tier after that reclaimed height; it shall
-  not remain Dense solely because the removed second status line is still
-  counted. Thus a one-filter row on that device uses the Compact 26-point
-  reference rather than the Dense 19-point reference, and the same tier's
-  references apply as wheels are added.
+  14-point values. These sizes remain typography references for the existing compact
+  presentation; they do not require a global height-only layout selector.
+  Arrangement selection follows `cross-cutting/presentation.md`
+  SHELL-010/012/057/059, including actual width, height, timer placement,
+  and the one-row status geometry from FILTER-STACK-008. Preserve the
+  established iPhone 17 Pro default-size Compact numeric reference
+  (26 points for one filter) where that arrangement fits. A denser
+  reference shall not be selected from an obsolete content budget or
+  used instead of a required adaptive arrangement.
 
   The Base Shutter column shall reserve the same persistent-label-row height
   as the filter columns, even though that reserved label row is visually
@@ -550,7 +552,7 @@ unchanged under the localization contract.
   accessibility. The region shall reserve only the height required for one
   visual row plus its normal vertical padding. It shall not retain capacity for
   the removed second line. This reclaimed height shall be returned to the wheel
-  row and included in the density-tier fit calculation. Status-state changes
+  row and included in the actual arrangement's content-fit calculation. Status-state changes
   shall remain geometry-stable within that one-row region.
 
   The source summary shall list each source once in main-row order (auxiliary

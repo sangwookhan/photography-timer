@@ -70,7 +70,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Goal.** Photographer with a film camera meters the scene, then wants to know the *corrected* exposure that compensates for the film's reciprocity characteristic.
 
 **Steps.**
-1. Open the film picker sheet (the picker is a dedicated sheet, not an in-screen dropdown).
+1. Open the film picker (a dedicated modal surface, presented as a sheet in compact windows and a bounded modal in wide windows, not an in-screen dropdown).
 2. Select a preset film stock from the launch catalog.
 3. Read the film row's authority subtitle to confirm whether the active reciprocity profile is **Official guidance** (manufacturer-published) or **Unofficial practical** (community-derived). The label is always present for the authorities shipped in the launch dataset.
 4. Set base shutter and ND as in Scenario 1.
@@ -198,6 +198,25 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 ---
 
+### Scenario 10 — Continue shooting as the available screen changes
+
+**Goal.** Use the same shooting and timer workflow on a phone, tablet, or
+foldable, including a short outer display and a larger unfolded display,
+without losing access to controls or the current task.
+
+1. Prepare a shot and start a timer.
+2. Rotate the device, fold or unfold it, or resize the app window.
+3. Continue adjusting the next shot, using selection and editing surfaces,
+   and monitoring or managing timers in the available space.
+
+**Boundary conditions.**
+
+- A larger device can still provide a narrow or short app window.
+- Keyboard, system UI, large text, and display-reserved regions reduce
+  the room available to content.
+- Changing the window must not discard edits, switch the selected camera,
+  reset shooting settings, or interrupt or duplicate a timer.
+
 ## 3. Functional requirements
 
 Each requirement is a "system shall" obligation with a back-reference to the originating scenario. The wording is intentionally close to acceptance-criteria style.
@@ -284,15 +303,16 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 ### 3.6 Calculator screen and workspace
 
 - **FR-6.1** Calculation and a compact, glanceable timer presence shall live together on a single primary shooting screen: the user monitors a running exposure's remaining time without navigating away from the calculator. Full timer management (inspecting and acting on every timer at once) is a separate full-screen destination, deliberately reached from that compact presence rather than folded into the shooting screen. (Scenario 3, 5)
-- **FR-6.2** The primary surface shall adapt to the device's vertical room without rearranging its conceptual structure: the same elements are present at every density, only the spacing changes. (Scenario 1)
-- **FR-6.3** The compact dock and the full-screen Timers workspace shall each show every running, paused, completed, and canceled timer from the same underlying collection — the compact dock glanceably on the shooting screen, the full-screen workspace with full per-timer management actions. Intermediate states between the two are out of scope. (Scenario 3, 5)
-- **FR-6.4** The compact dock shall coexist with the calculator without obscuring it; the user can adjust calculator inputs while a timer runs without dismissing or moving the compact dock. (Scenario 3, 5; placement is a design choice, not a requirement.)
+- **FR-6.2** The app's surfaces shall adapt to available width and height so the user can reach all functions on phones, tablets, and foldables. Related content may be rearranged while preserving the same shooting workflow and information hierarchy. At device-default font size, ordinary shooting on supported windows shall not require vertical scrolling of the main shooting content. A smaller window shall not automatically qualify for a scrolling exception; its supported status and any exception require an explicit product decision. (Scenario 1, 10)
+- **FR-6.3** The compact dock and the full-screen Timers workspace shall each show every running, paused, completed, and canceled timer from the same underlying collection — the compact dock through a visible summary and access to remaining timers on the shooting screen, the full-screen workspace with full per-timer management actions. Intermediate states between the two are out of scope. (Scenario 3, 5)
+- **FR-6.4** The compact dock shall coexist with the calculator without obscuring it; the user can adjust calculator inputs while a timer runs without dismissing the compact timer summary. The summary may move between a bottom strip and a side rail as the available space changes. (Scenario 3, 5; placement is a design choice, not a requirement.)
 - **FR-6.5** The reciprocity details surface shall present its sections in a fixed order — *reciprocity model (source + calculation)* first, then *Graph*, then *source reference data* (formula expression or published table anchors; source-only) with an *app-derived comparison* when the active model is explicitly app-derived, then *Sources*. The order keeps the active model and its curve first, with the published source data and citations following. (Scenario 2)
 
 ### 3.7 Orientation and inputs
 
-- **FR-7.1** The app shall lock orientation so the photographer can hold the phone in a single grip while metering and adjusting. The current release supports portrait only. (Persona 1.1)
+- **FR-7.1** On phones and folded outer displays, the app shall retain portrait orientation where the operating system permits it. On tablets, unfolded displays, and windows whose shape or orientation is controlled by the operating system, the photographer shall be able to continue working in the available space without relying on a portrait lock. (Persona 1.1; Scenario 10)
 - **FR-7.2** Base shutter and ND shall be entered through controls that snap to valid values. Free-text numeric input is not accepted, so a typo cannot put the calculator into an unphotographic state. (Scenario 1)
+- **FR-7.3** Changing the available screen shall preserve the user's camera selection, shooting settings, uncommitted input, and current task without interrupting or duplicating timers. System UI and display-reserved regions shall not make required content or actions inaccessible. (Scenario 10)
 
 ### 3.8 Managed camera list
 

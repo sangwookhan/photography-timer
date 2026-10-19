@@ -27,6 +27,7 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
 | 16 / 17 | iPad compatibility window: in the Target Shutter sheet the lower half of Cancel/Confirm is cut by the window's bottom edge, both on this branch (16) and on main (17). It is not introduced here; Cancel still works |
 | 18 | iPad compatibility window: the Shooting Filters sheet opens with Cancel/Apply at the top, and closes with Cancel |
 | 19–22 | iPhone 17 (iOS 26.5), hardware keyboard off: Rename shows the software keyboard, and the sheet keeps the field and Cancel/Save above it (19). A typed draft (20) is discarded by Cancel (21). A typed draft is applied by Save (22). The name was restored afterwards |
+| 23–25 | Duo outer, software keyboard. It appears once the simulator's keyboard minimization (`AutomaticMinimizationEnabled`, which DeviceHub leaves on) is turned off inside the test device. Rename keeps the field and Cancel/Save above the keyboard (23); a draft is typed (24); after unfolding, the inner display keeps the sheet and the draft, and the keyboard is dismissed (25). Cancel then closed it without renaming |
 
 Captures 15–18 are over 1MB at full resolution. Each has a smaller copy, `*_app-window-crop_*.png` (under 200KB): the iPad app window cropped from the original and scaled to 820px wide. The originals are kept.
 

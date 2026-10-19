@@ -87,6 +87,63 @@ struct CompactTimerCardStripView: View {
     }
 }
 
+/// The compact summary as a side rail (WORKSPACE-033): the same cards in
+/// the same order as the strip, at most three, then the overflow entry.
+/// When the rail's length holds fewer complete cards, fewer are shown and
+/// the overflow counts the rest; cards are never clipped or compressed,
+/// and the rail never scrolls.
+struct CompactTimerCardRailView: View {
+    let snapshot: BottomSheetWorkspaceSnapshot
+    let availableHeight: CGFloat
+    let cardWidth: CGFloat
+    let onItemTap: (UUID) -> Void
+    let onOverflowTap: () -> Void
+    var soundingAlarmTimerID: UUID?
+    var onStopAlarm: () -> Void = {}
+
+    var body: some View {
+        let shownCount = Self.visibleCardCount(
+            itemCount: snapshot.compactItems.count,
+            hiddenCount: snapshot.hiddenCompactItemCount,
+            availableHeight: availableHeight
+        )
+        let overflow = snapshot.compactItems.count - shownCount + snapshot.hiddenCompactItemCount
+        VStack(spacing: BottomSheetCompactDockMetrics.cardSpacing) {
+            ForEach(snapshot.compactItems.prefix(shownCount)) { item in
+                let alarmSounding = item.id == soundingAlarmTimerID
+                CompactTimerMiniCardView(
+                    item: item,
+                    onTap: {
+                        if alarmSounding {
+                            onStopAlarm()
+                        } else {
+                            onItemTap(item.id)
+                        }
+                    },
+                    isAlarmSounding: alarmSounding,
+                    cardWidth: cardWidth
+                )
+            }
+            if overflow > 0 {
+                CompactOverflowMiniCard(text: "+\(overflow)", onTap: onOverflowTap, cardWidth: cardWidth)
+            }
+        }
+        .accessibilityIdentifier("main-screen-timer-rail")
+    }
+
+    /// Complete cards the rail shows for its length: every item when they
+    /// and any overflow entry fit, otherwise one slot fewer than fits so
+    /// the overflow entry takes the last one.
+    static func visibleCardCount(itemCount: Int, hiddenCount: Int, availableHeight: CGFloat) -> Int {
+        let spacing = BottomSheetCompactDockMetrics.cardSpacing
+        let slots = max(0, Int((availableHeight + spacing) / (BottomSheetCompactDockMetrics.timerCardHeight + spacing)))
+        if itemCount + (hiddenCount > 0 ? 1 : 0) <= slots {
+            return itemCount
+        }
+        return max(0, slots - 1)
+    }
+}
+
 private struct CompactTimerMiniCardView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isRunningPulseActive = false
@@ -94,6 +151,7 @@ private struct CompactTimerMiniCardView: View {
     let item: BottomSheetCompactItem
     let onTap: () -> Void
     var isAlarmSounding: Bool = false
+    var cardWidth: CGFloat = BottomSheetCompactDockMetrics.timerCardWidth
 
     private var compactPrimaryTextFont: Font {
         item.status == .completed ? .headline.weight(.bold) : .title3.weight(.bold)
@@ -267,7 +325,7 @@ private struct CompactTimerMiniCardView: View {
         .padding(.horizontal, 10)
         .padding(.bottom, 12)
         .frame(
-            width: BottomSheetCompactDockMetrics.timerCardWidth,
+            width: cardWidth,
             height: BottomSheetCompactDockMetrics.timerCardHeight,
             alignment: .topLeading
         )
@@ -517,6 +575,7 @@ private enum IdentityMarkerBadgeSize {
 private struct CompactOverflowMiniCard: View {
     let text: String
     let onTap: () -> Void
+    var cardWidth: CGFloat = BottomSheetCompactDockMetrics.overflowCardWidth
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -536,7 +595,7 @@ private struct CompactOverflowMiniCard: View {
         }
         .padding(10)
         .frame(
-            width: BottomSheetCompactDockMetrics.overflowCardWidth,
+            width: cardWidth,
             height: BottomSheetCompactDockMetrics.timerCardHeight,
             alignment: .topLeading
         )

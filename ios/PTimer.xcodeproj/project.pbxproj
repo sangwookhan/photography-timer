@@ -39,6 +39,9 @@
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
 		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
 		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
+		A00000000000000000000821 /* ExposureWorkspacePageArrangement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */; };
+		A00000000000000000000841 /* CompactTimerRailPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000840 /* CompactTimerRailPlacement.swift */; };
+		A00000000000000000000861 /* BoundedTaskPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000860 /* BoundedTaskPresentation.swift */; };
 		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
 		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
 		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
@@ -50,6 +53,8 @@
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
+		A00000000000000000000831 /* ExposureWorkspacePageArrangementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */; };
+		A00000000000000000000851 /* CompactTimerRailPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */; };
 		A00000000000000000000928 /* ExposureWorkspaceMainLayoutStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */; };
 		A0000000000000000000092A /* NDWheelPickerCenterRowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */; };
 		A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */; };
@@ -165,6 +170,9 @@
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
+		A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangement.swift; sourceTree = "<group>"; };
+		A00000000000000000000840 /* CompactTimerRailPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacement.swift; sourceTree = "<group>"; };
+		A00000000000000000000860 /* BoundedTaskPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedTaskPresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
 		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
 		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
@@ -176,6 +184,8 @@
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangementTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacementTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyleTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerCenterRowTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControlAccessibilityTests.swift; sourceTree = "<group>"; };
@@ -324,6 +334,9 @@
 				A0000000000000000000FF02 /* CustomFilmEditorFittedFormulaSection.swift */,
 				A00000000000000000000B93 /* CustomFilmEditorFieldSheets.swift */,
 				A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */,
+				A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */,
+				A00000000000000000000840 /* CompactTimerRailPlacement.swift */,
+				A00000000000000000000860 /* BoundedTaskPresentation.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
 				A0000000000000000000014C /* NDWheelPickerView.swift */,
 				A00000000000000000000209 /* CameraSlot */,
@@ -413,6 +426,8 @@
 				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
 				A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */,
 				A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */,
+				A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */,
+				A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */,
 				A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */,
 				A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */,
 				A0000000000000000000092F /* NDWheelPickerPollingTests.swift */,
@@ -699,6 +714,9 @@
 				A00000000000000000000147 /* UserDefaultsTimerMetadataStore.swift in Sources */,
 				A00000000000000000000149 /* FilmModeDetailsView.swift in Sources */,
 				A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */,
+				A00000000000000000000821 /* ExposureWorkspacePageArrangement.swift in Sources */,
+				A00000000000000000000841 /* CompactTimerRailPlacement.swift in Sources */,
+				A00000000000000000000861 /* BoundedTaskPresentation.swift in Sources */,
 				A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */,
 				A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */,
 				A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */,
@@ -740,6 +758,8 @@
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
 				A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */,
 				A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */,
+				A00000000000000000000831 /* ExposureWorkspacePageArrangementTests.swift in Sources */,
+				A00000000000000000000851 /* CompactTimerRailPlacementTests.swift in Sources */,
 				A00000000000000000000928 /* ExposureWorkspaceMainLayoutStyleTests.swift in Sources */,
 				A0000000000000000000092A /* NDWheelPickerCenterRowTests.swift in Sources */,
 				A0000000000000000000092E /* NDWheelPickerPollingTests.swift in Sources */,
@@ -801,7 +821,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -832,7 +852,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -965,7 +985,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -986,7 +1006,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1013,7 +1033,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1040,7 +1060,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

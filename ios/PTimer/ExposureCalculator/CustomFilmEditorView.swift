@@ -184,6 +184,7 @@ struct CustomFilmEditorView: View {
                     formState: $formState,
                     isEditing: editing != nil
                 )
+                .boundedTaskPresentation()
             }
         }
     }

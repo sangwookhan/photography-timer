@@ -17,7 +17,9 @@ enum ExposureWorkspaceLayoutDensity {
 /// marker-to-rail gap → timer preview rail → rail bottom margin.
 /// The rail footprint is reserved unconditionally so timer presence
 /// never reflows the camera workspace; only the rail's *contents*
-/// (`CompactTimerCardStripView`) are conditional.
+/// (`CompactTimerCardStripView`) are conditional. When the system side
+/// area holds the compact timers as a side rail instead, no strip band
+/// is reserved (WORKSPACE-032).
 ///
 /// The screen-level `GeometryReader` is hosted inside the default
 /// safe area, so `geometry.size.height` is already safe-area-trimmed
@@ -56,8 +58,11 @@ struct ExposureWorkspaceLayoutMetrics {
     /// Bottom-anchored y-offset of the page marker. The marker
     /// always sits above the rail's reserved band; its position is
     /// independent of timer presence.
-    static func pageMarkerBottomOffset() -> CGFloat {
-        timerStripBottomMargin
+    static func pageMarkerBottomOffset(withSideRail: Bool = false) -> CGFloat {
+        if withSideRail {
+            return timerStripBottomMargin
+        }
+        return timerStripBottomMargin
             + timerStripHeight
             + pageMarkerToStripGap
     }
@@ -76,9 +81,18 @@ struct ExposureWorkspaceLayoutMetrics {
     /// trimmed `workspaceArea` minus the unconditional bottom
     /// reservation. Safe-area insets are already excluded from
     /// `workspaceArea` and must not be subtracted again here.
-    static func availableMainContentHeight(workspaceArea: CGFloat) -> CGFloat {
-        workspaceArea - bottomReservation
+    static func availableMainContentHeight(workspaceArea: CGFloat, withSideRail: Bool = false) -> CGFloat {
+        workspaceArea - (withSideRail ? bottomReservationWithSideRail : bottomReservation)
     }
+
+    /// Reservation below the camera workspace when the compact timers sit
+    /// in a side rail: only the marker gap, the marker and the bottom
+    /// margin, so the rail's placement gives the page that height
+    /// (WORKSPACE-032).
+    static let bottomReservationWithSideRail: CGFloat =
+        timerStripBottomMargin
+        + pageMarkerHeight
+        + workspaceMarkerGap
 
     /// Minimum workspace budget at which the given density tier is
     /// allowed to render the page without overflowing required
@@ -99,6 +113,108 @@ struct ExposureWorkspaceLayoutMetrics {
         }
         return .dense
     }
+
+    // MARK: - Arrangement
+
+    /// The narrowest readable input column: the smallest supported
+    /// iPhone width (375pt) less the page padding, where the filter
+    /// row, wheels and notation header were designed to fit. Side by
+    /// side needs two of these.
+    static let minimumColumnWidth: CGFloat = 343
+
+    /// Space between the inputs and results columns when side by side.
+    static let columnGap: CGFloat = 16
+
+    /// Arrangement and tier for the workspace room (SHELL-057/059).
+    /// The single column keeps the height-only tier choice whenever a
+    /// tier fits, so existing windows are unchanged. Otherwise, when
+    /// two readable columns fit the width, the inputs and results sit
+    /// side by side at the roomiest tier whose side-by-side budget fits
+    /// the height. When neither fits, the Dense single column is used
+    /// as before.
+    static func layout(forAvailableWidth width: CGFloat, height: CGFloat) -> ExposureWorkspaceLayout {
+        let tiers: [ExposureWorkspaceMainLayoutStyle] = [.regular, .compact, .dense]
+        for style in tiers where height >= style.worstCaseContentBudget.total {
+            return ExposureWorkspaceLayout(style: style, arrangement: .singleColumn)
+        }
+        for style in tiers
+        where width - 2 * style.horizontalPadding >= 2 * minimumColumnWidth + columnGap
+            && height >= style.worstCaseContentBudget.sideBySideTotal {
+            return ExposureWorkspaceLayout(style: style, arrangement: .sideBySide)
+        }
+        return ExposureWorkspaceLayout(style: .dense, arrangement: .singleColumn)
+    }
+
+    /// The fold-aligned layout for a workspace of `width` x `height`
+    /// with an active `fold` in the same coordinates (SHELL-061/062), or
+    /// nil when the fold does not cross the page or the content does not
+    /// fit beside it at any tier. The fold rectangle already includes
+    /// the margins the system asks content to keep. Book: header and
+    /// inputs before a vertical fold, results after it; each side needs
+    /// its own group's minimum width. Tabletop: header
+    /// and results above a horizontal fold, inputs below it.
+    static func foldLayout(width: CGFloat, height: CGFloat, fold: CGRect) -> ExposureWorkspaceLayout? {
+        let tiers: [ExposureWorkspaceMainLayoutStyle] = [.regular, .compact, .dense]
+        for style in tiers {
+            let budget = style.worstCaseContentBudget
+            let pageWidth = width - 2 * style.horizontalPadding
+            let pageHeight = height - style.topPadding - style.bottomPadding
+            let local = fold.offsetBy(dx: -style.horizontalPadding, dy: -style.topPadding)
+            if local.height >= local.width {
+                guard local.minX > 0, local.maxX < pageWidth,
+                      local.minX >= minimumColumnWidth,
+                      pageWidth - local.maxX >= style.minimumResultColumnWidth,
+                      budget.headerCard + budget.targetCard + budget.variableCard <= pageHeight,
+                      budget.resultCard <= pageHeight else { continue }
+                return ExposureWorkspaceLayout(
+                    style: style,
+                    arrangement: .book(leadingEnd: local.minX, trailingStart: local.maxX)
+                )
+            }
+            guard local.minY > 0, local.maxY < pageHeight,
+                  pageWidth >= minimumColumnWidth,
+                  budget.headerCard + budget.resultCard <= local.minY,
+                  local.maxY + budget.targetCard + budget.variableCard <= pageHeight else { continue }
+            return ExposureWorkspaceLayout(style: style, arrangement: .tabletop(lowerStart: local.maxY))
+        }
+        return nil
+    }
+}
+
+/// How a camera page places its inputs and results (SHELL-057/059/062).
+enum ExposureWorkspaceArrangement: Equatable {
+    /// Header, inputs and results stacked in one bounded column.
+    case singleColumn
+    /// Header across the top; the inputs and the results side by side
+    /// below it.
+    case sideBySide
+    /// Around a vertical fold: the header and inputs end at
+    /// `leadingEnd` and the results start at `trailingStart`, in page
+    /// coordinates.
+    case book(leadingEnd: CGFloat, trailingStart: CGFloat)
+    /// Around a horizontal fold: the header and results above it, the
+    /// inputs from `lowerStart` down, in page coordinates.
+    case tabletop(lowerStart: CGFloat)
+
+    /// Upper bound for the page width so it never stretches without
+    /// limit on a wide window. Around a fold the page keeps the full
+    /// width so the fold's position stays where the system reports it.
+    var maximumWidth: CGFloat {
+        switch self {
+        case .singleColumn:
+            return 600
+        case .sideBySide:
+            return 1000
+        case .book, .tabletop:
+            return .infinity
+        }
+    }
+}
+
+/// The tier and arrangement a camera page renders with.
+struct ExposureWorkspaceLayout: Equatable {
+    let style: ExposureWorkspaceMainLayoutStyle
+    let arrangement: ExposureWorkspaceArrangement
 }
 
 /// The complete worst-case visible content of one density tier
@@ -165,5 +281,11 @@ struct ExposureWorkspaceContentBudget: Equatable {
     /// The tier's eligibility requirement.
     var total: CGFloat {
         topPadding + headerCard + targetCard + variableCard + resultCard + resultSpacer + bottomPadding
+    }
+
+    /// The requirement when the inputs (Target Shutter and variable
+    /// cards) and the result card sit side by side under the header.
+    var sideBySideTotal: CGFloat {
+        topPadding + headerCard + max(targetCard + variableCard, resultCard) + resultSpacer + bottomPadding
     }
 }

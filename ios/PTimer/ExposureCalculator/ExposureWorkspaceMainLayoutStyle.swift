@@ -5,6 +5,7 @@ import SwiftUI
 import PTimerCore
 import PTimerKit
 import UIKit
+import CoreText
 
 /// Density-driven layout knobs shared by the camera workspace, the
 /// target shutter row, and the result section. Owns paddings,
@@ -253,13 +254,17 @@ enum ExposureWorkspaceMainLayoutStyle {
     /// line with a leading label, an optional seconds comparison, and
     /// the trailing timer affordance.
     var unifiedResultPrimaryFont: Font {
+        .system(size: unifiedResultPrimaryPointSize, weight: .semibold, design: .rounded)
+    }
+
+    var unifiedResultPrimaryPointSize: CGFloat {
         switch self {
         case .regular:
-            return .system(size: 21, weight: .semibold, design: .rounded)
+            return 21
         case .compact:
-            return .system(size: 19, weight: .semibold, design: .rounded)
+            return 19
         case .dense:
-            return .system(size: 18, weight: .semibold, design: .rounded)
+            return 18
         }
     }
 
@@ -1761,6 +1766,43 @@ extension ExposureWorkspaceMainLayoutStyle {
     /// row and viewport in a zero-spacing stack under the group header.
     func filterWheelColumnGeometry(ndWheelCount: Int) -> WheelColumnGeometry {
         wheelColumnGeometry(ndWheelCount: ndWheelCount)
+    }
+
+    /// The narrowest results column whose duration rows stay whole and
+    /// readable (SHELL-059), derived from the values the result row
+    /// renders: the card and block paddings, the fixed label, seconds
+    /// and start-button columns with the row's spacing, and the widest
+    /// primary duration the result formatter produces at the smallest
+    /// scale the row allows. It is independent of the input column's
+    /// minimum, which comes from the filter row and wheels.
+    var minimumResultColumnWidth: CGFloat {
+        let primary = Self.widestResultPrimaryWidth(pointSize: unifiedResultPrimaryPointSize)
+            * ResultValueRow.primaryMinimumScaleFactor
+        return 2 * sectionCardPadding + 2 * resultBlockPadding
+            + resultLabelColumnWidth + primary + resultSecondsColumnWidth + timerActionSize
+            + 3 * ResultValueRow.columnSpacing
+    }
+
+    /// The widest primary of each duration bucket: a clock value marked
+    /// approximate outside the manufacturer guidance, and the longest
+    /// month-and-day value.
+    static let widestResultPrimaries = ["≈23:59:59", "≈11mo 29d"]
+
+    /// Width of the widest primary in the row's rounded semibold font
+    /// with monospaced digits.
+    private static func widestResultPrimaryWidth(pointSize: CGFloat) -> CGFloat {
+        let base = UIFont.systemFont(ofSize: pointSize, weight: .semibold)
+        let rounded = base.fontDescriptor.withDesign(.rounded) ?? base.fontDescriptor
+        let monospacedDigits = rounded.addingAttributes([
+            .featureSettings: [[
+                UIFontDescriptor.FeatureKey.type: kNumberSpacingType,
+                UIFontDescriptor.FeatureKey.selector: kMonospacedNumbersSelector,
+            ]],
+        ])
+        let font = UIFont(descriptor: monospacedDigits, size: pointSize)
+        return widestResultPrimaries
+            .map { ($0 as NSString).size(withAttributes: [.font: font]).width }
+            .max() ?? 0
     }
 
     var worstCaseContentBudget: ExposureWorkspaceContentBudget {

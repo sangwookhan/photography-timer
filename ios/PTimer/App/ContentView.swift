@@ -2,17 +2,46 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import SwiftUI
+import UIKit
 import PTimerKit
 
 struct ContentView: View {
     var body: some View {
         ExposureCalculatorScreen()
             .ptimerComponentTheme(.system)
+            .background(PortraitOrientationKeeper().accessibilityHidden(true))
             #if DEBUG
             .overlay(alignment: .topTrailing) {
                 DebugBuildRibbon()
             }
             #endif
+    }
+}
+
+/// Applies the app's portrait-only orientation again whenever the window
+/// changes size, for example when it moves to the other display of a
+/// foldable. A display that allows portrait then returns to it instead of
+/// keeping the orientation of the display the window came from. Its size
+/// is tracked here, outside `ContentView`, so nothing re-evaluates the
+/// screen.
+private struct PortraitOrientationKeeper: UIViewRepresentable {
+    func makeUIView(context: Context) -> KeeperView {
+        let view = KeeperView()
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ view: KeeperView, context: Context) {}
+
+    final class KeeperView: UIView {
+        private var lastWindowSize: CGSize = .zero
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            guard let window, window.bounds.size != lastWindowSize else { return }
+            lastWindowSize = window.bounds.size
+            window.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        }
     }
 }
 

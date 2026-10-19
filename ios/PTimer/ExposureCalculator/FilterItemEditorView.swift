@@ -317,6 +317,7 @@ struct FilterItemEditorView: View {
                     },
                     onCancel: { creationDraft = nil }
                 )
+                .boundedTaskPresentation()
             }
         }
         .presentationDragIndicator(.visible)

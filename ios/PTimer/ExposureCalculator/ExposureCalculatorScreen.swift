@@ -40,6 +40,8 @@ struct ExposureCalculatorScreen: View {
     /// The pager's trailing utility page is showing (transient; relaunch
     /// returns to the active camera, CAMERA-PAGER-007).
     @State private var isUtilityPageShowing = false
+    /// The window's reserved regions, for the side rail's placement.
+    @State private var reservedRegions = ReservedRegionSnapshot()
     /// Where camera management was opened from, to choose where closing
     /// it returns to.
     @State private var cameraManagementOrigin: CameraManagementOrigin = .settings
@@ -191,17 +193,50 @@ struct ExposureCalculatorScreen: View {
             // it as the workspace area without re-subtracting safe
             // insets. The ZStack below lives in the same trimmed
             // region; bottom paddings measure from its bottom edge.
-            let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
-                workspaceArea: geometry.size.height
+            // The system side area holds the compact timers when it is
+            // wide and long enough (WORKSPACE-032/034); the page then
+            // keeps the strip's height.
+            let contentFrame = geometry.frame(in: .global)
+            // An active fold, in this content area's coordinates.
+            let fold = reservedRegions.fold?.offsetBy(dx: -contentFrame.minX, dy: -contentFrame.minY)
+            let sideRail = reservedRegions.window.isEmpty ? nil : CompactTimerRailPlacement.placement(
+                content: contentFrame,
+                window: reservedRegions.window,
+                reserved: reservedRegions.occlusions + [reservedRegions.fold].compactMap { $0 },
+                cardHeight: BottomSheetCompactDockMetrics.timerCardHeight
             )
-            let style = layoutStyle(for: workspaceHeight)
+            let workspaceHeight = ExposureWorkspaceLayoutMetrics.availableMainContentHeight(
+                workspaceArea: geometry.size.height,
+                withSideRail: sideRail != nil
+            )
+            // Around an active fold when the content fits beside it
+            // (SHELL-061/062); otherwise by the room alone.
+            let layout = fold.flatMap {
+                ExposureWorkspaceLayoutMetrics.foldLayout(
+                    width: geometry.size.width,
+                    height: workspaceHeight,
+                    fold: $0
+                )
+            } ?? ExposureWorkspaceLayoutMetrics.layout(
+                forAvailableWidth: geometry.size.width,
+                height: workspaceHeight
+            )
+            // Beside a vertical fold the page marker stays with the
+            // camera context and the strip takes the larger side.
+            let foldSides = fold.flatMap { FoldSides(fold: $0, width: geometry.size.width) }
+            let style = layout.style
 
             ZStack(alignment: .bottom) {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
+                ReservedRegionReader { reservedRegions = $0 }
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+
                 ExposureWorkspaceMainContent(
                     style: style,
+                    arrangement: layout.arrangement,
                     viewModel: viewModel,
                     availableHeight: workspaceHeight,
                     onToggleFilmSelector: {
@@ -240,49 +275,55 @@ struct ExposureCalculatorScreen: View {
                     CameraSlotPagerIndicator(indicator: indicator)
                     .padding(
                         .bottom,
-                        ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset()
+                        ExposureWorkspaceLayoutMetrics.pageMarkerBottomOffset(withSideRail: sideRail != nil)
                     )
-                    .frame(maxWidth: .infinity)
+                    .within(foldSides?.leading)
                 }
 
-                // Running timer preview rail boundary. Always
-                // rendered so the area reads as a preview surface
-                // even when no cards are present.
-                TimerPreviewRailBackground()
-                    .padding(
-                        .bottom,
-                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
-                    )
-                    .frame(maxWidth: .infinity)
+                if let sideRail {
+                    if hasTimers {
+                        sideRailView(sideRail, snapshot: snapshot, contentFrame: contentFrame)
+                    }
+                } else {
+                    // Running timer preview rail boundary. Always
+                    // rendered so the area reads as a preview surface
+                    // even when no cards are present.
+                    TimerPreviewRailBackground()
+                        .padding(
+                            .bottom,
+                            ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
+                        )
+                        .within(foldSides?.larger)
 
-                // Compact timer cards — rendered inside the rail
-                // band when timers exist.
-                if hasTimers {
-                    CompactTimerCardStripView(
-                        snapshot: snapshot,
-                        onItemTap: { id in
-                            Self.handleCompactCardTap(
-                                id: id,
-                                in: snapshot,
-                                store: bottomSheetStateStore
-                            )
-                        },
-                        onOverflowTap: {
-                            Self.handleOverflowTap(
-                                in: snapshot,
-                                store: bottomSheetStateStore
-                            )
-                        },
-                        soundingAlarmTimerID: alarmPlayer.soundingTimerID,
-                        onStopAlarm: { alarmPlayer.stop() }
-                    )
-                    .padding(
-                        .bottom,
-                        ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
-                    )
-                    .frame(maxWidth: .infinity)
-                    .allowsHitTesting(!isFilmSelectorPresented)
-                    .accessibilityIdentifier("main-screen-timer-strip-container")
+                    // Compact timer cards — rendered inside the rail
+                    // band when timers exist.
+                    if hasTimers {
+                        CompactTimerCardStripView(
+                            snapshot: snapshot,
+                            onItemTap: { id in
+                                Self.handleCompactCardTap(
+                                    id: id,
+                                    in: snapshot,
+                                    store: bottomSheetStateStore
+                                )
+                            },
+                            onOverflowTap: {
+                                Self.handleOverflowTap(
+                                    in: snapshot,
+                                    store: bottomSheetStateStore
+                                )
+                            },
+                            soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+                            onStopAlarm: { alarmPlayer.stop() }
+                        )
+                        .padding(
+                            .bottom,
+                            ExposureWorkspaceLayoutMetrics.timerStripBottomOffset()
+                        )
+                        .within(foldSides?.larger)
+                        .allowsHitTesting(!isFilmSelectorPresented)
+                        .accessibilityIdentifier("main-screen-timer-strip-container")
+                    }
                 }
 
                 if isFilmSelectorPresented {
@@ -395,22 +436,26 @@ struct ExposureCalculatorScreen: View {
                     set: { if !$0 { presentedFilmDetails = nil } }
                 )
             ) {
-                if let details = presentedFilmDetails {
-                    FilmModeDetailsSheet(
-                        details: details,
-                        onSelectProfile: { profileID in
-                            viewModel.selectProfileVariant(profileID: profileID)
-                            // Re-read the recomputed snapshot so the open
-                            // sheet reflects the newly active profile/model.
-                            presentedFilmDetails = viewModel.filmModeDetailsDisplayState
-                        }
-                    )
+                Group {
+                    if let details = presentedFilmDetails {
+                        FilmModeDetailsSheet(
+                            details: details,
+                            onSelectProfile: { profileID in
+                                viewModel.selectProfileVariant(profileID: profileID)
+                                // Re-read the recomputed snapshot so the open
+                                // sheet reflects the newly active profile/model.
+                                presentedFilmDetails = viewModel.filmModeDetailsDisplayState
+                            }
+                        )
+                    }
                 }
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isShootingFilterSelectionPresented) {
                 ShootingFilterSelectionView(viewModel: viewModel) {
                     isShootingFilterSelectionPresented = false
                 }
+                .boundedTaskPresentation()
             }
             .sheet(item: $slotIDPendingRename) { slotID in
                 CameraSlotRenameSheet(
@@ -420,11 +465,13 @@ struct ExposureCalculatorScreen: View {
                         viewModel.renameCamera(slotID, to: newName)
                     }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isCameraManagementPresented, onDismiss: handleCameraManagementDismissed) {
                 CameraManagementView(viewModel: viewModel) {
                     isCameraManagementPresented = false
                 }
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isCustomFilmEditorPresented, onDismiss: presentPendingFormulaSeed) {
                 CustomFilmEditorView(
@@ -446,9 +493,11 @@ struct ExposureCalculatorScreen: View {
                         isCustomFilmEditorPresented = false
                     }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(item: $customFilmBeingEdited, onDismiss: presentPendingFormulaSeed) { editing in
                 customFilmEditorSheet(for: editing)
+                .boundedTaskPresentation()
             }
             .sheet(item: $customFormulaSeed) { seed in
                 CustomFilmEditorView(
@@ -468,14 +517,17 @@ struct ExposureCalculatorScreen: View {
                         customFormulaSeed = nil
                     }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isAboutPresented) {
                 PTimerAboutView()
+                .boundedTaskPresentation()
             }
             .sheet(isPresented: $isFilterManagementPresented) {
                 FilterManagementView(viewModel: viewModel) {
                     isFilterManagementPresented = false
                 }
+                .boundedTaskPresentation()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -635,14 +687,11 @@ struct ExposureCalculatorScreen: View {
         )
         isUtilityPageShowing = target == .utilityPage
     }
-
-    private func layoutStyle(for availableHeight: CGFloat) -> ExposureWorkspaceMainLayoutStyle {
-        ExposureWorkspaceLayoutMetrics.style(forAvailableHeight: availableHeight)
-    }
 }
 
 private struct ExposureWorkspaceMainContent: View {
     let style: ExposureWorkspaceMainLayoutStyle
+    let arrangement: ExposureWorkspaceArrangement
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let availableHeight: CGFloat
     let onToggleFilmSelector: () -> Void
@@ -670,6 +719,7 @@ private struct ExposureWorkspaceMainContent: View {
                         pageState: viewModel.cameraSlotPageState(for: slotID),
                         viewModel: viewModel,
                         style: style,
+                        arrangement: arrangement,
                         onToggleFilmSelector: onToggleFilmSelector,
                         onShowFilmDetails: onShowFilmDetails,
                         onRequestRename: {
@@ -782,6 +832,7 @@ private struct CameraSlotCalculatorPage: View {
     let pageState: CameraSlotPageState
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let style: ExposureWorkspaceMainLayoutStyle
+    let arrangement: ExposureWorkspaceArrangement
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     /// Tap handler for the slot title rename affordance. Wired
@@ -804,7 +855,10 @@ private struct CameraSlotCalculatorPage: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ExposureWorkspacePageArrangement(
+            arrangement: arrangement,
+            resultSpacerMinLength: style.resultFlowSpacerMinLength
+        ) {
             HeaderView(
                 cameraSlotTitle: pageState.cameraDisplayName,
                 activeCameraSlotID: pageState.slotID,
@@ -832,7 +886,7 @@ private struct CameraSlotCalculatorPage: View {
             // and film selector), so it shares the priority of the
             // Target Shutter and result cards.
             .layoutPriority(1)
-
+        } inputs: {
             // Target Shutter goal row — sits between the film/profile
             // card and the Base Shutter / ND Filter controls because
             // the target is a shooting input, not a secondary read of
@@ -958,7 +1012,7 @@ private struct CameraSlotCalculatorPage: View {
                     ),
                 style: style
             )
-
+        } results: {
             ResultSectionView(
                 isFilmWorkflowActive: pageState.isFilmWorkflowActive,
                 calculationResult: viewModel.calculationResult(forPage: pageState),
@@ -987,8 +1041,6 @@ private struct CameraSlotCalculatorPage: View {
             // `ResultSectionView` keeps the 3-row film hierarchy
             // from being compressed past its inner clipShape.
             .layoutPriority(1)
-
-            Spacer(minLength: style.resultFlowSpacerMinLength)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .allowsHitTesting(pageState.isActive)
@@ -1389,4 +1441,62 @@ private func assertNoKoreanUIStrings(_ strings: [String]) {
 #if DEBUG
     assert(strings.allSatisfy { !$0.containsKoreanCharacters })
 #endif
+}
+
+/// The horizontal extents on each side of a vertical fold, in the
+/// content area's coordinates, for elements that must not span it
+/// (SHELL-061).
+private struct FoldSides {
+    let leading: ClosedRange<CGFloat>
+    let trailing: ClosedRange<CGFloat>
+
+    var larger: ClosedRange<CGFloat> {
+        leading.upperBound - leading.lowerBound >= trailing.upperBound - trailing.lowerBound ? leading : trailing
+    }
+
+    /// Nil for a horizontal fold or one outside the content area.
+    init?(fold: CGRect, width: CGFloat) {
+        guard fold.height >= fold.width, fold.minX > 0, fold.maxX < width else { return nil }
+        leading = 0...fold.minX
+        trailing = fold.maxX...width
+    }
+}
+
+private extension View {
+    /// Full width, or only `range` of it when given.
+    func within(_ range: ClosedRange<CGFloat>?) -> some View {
+        frame(width: range.map { $0.upperBound - $0.lowerBound })
+            .padding(.leading, range?.lowerBound ?? 0)
+            .frame(maxWidth: .infinity, alignment: range == nil ? .center : .leading)
+    }
+}
+
+private extension ExposureCalculatorScreen {
+    /// The compact timers in the system side area, placed beside the
+    /// safe area at the rail's run (WORKSPACE-033/034).
+    func sideRailView(
+        _ rail: CompactTimerRailPlacement,
+        snapshot: BottomSheetWorkspaceSnapshot,
+        contentFrame: CGRect
+    ) -> some View {
+        CompactTimerCardRailView(
+            snapshot: snapshot,
+            availableHeight: rail.height,
+            cardWidth: rail.cardWidth,
+            onItemTap: { id in
+                Self.handleCompactCardTap(id: id, in: snapshot, store: bottomSheetStateStore)
+            },
+            onOverflowTap: {
+                Self.handleOverflowTap(in: snapshot, store: bottomSheetStateStore)
+            },
+            soundingAlarmTimerID: alarmPlayer.soundingTimerID,
+            onStopAlarm: { alarmPlayer.stop() }
+        )
+        .frame(width: rail.width)
+        .padding(.top, rail.top - contentFrame.minY)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: rail.side == .trailing ? .topTrailing : .topLeading)
+        // Into the side area beside the safe area.
+        .offset(x: rail.side == .trailing ? rail.width : -rail.width)
+        .allowsHitTesting(!isFilmSelectorPresented)
+    }
 }

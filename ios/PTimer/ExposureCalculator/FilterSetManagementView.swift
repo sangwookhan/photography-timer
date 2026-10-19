@@ -213,6 +213,7 @@ struct FilterManagementView: View {
                     },
                     onCancel: { creationDraft = nil }
                 )
+                .boundedTaskPresentation()
             }
             .sheet(item: $editingItem) { context in
                 FilterItemEditorView(
@@ -223,6 +224,7 @@ struct FilterManagementView: View {
                     },
                     onDismiss: { editingItem = nil }
                 )
+                .boundedTaskPresentation()
             }
         }
     }
@@ -459,6 +461,7 @@ struct FilterSetDetailView: View {
                     },
                     onDismiss: { editingItem = nil }
                 )
+                .boundedTaskPresentation()
             }
             .confirmationDialog(
                 Text("Delete filter?"),
@@ -497,6 +500,7 @@ struct FilterSetDetailView: View {
                     },
                     onCancel: { isDeletionPending = false }
                 )
+                .boundedTaskPresentation()
             }
         } else {
             Text("This Filter Set no longer exists.")

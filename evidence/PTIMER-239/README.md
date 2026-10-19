@@ -27,4 +27,6 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
 | 16 / 17 | iPad compatibility window: in the Target Shutter sheet the lower half of Cancel/Confirm is cut by the window's bottom edge, both on this branch (16) and on main (17). It is not introduced here; Cancel still works |
 | 18 | iPad compatibility window: the Shooting Filters sheet opens with Cancel/Apply at the top, and closes with Cancel |
 
+Captures 15–18 are over 1MB at full resolution. Each has a smaller copy, `*_app-window-crop_*.png` (under 200KB): the iPad app window cropped from the original and scaled to 820px wide. The originals are kept.
+
 `test-log.txt`: app-hosted layout tests, PTimerKit package tests and per-commit build at the head.

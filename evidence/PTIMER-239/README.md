@@ -23,5 +23,8 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
 | 10 / 11 | Duo outer after folding from inner landscape: before the fix, landscape with the top and bottom cut off; after the fix, it stays portrait (`da0e2887`) |
 | 12 | Duo inner, flat, landscape: the Shooting Filters sheet, main (left) vs new (right). Both are width-limited at this size, so the form size request changes nothing visible here |
 | 13 / 14 | The Rename sheet with an unsaved draft on the inner display; after folding, the outer display (portrait) keeps the sheet, the draft and its Cancel/Save buttons |
+| 15 | iPad Air 11-inch (M4), iPadOS 26.5: the app runs in iPhone compatibility mode (`TARGETED_DEVICE_FAMILY = 1`) as an iPhone-sized window. All required shooting UI is visible |
+| 16 / 17 | iPad compatibility window: in the Target Shutter sheet the lower half of Cancel/Confirm is cut by the window's bottom edge, both on this branch (16) and on main (17). It is not introduced here; Cancel still works |
+| 18 | iPad compatibility window: the Shooting Filters sheet opens with Cancel/Apply at the top, and closes with Cancel |
 
 `test-log.txt`: app-hosted layout tests, PTimerKit package tests and per-commit build at the head.

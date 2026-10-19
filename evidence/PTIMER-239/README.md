@@ -28,6 +28,7 @@ Evidence for draft PR #94. It is not product documentation, and this branch is n
 | 18 | iPad compatibility window: the Shooting Filters sheet opens with Cancel/Apply at the top, and closes with Cancel |
 | 19–22 | iPhone 17 (iOS 26.5), hardware keyboard off: Rename shows the software keyboard, and the sheet keeps the field and Cancel/Save above it (19). A typed draft (20) is discarded by Cancel (21). A typed draft is applied by Save (22). The name was restored afterwards |
 | 23–25 | Duo outer, software keyboard. It appears once the simulator's keyboard minimization (`AutomaticMinimizationEnabled`, which DeviceHub leaves on) is turned off inside the test device. Rename keeps the field and Cancel/Save above the keyboard (23); a draft is typed (24); after unfolding, the inner display keeps the sheet and the draft, and the keyboard is dismissed (25). Cancel then closed it without renaming |
+| 26–28 | Duo, software keyboard enabled in DeviceHub. After unfolding with the keyboard up, the inner display (landscape) keeps the Rename sheet above the keyboard (26). An unsaved draft that differs from the saved name, `…No.2` against a saved `…No.2ㅇㄹㄹㄹㄹ`, typed on the inner display (27). After folding, the outer display keeps the sheet, the keyboard and that draft (28). The name was saved back to its original value afterwards |
 
 Captures 15–18 are over 1MB at full resolution. Each has a smaller copy, `*_app-window-crop_*.png` (under 200KB): the iPad app window cropped from the original and scaled to 820px wide. The originals are kept.
 

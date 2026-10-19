@@ -2,7 +2,9 @@
 
 Evidence for draft PR #94. It is not product documentation, and this branch is not meant to be merged.
 
-- Spec: #90 at `a71cf4ca`.
+- Spec baseline:
+  - Captures were taken against #90 at `a71cf4ca`, the revision in force while they were made.
+  - The approved revision is now `ba72ce0e`. Its only change is the Android 360x640dp exclusion, which does not affect these iOS captures.
 - PR head when collected: `9eb31818`.
 - Environment: Xcode 27.1, iOS 27.1 simulators (iPhone 17 and iPhone Duo), default text size.
 - The Duo was driven through DeviceHub (fold, posture, rotation).

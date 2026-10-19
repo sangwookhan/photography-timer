@@ -1,0 +1,31 @@
+PTIMER-230 Android #93 test log
+Head: 54676280  Date: 2026-10-19 09:36 KST  (tests re-run, not from cache)
+
+> Task :app:testDebugUnitTest
+BUILD SUCCESSFUL in 2s
+> Task :core:testClasses UP-TO-DATE
+> Task :core:test
+BUILD SUCCESSFUL in 5s
+BUILD SUCCESSFUL in 728ms
+
+app unit tests (tests failures errors):
+445 0 0
+core tests (tests failures errors):
+363 0 0
+
+Placement/fold suites:
+testsuite name="com.sangwook.ptimer.app.ui.shooting.FoldPlacementTest" tests="8" skipped="0" failures="0" errors="0"
+testsuite name="com.sangwook.ptimer.app.ui.shooting.ShootingPagePlacementTest" tests="10" skipped="0" failures="0" errors="0"
+
+Lint: 0 errors, 34 warnings
+
+Per-commit compile (compileDebugKotlin + compileDebugUnitTestKotlin), 2026-10-19 03:3x KST, before the A6 amend (tree of all earlier commits unchanged since):
+  f84860ae errors=0
+  add9c732 errors=0
+  5e34b805 errors=0
+  515e9270 errors=0
+  fa93329d errors=0
+  06f492fd errors=0
+  0ba0a2ce errors=0
+  2d5ff6c3 errors=0
+  54676280 (amended A6) builds: assembleDebug + tests above

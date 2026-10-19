@@ -47,6 +47,13 @@ Photography Timer is available now on iOS and Android.
 {% include shot.html name="home-custom-film-preview" alt="Custom film reciprocity preview" caption="Preview the curve before you save it" %}
 </div>
 
+On foldables, the layout adapts to how you hold the device.
+
+<div class="gallery fold">
+{% include shot.html name="home-fold-book" alt="Hasselblad 503cx half open like a book, with results on the other side of the fold" caption="Half open like a book: inputs on one side, results on the other" %}
+{% include shot.html name="home-fold-outer" alt="Hasselblad 503cx on the outer display with timers in a side column" caption="On the outer display, timers move to a side column" %}
+</div>
+
 ## Film Data & Attribution
 
 Photography Timer includes selected official film reciprocity data derived from publicly available manufacturer publications and source references.

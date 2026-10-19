@@ -7,6 +7,22 @@ title: Release Notes
 
 {% include platform-toggle.html %}
 
+## 1.1.2 — Unreleased
+
+Common changes:
+
+- **Foldable and wide screens**
+  - Supports iPhone Duo on iOS and Galaxy Fold and tablets on Android. Phone layouts are unchanged.
+  - On a wide screen the shooting page uses the extra room: a wider single column, or inputs and results side by side.
+  - When the device is half open, the page, page dots and timers stay clear of the fold.
+  - Running timers can sit in a column beside the page: up to three cards, with View all for the rest.
+  - Folding, unfolding and rotating keep your open screens and edits.
+
+<div class="gallery fold">
+{% include shot.html name="rn-1.1.2-open" alt="Hasselblad 503cx on an unfolded screen in landscape" caption="Unfolded, landscape" %}
+{% include shot.html name="rn-1.1.2-portrait" alt="Hasselblad 503cx on an unfolded screen in portrait" caption="Unfolded, portrait" %}
+</div>
+
 ## 1.0.1
 
 This release includes the changes beta-tested in 0.9.1, documented below.

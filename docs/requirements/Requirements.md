@@ -271,6 +271,8 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-2.17** The user shall be able to create a new, independent **custom Formula** profile seeded from a saved table's fitted preview ("Create Formula from table"). Cancel shall create nothing; Save shall create a separate profile whose calculation parameters remain independent of the source table afterward — editing or deleting either one shall not mutate the other. (Persona 1.2; extends FR-2.9, FR-2.10)
 - **FR-2.18** A preset film may expose more than one selectable reciprocity profile — a primary plus an alternate/derived model (for example an app-derived formula alongside an official table). When a film offers more than one, the user shall be able to select among them, and the selection shall persist per camera across an app restart (extends FR-8.2, FR-5.2). (Persona 1.2, 1.3; Scenario 2)
 
+- **FR-2.19** Preset and Custom films shall retain independent Positive/Negative and Color/Black & White classifications. Photographers shall be able to choose both when creating or editing Custom films and reuse the saved values after restart. Existing valid Custom data shall restore with compatible defaults, while Presets shall use source-verified classifications. Film classification shall preserve existing exposure, reciprocity, camera-selection, and captured-timer behavior. (Persona 1.2; Scenarios 2, 8)
+
 ### 3.3 Timer lifecycle
 
 - **FR-3.1** The system shall start a timer only with a duration that is strictly positive and finite. Infinite, NaN, or non-positive durations are rejected at the entry point, before any persisted state is written. (Scenario 3 boundary)

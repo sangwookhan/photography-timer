@@ -6,6 +6,7 @@
 | Prefix | Owns |
 | --- | --- |
 | CUSTOM | Identity, authority, and profile-type rules |
+| CUSTOM-CLASS | Classification editing, defaults, and compatibility |
 | CUSTOM-FORMULA | The formula editor |
 | CUSTOM-TABLE | The table editor |
 | CUSTOM-SEED | Deriving a formula from a saved table |
@@ -45,6 +46,51 @@ profile.
 - **CUSTOM-004** — On Android, an in-progress (unsaved) custom profile
   editor draft survives a configuration/Activity recreation (not a full
   app restart), rather than being silently discarded.
+
+### Film classification
+
+The independent attributes and shared identity invariants are owned by
+`reciprocity/catalog.md` CATALOG-CLASS-001–005.
+
+- **CUSTOM-CLASS-001** — A newly created Custom Formula or Table shall
+  start as **Negative + Black & White**. Both attributes remain independently
+  editable before saving.
+- **CUSTOM-CLASS-002** — The Custom create/edit identity area shall expose
+  two separately labelled choices after ISO and before calculation inputs:
+  **Polarity** (Negative / Positive) and **Color** (Black & White / Color).
+  The current value and alternatives shall be directly understandable;
+  labels and selection state shall be accessible without relying on color.
+  Both Formula and Table flows shall offer the same choices, including
+  Formula creation seeded from a saved Table.
+- **CUSTOM-CLASS-003** — English and Korean shall convey equivalent
+  choices: Polarity / 필름 유형, Negative / 네거티브, Positive / 포지티브,
+  Color / 색상 for the attribute label, Black & White / 흑백 and
+  Color / 컬러 for its values. The controls shall preserve the existing
+  identity and calculation editing hierarchy.
+- **CUSTOM-CLASS-004** — Saving a valid Custom film shall retain both
+  selected attributes through reopening, subsequent edits, and app relaunch.
+  Editing retains its film/profile identifiers and existing camera references.
+  Cancel or dismissal preserves the saved film.
+- **CUSTOM-CLASS-005** — Changing the unsaved Formula/Table input kind,
+  correcting validation failures, or using formula-only Reset/Revert shall
+  preserve both current classification choices. On Android both choices
+  shall survive editor draft recreation under CUSTOM-004.
+- **CUSTOM-CLASS-006** — Formula creation from a saved Table shall initially
+  inherit both source classifications. The photographer may change either
+  in the seeded editor. Saving and later editing/deleting either profile
+  follow the independent-profile contract in CUSTOM-SEED-004–005.
+- **CUSTOM-CLASS-007** — A valid legacy Custom Formula or Table with a
+  missing polarity shall restore as Negative; a missing color classification
+  shall restore as Black & White. Each fallback applies independently.
+  Explicitly stored values take precedence, including a non-default value
+  when the other field is missing, and survive subsequent saves.
+- **CUSTOM-CLASS-008** — Missing classification shall preserve an otherwise
+  valid legacy record and its identifiers, source metadata, formula
+  parameters, table anchors, and reference-table link. Present unrecognized
+  values remain governed by the strict decoding, record-isolation, and
+  quarantine contract in `cross-cutting/persistence.md`. Compatibility
+  defaults describe Custom restoration and initialization, not an inferred
+  claim about a physical film stock.
 
 ### Formula profile
 

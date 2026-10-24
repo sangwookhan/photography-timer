@@ -6,6 +6,7 @@
 | Prefix | Owns |
 | --- | --- |
 | CATALOG | Film identity, source provenance, and the bundled dataset |
+| CATALOG-CLASS | Independent film polarity and color classification |
 | CATALOG-SHAPE | The on-disk catalog encoding |
 | CATALOG-VALID | Validation rules a catalog must pass to load |
 | CATALOG-PICKER | The film picker sheet |
@@ -44,6 +45,35 @@ One canonical shared catalog file backs both platforms. It currently ships
   source.
 - **CATALOG-004** — Official manufacturer data and third-party/community
   data shall never be merged into one provenance record.
+
+### Independent film classification
+
+- **CATALOG-CLASS-001** — Every preset and custom film shall carry two
+  independent attributes: polarity (**Positive** or **Negative**) and color
+  classification (**Color** or **Black & White**). All four combinations
+  are supported. Changing one attribute preserves the other. The attributes
+  describe the film identity and remain the same across its primary,
+  alternate, and derived reciprocity profiles.
+- **CATALOG-CLASS-002** — Every one of the 40 bundled film identities,
+  including identities outside the current picker, shall receive explicit,
+  source-verified values for both attributes. A traceable mapping shall
+  associate each film id, both values, and documentation establishing those
+  classifications. Reciprocity provenance alone suffices only when the
+  cited document also establishes the classification.
+- **CATALOG-CLASS-003** — Preset classification shall be supplied as data;
+  runtime interpretation of names, manufacturer labels, processing chemistry,
+  or other text shall not determine either attribute. Custom compatibility
+  defaults are governed by `reciprocity/custom-profiles.md` and shall not
+  substitute for explicit preset classification.
+- **CATALOG-CLASS-004** — Adding or editing classification shall preserve
+  existing film/profile identifiers, catalog membership, picker eligibility,
+  camera selections, and calculation data. With the same exposure inputs
+  and reciprocity settings, exposure values, result categories, source-range
+  guidance, and timer eligibility remain unchanged. Existing timer records
+  retain their captured identities and behavior.
+- **CATALOG-CLASS-005** — Digital remains the no-film workflow under
+  `calculator/exposure.md`; it is independent of film polarity and color
+  classification.
 
 ### Allowed profile shapes
 

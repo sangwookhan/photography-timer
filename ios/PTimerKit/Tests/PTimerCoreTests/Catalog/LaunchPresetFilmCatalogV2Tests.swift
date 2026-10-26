@@ -809,6 +809,8 @@ bergger-pancro-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyond
                   "brandLabel": "Test Film",
                   "aliases": [],
                   "iso": 100,
+                  "polarity": "negative",
+                  "color": "blackAndWhite",
                   "kind": "preset",
                   "productionStatus": "current",
                   "profiles": [
@@ -859,6 +861,8 @@ bergger-pancro-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyond
                   "brandLabel": "Test Film",
                   "aliases": [],
                   "iso": 100,
+                  "polarity": "negative",
+                  "color": "blackAndWhite",
                   "kind": "preset",
                   "productionStatus": "current",
                   "profiles": [
@@ -947,6 +951,8 @@ bergger-pancro-400|1000.000000000|unsupported|unsupportedOutOfPolicyRange|beyond
                   "brandLabel": "Test Film",
                   "aliases": [],
                   "iso": 100,
+                  "polarity": "negative",
+                  "color": "blackAndWhite",
                   "kind": "preset",
                   "productionStatus": "current",
                   "profiles": [

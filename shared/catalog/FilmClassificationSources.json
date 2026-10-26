@@ -1,0 +1,501 @@
+{
+  "description": "Source evidence for the explicit stock classifications in LaunchPresetFilmCatalog.v2.json. These facts are not runtime classification rules.",
+  "checkedOn": "2026-10-25",
+  "films": [
+    {
+      "filmID": "ilford-pan-f-plus-50",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1905/product/700/",
+          "location": "p.1, description (black and white; enlargements from negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-fp4-plus-125",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1919/product/690/",
+          "location": "p.1, film description; Processing / Development times / Storage (Negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-delta-100",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/3/product/681/",
+          "location": "p.1, film description; Processing / Development times / Storage (Negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-delta-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1915/product/685/",
+          "location": "p.1, film description; Processing / Development times / Storage (Negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-delta-3200",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/wp/wp-content/uploads/2025/07/DP3200_F25.pdf",
+          "location": "p.1, film description; Processing / Development times / Storage (Negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-hp5-plus-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1903/product/695/",
+          "location": "p.1, film description; Processing / Development times / Storage (Negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-xp2-super-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1909/product/704/",
+          "location": "p.1, description and printing",
+          "evidence": "Black-and-white film; negatives are printed on black-and-white paper. C41 processing does not determine color classification."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-sfx-200",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1907/product/701/",
+          "location": "p.1, description; p.3, Development times (negatives)",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-ortho-plus-80",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/amfile/file/download/file/1948/product/698/",
+          "location": "p.1, description; p.5, Storage / Negatives",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-kentmere-pan-100",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-100_04_07_22.pdf",
+          "location": "p.1, description; p.2, Development times (negatives); p.4, Storage / Negatives",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-kentmere-pan-200",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/wp/wp-content/uploads/2025/05/KENTMERE-PAN-200-260325.pdf",
+          "location": "p.1, description; p.2, Development times (negatives); p.4, Storage / Negatives",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "ilford-kentmere-pan-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.ilfordphoto.com/wp/wp-content/uploads/2022/12/KENTMERE-PAN-400_04_07_22.pdf",
+          "location": "p.1, description; p.2, Development times (negatives); p.4, Storage / Negatives",
+          "evidence": "Black-and-white film description; the sheet explicitly describes negatives in its processing or storage instructions."
+        }
+      ]
+    },
+    {
+      "filmID": "harman-phoenix-200",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://www.harmanphoto.co.uk/amfile/file/download/file/1963/product/2143/",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific description explicitly says colour negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "harman-phoenix-ii",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://www.harmanphoto.co.uk/amfile/file/download/file/1968/product/2208/",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific description explicitly says colour negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-tri-x-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.kodak.com/en/still-film/product/professional/tri-x-400-film/",
+          "location": "Product page title and description",
+          "evidence": "Kodak explicitly identifies TRI-X 400 as a black-and-white negative film."
+        },
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/products/triXf4017.pdf",
+          "location": "p.1, technical data / black-and-white film heading",
+          "evidence": "Stock-specific technical data confirms the black-and-white classification."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-tmax-100",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/resources/f4016_TMax_100.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-tmax-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/products/f4043_tmax_400.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-ektar-100",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/resources/e4046_ektar_100.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The technical sheet identifies a color negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-portra-160",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/resources/techPub-porta160film.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The technical sheet identifies a color negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-portra-400",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/products/portra400-techpub-e4050.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The technical sheet identifies a color negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-gold-200",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/resources/E7022_Gold_200.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The technical sheet identifies a color negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-ultra-max-400",
+      "polarity": "negative",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://apps.kodakmoments.com/wp-content/uploads/2017/07/E7023_max_400.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The technical sheet identifies a color negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "kodak-ektachrome-e100",
+      "polarity": "positive",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://business.kodakmoments.com/sites/default/files/files/products/e4000_ektachrome_100.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific heading/description explicitly identifies color transparency or color reversal film."
+        }
+      ]
+    },
+    {
+      "filmID": "fujifilm-acros-ii",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://asset.fujifilm.com/www/us/files/2020-08/73080443d0289b1a7b116add14a9bdfc/films_neopan100acros2_135_01_0.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "fujifilm-velvia-50",
+      "polarity": "positive",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://asset.fujifilm.com/www/us/files/2020-03/742f83fe2440fce58fbcc08f7370a7e6/AF3-0221E2Velvia50PIB.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific heading/description explicitly identifies color transparency or color reversal film."
+        }
+      ]
+    },
+    {
+      "filmID": "fujifilm-velvia-100",
+      "polarity": "positive",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://asset.fujifilm.com/www/us/files/2020-03/0a569e6e2a9921af89a81a75a526611c/AF3-202E.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific heading/description explicitly identifies color transparency or color reversal film."
+        }
+      ]
+    },
+    {
+      "filmID": "fujifilm-provia-100f",
+      "polarity": "positive",
+      "color": "color",
+      "sources": [
+        {
+          "url": "https://asset.fujifilm.com/www/us/files/2020-03/dc6e1c21c643f82b7fb393cef94d524a/Provia100FAF3-036E.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific heading/description explicitly identifies color transparency or color reversal film."
+        }
+      ]
+    },
+    {
+      "filmID": "foma-fomapan-100",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.foma.cz/en/fomapan-100",
+          "location": "p.1, In general",
+          "evidence": "The stock-specific description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "foma-fomapan-200",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.foma.cz/en/fomapan-200",
+          "location": "p.1, In general",
+          "evidence": "The stock-specific description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "foma-fomapan-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.foma.cz/en/fomapan-400",
+          "location": "p.1, In general",
+          "evidence": "The stock-specific description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-rpx-25",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/products/rollei-rpx-25/?lang=en",
+          "location": "Product introduction",
+          "evidence": "The stock-specific manufacturer description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-rpx-100",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX100_Data-Sheet_EN_R210701.pdf",
+          "location": "p.2, stock description",
+          "evidence": "The stock-specific manufacturer description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-rpx-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/wp-content/uploads/2021/07/RPX400_Data-Sheet_EN_R210701.pdf",
+          "location": "p.2, stock description and canister photograph",
+          "evidence": "The description identifies black-and-white film; the canister photograph explicitly reads B&W NEGATIVE FILM (visually inspected)."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-ortho-25-plus",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/wp-content/uploads/2021/07/Ortho25_Data-Sheet_EN_R210701.pdf",
+          "location": "p.2, Facts",
+          "evidence": "The facts identify black-and-white film and excellent-quality negatives. Reversal suitability is an additional use, not a different stock identity."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-retro-80s",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/products/rollei-retro-80s/?lang=en",
+          "location": "Product introduction",
+          "evidence": "The stock-specific manufacturer description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-retro-400s",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/products/rollei-retro-400s/?lang=en",
+          "location": "Product introduction",
+          "evidence": "The stock-specific manufacturer description explicitly identifies a black-and-white negative film. Classification evidence is independent of the unofficial reciprocity source; picker eligibility remains unchanged."
+        }
+      ]
+    },
+    {
+      "filmID": "rollei-superpan-200",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.rolleianalog.com/wp-content/uploads/2021/07/SUPERPAN200_Data-Sheet_EN_R210701.pdf",
+          "location": "p.1, heading and film description",
+          "evidence": "The stock-specific manufacturer description explicitly identifies a black-and-white negative film."
+        }
+      ]
+    },
+    {
+      "filmID": "adox-chs-100-ii",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.fotoimpex.com/shop/images/products/media/44450_4_PDF-Datenblatt.pdf",
+          "location": "p.1, Technische Beschreibung (11 July 2024)",
+          "evidence": "Manufacturer sheet linked by the ADOX product page identifies Schwarzweissfilm and describes highlights in the Negativ; optional reversal processing is also described."
+        },
+        {
+          "url": "https://www.adox.de/films/chs100ii-en/",
+          "location": "Technical data sheet link",
+          "evidence": "Manufacturer entry point links to the checked Fotoimpex-hosted manufacturer PDF."
+        }
+      ]
+    },
+    {
+      "filmID": "adox-cms-20-ii",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://www.fotoimpex.com/shop/images/products/media/30945_5_PDF-Datasheet.pdf",
+          "location": "p.1, DATA SHEET / black and white film",
+          "evidence": "The current manufacturer sheet establishes black-and-white classification; the manufacturer CMS 20 II instructions explicitly describe the negative."
+        },
+        {
+          "url": "https://www.adox.de/Technical_Informations/CMS20_ADOTECHIII_instructions.pdf",
+          "location": "p.2, Technical Data ADOX CMS 20 II / Fixing",
+          "evidence": "The instructions explicitly refer to highlights in the negative."
+        }
+      ]
+    },
+    {
+      "filmID": "bergger-pancro-400",
+      "polarity": "negative",
+      "color": "blackAndWhite",
+      "sources": [
+        {
+          "url": "https://bergger.com/fr/index.php?controller=attachment&id_attachment=4",
+          "location": "p.1, description and 120-film package photograph",
+          "evidence": "The description identifies black-and-white film; the package photograph explicitly reads black & white negative film (visually inspected)."
+        }
+      ]
+    }
+  ]
+}

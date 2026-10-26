@@ -35,6 +35,12 @@ extension ExposureCalculatorViewModel {
     /// selection itself is preserved by id; no slot reset occurs.
     public func addCustomFilm(_ film: FilmIdentity) {
         customFilmLibrary.add(film)
+        cameraSlotSessionModel.updateInactiveSnapshots { _, snapshot in
+            guard snapshot.selectedPresetFilm?.id == film.id else { return nil }
+            var updated = snapshot
+            updated.selectedPresetFilm = film
+            return updated
+        }
         if selectedPresetFilm?.id == film.id {
             // Edit-save of the currently selected custom film:
             // replace the in-memory identity so downstream readers
@@ -45,6 +51,7 @@ extension ExposureCalculatorViewModel {
             // existing public path is safe.
             selectPresetFilm(film)
         }
+        persistInactiveSlotCleanup()
     }
 
     /// Removes a custom film from the library and the picker. If the

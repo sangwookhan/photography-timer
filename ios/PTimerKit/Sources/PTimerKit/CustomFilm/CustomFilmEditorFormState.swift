@@ -49,6 +49,8 @@ public struct CustomFilmEditorFormState: Equatable {
     public var profileName: String
     public var filmLabel: String
     public var isoText: String
+    public var polarity: FilmPolarity
+    public var color: FilmColor
     public var sourceType: CustomProfileSourceType
     public var notes: String
     /// Photographer-facing input mode (Basic / Scaled / Advanced).
@@ -106,6 +108,8 @@ public struct CustomFilmEditorFormState: Equatable {
         profileName: String = "",
         filmLabel: String = "",
         isoText: String = "",
+        polarity: FilmPolarity = .negative,
+        color: FilmColor = .blackAndWhite,
         sourceType: CustomProfileSourceType = .userDefined,
         notes: String = "",
         formulaInputMode: CustomFilmFormulaInputMode = .basic,
@@ -124,6 +128,8 @@ public struct CustomFilmEditorFormState: Equatable {
         self.profileName = profileName
         self.filmLabel = filmLabel
         self.isoText = isoText
+        self.polarity = polarity
+        self.color = color
         self.sourceType = sourceType
         self.notes = notes
         self.formulaInputMode = formulaInputMode
@@ -363,6 +369,8 @@ extension CustomFilmEditorFormState {
             profileName: profile.name,
             filmLabel: seed.labelText,
             isoText: "\(film.iso)",
+            polarity: film.polarity,
+            color: film.color,
             sourceType: seed.sourceType,
             notes: seed.notesValue,
             formulaInputMode: Self.inferInputMode(
@@ -410,6 +418,8 @@ extension CustomFilmEditorFormState {
         return CustomFilmEditorFormState(
             filmLabel: suggestedLabel,
             isoText: "\(film.iso)",
+            polarity: film.polarity,
+            color: film.color,
             sourceType: seed.sourceType,
             notes: seed.notesValue,
             formulaInputMode: inferInputMode(
@@ -1479,6 +1489,8 @@ extension CustomFilmEditorFormState {
             brandLabel: nil,
             aliases: [],
             iso: iso,
+            polarity: polarity,
+            color: color,
             productionStatus: .unknown,
             profiles: [profile],
             userMetadata: filmMetadata

@@ -10,6 +10,8 @@
       ▿ aliases: 1 element
         - "Pan F+"
       - iso: 50
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -62,6 +64,8 @@
       ▿ aliases: 1 element
         - "FP4+"
       - iso: 125
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -114,6 +118,8 @@
       ▿ aliases: 1 element
         - "Delta 100 Pro"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -166,6 +172,8 @@
       ▿ aliases: 1 element
         - "Delta 400 Pro"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -218,6 +226,8 @@
       ▿ aliases: 1 element
         - "Delta 3200 Pro"
       - iso: 3200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -272,6 +282,8 @@
         - "HP5+"
         - "HP5 Plus 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -327,6 +339,8 @@
       ▿ aliases: 1 element
         - "XP2"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -378,6 +392,8 @@
         - some: "ILFORD SFX 200"
       - aliases: 0 elements
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -428,6 +444,8 @@
         - some: "ILFORD ORTHO PLUS"
       - aliases: 0 elements
       - iso: 80
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -480,6 +498,8 @@
       ▿ aliases: 1 element
         - "Kentmere Pan 100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -532,6 +552,8 @@
       ▿ aliases: 1 element
         - "Kentmere Pan 200"
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -584,6 +606,8 @@
       ▿ aliases: 1 element
         - "Kentmere Pan 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -635,6 +659,8 @@
         - some: "HARMAN PHOENIX 200"
       - aliases: 0 elements
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -687,6 +713,8 @@
         - some: "HARMAN PHOENIX II"
       - aliases: 0 elements
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -741,6 +769,8 @@
         - "TRI-X"
         - "TX 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1003,6 +1033,8 @@
         - "TMX"
         - "T-MAX 100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1118,6 +1150,8 @@
         - "TMY-2"
         - "T-MAX 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1230,6 +1264,8 @@
       ▿ aliases: 1 element
         - "EKTAR 100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1292,6 +1328,8 @@
       ▿ aliases: 1 element
         - "PORTRA 160"
       - iso: 160
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1354,6 +1392,8 @@
       ▿ aliases: 1 element
         - "PORTRA 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1416,6 +1456,8 @@
       ▿ aliases: 1 element
         - "GOLD 200"
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1478,6 +1520,8 @@
       ▿ aliases: 1 element
         - "ULTRA MAX 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1541,6 +1585,8 @@
         - "EKTACHROME E100"
         - "E100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.positive
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1609,6 +1655,8 @@
         - "NEOPAN 100 ACROS II"
         - "Acros II"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1679,6 +1727,8 @@
         - "RVP 50"
         - "Velvia"
       - iso: 50
+      - polarity: PTimerCore.FilmPolarity.positive
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1804,6 +1854,8 @@
       ▿ aliases: 1 element
         - "RVP 100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.positive
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1889,6 +1941,8 @@
       ▿ aliases: 1 element
         - "RDP III"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.positive
+      - color: PTimerCore.FilmColor.color
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -1969,6 +2023,8 @@
       ▿ aliases: 1 element
         - "Fomapan 100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2081,6 +2137,8 @@
       ▿ aliases: 1 element
         - "Fomapan 200"
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2193,6 +2251,8 @@
       ▿ aliases: 1 element
         - "Fomapan 400"
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2304,6 +2364,8 @@
         - some: "Rollei RPX 25"
       - aliases: 0 elements
       - iso: 25
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2420,6 +2482,8 @@
         - some: "Rollei RPX 100"
       - aliases: 0 elements
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2553,6 +2617,8 @@
         - some: "Rollei RPX 400"
       - aliases: 0 elements
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2686,6 +2752,8 @@
         - some: "Rollei ORTHO 25 plus"
       - aliases: 0 elements
       - iso: 25
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2836,6 +2904,8 @@
         - some: "Rollei RETRO 80S"
       - aliases: 0 elements
       - iso: 80
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -2966,6 +3036,8 @@
         - some: "Rollei RETRO 400S"
       - aliases: 0 elements
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -3063,6 +3135,8 @@
         - some: "Rollei SUPERPAN 200"
       - aliases: 0 elements
       - iso: 200
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -3194,6 +3268,8 @@
       ▿ aliases: 1 element
         - "CHS II 100"
       - iso: 100
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -3326,6 +3402,8 @@
       ▿ aliases: 1 element
         - "CMS II 20"
       - iso: 20
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile
@@ -3437,6 +3515,8 @@
         - some: "BERGGER PANCRO 400"
       - aliases: 0 elements
       - iso: 400
+      - polarity: PTimerCore.FilmPolarity.negative
+      - color: PTimerCore.FilmColor.blackAndWhite
       - productionStatus: PTimerCore.FilmProductionStatus.current
       ▿ profiles: 1 element
         ▿ PTimerCore.ReciprocityProfile

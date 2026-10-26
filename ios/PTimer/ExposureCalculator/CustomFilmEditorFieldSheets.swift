@@ -5,14 +5,14 @@ import SwiftUI
 import PTimerKit
 
 /// Identifier for the field the photographer tapped in the compact
-/// editor. Drives the `.sheet(item:)` modal that
+/// editor. Drives the `navigationDestination(item:)` screen that
 /// `CustomFilmEditorView` presents — each case maps to a focused
 /// edit sheet that owns its own input chrome (chips, steppers,
 /// numeric field) so the main editor stays a tall stack of compact
 /// summary rows.
 
 /// Dispatching wrapper presented by `CustomFilmEditorView`'s
-/// `.sheet(item:)`. Routes the tapped field identifier to the
+/// navigation destination. Routes the tapped field identifier to the
 /// concrete edit sheet, keeping the main editor view free of one
 /// big switch.
 struct CustomFilmEditorFieldSheet: View {
@@ -24,81 +24,65 @@ struct CustomFilmEditorFieldSheet: View {
     let isEditing: Bool
 
     var body: some View {
-        switch field {
-        case .manufacturer:
-            CustomFilmEditorManufacturerSheet(formState: $formState)
-        case .label:
-            CustomFilmEditorLabelSheet(formState: $formState, isEditing: isEditing)
-        case .iso:
-            CustomFilmEditorISOSheet(formState: $formState, isEditing: isEditing)
-        case .exponent:
-            CustomFilmEditorExponentSheet(formState: $formState, isEditing: isEditing)
-        case .referenceTm:
-            CustomFilmEditorDurationSheet(
-                formState: $formState,
-                field: .referenceTm,
-                isEditing: isEditing
-            )
-        case .correctedAtReference:
-            CustomFilmEditorDurationSheet(
-                formState: $formState,
-                field: .correctedAtReference,
-                isEditing: isEditing
-            )
-        case .offset:
-            CustomFilmEditorDurationSheet(
-                formState: $formState,
-                field: .offset,
-                isEditing: isEditing
-            )
-        case .noCorrectionThrough:
-            CustomFilmEditorDurationSheet(
-                formState: $formState,
-                field: .noCorrectionThrough,
-                isEditing: isEditing
-            )
-        case .sourceRangeThrough:
-            CustomFilmEditorDurationSheet(
-                formState: $formState,
-                field: .sourceRangeThrough,
-                isEditing: isEditing
-            )
+        Group {
+            switch field {
+            case .manufacturer:
+                CustomFilmEditorManufacturerSheet(formState: $formState)
+            case .label:
+                CustomFilmEditorLabelSheet(formState: $formState, isEditing: isEditing)
+            case .iso:
+                CustomFilmEditorISOSheet(formState: $formState, isEditing: isEditing)
+            case .exponent:
+                CustomFilmEditorExponentSheet(formState: $formState, isEditing: isEditing)
+            case .referenceTm:
+                CustomFilmEditorDurationSheet(
+                    formState: $formState,
+                    field: .referenceTm,
+                    isEditing: isEditing
+                )
+            case .correctedAtReference:
+                CustomFilmEditorDurationSheet(
+                    formState: $formState,
+                    field: .correctedAtReference,
+                    isEditing: isEditing
+                )
+            case .offset:
+                CustomFilmEditorDurationSheet(
+                    formState: $formState,
+                    field: .offset,
+                    isEditing: isEditing
+                )
+            case .noCorrectionThrough:
+                CustomFilmEditorDurationSheet(
+                    formState: $formState,
+                    field: .noCorrectionThrough,
+                    isEditing: isEditing
+                )
+            case .sourceRangeThrough:
+                CustomFilmEditorDurationSheet(
+                    formState: $formState,
+                    field: .sourceRangeThrough,
+                    isEditing: isEditing
+                )
+            }
         }
     }
 }
 
-// MARK: - Sheet helpers
+// MARK: - Input screen helpers
 
-/// Toolbar + presentation-detent chrome shared by every edit
-/// sheet so the dismiss interaction stays consistent across
-/// fields.
+/// Toolbar chrome shared by every edit screen so its Done action
+/// returns to the compact editor consistently across fields.
 private struct EditSheetChrome<Content: View>: View {
     let title: String
     let accessibilityIdentifier: String
     @ViewBuilder var content: () -> Content
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            content()
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
-                            .accessibilityIdentifier("\(accessibilityIdentifier)-done")
-                    }
-                }
-        }
-        // `.fraction(0.7)` initial detent lets the photographer
-        // see the formula display, the input field, and the chip
-        // ladder on a single screen without scrolling, and the
-        // `.large` detent keeps room for the keyboard on smaller
-        // phones. The previous `.medium`-only configuration left
-        // the chip row clipped on long ladders (ISO, exponent).
-        .presentationDetents([.fraction(0.7), .large])
-        .presentationDragIndicator(.visible)
-        .accessibilityIdentifier(accessibilityIdentifier)
+        content()
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 

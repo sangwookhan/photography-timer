@@ -10,7 +10,7 @@ import PTimerCore
 /// surface: the four formula terms (`Tc₀`, `Tm₀`, `p`, `b`)
 /// render as tappable tokens inside the live current-value line
 /// of the equation, and each tap opens the existing per-field
-/// sheet (see `CustomFilmEditorFieldSheets.swift`). The range
+/// input screens (see `CustomFilmEditorFieldSheets.swift`). The range
 /// fields (`No correction`, `Source data`) live in a small
 /// compact block below the formula so they do not visually
 /// compete with the formula terms.
@@ -30,7 +30,7 @@ import PTimerCore
 ///   4. Preview card (graph + Calculation basis + checkpoint
 ///      table). The Preview surface is the only live numerical
 ///      feedback — no Live Check section is embedded in the
-///      Formula card or in the field sheets.
+///      Formula card or in the field input screens.
 ///   5. Secondary "Details" section: source type, notes, and
 ///      reference URL — lower-priority provenance the
 ///      photographer can skip.
@@ -50,15 +50,11 @@ struct CustomFilmEditorView: View {
     let onCreateFormula: ((FilmIdentity) -> Void)?
 
     @State private var formState: CustomFilmEditorFormState
+    @State private var inputPath: [CustomFilmEditorEditField] = []
     /// Toggles the compact help panel inside the Formula card so
     /// the verbose per-field helper text is hidden by default and
     /// only expanded on demand.
     @State private var showsFormulaHelp: Bool = false
-    /// Drives the per-field edit-sheet modal. `nil` while the
-    /// editor is on the main compact-row view; set to a field
-    /// case when the photographer taps one of the formula tokens
-    /// or a range row.
-    @State private var activeEditField: CustomFilmEditorEditField?
     /// Focus for the inline custom-table Tm/Tc fields, owned here at
     /// the Form level. It drives the row-sort boundary (sort fires when
     /// focus leaves a row, never mid-typing) and lets Save end editing.
@@ -116,7 +112,7 @@ struct CustomFilmEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $inputPath) {
             Form {
                 Section {
                     Text(displayName)
@@ -178,13 +174,14 @@ struct CustomFilmEditorView: View {
                     .accessibilityIdentifier("custom-film-editor-save")
                 }
             }
-            .sheet(item: $activeEditField) { field in
+            // Keep field editors in this NavigationStack; nested sheets
+            // do not present reliably from the compact editor sheet.
+            .navigationDestination(for: CustomFilmEditorEditField.self) { field in
                 CustomFilmEditorFieldSheet(
                     field: field,
                     formState: $formState,
                     isEditing: editing != nil
                 )
-                .boundedTaskPresentation()
             }
         }
     }
@@ -198,10 +195,9 @@ struct CustomFilmEditorView: View {
                 label: "Manufacturer",
                 value: rowDisplayValue(formState.manufacturerText, placeholder: "Optional"),
                 inlineError: nil,
-                accessibilityID: "custom-film-editor-manufacturer"
-            ) {
-                activeEditField = .manufacturer
-            }
+                accessibilityID: "custom-film-editor-manufacturer",
+                field: .manufacturer
+            )
             CustomFilmEditorCompactRow(
                 label: "Label",
                 value: rowDisplayValue(formState.filmLabel, placeholder: "Required"),
@@ -209,10 +205,9 @@ struct CustomFilmEditorView: View {
                     for: .label,
                     isEditing: editing != nil
                 ),
-                accessibilityID: "custom-film-editor-film-label"
-            ) {
-                activeEditField = .label
-            }
+                accessibilityID: "custom-film-editor-film-label",
+                field: .label
+            )
             CustomFilmEditorCompactRow(
                 label: "ISO",
                 value: rowDisplayValue(formState.isoText, placeholder: "Required"),
@@ -220,11 +215,82 @@ struct CustomFilmEditorView: View {
                     for: .iso,
                     isEditing: editing != nil
                 ),
-                accessibilityID: "custom-film-editor-iso"
-            ) {
-                activeEditField = .iso
+                accessibilityID: "custom-film-editor-iso",
+                field: .iso
+            )
+            HStack(spacing: 10) {
+                Menu {
+                    Button { formState.polarity = .negative } label: {
+                        if formState.polarity == .negative {
+                            Label("Negative", systemImage: "checkmark")
+                        } else {
+                            Text("Negative")
+                        }
+                    }
+                    Button { formState.polarity = .positive } label: {
+                        if formState.polarity == .positive {
+                            Label("Positive", systemImage: "checkmark")
+                        } else {
+                            Text("Positive")
+                        }
+                    }
+                } label: {
+                    classificationMenuLabel(
+                        title: "Polarity",
+                        value: formState.polarity == .negative ? "Negative" : "Positive"
+                    )
+                }
+                .accessibilityIdentifier("custom-film-editor-polarity")
+                .frame(maxWidth: .infinity)
+
+                Menu {
+                    Button { formState.color = .blackAndWhite } label: {
+                        if formState.color == .blackAndWhite {
+                            Label("Black & White", systemImage: "checkmark")
+                        } else {
+                            Text("Black & White")
+                        }
+                    }
+                    Button { formState.color = .color } label: {
+                        if formState.color == .color {
+                            Label("film-color-value", systemImage: "checkmark")
+                        } else {
+                            Text("film-color-value")
+                        }
+                    }
+                } label: {
+                    classificationMenuLabel(
+                        title: "Color",
+                        value: formState.color == .blackAndWhite ? "Black & White" : "film-color-value"
+                    )
+                }
+                .accessibilityIdentifier("custom-film-editor-color")
+                .frame(maxWidth: .infinity)
             }
         }
+    }
+
+    private func classificationMenuLabel(title: LocalizedStringKey, value: LocalizedStringKey) -> some View {
+        HStack(spacing: 6) {
+            Text(value).font(.subheadline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.35), lineWidth: 1)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 8))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text(value))
     }
 
     // MARK: - Calculation kind (PTIMER-178)
@@ -265,7 +331,6 @@ struct CustomFilmEditorView: View {
         CustomFilmEditorTableCard(
             formState: $formState,
             isEditing: editing != nil,
-            onEditNoCorrection: { activeEditField = .noCorrectionThrough },
             focusedField: $tableFocusedField
         )
     }
@@ -289,7 +354,7 @@ struct CustomFilmEditorView: View {
     /// one short line that maps token-for-token onto the value
     /// row below. The bottom row goes through the math-expression
     /// renderer with tappable pills — each tap opens the matching
-    /// field sheet.
+    /// field input screen.
     @ViewBuilder
     private var formulaTokenBlock: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -316,7 +381,7 @@ struct CustomFilmEditorView: View {
             CustomFilmFormulaMathView(
                 tokens: formState.formulaTokenDisplays(),
                 leadingText: "   = ",
-                onTap: { activeEditField = $0.editField }
+                onTap: { inputPath.append($0.editField) }
             )
 
             if showsFormulaHelp {
@@ -337,7 +402,7 @@ struct CustomFilmEditorView: View {
     /// the formula's domain. These are not formula terms, so they
     /// live below the formula tokens in a smaller, lighter layout
     /// — secondary-color label on the left, current value on the
-    /// right, both tappable to open the matching field sheet.
+    /// right, both tappable to open the matching field input screen.
     @ViewBuilder
     private var formulaRangeBlock: some View {
         VStack(spacing: 4) {
@@ -351,10 +416,9 @@ struct CustomFilmEditorView: View {
                     for: .noCorrectionThrough,
                     isEditing: editing != nil
                 ),
-                accessibilityID: "custom-film-editor-no-correction-through"
-            ) {
-                activeEditField = .noCorrectionThrough
-            }
+                accessibilityID: "custom-film-editor-no-correction-through",
+                field: .noCorrectionThrough
+            )
             CustomFilmEditorRangeRow(
                 label: "Source data",
                 value: rowDurationDisplayValue(
@@ -366,10 +430,9 @@ struct CustomFilmEditorView: View {
                     for: .sourceRangeThrough,
                     isEditing: editing != nil
                 ),
-                accessibilityID: "custom-film-editor-valid-through"
-            ) {
-                activeEditField = .sourceRangeThrough
-            }
+                accessibilityID: "custom-film-editor-valid-through",
+                field: .sourceRangeThrough
+            )
         }
     }
 
@@ -888,10 +951,10 @@ struct CustomFilmEditorCompactRow: View {
     let value: CustomFilmEditorRowDisplayValue
     let inlineError: String?
     let accessibilityID: String
-    let action: () -> Void
+    let field: CustomFilmEditorEditField
 
     var body: some View {
-        Button(action: action) {
+        NavigationLink(value: field) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(LocalizedStringKey(label))
@@ -900,9 +963,6 @@ struct CustomFilmEditorCompactRow: View {
                     Text(value.text)
                         .foregroundStyle(value.isPlaceholder ? Color.secondary : Color.primary)
                         .multilineTextAlignment(.trailing)
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.tertiary)
                 }
                 if let inlineError {
                     Text(inlineError)
@@ -912,7 +972,6 @@ struct CustomFilmEditorCompactRow: View {
                 }
             }
         }
-        .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityID)
     }
 }
@@ -930,10 +989,10 @@ struct CustomFilmEditorCompactRow: View {
 /// closure:
 ///
 /// - editor Formula card (interactive — pills dispatch to the
-///   matching per-field sheet),
+///   matching per-field input screen),
 /// - editor Formula card's symbolic structure row (read-only,
 ///   the same shape but with symbol-only tokens),
-/// - per-field sheet header (read-only, the photographer reads
+/// - per-field input header (read-only, the photographer reads
 ///   the same expression they saw on the card behind it).
 struct CustomFilmFormulaMathView: View {
     let tokens: [CustomFilmEditorFormState.FormulaTokenDisplay]
@@ -941,9 +1000,8 @@ struct CustomFilmFormulaMathView: View {
     /// `"Tc ="`, the value row passes `"   ="` so the equals
     /// glyphs align under each other in the same VStack.
     let leadingText: String
-    /// `nil` renders a read-only static expression. Non-nil
-    /// turns every formula term into a tappable pill that
-    /// dispatches to the matching field sheet.
+    /// `nil` renders a read-only expression; otherwise taps dispatch
+    /// the selected token to the editor's navigation path.
     let onTap: ((CustomFilmEditorFormState.FormulaTokenSlot) -> Void)?
 
     init(
@@ -1066,7 +1124,7 @@ struct CustomFilmFormulaMathView: View {
 
 /// Compact one-line rendering of the symbolic formula
 /// structure shown above the editable value row in the Formula
-/// card and above the read-only value row in field-sheet
+/// card and above the read-only value row in field input screens
 /// headers. Uses inline `Text` concatenation with a
 /// `baselineOffset`-lifted exponent so the line reads as
 /// `Tc = Tc₀ × (Tm / Tm₀)ᵖ + b` on a single tight row — much
@@ -1098,10 +1156,10 @@ struct CustomFilmEditorRangeRow: View {
     let value: CustomFilmEditorRowDisplayValue
     let inlineError: String?
     let accessibilityID: String
-    let action: () -> Void
+    let field: CustomFilmEditorEditField
 
     var body: some View {
-        Button(action: action) {
+        NavigationLink(value: field) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(LocalizedStringKey(label))
@@ -1113,14 +1171,6 @@ struct CustomFilmEditorRangeRow: View {
                         .foregroundStyle(value.isPlaceholder
                                          ? Color.secondary
                                          : Color.primary)
-                    // Tiny trailing chevron so the row reads as
-                    // tappable rather than passive metadata. Kept
-                    // intentionally light (caption2 in tertiary)
-                    // so the range block does not regain the
-                    // visual weight of a full compact row.
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
                 }
                 if let inlineError {
                     Text(inlineError)
@@ -1380,7 +1430,7 @@ private struct CustomFilmEditorPreviewTable: View {
 
 /// Table card section (PTIMER-178): the editable Tm/Tc anchor
 /// rows with add/delete affordances, the editable no-correction
-/// boundary (same field sheet as the formula card; an empty field
+/// boundary (same input screen as the formula card; an empty field
 /// falls back to the derived `firstAnchor / 10` suggestion shown
 /// as the placeholder), and the read-only derived source range —
 /// PTIMER-178 does not expose source range as an editable field.
@@ -1406,7 +1456,6 @@ private enum CustomFilmEditorTableFocus: Hashable {
 private struct CustomFilmEditorTableCard: View {
     @Binding var formState: CustomFilmEditorFormState
     let isEditing: Bool
-    let onEditNoCorrection: () -> Void
     /// Table focus is owned by the parent `CustomFilmEditorView` so a
     /// single keyboard `Done` toolbar can own it; the rows and this
     /// card share it through the binding.
@@ -1490,7 +1539,7 @@ private struct CustomFilmEditorTableCard: View {
                     isEditing: isEditing
                 ),
                 accessibilityID: "custom-film-editor-no-correction-through",
-                action: onEditNoCorrection
+                field: .noCorrectionThrough
             )
             if fittedFormulaUnusableDueToShortening {
                 Text(CustomTableFittedFormulaPresenter.unusableShorteningRowMessage)

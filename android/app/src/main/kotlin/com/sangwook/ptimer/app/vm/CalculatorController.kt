@@ -33,6 +33,8 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityAuthority
 import com.sangwook.ptimer.core.reciprocity.calculatedCorrectedSeconds
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
 import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
+import com.sangwook.ptimer.core.reciprocity.FilmColor
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenter
 import com.sangwook.ptimer.core.persistence.CameraListPersistenceController
@@ -75,6 +77,8 @@ data class FilmOption(
     val isUnofficial: Boolean = false,
     val hasReciprocityCurve: Boolean = false,
     val isCustom: Boolean = false,
+    val polarity: FilmPolarity = FilmPolarity.negative,
+    val color: FilmColor = FilmColor.blackAndWhite,
 )
 
 data class ModelOption(val id: String, val label: String)
@@ -1870,6 +1874,8 @@ class CalculatorController(
                     it.formula != null || it.tableInterpolation != null
                 } == true,
                 isCustom = f.kind == FilmIdentityKind.custom,
+                polarity = f.polarity,
+                color = f.color,
             )
         }
         val presetComparator = compareBy<FilmOption, String>(java.lang.String.CASE_INSENSITIVE_ORDER) {

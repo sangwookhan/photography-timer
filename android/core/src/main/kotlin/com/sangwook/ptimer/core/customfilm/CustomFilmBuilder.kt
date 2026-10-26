@@ -5,6 +5,8 @@ package com.sangwook.ptimer.core.customfilm
 
 import com.sangwook.ptimer.core.reciprocity.CustomProfileSourceType
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
+import com.sangwook.ptimer.core.reciprocity.FilmColor
 import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
 import com.sangwook.ptimer.core.reciprocity.FilmProductionStatus
 import com.sangwook.ptimer.core.reciprocity.FormulaFamily
@@ -50,6 +52,8 @@ data class CustomFormulaFilmInput(
     val referenceUrl: String? = null,
     /** Display-only link to the custom table this formula was derived from. */
     val referenceTableFilmId: String? = null,
+    val polarity: FilmPolarity = FilmPolarity.negative,
+    val color: FilmColor = FilmColor.blackAndWhite,
 )
 
 /**
@@ -67,6 +71,8 @@ data class CustomTableFilmInput(
     val notes: String? = null,
     val sourceType: CustomProfileSourceType = CustomProfileSourceType.userDefined,
     val referenceUrl: String? = null,
+    val polarity: FilmPolarity = FilmPolarity.negative,
+    val color: FilmColor = FilmColor.blackAndWhite,
 )
 
 /**
@@ -113,6 +119,8 @@ object CustomFilmBuilder {
             rule = ReciprocityRule(kind = ReciprocityRuleKind.formula, formula = FormulaReciprocityRule(formula)),
             label = label,
             iso = input.iso,
+            polarity = input.polarity,
+            color = input.color,
             manufacturer = input.manufacturer,
             notes = input.notes,
             sourceType = input.sourceType,
@@ -151,6 +159,8 @@ object CustomFilmBuilder {
             rule = ReciprocityRule(kind = ReciprocityRuleKind.tableInterpolation, tableInterpolation = rule),
             label = label,
             iso = input.iso,
+            polarity = input.polarity,
+            color = input.color,
             manufacturer = input.manufacturer,
             notes = input.notes,
             sourceType = input.sourceType,
@@ -166,6 +176,8 @@ object CustomFilmBuilder {
         rule: ReciprocityRule,
         label: String,
         iso: Int,
+        polarity: FilmPolarity,
+        color: FilmColor,
         manufacturer: String?,
         notes: String?,
         sourceType: CustomProfileSourceType,
@@ -197,6 +209,8 @@ object CustomFilmBuilder {
             canonicalStockName = canonical,
             aliases = emptyList(),
             iso = iso,
+            polarity = polarity,
+            color = color,
             productionStatus = FilmProductionStatus.unknown,
             profiles = listOf(profile),
             userMetadata = UserEditableMetadata(

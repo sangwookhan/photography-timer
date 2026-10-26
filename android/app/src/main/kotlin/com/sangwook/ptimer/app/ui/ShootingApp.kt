@@ -90,6 +90,7 @@ import com.sangwook.ptimer.app.ui.shooting.filterReferenceVocabulary
 import com.sangwook.ptimer.app.ui.shooting.CameraManagementActions
 import com.sangwook.ptimer.app.ui.shooting.FilterSetManagementScreen
 import com.sangwook.ptimer.app.ui.shooting.ShootingScreen
+import com.sangwook.ptimer.app.ui.shooting.FilmClassificationBadgeVisibility
 import com.sangwook.ptimer.app.ui.shooting.besideFold
 import com.sangwook.ptimer.app.ui.shooting.CompactTimerRailWidth
 import com.sangwook.ptimer.app.ui.shooting.FoldSide
@@ -333,6 +334,8 @@ fun ShootingApp(
     var editedFilterSetId by rememberSaveable(stateSaver = FilterSetIdSaver) { mutableStateOf<FilterSetId?>(null) }
     val filterInventory by holder.filterInventory.collectAsStateWithLifecycle()
     var showExactAlarmInfo by rememberSaveable { mutableStateOf(false) }
+    var mainReturnBadgeToken by remember { mutableStateOf(0) }
+    var wasMainSurfaceCovered by remember { mutableStateOf(false) }
     val scaffoldState = rememberBottomSheetScaffoldState()
     val hasTimers = timerState.active.isNotEmpty() || timerState.history.isNotEmpty()
     // Exact alarms are gated + denied, so completion-alert reliability is
@@ -351,6 +354,14 @@ fun ShootingApp(
     // (PTIMER-219: it only opens by tapping a compact card, never by
     // dragging).
     val expanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
+    val isMainSurfaceCovered = details != null || showAbout || showFilterManagement
+        || showShootingFilters || editedFilterSetId != null || showExactAlarmInfo || expanded
+    LaunchedEffect(isMainSurfaceCovered) {
+        if (FilmClassificationBadgeVisibility.isMainReturn(wasMainSurfaceCovered, isMainSurfaceCovered)) {
+            mainReturnBadgeToken++
+        }
+        wasMainSurfaceCovered = isMainSurfaceCovered
+    }
     // The Timers destination counts as open from the moment the sheet starts
     // opening until it has fully closed; the side rail hides meanwhile.
     val timersOpen = expanded ||
@@ -576,6 +587,7 @@ fun ShootingApp(
                     onStartAdjusted = controller::startFromAdjusted,
                     onStartCorrected = controller::startFromCorrected,
                     onOpenDetails = { details = controller.detailsState() },
+                    mainReturnBadgeToken = mainReturnBadgeToken,
                     onResetSettings = controller::resetActiveSlotSettings,
                     onCreateCustomFilm = { input, editId ->
                         // editId set → update that film in place (reuse its ids); else new.
@@ -623,9 +635,8 @@ fun ShootingApp(
                     onCalculationBasis = { input -> controller.calculationBasis(input) },
                     onPreviewTableFit = { input -> controller.previewTableFit(input) },
                     onCreateFormulaFromTable = { input, editId ->
-                        // Save the table (in place when editing), then create and
-                        // select a separate formula film fitted from it, linked back
-                        // to the table for live reference points (PTIMER-180).
+                        // Persist the source table before opening the seeded formula
+                        // draft. Only the editor's explicit Save creates the formula.
                         val tableFilmId = editId ?: "custom-film-${java.util.UUID.randomUUID()}"
                         val table = CustomFilmBuilder.buildTableFilm(
                             input = input,
@@ -633,19 +644,11 @@ fun ShootingApp(
                             profileId = editId?.let { controller.customFilmProfileId(it) }
                                 ?: "custom-profile-${java.util.UUID.randomUUID()}",
                         )
-                        val formula = controller.buildFormulaFilmFromTableInput(
-                            input = input,
-                            filmId = "custom-film-${java.util.UUID.randomUUID()}",
-                            profileId = "custom-profile-${java.util.UUID.randomUUID()}",
-                            referenceTableFilmId = tableFilmId,
-                        )
-                        if (table == null || formula == null) {
+                        if (table == null) {
                             false
                         } else {
                             library.add(table)
-                            library.add(formula)
                             controller.setFilms(LaunchPresetFilmCatalogV2.userSelectableFilms + library.customFilms)
-                            controller.selectFilm(formula.id)
                             true
                         }
                     },

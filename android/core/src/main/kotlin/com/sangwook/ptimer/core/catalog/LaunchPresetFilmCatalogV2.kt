@@ -9,6 +9,8 @@ import com.sangwook.ptimer.core.reciprocity.DevelopmentAdjustment
 import com.sangwook.ptimer.core.reciprocity.ExposureAdjustment
 import com.sangwook.ptimer.core.reciprocity.ExposureAdjustmentKind
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
+import com.sangwook.ptimer.core.reciprocity.FilmColor
 import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
 import com.sangwook.ptimer.core.reciprocity.FilmProductionStatus
 import com.sangwook.ptimer.core.reciprocity.FormulaFamily
@@ -580,6 +582,8 @@ class LaunchPresetFilmCatalogV2Loader {
             brandLabel = film.brandLabel,
             aliases = film.aliases,
             iso = film.iso,
+            polarity = film.polarity,
+            color = film.color,
             productionStatus = enumValueOrUnknown(film.productionStatus.name, FilmProductionStatus.unknown),
             profiles = film.profiles.map { adaptProfile(it, sources) },
             userMetadata = null,
@@ -889,6 +893,8 @@ private data class CatalogV2Film(
     val brandLabel: String,
     val aliases: List<String>,
     val iso: Int,
+    val polarity: FilmPolarity,
+    val color: FilmColor,
     val kind: CatalogV2FilmKind,
     val productionStatus: CatalogV2ProductionStatus,
     val profiles: List<CatalogV2Profile>,

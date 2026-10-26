@@ -12,13 +12,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,7 +46,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +69,8 @@ import com.sangwook.ptimer.core.customfilm.CustomFormulaFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
+import com.sangwook.ptimer.core.reciprocity.FilmColor
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 
 /** Saves/restores a [SnapshotStateList] of table-anchor input strings (PTIMER-218). */
@@ -94,8 +105,8 @@ internal fun CustomFilmEditorDialog(
     // (resolved when the editor opened) drive the live reference-points table.
     val referenceTableFilmId = initial?.referenceTableFilmId
     val linkedTableAnchors = initial?.linkedTableAnchors ?: emptyList()
-    val editId = initial?.filmId
-    val isEditing = initial != null
+    val editId = initial?.takeUnless { it.isSeededFormulaCreate }?.filmId
+    val isEditing = editId != null
     // rememberSaveable (PTIMER-218): survives configuration change and process
     // recreation so an in-progress edit isn't silently reset back to [initial].
     // These fields are all Bundle-primitive (String/Boolean/enum) so the
@@ -107,6 +118,8 @@ internal fun CustomFilmEditorDialog(
     var label by rememberSaveable { mutableStateOf(initial?.label ?: "") }
     var manufacturer by rememberSaveable { mutableStateOf(initial?.manufacturer ?: "") }
     var iso by rememberSaveable { mutableStateOf(initial?.iso ?: "100") }
+    var polarity by rememberSaveable { mutableStateOf(initial?.polarity ?: FilmPolarity.negative) }
+    var color by rememberSaveable { mutableStateOf(initial?.color ?: FilmColor.blackAndWhite) }
     // Blank by default: formula falls back to 1s; table derives first-anchor ÷ 10
     // (so a typical table like 1→2 / 10→20 isn't rejected by a no-correction time
     // that collides with the first anchor).
@@ -179,6 +192,7 @@ internal fun CustomFilmEditorDialog(
         }
         return CustomFormulaFilmInput(
             filmLabel = labelV, profileName = labelV, iso = isoV,
+            polarity = polarity, color = color,
             coefficientSeconds = tc, referenceMeteredTimeSeconds = tm, exponent = exp, offsetSeconds = off,
             noCorrectionThroughSeconds = parsedNoCorrection(), sourceRangeThroughSeconds = through,
             manufacturer = manufacturer.trim().ifEmpty { null },
@@ -199,7 +213,8 @@ internal fun CustomFilmEditorDialog(
         if (anchors.size < 2) return null
         val firstAnchor = anchors.minOf { it.first }
         return CustomTableFilmInput(
-            filmLabel = labelV, profileName = labelV, iso = isoV, anchors = anchors,
+            filmLabel = labelV, profileName = labelV, iso = isoV,
+            polarity = polarity, color = color, anchors = anchors,
             noCorrectionThroughSeconds = tableNoCorrection(firstAnchor), manufacturer = manufacturer.trim().ifEmpty { null },
             notes = notes.trim().ifEmpty { null }, sourceType = sourceType,
             referenceUrl = referenceUrl.trim().ifEmpty { null },
@@ -258,12 +273,32 @@ internal fun CustomFilmEditorDialog(
             if (editing == EditField.Iso) {
                 ValueEditPanel(iso, { iso = it }, step = null, presets = ISO_PRESETS, onClose = { editing = null })
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                ClassificationMenu(
+                    title = stringResource(R.string.film_polarity),
+                    selectedValue = stringResource(if (polarity == FilmPolarity.negative) R.string.film_negative else R.string.film_positive),
+                    options = listOf(
+                        stringResource(R.string.film_negative) to { polarity = FilmPolarity.negative },
+                        stringResource(R.string.film_positive) to { polarity = FilmPolarity.positive },
+                    ),
+                    modifier = Modifier.weight(1f).testTag("film-polarity-menu"),
+                )
+                ClassificationMenu(
+                    title = stringResource(R.string.film_color_label),
+                    selectedValue = stringResource(if (color == FilmColor.blackAndWhite) R.string.film_black_and_white else R.string.film_color),
+                    options = listOf(
+                        stringResource(R.string.film_black_and_white) to { color = FilmColor.blackAndWhite },
+                        stringResource(R.string.film_color) to { color = FilmColor.color },
+                    ),
+                    modifier = Modifier.weight(1f).testTag("film-color-menu"),
+                )
+            }
         }
 
         // The calculation kind is fixed once a film is saved (iOS hides this
         // picker in the edit flow): a table film stays a table, a formula film
         // stays a formula — editing can never silently convert one into the other.
-        if (!isEditing) {
+        if (!isEditing && initial?.isSeededFormulaCreate != true) {
             Spacer(Modifier.height(16.dp))
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 SegmentedButton(
@@ -494,5 +529,37 @@ internal fun CustomFilmEditorDialog(
         // Generous trailing whitespace so the preview graph + legend sit
         // comfortably above the bottom rather than flush against it.
         Spacer(Modifier.height(72.dp))
+    }
+}
+
+
+@Composable
+private fun ClassificationMenu(
+    title: String,
+    selectedValue: String,
+    options: List<Pair<String, () -> Unit>>,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Box(modifier) {
+        TextButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .semantics { contentDescription = "$title, $selectedValue" },
+        ) {
+            Text(selectedValue, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (label, select) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = { select(); expanded = false },
+                    trailingIcon = if (label == selectedValue) {
+                        { Icon(Icons.Default.Check, contentDescription = null) }
+                    } else null,
+                )
+            }
+        }
     }
 }

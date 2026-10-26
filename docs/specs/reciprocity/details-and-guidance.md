@@ -63,6 +63,17 @@ corrected exposure came from, without cluttering the primary result.
   Tapping the value or icon opens the same existing details surface; the
   adjacent timer start action remains a separate non-overlapping target.
 
+- **DETAILS-015** — The Reciprocity Details header shall persistently
+  display the selected film's color classification, polarity and ISO
+  beneath the film name, for Preset and Custom films alike; for example
+  **Color Negative · ISO 400** / **컬러 네거티브 · ISO 400** or
+  **Black & White Positive · ISO 100** / **흑백 포지티브 · ISO 100**.
+  Classification comes from the film identity under
+  `reciprocity/catalog.md` CATALOG-CLASS-001 and remains unchanged when
+  selecting another reciprocity model for the same film. Preserve existing
+  model identity and authority information as distinct information. These
+  are read-only values and remain visible while Details is open.
+
 ## Secondary guidance formatting
 
 - **GUIDANCE-001** — Stored secondary guidance (color-correction notation,

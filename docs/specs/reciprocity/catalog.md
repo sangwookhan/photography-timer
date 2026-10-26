@@ -6,6 +6,7 @@
 | Prefix | Owns |
 | --- | --- |
 | CATALOG | Film identity, source provenance, and the bundled dataset |
+| CATALOG-CLASS | Independent film polarity and color classification |
 | CATALOG-SHAPE | The on-disk catalog encoding |
 | CATALOG-VALID | Validation rules a catalog must pass to load |
 | CATALOG-PICKER | The film picker sheet |
@@ -44,6 +45,70 @@ One canonical shared catalog file backs both platforms. It currently ships
   source.
 - **CATALOG-004** — Official manufacturer data and third-party/community
   data shall never be merged into one provenance record.
+
+### Independent film classification
+
+- **CATALOG-CLASS-001** — Every preset and custom film shall carry two
+  independent attributes: polarity (**Positive** or **Negative**) and color
+  classification (**Color** or **Black & White**). All four combinations
+  are supported. Changing one attribute preserves the other. The attributes
+  describe the film identity and remain the same across its primary,
+  alternate, and derived reciprocity profiles.
+- **CATALOG-CLASS-002** — Every one of the 40 bundled film identities,
+  including identities outside the current picker, shall receive explicit,
+  source-verified values for both attributes. A traceable mapping shall
+  associate each film id, both values, and documentation establishing those
+  classifications. Reciprocity provenance alone suffices only when the
+  cited document also establishes the classification.
+- **CATALOG-CLASS-003** — Preset classification shall be supplied as data;
+  runtime interpretation of names, manufacturer labels, processing chemistry,
+  or other text shall not determine either attribute. Custom compatibility
+  defaults are governed by `reciprocity/custom-profiles.md` and shall not
+  substitute for explicit preset classification.
+- **CATALOG-CLASS-004** — Adding or editing classification shall preserve
+  existing film/profile identifiers, catalog membership, picker eligibility,
+  camera selections, and calculation data. With the same exposure inputs
+  and reciprocity settings, exposure values, result categories, source-range
+  guidance, and timer eligibility remain unchanged. Existing timer records
+  retain their captured identities and behavior.
+- **CATALOG-CLASS-005** — Digital remains the no-film workflow under
+  `calculator/exposure.md`; it is independent of film polarity and color
+  classification.
+
+### Selected-film classification on Main
+
+- **CATALOG-CLASS-006** — For a selected Preset or Custom film, Main shall
+  temporarily show two passive classification badges to the right of the
+  film name, color classification first and polarity second; for example
+  **[Color] [Negative]** or **[Black & White] [Positive]**. Values come from
+  the selected film identity under CATALOG-CLASS-001, independent of its
+  selected reciprocity model. English and Korean use equivalent localized
+  values under `reciprocity/custom-profiles.md` CUSTOM-CLASS-003. The badges
+  have no editing action.
+- **CATALOG-CLASS-007** — The badges shall appear after a film is selected,
+  when the selected film is restored at app launch, when the app returns
+  to the foreground on Main, when the photographer returns to Main from
+  another app surface, and when switching to a camera with a selected film.
+  Each such event shows the active camera's current film classifications.
+- **CATALOG-CLASS-008** — Each display lasts three seconds, followed by a
+  short fade-out. A new qualifying event during display starts a fresh
+  three-second interval for the current selection; an earlier interval
+  shall not hide a later display. Ordinary rendering, exposure adjustments
+  and reciprocity recalculation shall not restart the interval.
+- **CATALOG-CLASS-009** — No-film Digital workflow shall show no
+  classification badges. Clearing film selection or switching to a
+  no-film camera removes them immediately; another camera's or film's
+  values shall never remain visible. Classification display does not
+  change selection, calculations, or captured timer records.
+- **CATALOG-CLASS-010** — Badge appearance and disappearance shall preserve
+  the film name's position and the surrounding controls' layout. Long
+  film names and localized values shall not overlap; reserve badge space
+  within the existing film row, allow the name to truncate first, and keep
+  the complete name accessible. Classification shall not add a permanent
+  row or expand Main's vertical content. The two badges shall remain
+  readable during their display interval on both platforms.
+  Persistent selected-film classification remains available in Reciprocity
+  Details under `reciprocity/details-and-guidance.md` DETAILS-015.
 
 ### Allowed profile shapes
 

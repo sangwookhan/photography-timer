@@ -7,6 +7,26 @@ import PTimerCore
 import PTimerKit
 
 final class FilmClassificationTests: XCTestCase {
+    @MainActor
+    func testReciprocityDetailsIdentityLineShowsAllFourClassificationsAndISO() throws {
+        let viewModel = makeFilmModeViewModel()
+        for polarity in FilmPolarity.allCases {
+            for color in FilmColor.allCases {
+                var form = makeForm(table: false)
+                form.polarity = polarity
+                form.color = color
+                let film = try save(form, id: "\(polarity.rawValue)-\(color.rawValue)")
+                viewModel.addCustomFilm(film)
+                viewModel.selectPresetFilm(film)
+
+                let details = try XCTUnwrap(viewModel.filmModeDetailsDisplayState)
+                let colorLabel = color == .color ? "film-color-value" : "Black & White"
+                let polarityLabel = String(localized: polarity == .positive ? "Positive" : "Negative")
+                XCTAssertEqual(details.classificationAndISO, "\(colorLabel) \(polarityLabel) · ISO 100")
+                XCTAssertTrue(details.subtitle?.contains(film.canonicalStockName) == true)
+            }
+        }
+    }
 
     func testFourCombinationsSaveReopenAndRestoreForBothKinds() throws {
         for table in [false, true] {

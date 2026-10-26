@@ -57,6 +57,12 @@ struct FilmModeDetailsSheet: View {
                             .foregroundStyle(.secondary)
                             .accessibilityIdentifier("film-mode-details-subtitle")
                     }
+                    if let identity = details.classificationAndISO {
+                        Text(identity)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("film-mode-details-classification-iso")
+                    }
 
                     // Current Result block (Adjusted Shutter,
                     // Corrected Exposure, Status) is the primary

@@ -49,7 +49,9 @@ public struct CameraSlotPageStateBuilder {
             let activeProfile = inputs.selectedProfileOverride ?? film.profiles.first
             return FilmSelectionDisplayState(
                 primaryText: film.canonicalStockName,
-                secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile)
+                secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile),
+                colorBadgeText: String(localized: film.color == .color ? "film-color-value" : "Black & White"),
+                polarityBadgeText: String(localized: film.polarity == .positive ? "Positive" : "Negative")
             )
         }()
 

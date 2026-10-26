@@ -54,9 +54,13 @@ public struct FilmSelectorEntry: Equatable, Identifiable {
 public struct FilmSelectionDisplayState: Equatable {
     public let primaryText: String
     public let secondaryText: String?
-    public init(primaryText: String, secondaryText: String?) {
+    public let colorBadgeText: String?
+    public let polarityBadgeText: String?
+    public init(primaryText: String, secondaryText: String?, colorBadgeText: String? = nil, polarityBadgeText: String? = nil) {
         self.primaryText = primaryText
         self.secondaryText = secondaryText
+        self.colorBadgeText = colorBadgeText
+        self.polarityBadgeText = polarityBadgeText
     }
 }
 

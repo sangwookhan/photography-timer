@@ -109,6 +109,7 @@ public struct FilmModeDetailsPresenter {
         return FilmModeDetailsDisplayState(
             title: String(localized: "Reciprocity Details"),
             subtitle: filmIdentitySubtitle(for: bindingState),
+            classificationAndISO: "\(String(localized: bindingState.film.color == .color ? "film-color-value" : "Black & White")) \(String(localized: bindingState.film.polarity == .positive ? "Positive" : "Negative")) · ISO \(bindingState.film.iso)",
             summary: detailsSummaryState(for: input),
             currentResult: currentResultState(for: input, graph: graphState),
             modelSelection: input.modelSelection,

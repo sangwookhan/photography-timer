@@ -631,7 +631,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             ?? selectedPresetFilm.profiles.first
         return FilmSelectionDisplayState(
             primaryText: selectedPresetFilm.canonicalStockName,
-            secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile)
+            secondaryText: FilmSelectionModel.filmRowAuthorityLabel(for: activeProfile),
+            colorBadgeText: String(
+                localized: selectedPresetFilm.color == .color ? "film-color-value" : "Black & White"
+            ),
+            polarityBadgeText: String(localized: selectedPresetFilm.polarity == .positive ? "Positive" : "Negative")
         )
     }
 

@@ -496,6 +496,8 @@ extension CustomFilmEditorFormState {
             profileName: profile.name,
             filmLabel: seed.labelText,
             isoText: "\(film.iso)",
+            polarity: film.polarity,
+            color: film.color,
             sourceType: seed.sourceType,
             notes: seed.notesValue,
             noCorrectionThroughText: Self.formatNumeric(tableRule.noCorrectionThroughSeconds),

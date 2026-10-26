@@ -86,6 +86,7 @@
 		B3A6DC75BC0B7A2BEF2BA814 /* CameraDataUnavailableScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */; };
 		B3C1FFC9B64BE426D19A513E /* SheetCloseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */; };
 		B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */; };
+		F24300000000000000000001 /* FilmClassificationBadgeVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */; };
 		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
 		EE0000000000000000000005 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
 		EE0000000000000000000006 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
@@ -216,6 +217,7 @@
 		B2772717057DB6829867D209 /* UserDefaultsCameraSlotSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStoreTests.swift; sourceTree = "<group>"; };
 		B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDataUnavailableScreenTests.swift; sourceTree = "<group>"; };
 		B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagementAccessibilityTests.swift; sourceTree = "<group>"; };
+		F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmClassificationBadgeVisibilityTests.swift; sourceTree = "<group>"; };
 		B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButtonTests.swift; sourceTree = "<group>"; };
 		B2EF4676CCD0494A730F584A /* UserDefaultsCameraNameSequenceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraNameSequenceStoreTests.swift; sourceTree = "<group>"; };
 		EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCalculatorContextStore.swift; sourceTree = "<group>"; };
@@ -423,6 +425,7 @@
 		A000000000000000000000CB /* App */ = {
 			isa = PBXGroup;
 			children = (
+				F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */,
 				A0000000000000000000001D /* BottomSheetWorkspaceShellTests.swift */,
 				A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */,
 				A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */,
@@ -753,6 +756,7 @@
 				B32717057DB6829867D20977 /* UserDefaultsCameraSlotSessionStoreTests.swift in Sources */,
 				B3A6DC75BC0B7A2BEF2BA814 /* CameraDataUnavailableScreenTests.swift in Sources */,
 				B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */,
+				F24300000000000000000001 /* FilmClassificationBadgeVisibilityTests.swift in Sources */,
 				B310092EFA3E9194D8630EE9 /* SheetCloseButtonTests.swift in Sources */,
 				A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */,
 				A0000000000000000000000C /* BottomSheetWorkspaceShellTests.swift in Sources */,
@@ -821,7 +825,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -852,7 +856,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -985,7 +989,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1006,7 +1010,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1033,7 +1037,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1060,7 +1064,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

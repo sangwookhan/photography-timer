@@ -435,6 +435,8 @@ public struct LaunchPresetFilmCatalogV2Loader {
             brandLabel: film.brandLabel,
             aliases: film.aliases,
             iso: film.iso,
+            polarity: film.polarity,
+            color: film.color,
             productionStatus: FilmProductionStatus(rawValue: film.productionStatus.rawValue) ?? .unknown,
             profiles: film.profiles.map { adaptProfile($0, sources: sources) },
             userMetadata: nil
@@ -816,6 +818,8 @@ private struct CatalogV2Film: Decodable {
     let brandLabel: String
     let aliases: [String]
     let iso: Int
+    let polarity: FilmPolarity
+    let color: FilmColor
     let kind: CatalogV2FilmKind
     let productionStatus: CatalogV2ProductionStatus
     let profiles: [CatalogV2Profile]

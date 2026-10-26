@@ -46,6 +46,8 @@ public struct FilmIdentity: Codable, Equatable {
     public let brandLabel: String?
     public let aliases: [String]
     public let iso: Int
+    public let polarity: FilmPolarity
+    public let color: FilmColor
     public let productionStatus: FilmProductionStatus
     public let profiles: [ReciprocityProfile]
     public let userMetadata: UserEditableMetadata?
@@ -58,6 +60,8 @@ public struct FilmIdentity: Codable, Equatable {
         brandLabel: String? = nil,
         aliases: [String],
         iso: Int,
+        polarity: FilmPolarity = .negative,
+        color: FilmColor = .blackAndWhite,
         productionStatus: FilmProductionStatus,
         profiles: [ReciprocityProfile],
         userMetadata: UserEditableMetadata? = nil
@@ -69,9 +73,37 @@ public struct FilmIdentity: Codable, Equatable {
         self.brandLabel = brandLabel
         self.aliases = aliases
         self.iso = iso
+        self.polarity = polarity
+        self.color = color
         self.productionStatus = productionStatus
         self.profiles = profiles
         self.userMetadata = userMetadata
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, kind, canonicalStockName, manufacturer, brandLabel, aliases, iso
+        case polarity, color, productionStatus, profiles, userMetadata
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try values.decode(FilmIdentityKind.self, forKey: .kind)
+        self.init(
+            id: try values.decode(String.self, forKey: .id),
+            kind: kind,
+            canonicalStockName: try values.decode(String.self, forKey: .canonicalStockName),
+            manufacturer: try values.decodeIfPresent(String.self, forKey: .manufacturer),
+            brandLabel: try values.decodeIfPresent(String.self, forKey: .brandLabel),
+            aliases: try values.decode([String].self, forKey: .aliases),
+            iso: try values.decode(Int.self, forKey: .iso),
+            polarity: kind == .custom && !values.contains(.polarity)
+                ? .negative : try values.decode(FilmPolarity.self, forKey: .polarity),
+            color: kind == .custom && !values.contains(.color)
+                ? .blackAndWhite : try values.decode(FilmColor.self, forKey: .color),
+            productionStatus: try values.decode(FilmProductionStatus.self, forKey: .productionStatus),
+            profiles: try values.decode([ReciprocityProfile].self, forKey: .profiles),
+            userMetadata: try values.decodeIfPresent(UserEditableMetadata.self, forKey: .userMetadata)
+        )
     }
 }
 

@@ -35,6 +35,8 @@ final class ExposureCalculatorViewModelFilmModeTests: XCTestCase {
         XCTAssertEqual(viewModel.filmSelectionDisplayState.primaryText, "Tri-X 400")
         XCTAssertFalse(viewModel.filmSelectionDisplayState.primaryText.contains("ISO"))
         XCTAssertEqual(viewModel.filmSelectionDisplayState.secondaryText, "Official guidance")
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.colorBadgeText, String(localized: "Black & White"))
+        XCTAssertEqual(viewModel.filmSelectionDisplayState.polarityBadgeText, String(localized: "Negative"))
     }
 
     @MainActor

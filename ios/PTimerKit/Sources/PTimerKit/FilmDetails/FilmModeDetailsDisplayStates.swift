@@ -501,6 +501,7 @@ public struct FilmModeDetailsModelSelectionState: Equatable, Identifiable {
 public struct FilmModeDetailsDisplayState: Equatable, Identifiable {
     public let title: String
     public let subtitle: String?
+    public let classificationAndISO: String?
     public let summary: FilmModeDetailsSummaryState
     public let currentResult: FilmModeDetailsCurrentResultState
     public let modelSelection: FilmModeDetailsModelSelectionState?
@@ -511,6 +512,7 @@ public struct FilmModeDetailsDisplayState: Equatable, Identifiable {
     public init(
         title: String,
         subtitle: String? = nil,
+        classificationAndISO: String? = nil,
         summary: FilmModeDetailsSummaryState,
         currentResult: FilmModeDetailsCurrentResultState,
         modelSelection: FilmModeDetailsModelSelectionState? = nil,
@@ -520,6 +522,7 @@ public struct FilmModeDetailsDisplayState: Equatable, Identifiable {
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.classificationAndISO = classificationAndISO
         self.summary = summary
         self.currentResult = currentResult
         self.modelSelection = modelSelection
@@ -536,6 +539,7 @@ public struct FilmModeDetailsDisplayState: Equatable, Identifiable {
             [
                 title,
                 subtitle ?? "no-subtitle",
+                classificationAndISO ?? "no-classification",
                 summary.badgeText,
                 summary.summaryText,
                 String(describing: currentResult.layout),

@@ -27,6 +27,7 @@ struct ExposureCalculatorScreen: View {
     /// timer card strip. Toggling does not touch the Timers
     /// presentation detent or any timer state.
     @State private var isFilmSelectorPresented = false
+    @State private var classificationBadgeRevealEvent = 0
     @State private var presentedFilmDetails: FilmModeDetailsDisplayState?
     /// Slot id currently being renamed via the title-tap sheet.
     /// `.sheet(item:)` keys off this so dismissal clears it back to
@@ -239,6 +240,7 @@ struct ExposureCalculatorScreen: View {
                     arrangement: layout.arrangement,
                     viewModel: viewModel,
                     availableHeight: workspaceHeight,
+                    classificationBadgeRevealEvent: classificationBadgeRevealEvent,
                     onToggleFilmSelector: {
                         isFilmSelectorPresented.toggle()
                     },
@@ -546,6 +548,14 @@ struct ExposureCalculatorScreen: View {
                 isAlarmSounding: alarmPlayer.soundingTimerID != nil
             )
         }
+        .onChange(of: isMainSurfaceCovered) { wasCovered, isCovered in
+            if FilmClassificationBadgeVisibility.isMainReturn(
+                wasCovered: wasCovered,
+                isCovered: isCovered
+            ) {
+                classificationBadgeRevealEvent &+= 1
+            }
+        }
         .onAppear {
             viewModel.setFilterStackOrderingSuspended(UIAccessibility.isVoiceOverRunning)
         }
@@ -614,6 +624,24 @@ struct ExposureCalculatorScreen: View {
                 }
             }
         )
+    }
+
+    /// A return to the calculator from any modal, picker, timer surface, or
+    /// pager utility page is a qualifying badge event. This derived signal
+    /// covers surfaces dismissed without changing the selected film.
+    private var isMainSurfaceCovered: Bool {
+        isFilmSelectorPresented
+            || presentedFilmDetails != nil
+            || slotIDPendingRename != nil
+            || isCameraManagementPresented
+            || isUtilityPageShowing
+            || isCustomFilmEditorPresented
+            || customFilmBeingEdited != nil
+            || customFormulaSeed != nil
+            || isAboutPresented
+            || isFilterManagementPresented
+            || isShootingFilterSelectionPresented
+            || bottomSheetStateStore.isExpanded
     }
 
     /// True when the snapshot should surface a closed-state timer
@@ -694,6 +722,7 @@ private struct ExposureWorkspaceMainContent: View {
     let arrangement: ExposureWorkspaceArrangement
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let availableHeight: CGFloat
+    let classificationBadgeRevealEvent: Int
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
@@ -720,6 +749,7 @@ private struct ExposureWorkspaceMainContent: View {
                         viewModel: viewModel,
                         style: style,
                         arrangement: arrangement,
+                        classificationBadgeRevealEvent: classificationBadgeRevealEvent,
                         onToggleFilmSelector: onToggleFilmSelector,
                         onShowFilmDetails: onShowFilmDetails,
                         onRequestRename: {
@@ -833,6 +863,7 @@ private struct CameraSlotCalculatorPage: View {
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let style: ExposureWorkspaceMainLayoutStyle
     let arrangement: ExposureWorkspaceArrangement
+    let classificationBadgeRevealEvent: Int
     let onToggleFilmSelector: () -> Void
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     /// Tap handler for the slot title rename affordance. Wired
@@ -865,6 +896,8 @@ private struct CameraSlotCalculatorPage: View {
                 selectorEntries: viewModel.filmSelectorEntries,
                 selectedFilmID: pageState.selectedSelectorEntryID,
                 filmSelectionDisplayState: pageState.filmSelectionDisplayState,
+                isActivePage: pageState.isActive,
+                classificationBadgeRevealEvent: classificationBadgeRevealEvent,
                 onToggleSelector: pageState.isActive ? onToggleFilmSelector : {},
                 // The active-model selector is sourced from the live view
                 // model and shown only on the active page (the main screen).
@@ -1061,7 +1094,36 @@ private struct CameraSlotCalculatorPage: View {
 
 }
 
+struct FilmClassificationBadgeVisibility {
+    static let visibleDuration = Duration.seconds(3)
+
+    static func isMainReturn(wasCovered: Bool, isCovered: Bool) -> Bool {
+        wasCovered && !isCovered
+    }
+
+    static func shouldBeginFade(after elapsed: Duration) -> Bool {
+        elapsed >= visibleDuration
+    }
+
+    private(set) var isVisible = false
+    private(set) var generation = 0
+
+    mutating func reveal(isActiveFilm: Bool) -> Int {
+        generation += 1
+        isVisible = isActiveFilm
+        return generation
+    }
+
+    mutating func hide(ifGeneration expectedGeneration: Int) {
+        guard generation == expectedGeneration else { return }
+        isVisible = false
+    }
+}
+
 private struct HeaderView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var badgeVisibility = FilmClassificationBadgeVisibility()
+    @State private var badgeHideTask: Task<Void, Never>?
     /// Active camera slot's display name. Used as the screen's main
     /// title so the workspace itself reads as "the page for this
     /// camera." Sourced from the slot identity's computed
@@ -1075,6 +1137,8 @@ private struct HeaderView: View {
     let selectorEntries: [FilmSelectorEntry]
     let selectedFilmID: String?
     let filmSelectionDisplayState: FilmSelectionDisplayState
+    let isActivePage: Bool
+    let classificationBadgeRevealEvent: Int
     let onToggleSelector: () -> Void
     /// Compact active-model summary (name + calculation) for the
     /// single-model case; `nil` when no film is selected. PTIMER-159.
@@ -1172,6 +1236,7 @@ private struct HeaderView: View {
                 selectorEntries: selectorEntries,
                 selectedFilmID: selectedFilmID,
                 displayState: filmSelectionDisplayState,
+                showsClassificationBadge: badgeVisibility.isVisible,
                 onToggleSelector: onToggleSelector,
                 style: style
             )
@@ -1188,7 +1253,44 @@ private struct HeaderView: View {
                 ReciprocityModelCompactLabel(summary: activeModelSummary)
             }
         }
+        .onAppear { revealClassificationBadge() }
+        .onChange(of: selectedFilmID) { _, _ in revealClassificationBadge() }
+        .onChange(of: isActivePage) { _, _ in revealClassificationBadge() }
+        .onChange(of: classificationBadgeRevealEvent) { _, _ in revealClassificationBadge() }
+        .onChange(of: activeCameraSlotID) { _, _ in revealClassificationBadge() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { revealClassificationBadge() }
+        }
+        .onDisappear { badgeHideTask?.cancel() }
         .sectionCardStyle(style: style)
+    }
+
+    private func revealClassificationBadge() {
+        badgeHideTask?.cancel()
+        let hasClassification = selectedFilmID != nil
+            && filmSelectionDisplayState.colorBadgeText != nil
+            && filmSelectionDisplayState.polarityBadgeText != nil
+        var generation = 0
+        withAnimation(.easeIn(duration: 0.15)) {
+            generation = badgeVisibility.reveal(
+                isActiveFilm: isActivePage && hasClassification
+            )
+        }
+        guard badgeVisibility.isVisible else {
+            return
+        }
+        badgeHideTask = Task { @MainActor in
+            let clock = ContinuousClock()
+            let revealedAt = clock.now
+            try? await Task.sleep(for: FilmClassificationBadgeVisibility.visibleDuration)
+            guard !Task.isCancelled,
+                  FilmClassificationBadgeVisibility.shouldBeginFade(
+                    after: revealedAt.duration(to: clock.now)
+                  ) else { return }
+            withAnimation(.easeOut(duration: 0.3)) {
+                badgeVisibility.hide(ifGeneration: generation)
+            }
+        }
     }
 
     @ViewBuilder
@@ -1224,6 +1326,7 @@ private struct FilmSelectionRow: View {
     let selectorEntries: [FilmSelectorEntry]
     let selectedFilmID: String?
     let displayState: FilmSelectionDisplayState
+    let showsClassificationBadge: Bool
     let onToggleSelector: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
@@ -1252,6 +1355,19 @@ private struct FilmSelectionRow: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                    ZStack(alignment: .trailing) {
+                        if let colorBadge = displayState.colorBadgeText,
+                           let polarityBadge = displayState.polarityBadgeText {
+                            HStack(spacing: 4) {
+                                classificationBadge(colorBadge)
+                                classificationBadge(polarityBadge)
+                            }
+                            .opacity(showsClassificationBadge ? 1 : 0)
+                        }
+                    }
+                    .frame(width: 140, height: 28, alignment: .trailing)
+                    .accessibilityHidden(true)
+
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -1271,6 +1387,15 @@ private struct FilmSelectionRow: View {
     private var selectedFilmAccessibilityValue: String {
         selectorEntries.first(where: { $0.id == selectedFilmID })?.primaryText
             ?? displayState.primaryText
+    }
+
+    private func classificationBadge(_ title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.semibold))
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(Color.accentColor.opacity(0.12), in: Capsule())
     }
 }
 

@@ -249,6 +249,8 @@
         "Pan F+"
       ],
       "iso": 50,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -281,6 +283,8 @@
         "FP4+"
       ],
       "iso": 125,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -313,6 +317,8 @@
         "Delta 100 Pro"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -345,6 +351,8 @@
         "Delta 400 Pro"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -377,6 +385,8 @@
         "Delta 3200 Pro"
       ],
       "iso": 3200,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -411,6 +421,8 @@
         "HP5 Plus 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -444,6 +456,8 @@
         "XP2"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -474,6 +488,8 @@
       "brandLabel": "ILFORD SFX 200",
       "aliases": [],
       "iso": 200,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -503,6 +519,8 @@
       "brandLabel": "ILFORD ORTHO PLUS",
       "aliases": [],
       "iso": 80,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -535,6 +553,8 @@
         "Kentmere Pan 100"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -567,6 +587,8 @@
         "Kentmere Pan 200"
       ],
       "iso": 200,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -599,6 +621,8 @@
         "Kentmere Pan 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -629,6 +653,8 @@
       "brandLabel": "HARMAN PHOENIX 200",
       "aliases": [],
       "iso": 200,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -659,6 +685,8 @@
       "brandLabel": "HARMAN PHOENIX II",
       "aliases": [],
       "iso": 200,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -692,6 +720,8 @@
         "TX 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -822,6 +852,8 @@
         "T-MAX 100"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -889,6 +921,8 @@
         "T-MAX 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -951,6 +985,8 @@
         "EKTAR 100"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -992,6 +1028,8 @@
         "PORTRA 160"
       ],
       "iso": 160,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1033,6 +1071,8 @@
         "PORTRA 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1074,6 +1114,8 @@
         "GOLD 200"
       ],
       "iso": 200,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1115,6 +1157,8 @@
         "ULTRA MAX 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1157,6 +1201,8 @@
         "E100"
       ],
       "iso": 100,
+      "polarity": "positive",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1203,6 +1249,8 @@
         "Acros II"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1249,6 +1297,8 @@
         "Velvia"
       ],
       "iso": 50,
+      "polarity": "positive",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1324,6 +1374,8 @@
         "RVP 100"
       ],
       "iso": 100,
+      "polarity": "positive",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1378,6 +1430,8 @@
         "RDP III"
       ],
       "iso": 100,
+      "polarity": "positive",
+      "color": "color",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1431,6 +1485,8 @@
         "Fomapan 100"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1492,6 +1548,8 @@
         "Fomapan 200"
       ],
       "iso": 200,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1553,6 +1611,8 @@
         "Fomapan 400"
       ],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1612,6 +1672,8 @@
       "brandLabel": "Rollei RPX 25",
       "aliases": [],
       "iso": 25,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1675,6 +1737,8 @@
       "brandLabel": "Rollei RPX 100",
       "aliases": [],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1745,6 +1809,8 @@
       "brandLabel": "Rollei RPX 400",
       "aliases": [],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1815,6 +1881,8 @@
       "brandLabel": "Rollei ORTHO 25 plus",
       "aliases": [],
       "iso": 25,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1892,6 +1960,8 @@
       "brandLabel": "Rollei RETRO 80S",
       "aliases": [],
       "iso": 80,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -1969,6 +2039,8 @@
       "brandLabel": "Rollei RETRO 400S",
       "aliases": [],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -2027,6 +2099,8 @@
       "brandLabel": "Rollei SUPERPAN 200",
       "aliases": [],
       "iso": 200,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -2106,6 +2180,8 @@
         "CHS II 100"
       ],
       "iso": 100,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -2174,6 +2250,8 @@
         "CMS II 20"
       ],
       "iso": 20,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [
@@ -2241,6 +2319,8 @@
       "brandLabel": "BERGGER PANCRO 400",
       "aliases": [],
       "iso": 400,
+      "polarity": "negative",
+      "color": "blackAndWhite",
       "kind": "preset",
       "productionStatus": "current",
       "profiles": [

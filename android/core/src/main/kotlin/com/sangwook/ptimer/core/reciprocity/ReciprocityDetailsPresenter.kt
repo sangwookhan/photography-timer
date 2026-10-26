@@ -23,6 +23,9 @@ data class ReciprocityModelOption(val id: String, val label: String)
 data class ReciprocityDetailsDisplayState(
     val title: String,
     val subtitle: String,
+    val filmColor: FilmColor,
+    val filmPolarity: FilmPolarity,
+    val filmISO: Int,
     /** Model toggle options (empty for single-model films); see iOS "Official table | App formula". */
     val modelOptions: List<ReciprocityModelOption>,
     val selectedModelId: String,
@@ -134,6 +137,9 @@ object ReciprocityDetailsPresenter {
         return ReciprocityDetailsDisplayState(
             title = "Reciprocity Details",
             subtitle = subtitle(film, activeModelLabel),
+            filmColor = film.color,
+            filmPolarity = film.polarity,
+            filmISO = film.iso,
             modelOptions = modelOptions,
             selectedModelId = profile.id,
             adjustedShutterText = formatDuration(adjustedShutterSeconds),

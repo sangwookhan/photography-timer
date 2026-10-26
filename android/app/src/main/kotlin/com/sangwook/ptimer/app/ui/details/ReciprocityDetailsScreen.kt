@@ -87,6 +87,16 @@ fun ReciprocityDetailsScreen(
         ) {
             Spacer(Modifier.height(2.dp))
             Text(localizedDetailsSubtitle(state.subtitle), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(
+                    R.string.recip_details_film_identity,
+                    stringResource(if (state.filmColor == com.sangwook.ptimer.core.reciprocity.FilmColor.color) R.string.film_color else R.string.film_black_and_white),
+                    stringResource(if (state.filmPolarity == com.sangwook.ptimer.core.reciprocity.FilmPolarity.positive) R.string.film_positive else R.string.film_negative),
+                    state.filmISO,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             // Current result: Adjusted | Corrected side by side, then Status.
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {

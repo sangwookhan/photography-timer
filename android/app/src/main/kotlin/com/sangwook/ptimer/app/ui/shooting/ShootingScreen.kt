@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -70,9 +72,14 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlin.time.TimeSource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalConfiguration
@@ -104,6 +111,7 @@ import com.sangwook.ptimer.app.vm.CalculatorUiState
 import com.sangwook.ptimer.app.vm.CameraManagementOrigin
 import com.sangwook.ptimer.app.vm.CameraPagerNavigation
 import com.sangwook.ptimer.app.vm.CameraPagerReturnTarget
+import com.sangwook.ptimer.app.vm.CustomFilmEditingPresenter
 import com.sangwook.ptimer.app.vm.CustomFilmDraft
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentDirection
 import com.sangwook.ptimer.app.vm.FilterWheelAdjustmentOutcome
@@ -114,6 +122,8 @@ import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.NDNotationMode
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
+import com.sangwook.ptimer.core.reciprocity.FilmColor
 import com.sangwook.ptimer.core.reciprocity.CustomProfileSourceType
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
@@ -179,6 +189,8 @@ fun ShootingScreen(
     onPageRoom: (ShootingPageRoom) -> Unit = {},
     /** The fold dividing the window, if any (SHELL-061/062). */
     fold: WindowFold? = null,
+    /** Root-level modal return event for Details and management surfaces. */
+    mainReturnBadgeToken: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -197,17 +209,29 @@ fun ShootingScreen(
     // wipe the slot's shooting setup. PTIMER-208.
     var showResetConfirm by rememberSaveable { mutableStateOf(false) }
 
+    var resumeBadgeToken by remember { mutableStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { resumeBadgeToken++ }
+
     val activeIndex = state.slots.indexOfFirst { it.isActive }.coerceAtLeast(0)
     val displayedCount = state.slots.size
     // The pager holds the displayed cameras plus one trailing utility page
     // (CAMERA-PAGER-007); with no displayed camera it holds nothing.
     val pagerState = rememberPagerState(initialPage = activeIndex) { CameraPagerNavigation.pageCount(displayedCount) }
     val isUtilityPageShowing = CameraPagerNavigation.isUtilityPage(pagerState.settledPage, displayedCount)
-
     // Where camera management was opened from (null: closed), and where the
     // pager returns to once it closes. Saved so a recreation reopens it.
     var managementOrigin by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingReturn by remember { mutableStateOf<CameraPagerReturnTarget?>(null) }
+    val isShootingSurfaceCovered = showFilmPicker || showRename || editDraft != null
+        || showTarget || showEditor || showResetConfirm || managementOrigin != null || isUtilityPageShowing
+    var wasShootingSurfaceCovered by remember { mutableStateOf(false) }
+    var shootingSurfaceReturnToken by remember { mutableStateOf(0) }
+    LaunchedEffect(isShootingSurfaceCovered) {
+        if (FilmClassificationBadgeVisibility.isMainReturn(wasShootingSurfaceCovered, isShootingSurfaceCovered)) {
+            shootingSurfaceReturnToken++
+        }
+        wasShootingSurfaceCovered = isShootingSurfaceCovered
+    }
     fun openManagement(origin: CameraManagementOrigin) { managementOrigin = origin.name }
     // Add from the utility page or the empty state: the same action as Add in
     // camera management, so the resulting camera is announced the same way.
@@ -330,6 +354,32 @@ fun ShootingScreen(
                 // that IS the active slot edits it; off-active pages are
                 // display-only.
                 val writesActiveSlot = page == activeIndex
+                val selectedFilm = pageState.filmOptions.firstOrNull { it.id == pageState.selectedFilmId }
+                var badgeVisibility by remember(page) { mutableStateOf(FilmClassificationBadgeVisibility()) }
+                LaunchedEffect(
+                    pageState.selectedFilmId,
+                    writesActiveSlot,
+                    resumeBadgeToken,
+                    mainReturnBadgeToken,
+                    shootingSurfaceReturnToken,
+                ) {
+                    badgeVisibility = badgeVisibility.reveal(
+                        isActiveFilm = writesActiveSlot && pageState.selectedFilmId != null && selectedFilm != null,
+                    )
+                    val generation = badgeVisibility.generation
+                    if (badgeVisibility.isVisible) {
+                        val revealedAt = TimeSource.Monotonic.markNow()
+                        delay(FilmClassificationBadgeVisibility.DISPLAY_DURATION_MILLIS)
+                        if (badgeVisibility.shouldBeginFade(revealedAt.elapsedNow().inWholeMilliseconds)) {
+                            badgeVisibility = badgeVisibility.hide(ifGeneration = generation)
+                        }
+                    }
+                }
+                val badgeAlpha by animateFloatAsState(
+                    targetValue = if (badgeVisibility.isVisible) 1f else 0f,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "film-classification-badges",
+                )
                 val onShutterForPage: (Int) -> Unit = if (writesActiveSlot) onShutterIndex else { _ -> }
                 // The page places its header, inputs and results in the
                 // arrangement that fits the room above the compact timers
@@ -415,7 +465,10 @@ fun ShootingScreen(
                     // first-time user, and once a film is picked the row's
                     // position + chevron carry the same context (PTIMER-219).
                     Card(
-                        modifier = Modifier.fillMaxWidth().clickable { showFilmPicker = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("film-selection-row-$page")
+                            .clickable { showFilmPicker = true },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         Row(
@@ -426,10 +479,35 @@ fun ShootingScreen(
                             Text(
                                 localizedFilmName(pageState.selectedFilmName),
                                 style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.weight(1f, fill = false),
+                                modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            Box(
+                                modifier = Modifier.width(132.dp).heightIn(min = 24.dp),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                if (selectedFilm != null) {
+                                    Row(
+                                        modifier = Modifier
+                                            .alpha(badgeAlpha)
+                                            .then(
+                                                if (badgeVisibility.isVisible) Modifier
+                                                else Modifier.clearAndSetSemantics {},
+                                            ),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        FilmClassificationBadge(
+                                            stringResource(if (selectedFilm.color == FilmColor.color) R.string.film_color else R.string.film_black_and_white),
+                                            testTag = "film-classification-color-$page",
+                                        )
+                                        FilmClassificationBadge(
+                                            stringResource(if (selectedFilm.polarity == FilmPolarity.positive) R.string.film_positive else R.string.film_negative),
+                                            testTag = "film-classification-polarity-$page",
+                                        )
+                                    }
+                                }
+                            }
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
@@ -627,26 +705,35 @@ fun ShootingScreen(
     }
 
     if (showEditor) {
-        CustomFilmEditorDialog(
-            initial = editDraft,
-            onCreateFormula = { input, editId ->
-                onCreateCustomFilm(input, editId).also { if (it) { showEditor = false; editDraft = null } }
-            },
-            onCreateTable = { input, editId ->
-                onCreateCustomTableFilm(input, editId).also { if (it) { showEditor = false; editDraft = null } }
-            },
-            onPreviewFormula = onPreviewCustomFilm,
-            onPreviewTable = onPreviewCustomTableFilm,
-            onFormulaCheckpoints = onFormulaCheckpoints,
-            onTableCheckpoints = onTableCheckpoints,
-            onCalculationBasis = onCalculationBasis,
-            onPreviewTableFit = onPreviewTableFit,
-            onCreateFormulaFromTable = { input, editId ->
-                onCreateFormulaFromTable(input, editId).also { if (it) { showEditor = false; editDraft = null } }
-            },
-            onReferencePoints = onReferencePoints,
-            onDismiss = { showEditor = false; editDraft = null },
-        )
+        androidx.compose.runtime.key(editDraft?.filmId) {
+            CustomFilmEditorDialog(
+                initial = editDraft,
+                onCreateFormula = { input, editId ->
+                    onCreateCustomFilm(input, editId).also { if (it) { showEditor = false; editDraft = null } }
+                },
+                onCreateTable = { input, editId ->
+                    onCreateCustomTableFilm(input, editId).also { if (it) { showEditor = false; editDraft = null } }
+                },
+                onPreviewFormula = onPreviewCustomFilm,
+                onPreviewTable = onPreviewCustomTableFilm,
+                onFormulaCheckpoints = onFormulaCheckpoints,
+                onTableCheckpoints = onTableCheckpoints,
+                onCalculationBasis = onCalculationBasis,
+                onPreviewTableFit = onPreviewTableFit,
+                onCreateFormulaFromTable = { input, editId ->
+                    val tableId = editId ?: "custom-film-${java.util.UUID.randomUUID()}"
+                    val seeded = CustomFilmEditingPresenter.creatingFormulaDraft(
+                        input, tableId, "draft-formula-${java.util.UUID.randomUUID()}",
+                    )
+                    if (seeded != null && onCreateFormulaFromTable(input, tableId)) {
+                        editDraft = seeded
+                        true
+                    } else false
+                },
+                onReferencePoints = onReferencePoints,
+                onDismiss = { showEditor = false; editDraft = null },
+            )
+        }
     }
 
     if (showRename) {
@@ -699,6 +786,22 @@ fun ShootingScreen(
                     }
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun FilmClassificationBadge(label: String, testTag: String) {
+    Surface(
+        modifier = Modifier.testTag(testTag),
+        shape = RoundedCornerShape(5.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
         )
     }
 }
@@ -834,6 +937,9 @@ private val CustomFilmDraftSaver: Saver<CustomFilmDraft?, Any> = mapSaver(
                 "label" to draft.label,
                 "manufacturer" to draft.manufacturer,
                 "iso" to draft.iso,
+                "polarity" to draft.polarity.name,
+                "color" to draft.color.name,
+                "isSeededFormulaCreate" to draft.isSeededFormulaCreate,
                 "tc0" to draft.tc0,
                 "tm0" to draft.tm0,
                 "exponent" to draft.exponent,
@@ -865,9 +971,12 @@ private val CustomFilmDraftSaver: Saver<CustomFilmDraft?, Any> = mapSaver(
         CustomFilmDraft(
             filmId = filmId,
             isTable = map["isTable"] as? Boolean ?: false,
+            isSeededFormulaCreate = map["isSeededFormulaCreate"] as? Boolean ?: false,
             label = map["label"] as? String ?: "",
             manufacturer = map["manufacturer"] as? String ?: "",
             iso = map["iso"] as? String ?: "",
+            polarity = (map["polarity"] as? String)?.let(FilmPolarity::valueOf) ?: FilmPolarity.negative,
+            color = (map["color"] as? String)?.let(FilmColor::valueOf) ?: FilmColor.blackAndWhite,
             tc0 = map["tc0"] as? String ?: "",
             tm0 = map["tm0"] as? String ?: "",
             exponent = map["exponent"] as? String ?: "",

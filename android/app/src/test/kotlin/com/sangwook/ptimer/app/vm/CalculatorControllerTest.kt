@@ -6,6 +6,8 @@ package com.sangwook.ptimer.app.vm
 import com.sangwook.ptimer.core.catalog.LaunchPresetFilmCatalogV2
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.persistence.PersistentSlotSession
+import com.sangwook.ptimer.core.reciprocity.FilmColor
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.slots.SlotCalculatorSnapshot
 import com.sangwook.ptimer.core.slots.canonicalNdStackStops
@@ -298,6 +300,23 @@ class CalculatorControllerTest {
         assertEquals("Camera 2", camera2.activeSlotName)
         assertEquals("No film", camera2.selectedFilmName)
         assertEquals(0, camera2.ndIndex)
+
+        c.selectSlot(CameraSlotId.camera2)
+        c.selectFilm("kodak-ektachrome-e100")
+        val classifiedPages = c.state.value.slotStates
+        val panF = classifiedPages[0].filmOptions.single { it.id == classifiedPages[0].selectedFilmId }
+        val ektachrome = classifiedPages[1].filmOptions.single { it.id == classifiedPages[1].selectedFilmId }
+        assertEquals("ilford-pan-f-plus-50", classifiedPages[0].selectedFilmId)
+        assertEquals(FilmPolarity.negative, panF.polarity)
+        assertEquals(FilmColor.blackAndWhite, panF.color)
+        assertEquals("kodak-ektachrome-e100", classifiedPages[1].selectedFilmId)
+        assertEquals(FilmPolarity.positive, ektachrome.polarity)
+        assertEquals(FilmColor.color, ektachrome.color)
+
+        c.selectSlot(CameraSlotId.camera1)
+        c.selectFilm(null)
+        assertNull(c.state.value.slotStates[0].selectedFilmId)
+        assertEquals("kodak-ektachrome-e100", c.state.value.slotStates[1].selectedFilmId)
     }
 
     @Test

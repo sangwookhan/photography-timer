@@ -437,4 +437,11 @@
     <string name="filter_set_delete_named_title">%1$s 삭제할까요?</string>
     <string name="filter_set_delete_global_message">%1$s 필터 세트와 그 안의 필터가 인벤토리에서 삭제됩니다. 지금 이 필터 세트로 장착한 카메라는 없습니다. 이미 시작한 타이머는 기록된 요약을 유지합니다.</string>
     <string name="filter_set_delete_global_message_cameras">%1$s 필터 세트와 그 안의 필터가 인벤토리에서 삭제되고, %2$s에서 이 필터 세트의 필터와 ND 휠이 해제됩니다. 이미 시작한 타이머는 기록된 요약을 유지합니다.</string>
+    <string name="film_polarity">필름 유형</string>
+    <string name="film_negative">네거티브</string>
+    <string name="film_positive">포지티브</string>
+    <string name="film_color_label">색상</string>
+    <string name="film_black_and_white">흑백</string>
+    <string name="film_color">컬러</string>
+    <string name="recip_details_film_identity">%1$s %2$s · ISO %3$d</string>
 </resources>

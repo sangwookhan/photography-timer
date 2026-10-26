@@ -25,6 +25,10 @@ object ReciprocityNoCorrectionBoundary {
 
 enum class FilmIdentityKind { preset, custom, unknown }
 
+enum class FilmPolarity { negative, positive }
+
+enum class FilmColor { blackAndWhite, color }
+
 enum class FilmProductionStatus { current, discontinued, unknown }
 
 @Serializable
@@ -36,6 +40,8 @@ data class FilmIdentity(
     val brandLabel: String? = null,
     val aliases: List<String>,
     val iso: Int,
+    val polarity: FilmPolarity = FilmPolarity.negative,
+    val color: FilmColor = FilmColor.blackAndWhite,
     val productionStatus: FilmProductionStatus,
     val profiles: List<ReciprocityProfile>,
     val userMetadata: UserEditableMetadata? = null,

@@ -13,6 +13,8 @@ import com.sangwook.ptimer.core.customfilm.CustomTableFilmInput
 import com.sangwook.ptimer.core.customfilm.CustomTableFittedFormula
 import com.sangwook.ptimer.core.reciprocity.CustomProfileSourceType
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
+import com.sangwook.ptimer.core.reciprocity.FilmColor
 import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.reciprocity.ReciprocityGraphPresenter
@@ -30,6 +32,8 @@ data class CustomFilmDraft(
     val label: String,
     val manufacturer: String,
     val iso: String,
+    val polarity: FilmPolarity = FilmPolarity.negative,
+    val color: FilmColor = FilmColor.blackAndWhite,
     val tc0: String = "",
     val tm0: String = "",
     val exponent: String = "",
@@ -44,6 +48,7 @@ data class CustomFilmDraft(
     val referenceTableFilmId: String? = null,
     /** The linked table's current anchors, resolved at open time for reference points. */
     val linkedTableAnchors: List<Pair<Double, Double>> = emptyList(),
+    val isSeededFormulaCreate: Boolean = false,
 )
 
 /**
@@ -81,6 +86,8 @@ object CustomFilmEditingPresenter {
                 filmLabel = name,
                 profileName = name,
                 iso = input.iso,
+                polarity = input.polarity,
+                color = input.color,
                 coefficientSeconds = fitted.coefficientSeconds,
                 referenceMeteredTimeSeconds = fitted.referenceMeteredTimeSeconds,
                 exponent = fitted.exponent,
@@ -93,6 +100,17 @@ object CustomFilmEditingPresenter {
             filmId,
             profileId,
         )
+    }
+
+    /** A fitted create draft; its id identifies the editor session, not a saved film. */
+    fun creatingFormulaDraft(
+        input: CustomTableFilmInput,
+        tableFilmId: String,
+        draftFilmId: String,
+    ): CustomFilmDraft? {
+        val table = CustomFilmBuilder.buildTableFilm(input, tableFilmId, "draft-table-profile") ?: return null
+        val film = buildFormulaFilmFromTableInput(input, draftFilmId, "draft-profile", tableFilmId) ?: return null
+        return customFilmDraft(listOf(table, film), film.id)?.copy(isSeededFormulaCreate = true)
     }
 
     /**
@@ -183,12 +201,14 @@ object CustomFilmEditingPresenter {
         return when {
             table != null -> CustomFilmDraft(
                 filmId = filmId, isTable = true, label = label, manufacturer = manufacturer, iso = iso,
+                polarity = film.polarity, color = film.color,
                 noCorrection = num(table.noCorrectionThroughSeconds),
                 anchors = table.anchors.map { num(it.meteredSeconds) to num(it.correctedSeconds) },
                 notes = notes, sourceType = sourceType, referenceUrl = referenceUrl,
             )
             formula != null -> CustomFilmDraft(
                 filmId = filmId, isTable = false, label = label, manufacturer = manufacturer, iso = iso,
+                polarity = film.polarity, color = film.color,
                 tc0 = num(formula.coefficientSeconds),
                 tm0 = num(formula.referenceMeteredTimeSeconds),
                 exponent = num(formula.exponent),

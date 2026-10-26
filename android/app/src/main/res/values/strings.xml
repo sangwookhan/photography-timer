@@ -461,4 +461,11 @@
     <string name="filter_set_delete_named_title">Delete %1$s?</string>
     <string name="filter_set_delete_global_message">This removes %1$s and its filters from your inventory. No camera currently mounts from it. Timers already started keep their captured summary.</string>
     <string name="filter_set_delete_global_message_cameras">This removes %1$s and its filters from your inventory, and removes its filters and ND wheels on %2$s. Timers already started keep their captured summary.</string>
+    <string name="film_polarity">Polarity</string>
+    <string name="film_negative">Negative</string>
+    <string name="film_positive">Positive</string>
+    <string name="film_color_label">Color</string>
+    <string name="film_black_and_white">Black &amp; White</string>
+    <string name="film_color">Color</string>
+    <string name="recip_details_film_identity">%1$s %2$s · ISO %3$d</string>
 </resources>

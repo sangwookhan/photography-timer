@@ -5,13 +5,18 @@ package com.sangwook.ptimer.app.ui.shooting
 
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.sangwook.ptimer.ui.theme.PTimerTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -48,7 +53,18 @@ class CustomFilmEditorDialogRestorationTest {
             }
         }
 
+        val polarityBounds = composeTestRule.onNodeWithTag("film-polarity-menu").fetchSemanticsNode().boundsInRoot
+        val colorBounds = composeTestRule.onNodeWithTag("film-color-menu").fetchSemanticsNode().boundsInRoot
+        assertEquals(polarityBounds.width, colorBounds.width, 1f)
+        assertEquals(polarityBounds.top, colorBounds.top, 1f)
+        assertTrue(polarityBounds.height >= with(composeTestRule.density) { 48.dp.toPx() })
         composeTestRule.onNodeWithText("Label").performClick()
+        composeTestRule.onNodeWithText("Polarity").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Color", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Negative").assertExists()
+        composeTestRule.onNodeWithText("Black & White").assertExists()
+        composeTestRule.onNodeWithContentDescription("Polarity, Negative").assertExists()
+        composeTestRule.onNodeWithContentDescription("Color, Black & White").assertExists()
         // The Label field's ValueEditPanel is composed first among the
         // simultaneously-mounted text fields (Notes/Reference URL further
         // down the same non-lazy Column also have a SetText action).
@@ -57,7 +73,13 @@ class CustomFilmEditorDialogRestorationTest {
         // show "Restored Film" simultaneously — match either occurrence.
         composeTestRule.onAllNodesWithText("Restored Film").onFirst().assertExists()
 
+        composeTestRule.onNodeWithTag("film-polarity-menu").performClick()
+        composeTestRule.onNodeWithText("Positive").performClick()
+        composeTestRule.onNodeWithTag("film-color-menu").performClick()
+        composeTestRule.onNodeWithText("Color").performClick()
         restorationTester.emulateSavedInstanceStateRestore()
+        composeTestRule.onNodeWithContentDescription("Polarity, Positive").assertExists()
+        composeTestRule.onNodeWithContentDescription("Color, Color").assertExists()
 
         composeTestRule.onAllNodesWithText("Restored Film").onFirst().assertExists()
     }

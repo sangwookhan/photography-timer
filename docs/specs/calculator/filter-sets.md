@@ -579,6 +579,12 @@ unchanged under the localization contract.
   touch center. A Standard-only stack retains the existing status behavior in
   `nd-filters.md`.
 
+  During Base interaction with Target ND suggestions active, the temporary
+  guidance and Apply contract in `target-shutter.md` replaces the ordinary
+  leading status content. The existing Total remains readable and
+  untruncated, and the one-row geometry and wheel alignment remain stable.
+  After that interaction/proposal ends, restore the ordinary status here.
+
 ### Plus wheel and per-camera source memory
 
 - **FILTER-PLUS-001** — Plus shall remain at the right end while the applicable

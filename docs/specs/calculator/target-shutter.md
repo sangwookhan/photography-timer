@@ -3,17 +3,25 @@
 
 # Target Shutter
 
+| Prefix | Owns |
+| --- | --- |
+| TARGET | Target entry, comparison, identity and persistence |
+| TARGET-ND | Suggestion activation and allowance settings |
+| TARGET-ND-CALC | Required attenuation, inverse and error semantics |
+| TARGET-ND-SELECT | Candidate inventory, validity and ranking |
+| TARGET-ND-UI | Interaction, lifetime and explicit application |
+
 ## Purpose
 
-Target Shutter lets a photographer enter a desired final exposure duration
-and compare it against the calculator's current result, without altering
-exposure or reciprocity calculation.
+Target Shutter lets a photographer enter a desired final exposure duration,
+compare it against the calculator's current result, and explicitly apply an
+ND suggestion after manually adjusting Base Shutter.
 
 ## Current behavior
 
-Target Shutter is optional and scoped to the active camera. It sits on
-top of the calculator and reciprocity results; enabling, disabling, or
-editing it never feeds back into either.
+Target Shutter is optional and scoped to the active camera. Enabling,
+disabling or editing the Target preserves Base and filters. ND suggestions
+use that fixed Target and require a separate Apply action to change ND.
 
 ## Requirements
 
@@ -79,6 +87,160 @@ editing it never feeds back into either.
   after switching it off preserves the previously committed target
   unchanged, on the same terms as TARGET-032.
 
+### ND suggestions after Base Shutter adjustment
+
+The exposure error used to choose filters is distinct from the Target row's
+time-ratio comparison (TARGET-010). Filter-stack invariants and ordering are
+owned by `filter-sets.md` and `nd-filters.md`; the requirements below inherit
+them rather than define a second stack model.
+
+#### Activation and settings
+
+- **TARGET-ND-001** — With a committed Target and ND suggestions enabled,
+  manual Base Shutter interaction shall show the required total attenuation
+  live. Target entry, Quick/Fine, Confirm, Cancel and Switch Off retain
+  TARGET-032–034; confirming a Target alone shall not select filters.
+- **TARGET-ND-002** — Settings shall offer a Target Shutter section with
+  **Suggest ND selection** / **ND 자동 선택 제안**, initially on. Its
+  explanation shall communicate that adjusting Base shows required ND and
+  an Apply action. The setting is app-global, shared across cameras and
+  retained after relaunch. Turning it off immediately removes guidance,
+  suggestions and failure messages while preserving current inputs.
+- **TARGET-ND-003** — The same Settings section shall offer **Allowed exposure
+  error** / **허용 노출 오차**, with independent **Default** / **Extended**
+  choices for Negative, Positive and Digital. Each initially uses Default
+  and persists app-globally. The selected film's explicit polarity selects
+  the film allowance; its color classification does not alter it. No film
+  selects Digital. The intervals are inclusive:
+
+  | Medium | Default | Extended |
+  | --- | --- | --- |
+  | Negative | −0.5 to +1 stop | −0.5 to +2 stops |
+  | Positive | −1/3 to +1/3 stop | −0.5 to +0.5 stop |
+  | Digital | −1 to 0 stop | −2 to 0 stops |
+
+  Settings shall identify these as app selection allowances rather than
+  guaranteed film/sensor limits, and explain the RAW-processing assumption
+  for Digital Extended.
+
+#### Required attenuation and exposure error
+
+- **TARGET-ND-CALC-001** — Let B be the current Base seconds, T the fixed
+  Target seconds, and M the metered/pre-reciprocity seconds corresponding to
+  T. Digital uses M = T. Film obtains M by reversing the selected profile's
+  existing forward evaluation, including its no-correction bands, formula
+  or table, boundary policies and permitted numeric continuation. Only a
+  unique, positive, finite solution verified through that forward evaluation
+  supplies a numeric suggestion.
+- **TARGET-ND-CALC-002** — Required total attenuation is R = log2(M / B).
+  It includes the fixed mounted auxiliary contribution A. For a candidate
+  with ND subtotal N, its total is D = N + A and its remaining exposure
+  error is E = R − D. Negative E denotes underexposure, positive E
+  overexposure relative to the user's Base reference. Calculations and
+  eligibility shall use precise values; displayed rounding shall not decide
+  validity. Base and Target shall remain fixed throughout evaluation.
+- **TARGET-ND-CALC-003** — Required attenuation shall be labeled
+  **Required ND** / **필요 ND**, rendered as a single total in stops to one
+  decimal place, independent of global ND notation. It is not an increment
+  to the mounted filters. The existing Target row continues to display its
+  time-ratio comparison; that value shall not be reused as the film ND
+  adjustment or the candidate's remaining exposure error.
+- **TARGET-ND-CALC-004** — No quantified inverse, multiple inverse solutions,
+  invalid/non-finite calculation, and a negative required total shall produce
+  understandable unavailable guidance and no Apply action. A negative total
+  shall explain that attenuation cannot reach this Target. The app shall not
+  invent a numeric inverse, silently change profile, or fall back to Digital.
+  A profile's valid no-correction segment remains eligible even if its
+  longer-exposure guidance is non-quantified.
+- **TARGET-ND-CALC-005** — Numeric continuation beyond a profile's source
+  range remains eligible. If the inverse or chosen candidate relies on
+  out-of-source-range evaluation, Apply shall use a warning color distinct
+  from the ordinary action and show an explicit source-range warning.
+  Color shall not be the only warning cue; accessibility shall expose it.
+  Existing forward result categories and warnings remain authoritative.
+
+#### Candidate selection
+
+- **TARGET-ND-SELECT-001** — If the active camera's selected Filter Sets
+  contain any ND items, search their union of physical ND items only.
+  Available/unselected Sets and Standard shall not supplement that search.
+  If the selected Sets contain no ND items, including no selected Sets,
+  search a replacement single Standard wheel from the canonical integer
+  ladder 0–30 in ND-001, limited only by the unchanged auxiliary contribution.
+  ND wheels being replaced shall not consume that replacement budget.
+  Retained legacy fractional Standard values remain current state until
+  Apply but shall not become new automatic-selection candidates.
+  This fallback shall not change selected Filter Sets or Plus source memory.
+- **TARGET-ND-SELECT-002** — Automatic selection shall preserve every mounted
+  auxiliary item and its exact current CPL choice, GND mode and contribution.
+  Physical item exclusivity, the total cap, the auxiliary-dependent ND-wheel
+  limit and settled ordering follow the owning filter contracts. The search
+  may choose no mounted ND when auxiliary attenuation suffices; represent
+  that result with one legal zero/Empty wheel. Empty wheels are not physical
+  filters and do not count in candidate filter-count comparisons.
+- **TARGET-ND-SELECT-003** — A valid candidate must be representable by the
+  actual filter controls, have a usable numeric film evaluation when
+  applicable, and have E inside the configured interval. When no valid
+  candidate exists, show a clear no-combination message while preserving
+  the current stack. Insufficient inventory, stack limits and fixed auxiliary loss shall
+  not be bypassed by fabricating filters, changing Base, or clamping.
+- **TARGET-ND-SELECT-004** — First obtain the minimum |E| among valid
+  candidates. Treat every valid candidate whose |E| is no more than
+  0.1 stop above that minimum as equivalent for accuracy. Among those
+  candidates choose fewer mounted ND filters, then fewer removals/additions
+  relative to the currently mounted ND selections, then stable source/item
+  identity order (canonical numeric order for Standard). Changed-item count
+  includes removals plus additions; empty-wheel arrangement is ignored.
+  This equivalence band shall never expand the allowed-error interval.
+- **TARGET-ND-SELECT-005** — If the chosen result has the same ND selections
+  as the current configuration, show **Current filters are suitable** /
+  **현재 필터가 적정합니다** without Apply. Otherwise offer Apply even when
+  the current configuration is already within the allowed interval. A
+  candidate in the equivalent-accuracy group may be chosen for fewer filters
+  even if its absolute error is slightly larger than the current error.
+
+#### Interaction, presentation and application
+
+- **TARGET-ND-UI-001** — During Base interaction, hide any preceding Apply
+  and update required-ND guidance using the live Base. Offer a result only
+  after touch release, inertial scrolling, final snap and value commitment
+  have finished, and filter controls are quiet. A gesture that returns to
+  its initial Base still qualifies. Accessibility adjustment shall use the
+  same value-commit rule.
+- **TARGET-ND-UI-002** — After settlement and evaluation, a valid changed
+  candidate shall show **Apply**, identify the proposed ND combination and
+  distinguish its signed remaining exposure error. No-combination, already
+  suitable and inverse-unavailable results shall show the corresponding
+  explanation instead. Full proposal and reason remain accessible.
+- **TARGET-ND-UI-003** — The settled result/action shall remain for five
+  seconds from when the result is ready, then return to the ordinary
+  status presentation. A new qualifying interaction starts a fresh result
+  lifetime; an earlier timeout shall not dismiss a later result. While a
+  screen reader focuses the action, expiry shall be suspended so it can be
+  activated. Transient proposals shall not be persisted or restored.
+- **TARGET-ND-UI-004** — Use the existing status area immediately below the
+  Base/ND wheels. Required guidance occupies the leading content and Apply
+  is trailing; preserve the mixed-stack Total's readability under
+  FILTER-STACK-008. Content may replace the ordinary source/detail text
+  within that stable region; complete details remain accessible. Appearance,
+  expiry and failure shall not move the wheels, obscure results/timers,
+  add a permanent panel or expand the shooting page vertically. Ordinary
+  status returns after the proposal ends.
+- **TARGET-ND-UI-005** — Base reinteraction, ND/auxiliary/selected-Set or
+  inventory change, film/profile or classification change, Target change,
+  allowance change, camera switch, feature disable, and leaving Main shall
+  invalidate the pending proposal. Re-evaluation uses current inputs;
+  only a new settled manual Base interaction opens a new five-second
+  offer. A late result from earlier inputs shall not reappear.
+- **TARGET-ND-UI-006** — Apply shall revalidate the proposal against the
+  current camera, settings, inventory and committed inputs and commit the
+  chosen ND stack as one action. Reject a stale/invalid proposal with its
+  reason and preserve the prior stack. Prevent duplicate application.
+  Success preserves Base, Target, auxiliary selections, selected Filter Sets,
+  Plus memory, other cameras and captured timers; persist the resulting
+  stack under the existing camera contract and briefly acknowledge success
+  before ordinary status resumes.
+
 ## Timer creation
 
 - **TARGET-040** — Starting a timer from Target Shutter shall use the
@@ -96,5 +258,6 @@ editing it never feeds back into either.
 
 ## Non-goals
 
-- Target Shutter does not alter exposure or reciprocity calculation; it is
-  a comparison layer only.
+- Automatic Base adjustment, Target-entry optimization checkboxes, and
+  applying filters merely because an input changed.
+- Altering reciprocity source data or the forward calculation rules.

@@ -28,6 +28,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -199,6 +201,7 @@ fun SnapWheel(
     selectedIndex: Int,
     onSelectedIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onManualEvent: ((ManualWheelEvent) -> Unit)? = null,
     visibleCount: Int = 5,
     /** MINIMUM row height: [snapWheelItemHeight] grows it when the
      *  system font scale makes a row's line taller than this. */
@@ -234,6 +237,8 @@ fun SnapWheel(
     /** Overrides the default `labels[selectedIndex]` state description
      *  (FILTER-A11Y-005). */
     accessibilityValue: String? = null,
+    /** Brief color emphasis for a value changed by one ND Apply commit. */
+    appliedValueEmphasis: Float = 0f,
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -267,11 +272,14 @@ fun SnapWheel(
     // to active when the camera pager settles on that page — would keep invoking
     // the stale callback and silently drop the user's spins.
     val currentOnSelectedIndexChange by rememberUpdatedState(onSelectedIndexChange)
+    val currentOnManualEvent by rememberUpdatedState(onManualEvent)
+    val manual = remember { ManualWheelSession() }
+    var manualEpoch by remember { mutableIntStateOf(0) }
     LaunchedEffect(listState, labels) {
         snapshotFlow { centeredIndex }
             .filterNotNull()
             .distinctUntilChanged()
-            .collect { currentOnSelectedIndexChange(it) }
+            .collect { if (currentOnManualEvent == null) currentOnSelectedIndexChange(it) }
     }
 
     // PTIMER-199: activity signal. Pressed is tracked from the Final pass
@@ -279,6 +287,25 @@ fun SnapWheel(
     // scroll — still counts as active and keeps the caller's set commit
     // open until the finger lifts.
     var pressed by remember { mutableStateOf(false) }
+    if (onManualEvent != null) {
+        LaunchedEffect(listState, labels) {
+            snapshotFlow {
+                val info = listState.layoutInfo
+                val center = (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                val row = info.visibleItemsInfo.minByOrNull { abs(it.offset + it.size / 2f - center) }
+                listOf(manualEpoch, row?.index ?: -1, if (pressed || listState.isScrollInProgress) 1 else 0,
+                       if (row != null && abs(row.offset + row.size / 2f - center) <= 1f) 1 else 0)
+            }.collect { values ->
+                if (values[1] >= 0) manual.sample(values[1], values[2] == 1, values[3] == 1).forEach { currentOnManualEvent?.invoke(it) }
+            }
+        }
+        DisposableEffect(Unit) {
+            onDispose {
+                val cancelled = manual.cancel()
+                currentOnManualEvent?.invoke(cancelled)
+            }
+        }
+    }
     val currentOnActiveChange by rememberUpdatedState(onActiveChange)
     if (onActiveChange != null) {
         LaunchedEffect(listState) {
@@ -400,7 +427,13 @@ fun SnapWheel(
         } else {
             val target = selectedIndex + if (forward) 1 else -1
             if (target in labels.indices) {
-                currentOnSelectedIndexChange(target)
+                val manualEvent = currentOnManualEvent
+                if (manualEvent == null) currentOnSelectedIndexChange(target)
+                else {
+                    manualEvent(manual.begin(target))
+                    manualEpoch++
+                    manualEvent(ManualWheelEvent.Preview(target))
+                }
                 true
             } else {
                 false
@@ -443,11 +476,13 @@ fun SnapWheel(
         if (!overscrollActive) overscrollPx = 0f
     }
 
-    val pressTrackingModifier = if (onActiveChange != null) {
+    val pressTrackingModifier = if (onActiveChange != null || onManualEvent != null) {
         Modifier.pointerInput(Unit) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 pressed = true
+                currentOnManualEvent?.invoke(manual.begin())
+                manualEpoch++
                 try {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Final)
@@ -532,7 +567,9 @@ fun SnapWheel(
                             dense -> MaterialTheme.typography.bodySmall
                             else -> MaterialTheme.typography.bodyLarge
                         },
-                        color = LocalContentColor.current.copy(alpha = alpha),
+                        color = if (isCenter) lerp(LocalContentColor.current, MaterialTheme.colorScheme.primary,
+                            appliedValueEmphasis).copy(alpha = alpha)
+                        else LocalContentColor.current.copy(alpha = alpha),
                         // The rows are inside the wheel's cleared semantics,
                         // so only the laid-out text can show a silent clip.
                         onTextLayout = { layout ->

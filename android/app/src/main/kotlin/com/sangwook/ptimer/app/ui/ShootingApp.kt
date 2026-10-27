@@ -129,6 +129,7 @@ fun ShootingApp(
     bootstrap: ShootingAppBootstrap,
     openTimersSignal: Int = 0,
     notificationFocusTimerId: String? = null,
+    targetNDReviewLayout: String? = null,
 ) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
@@ -244,6 +245,7 @@ fun ShootingApp(
     val timerState by viewModel.uiState.collectAsStateWithLifecycle()
     val soundingAlarmId by viewModel.soundingAlarmTimerId.collectAsStateWithLifecycle()
     val calcState by controller.state.collectAsStateWithLifecycle()
+    val proposalState by controller.targetNDProposal.state.collectAsStateWithLifecycle()
 
     // Camera management and the pager's utility page (CAMERA-PAGER-002/007).
     val cameraActions = remember(holder) {
@@ -306,6 +308,7 @@ fun ShootingApp(
     // Refresh exact-alarm permission on resume (e.g. returning from settings).
     // If it changed, reschedule the active timers' alarms under the new state so
     // a just-granted permission upgrades them to exact.
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { controller.targetNDProposal.invalidate() }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         val nowAllowed = exactAlarmAvailability.isAllowed()
         if (nowAllowed != exactAlarmAllowed) {
@@ -362,6 +365,7 @@ fun ShootingApp(
     val isMainSurfaceCovered = details != null || showAbout || showTargetNDSettings || showFilterManagement
         || showShootingFilters || editedFilterSetId != null || showExactAlarmInfo || expanded
     LaunchedEffect(isMainSurfaceCovered) {
+        if (isMainSurfaceCovered) controller.targetNDProposal.invalidate()
         if (FilmClassificationBadgeVisibility.isMainReturn(wasMainSurfaceCovered, isMainSurfaceCovered)) {
             mainReturnBadgeToken++
         }
@@ -570,6 +574,19 @@ fun ShootingApp(
                     },
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
+                    reviewLayout = targetNDReviewLayout,
+                    targetNDProposal = com.sangwook.ptimer.app.vm.TargetNDProposalPresenter.display(proposalState, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
+                    onApplyTargetND = { controller.applyPendingTargetNDProposal() },
+                    onTargetNDFocus = { controller.targetNDProposal.focusAction(it, proposalState.generation) },
+                    onLeaveMain = { controller.targetNDProposal.invalidate() },
+                    onManualBaseEvent = { event ->
+                        when (event) {
+                            com.sangwook.ptimer.ui.component.ManualWheelEvent.Started -> controller.beginManualBase()
+                            is com.sangwook.ptimer.ui.component.ManualWheelEvent.Preview -> controller.previewManualBase(event.index)
+                            is com.sangwook.ptimer.ui.component.ManualWheelEvent.Committed -> controller.commitManualBase(event.index)
+                            com.sangwook.ptimer.ui.component.ManualWheelEvent.Cancelled -> controller.targetNDProposal.invalidate()
+                        }
+                    },
                     onNdWheelActive = controller::setNdWheelActive,
                     onNdWheelValue = controller::setNdWheelValue,
                     onAddFilterWheel = controller::addFilterWheel,
@@ -842,7 +859,7 @@ fun ShootingApp(
         if (showTargetNDSettings) {
             TargetNDSettingsDialog(
                 settings = targetNDSettings,
-                onChange = holder.targetNDSettings::update,
+                onChange = holder::updateTargetNDSettings,
                 onDismiss = { showTargetNDSettings = false },
             )
         }

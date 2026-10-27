@@ -108,9 +108,14 @@ class MainActivity : ComponentActivity() {
                         } else {
                             ShootingApp(
                                 bootstrap = readyBootstrap,
+                                targetNDReviewLayout = if (BuildConfig.DEBUG) intent.getStringExtra("target-nd-review")?.takeIf { it == "A" || it == "B" } else null,
                                 openTimersSignal = openTimersSignal.intValue,
                                 notificationFocusTimerId = focusTimerId.value,
                             )
+                        }
+                        if (BuildConfig.DEBUG && intent.getStringExtra("target-nd-review") in listOf("A", "B")) {
+                            androidx.compose.material3.Text("Review ${intent.getStringExtra("target-nd-review")} · Real inputs/Apply",
+                                modifier = Modifier.align(Alignment.TopCenter), color = androidx.compose.ui.graphics.Color.Yellow)
                         }
                         if (BuildConfig.DEBUG) {
                             var showDebugRibbon by rememberSaveable { mutableStateOf(true) }

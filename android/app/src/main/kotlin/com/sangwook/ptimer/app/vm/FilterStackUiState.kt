@@ -161,3 +161,13 @@ sealed class FilterItemSaveOutcome {
         val reason: FilterItemSaveBlockReason,
     ) : FilterItemSaveOutcome()
 }
+
+/** Shared numeric stops formatting for current and proposed combined totals. */
+internal fun formatFilterTotalStops(stops: Double): String {
+    val rounded = Math.round(stops).toDouble()
+    return if (kotlin.math.abs(stops - rounded) <= 0.05) {
+        Math.round(stops).toString()
+    } else {
+        String.format(java.util.Locale.US, "%.1f", stops)
+    }
+}

@@ -3,6 +3,9 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import android.provider.Settings
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -144,9 +147,21 @@ internal fun FilterStackGroup(
     onOverscrollRemove: (Int) -> Unit,
     onOpenShootingFilters: () -> Unit,
     modifier: Modifier = Modifier,
+    reviewLayout: String? = null,
+    proposal: com.sangwook.ptimer.app.vm.TargetNDProposalDisplayState? = null,
+    onApplyProposal: () -> Unit = {},
+    onProposalFocus: (Boolean) -> Unit = {},
     wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
 ) {
     val wheels = state.filterWheels
+    var beforeApply by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    var appliedMotion by remember { mutableStateOf(false) }
+    LaunchedEffect(appliedMotion) {
+        if (appliedMotion) {
+            delay(750)
+            appliedMotion = false
+        }
+    }
     val palette = filterTypePalette()
     val totalText = filterTotalText(
         state.filterStatus.totalStopsText,
@@ -206,6 +221,8 @@ internal fun FilterStackGroup(
                     itemsIndexed(wheels, key = { _, wheel -> wheel.id }) { index, wheel ->
                         FilterWheelColumn(
                             wheel = wheel,
+                            emphasizeAppliedValue = appliedMotion &&
+                                beforeApply[wheel.id]?.let { it != wheel.committedIndex } == true,
                             position = index + 1,
                             wheelCount = wheels.size,
                             palette = palette,
@@ -240,6 +257,7 @@ internal fun FilterStackGroup(
             }
         }
 
+        val ordinaryStatus: @Composable () -> Unit = {
         FilterStatusRegion(
             content = FilterStatusRegionPresenter.content(
                 moving = state.movingFilterWheel?.let { wheel ->
@@ -269,6 +287,19 @@ internal fun FilterStackGroup(
                 MaterialTheme.typography.titleMedium
             },
         )
+        }
+        TargetNDReviewRegion(
+            proposal,
+            if (isDenseFilterWheelRow(state.occupiedFilterSpaces)) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+            totalText, state.filterStatus.totalStopsText,
+            {
+                beforeApply = wheels.associate { it.id to it.committedIndex }
+                appliedMotion = true
+                onApplyProposal()
+            },
+            onProposalFocus, ordinaryStatus,
+        )
+
     }
 }
 
@@ -280,6 +311,7 @@ internal fun FilterStackGroup(
 @Composable
 private fun FilterWheelColumn(
     wheel: FilterWheelUiState,
+    emphasizeAppliedValue: Boolean,
     position: Int,
     wheelCount: Int,
     palette: FilterTypePalette,
@@ -294,6 +326,14 @@ private fun FilterWheelColumn(
     val displayed = wheel.rows.getOrNull(wheel.selectedIndex)
     val committed = wheel.rows.getOrNull(wheel.committedIndex)
     val view = LocalView.current
+    val appliedEmphasis = remember { Animatable(0f) }
+    LaunchedEffect(emphasizeAppliedValue) {
+        if (emphasizeAppliedValue && Settings.Global.getFloat(view.context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f) {
+            appliedEmphasis.snapTo(1f)
+            appliedEmphasis.animateTo(0f, tween(650))
+        } else appliedEmphasis.snapTo(0f)
+    }
     val rejectionTexts = filterRejectionTexts()
     val boundaryText = stringResource(R.string.filter_boundary)
 
@@ -354,6 +394,7 @@ private fun FilterWheelColumn(
             itemHeight = WheelItemHeight,
             accessibilityLabel = wheelDescription,
             dense = dense,
+            appliedValueEmphasis = appliedEmphasis.value,
             onActiveChange = onActiveChange,
             // Visual gate only — the controller re-validates the removal
             // (cleanable committed row, last-wheel rule, quiet others).

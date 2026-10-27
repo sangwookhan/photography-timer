@@ -3,6 +3,10 @@
 
 package com.sangwook.ptimer.app.vm
 
+import com.sangwook.ptimer.core.exposure.TargetNDSettings
+import com.sangwook.ptimer.core.exposure.TargetNDMedium
+import com.sangwook.ptimer.core.exposure.TargetNDSelectionResult
+import com.sangwook.ptimer.core.reciprocity.FilmPolarity
 import androidx.annotation.VisibleForTesting
 import com.sangwook.ptimer.app.calc.ShootingCalculator
 import com.sangwook.ptimer.app.calc.ShootingResult
@@ -34,7 +38,6 @@ import com.sangwook.ptimer.core.reciprocity.calculatedCorrectedSeconds
 import com.sangwook.ptimer.core.reciprocity.FilmIdentity
 import com.sangwook.ptimer.core.reciprocity.FilmIdentityKind
 import com.sangwook.ptimer.core.reciprocity.FilmColor
-import com.sangwook.ptimer.core.reciprocity.FilmPolarity
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsDisplayState
 import com.sangwook.ptimer.core.reciprocity.ReciprocityDetailsPresenter
 import com.sangwook.ptimer.core.persistence.CameraListPersistenceController
@@ -208,7 +211,35 @@ class CalculatorController(
     private val referenceVocabulary: () -> FilterReferenceVocabulary = {
         FilterReferenceVocabulary.canonicalEnglish
     },
+    val targetNDProposal: TargetNDProposalModel = TargetNDProposalModel.inScope(ndCleanupScope),
 ) {
+    private var targetNDSettings = TargetNDSettings()
+    private var writingManualBase = false
+    private var applyingTargetProposal = false
+
+    fun updateTargetNDSettings(settings: TargetNDSettings) {
+        targetNDSettings = settings
+        targetNDProposal.reconcile(targetNDInput(settings))
+    }
+    fun beginManualBase() { targetNDProposal.begin(targetNDInput(targetNDSettings)) }
+    fun previewManualBase(index: Int) {
+        writingManualBase = true
+        try { setShutterIndex(index) } finally { writingManualBase = false }
+        targetNDProposal.preview(targetNDInput(targetNDSettings))
+    }
+    fun commitManualBase(index: Int) {
+        previewManualBase(index)
+        targetNDProposal.settle(targetNDInput(targetNDSettings), activeNdWheelIds.isEmpty() && pendingNdCommits.isEmpty())
+    }
+    fun applyPendingTargetNDProposal(): TargetNDApplyFailure? {
+        applyingTargetProposal = true
+        return try {
+            targetNDProposal.apply(targetNDInput(targetNDSettings), activeNdWheelIds.isEmpty() && pendingNdCommits.isEmpty()) { input, result ->
+                applyTargetNDProposal(input, result, targetNDSettings)
+            }
+        } finally { applyingTargetProposal = false }
+    }
+
     // Catalog + custom films; replaced via [setFilms] when the custom library changes.
     private var films: List<FilmIdentity> = films
 
@@ -372,6 +403,7 @@ class CalculatorController(
 
     /** Slot switches, resets, and inventory edits discard in-flight selections. */
     private fun clearNdInteraction() {
+        targetNDProposal.invalidate()
         activeNdWheelIds.clear()
         pendingNdCommits.clear()
     }
@@ -415,6 +447,7 @@ class CalculatorController(
      *  finger (true) or has gone quiet (false). Quiescence triggers
      *  the set commit. */
     fun setNdWheelActive(wheelId: Int, isActive: Boolean) {
+        if (isActive) targetNDProposal.invalidate()
         if (isActive) {
             if (wheelId in ndWheelIds) activeNdWheelIds.add(wheelId)
         } else {
@@ -1252,6 +1285,57 @@ class CalculatorController(
         return null
     }
 
+    /** Current immutable identity for a Target offer and apply-time recheck. */
+    fun targetNDInput(settings: TargetNDSettings): TargetNDProposalInput? {
+        if (!settings.isEnabled) return null
+        val camera = session.activeSlotId ?: return null
+        val snapshot = session.activeSnapshot
+        val target = snapshot.targetSeconds ?: return null
+        val film = selectedFilm()
+        val profile = resolvedProfileFor(film, snapshot.selectedProfileId)
+        val medium = if (film == null) TargetNDMedium.digital else if (film.polarity == FilmPolarity.negative) TargetNDMedium.negative else TargetNDMedium.positive
+        val ladder = ExposureScale.oneThirdStop.shutterSteps
+        return TargetNDProposalInput(camera.raw, ladder[shutterIndex.coerceIn(ladder.indices)].seconds, target,
+            profile, inventory, candidateFilterSetIds, activeFilterStack(), settings, medium, filmId = film?.id, filmColor = film?.color)
+    }
+
+    /** Revalidated ND-only commit. No intermediate wheel changes or Plus writes. */
+    fun applyTargetNDProposal(input: TargetNDProposalInput, result: TargetNDSelectionResult, settings: TargetNDSettings): TargetNDApplyFailure? {
+        if (activeNdWheelIds.isNotEmpty() || pendingNdCommits.isNotEmpty() || targetNDInput(settings) != input) return TargetNDApplyFailure.stale
+        val candidate = (result as? TargetNDSelectionResult.Available)?.candidate ?: return TargetNDApplyFailure.unavailable
+        if (candidate.isCurrent || input.evaluate() != result) return TargetNDApplyFailure.unavailable
+        val old = activeFilterStack()
+        if (candidate.stack.auxiliaryFilters != old.auxiliaryFilters) return TargetNDApplyFailure.stale
+        val proposed = FilterStack.validated(candidate.stack.wheels, old.auxiliaryFilters, inventory) ?: return TargetNDApplyFailure.stale
+        val wheels = if (filterStackOrdering == FilterStackOrdering.live) proposed.wheels else proposed.wheels.sortedBy { old.wheels.indexOf(it).takeIf { index -> index >= 0 } ?: old.wheels.size }
+        val replacement = FilterStack.validated(wheels, old.auxiliaryFilters, inventory) ?: return TargetNDApplyFailure.stale
+        val oldIds = ndWheelIds
+        val unclaimed = old.wheels.indices.toMutableList()
+        val origins = MutableList<Int?>(wheels.size) { null }
+        wheels.forEachIndexed { index, wheel ->
+            unclaimed.firstOrNull { old.wheels[it] == wheel }?.let {
+                origins[index] = it
+                unclaimed.remove(it)
+            }
+        }
+        wheels.forEachIndexed { index, wheel ->
+            if (origins[index] == null && wheel.source == FilterSource.Standard &&
+                index in unclaimed && old.wheels[index].source == FilterSource.Standard) {
+                origins[index] = index
+                unclaimed.remove(index)
+            }
+        }
+        val ids = origins.map { it?.let(oldIds::get) ?: makeNdWheelId() }
+        val (committed, committedIds) = applyingSettledOrder(replacement, ids, inventory)
+        val source = lastFilterSource
+        val candidates = candidateFilterSetIds
+        session.updateActiveSnapshot { it.writingFilterStack(committed, source, candidates) }
+        ndWheelIds = committedIds
+        publish()
+        rearmNdCleanupTimer()
+        return null
+    }
+
     private val defaultSnapshot = SlotCalculatorSnapshot(defaultShutterIndex, 0, null, null)
 
     // The session is the single owner of every slot's calculator state; the
@@ -1560,6 +1644,7 @@ class CalculatorController(
     }
 
     private fun publish() {
+        if (!writingManualBase && !applyingTargetProposal) targetNDProposal.reconcile(targetNDInput(targetNDSettings))
         reorderIfPending()
         _state.value = compute()
     }
@@ -1852,14 +1937,7 @@ class CalculatorController(
 
     /** Stack total, always in stops: "18" for whole values, one
      *  decimal ("13.2") otherwise (iOS Total-overlay parity). */
-    private fun formatTotalStops(stops: Double): String {
-        val rounded = Math.round(stops).toDouble()
-        return if (abs(stops - rounded) <= 0.05) {
-            Math.round(stops).toString()
-        } else {
-            String.format(java.util.Locale.US, "%.1f", stops)
-        }
-    }
+    private fun formatTotalStops(stops: Double): String = formatFilterTotalStops(stops)
 
     private fun filmOptions(): List<FilmOption> {
         val options = films.map { f ->

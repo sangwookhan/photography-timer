@@ -64,6 +64,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,6 +130,7 @@ import com.sangwook.ptimer.core.reciprocity.ReciprocityGraph
 import com.sangwook.ptimer.core.slots.CameraSlotId
 import com.sangwook.ptimer.core.target.TargetShutterDisplayState
 import com.sangwook.ptimer.ui.component.SnapWheel
+import com.sangwook.ptimer.ui.component.ManualWheelEvent
 
 
 /**
@@ -184,6 +186,7 @@ fun ShootingScreen(
     // over the navigation bar, so reserving its inset here left a dead band
     // between the page dots and the strip and cost the result card that height.
     reserveNavigationBarInset: Boolean = true,
+    onManualBaseEvent: ((ManualWheelEvent) -> Unit)? = null,
     /** Camera management and utility-page actions (CAMERA-PAGER-002/007). */
     cameraActions: CameraManagementActions = CameraManagementActions.None,
     onPageRoom: (ShootingPageRoom) -> Unit = {},
@@ -192,6 +195,11 @@ fun ShootingScreen(
     /** Root-level modal return event for Details and management surfaces. */
     mainReturnBadgeToken: Int = 0,
     onOpenTargetNDSettings: () -> Unit = {},
+    onLeaveMain: () -> Unit = {},
+    reviewLayout: String? = null,
+    targetNDProposal: com.sangwook.ptimer.app.vm.TargetNDProposalDisplayState? = null,
+    onApplyTargetND: () -> Unit = {},
+    onTargetNDFocus: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -242,6 +250,12 @@ fun ShootingScreen(
     // (capture-on-switch); settling on the utility page changes no camera,
     // calculator, or timer (CAMERA-PAGER-007). A restored session is covered
     // by rememberPagerState(initialPage).
+    LaunchedEffect(pagerState.isScrollInProgress, pagerState.settledPage, showFilmPicker, showRename, editDraft,
+                   showTarget, showEditor, showResetConfirm) {
+        if (pagerState.isScrollInProgress || pagerState.settledPage !in state.slots.indices || showFilmPicker || showRename ||
+            editDraft != null || showTarget || showEditor || showResetConfirm) onLeaveMain()
+    }
+    DisposableEffect(Unit) { onDispose { onLeaveMain() } }
     LaunchedEffect(pagerState.settledPage) {
         val idx = pagerState.settledPage
         if (idx in state.slots.indices) onSelectSlot(state.slots[idx].id)
@@ -557,7 +571,7 @@ fun ShootingScreen(
                     Spacer(Modifier.height(8.dp))
 
                     // Base shutter + ND wheels (compact: 3 visible rows).
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Card(modifier = Modifier.testTag(if (writesActiveSlot) "target-nd-input-card" else "target-nd-input-card-inactive"), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         // The stack owns the card's whole content column so
                         // its one-row status region spans the full content
                         // width (FILTER-STACK-008) instead of starting at
@@ -565,6 +579,10 @@ fun ShootingScreen(
                         // through the slot to sit beside Base Shutter.
                         FilterStackGroup(
                             state = pageState,
+                            reviewLayout = reviewLayout,
+                            proposal = if (writesActiveSlot) targetNDProposal else null,
+                            onApplyProposal = onApplyTargetND,
+                            onProposalFocus = onTargetNDFocus,
                             onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
                             onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
                             onAddFilterWheel = if (writesActiveSlot) onAddFilterWheel else { _ -> },
@@ -619,6 +637,7 @@ fun ShootingScreen(
                                                 pageState.shutterLabels,
                                                 pageState.shutterIndex,
                                                 onShutterForPage,
+                                                onManualEvent = if (writesActiveSlot) onManualBaseEvent else null,
                                                 visibleCount = 3,
                                                 // The filter wheels' own minimum, not a
                                                 // second literal that has to agree with it

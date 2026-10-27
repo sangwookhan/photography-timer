@@ -114,6 +114,11 @@ class ShootingAppViewModel(
 
     val targetNDSettings = TargetNDSettingsModel(initialTargetNDSettings, targetNDSettingsStore, persistence)
 
+    fun updateTargetNDSettings(settings: TargetNDSettings) {
+        calculator.updateTargetNDSettings(settings)
+        targetNDSettings.update(settings)
+    }
+
     /** Timer workspace state holder (unchanged pure Kotlin type). */
     val timers = ShootingViewModel(
         store = timerStore,
@@ -163,6 +168,10 @@ class ShootingAppViewModel(
     private val coordinator = AndroidTimerCoordinator(viewModelScope, timers, clock)
 
     init {
+        calculator.updateTargetNDSettings(targetNDSettings.settings.value)
+        viewModelScope.launch {
+            targetNDSettings.settings.collect { calculator.updateTargetNDSettings(it) }
+        }
         // Restore the timer workspace once per ViewModel lifetime. On a
         // configuration change the retained workspace state simply survives;
         // only a new owner — a fresh process, or a new Activity after the

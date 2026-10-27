@@ -205,7 +205,7 @@ internal fun FilterStatusRegion(
  * that reads directly in the field (FILTER-STACK-008).
  */
 @Composable
-private fun prominentTotal(total: String, value: String?, valueStyle: TextStyle): AnnotatedString {
+internal fun prominentTotal(total: String, value: String?, valueStyle: TextStyle): AnnotatedString {
     val start = value?.let { total.indexOf(it) } ?: -1
     if (value == null || start < 0) return AnnotatedString(total)
     val color = MaterialTheme.colorScheme.onSurface

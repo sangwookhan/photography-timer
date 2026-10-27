@@ -222,14 +222,19 @@ them rather than define a second stack model.
   shows the short warning from TARGET-ND-CALC-005 on the leading side.
   Individual candidate ND composition and numeric residual shall not appear
   in this visual status row. Precise error evaluation and ranking remain
-  unchanged. No-combination, already-suitable and inverse-unavailable results
-  shall show short accurate explanations with no Apply. Complete action
-  meaning and reasons remain accessible without another navigation flow.
-- **TARGET-ND-UI-003** — The settled result/action shall remain for five
-  seconds from when the result is ready, then return to the ordinary
-  status presentation. A new qualifying interaction starts a fresh result
-  lifetime; an earlier timeout shall not dismiss a later result. While a
-  screen reader focuses the action, expiry shall be suspended so it can be
+  unchanged. A result with no eligible ND combination shall show a short
+  **No suitable ND combination** / **적합한 ND 조합 없음** reason on the leading
+  side and the unchanged current Total in its ordinary trailing hierarchy,
+  with no Apply. Already-suitable and inverse-unavailable results shall show
+  short accurate explanations with no Apply. Complete action meaning and
+  reasons remain accessible without another navigation flow.
+- **TARGET-ND-UI-003** — A valid changed candidate's Apply offer shall
+  remain for five seconds from when that result is ready. No-combination
+  guidance shall remain for two seconds from when its result is ready. Other
+  settled guidance retains the five-second lifetime. Each transient then
+  returns to the ordinary status presentation. A new qualifying interaction
+  starts a fresh result lifetime; an earlier timeout shall not dismiss a
+  later result. While a screen reader focuses the action, expiry shall be
   activated. Transient proposals shall not be persisted or restored.
 - **TARGET-ND-UI-004** — Use the existing single visual status row
   immediately below the Base/ND wheels. Preserve its baseline, typography
@@ -242,10 +247,14 @@ them rather than define a second stack model.
   a panel or a detail route, shrink established wheel numerals, or expand
   the shooting page. The usable action hit region shall remain within the
   existing status space and shall not overlap or steal touches from wheels,
-  Plus, results or timers. Appearance, expiry and failure shall not move
-  surrounding controls. Restore ordinary status behavior after the
-  transient state ends. FILTER-STACK-008 governs the ordinary status;
-  these Target ND states replace its current-total presentation.
+  Plus, results or timers. A visible gap shall separate the action border and
+  text from the wheel viewport, using available space inside the current card
+  without moving the wheels or surrounding controls. Appearance, expiry and
+  failure shall not move surrounding controls. Restore ordinary status
+  behavior after the transient state ends. FILTER-STACK-008 governs the
+  ordinary status; these Target ND states replace its current-total
+  presentation except for the no-combination current Total in
+  TARGET-ND-UI-002.
 - **TARGET-ND-UI-005** — Base reinteraction, ND/auxiliary/selected-Set or
   inventory change, film/profile or classification change, Target change,
   allowance change, camera switch, feature disable, and leaving Main shall
@@ -260,6 +269,14 @@ them rather than define a second stack model.
   Plus memory, other cameras and captured timers; persist the resulting
   stack under the existing camera contract and briefly acknowledge success
   before ordinary status resumes.
+- **TARGET-ND-UI-007** — A successful ND Apply shall visibly distinguish the
+  resulting arrangement: retained physical wheels keep their identity while
+  insertions, removals and moves transition briefly, and a changed selection
+  at the same position receives a short value transition or emphasis. The
+  final legal stack is committed once; transitional visuals shall not create
+  intermediate exposure, timer or persistence states. Base and auxiliary
+  controls remain stable. Follow the platform's existing motion conventions
+  and reduced-motion setting.
 
 ## Timer creation
 

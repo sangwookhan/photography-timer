@@ -582,9 +582,10 @@ unchanged under the localization contract.
   During Base interaction with Target ND suggestions active, the temporary
   guidance and candidate-total action contract in `target-shutter.md`
   replaces this ordinary status presentation, including its current Total.
-  Preserve this row's existing geometry, numeric hierarchy, wheel alignment
-  and neighboring control positions. After that interaction/proposal ends,
-  restore the ordinary status here.
+  A settled no-combination result retains the ordinary current Total beside
+  its short reason. Preserve this row's existing geometry, numeric hierarchy,
+  wheel alignment and neighboring control positions. After the Target ND
+  transient ends, restore the ordinary status here.
 
 ### Plus wheel and per-camera source memory
 

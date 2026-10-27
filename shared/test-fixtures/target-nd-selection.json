@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "standard-exact",
+      "requiredStops": 10,
+      "items": [],
+      "selectSet": false,
+      "minimumError": -1,
+      "maximumError": 0,
+      "expectedStops": 10,
+      "expectedCount": 1
+    },
+    {
+      "name": "physical-exact",
+      "requiredStops": 9,
+      "items": [
+        3,
+        6
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 9,
+      "expectedCount": 2
+    },
+    {
+      "name": "fewer-at-equivalence-boundary",
+      "requiredStops": 9,
+      "items": [
+        8.9,
+        3,
+        6
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 8.9,
+      "expectedCount": 1
+    },
+    {
+      "name": "outside-equivalence-boundary",
+      "requiredStops": 9,
+      "items": [
+        8.899999,
+        3,
+        6
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 9,
+      "expectedCount": 2
+    },
+    {
+      "name": "no-standard-supplement",
+      "requiredStops": 10,
+      "items": [
+        3
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "unselected-items-ignored",
+      "requiredStops": 10,
+      "items": [
+        3
+      ],
+      "selectSet": false,
+      "minimumError": -1,
+      "maximumError": 0,
+      "expectedStops": 10,
+      "expectedCount": 1
+    },
+    {
+      "name": "zero-physical",
+      "requiredStops": 0,
+      "items": [
+        3,
+        6
+      ],
+      "selectSet": true,
+      "minimumError": 0,
+      "maximumError": 0,
+      "expectedStops": 0,
+      "expectedCount": 0
+    },
+    {
+      "name": "negative-lower-inclusive",
+      "requiredStops": 9,
+      "items": [
+        9.5
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 9.5,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-below-lower",
+      "requiredStops": 9,
+      "items": [
+        9.500000001
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "negative-upper-inclusive",
+      "requiredStops": 9,
+      "items": [
+        8
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 8,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-above-upper",
+      "requiredStops": 9,
+      "items": [
+        7.999999999
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "negative-extended-upper",
+      "requiredStops": 9,
+      "items": [
+        7
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 2,
+      "expectedStops": 7,
+      "expectedCount": 1
+    },
+    {
+      "name": "digital-extended-lower",
+      "requiredStops": 9,
+      "items": [
+        11
+      ],
+      "selectSet": true,
+      "minimumError": -2,
+      "maximumError": 0,
+      "expectedStops": 11,
+      "expectedCount": 1
+    },
+    {
+      "name": "positive-extended-upper",
+      "requiredStops": 9,
+      "items": [
+        8.5
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 0.5,
+      "expectedStops": 8.5,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-default-lower",
+      "requiredStops": 4,
+      "items": [
+        4.5
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 4.5,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-default-below",
+      "requiredStops": 4,
+      "items": [
+        4.500000001
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "negative-default-upper",
+      "requiredStops": 4,
+      "items": [
+        3
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 3,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-default-above",
+      "requiredStops": 4,
+      "items": [
+        2.999999999
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "negative-extended-lower",
+      "requiredStops": 4,
+      "items": [
+        4.5
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 2,
+      "expectedStops": 4.5,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-extended-below",
+      "requiredStops": 4,
+      "items": [
+        4.500000001
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 2,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "negative-extended-upper",
+      "requiredStops": 4,
+      "items": [
+        2
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 2,
+      "expectedStops": 2,
+      "expectedCount": 1
+    },
+    {
+      "name": "negative-extended-above",
+      "requiredStops": 4,
+      "items": [
+        1.999999999
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 2,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "positive-default-lower",
+      "requiredStops": 4,
+      "items": [
+        4.333333333333333
+      ],
+      "selectSet": true,
+      "minimumError": -0.3333333333333333,
+      "maximumError": 0.3333333333333333,
+      "expectedStops": 4.333333333333333,
+      "expectedCount": 1
+    },
+    {
+      "name": "positive-default-below",
+      "requiredStops": 4,
+      "items": [
+        4.333333334333333
+      ],
+      "selectSet": true,
+      "minimumError": -0.3333333333333333,
+      "maximumError": 0.3333333333333333,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "positive-default-upper",
+      "requiredStops": 4,
+      "items": [
+        3.666666666666667
+      ],
+      "selectSet": true,
+      "minimumError": -0.3333333333333333,
+      "maximumError": 0.3333333333333333,
+      "expectedStops": 3.666666666666667,
+      "expectedCount": 1
+    },
+    {
+      "name": "positive-default-above",
+      "requiredStops": 4,
+      "items": [
+        3.666666665666667
+      ],
+      "selectSet": true,
+      "minimumError": -0.3333333333333333,
+      "maximumError": 0.3333333333333333,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "positive-extended-lower",
+      "requiredStops": 4,
+      "items": [
+        4.5
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 0.5,
+      "expectedStops": 4.5,
+      "expectedCount": 1
+    },
+    {
+      "name": "positive-extended-below",
+      "requiredStops": 4,
+      "items": [
+        4.500000001
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 0.5,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "positive-extended-upper",
+      "requiredStops": 4,
+      "items": [
+        3.5
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 0.5,
+      "expectedStops": 3.5,
+      "expectedCount": 1
+    },
+    {
+      "name": "positive-extended-above",
+      "requiredStops": 4,
+      "items": [
+        3.499999999
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 0.5,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "digital-default-lower",
+      "requiredStops": 4,
+      "items": [
+        5
+      ],
+      "selectSet": true,
+      "minimumError": -1,
+      "maximumError": 0,
+      "expectedStops": 5,
+      "expectedCount": 1
+    },
+    {
+      "name": "digital-default-below",
+      "requiredStops": 4,
+      "items": [
+        5.000000001
+      ],
+      "selectSet": true,
+      "minimumError": -1,
+      "maximumError": 0,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "digital-default-upper",
+      "requiredStops": 4,
+      "items": [
+        4
+      ],
+      "selectSet": true,
+      "minimumError": -1,
+      "maximumError": 0,
+      "expectedStops": 4,
+      "expectedCount": 1
+    },
+    {
+      "name": "digital-default-above",
+      "requiredStops": 4,
+      "items": [
+        3.999999999
+      ],
+      "selectSet": true,
+      "minimumError": -1,
+      "maximumError": 0,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "digital-extended-lower",
+      "requiredStops": 4,
+      "items": [
+        6
+      ],
+      "selectSet": true,
+      "minimumError": -2,
+      "maximumError": 0,
+      "expectedStops": 6,
+      "expectedCount": 1
+    },
+    {
+      "name": "digital-extended-below",
+      "requiredStops": 4,
+      "items": [
+        6.000000001
+      ],
+      "selectSet": true,
+      "minimumError": -2,
+      "maximumError": 0,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "digital-extended-upper",
+      "requiredStops": 4,
+      "items": [
+        4
+      ],
+      "selectSet": true,
+      "minimumError": -2,
+      "maximumError": 0,
+      "expectedStops": 4,
+      "expectedCount": 1
+    },
+    {
+      "name": "digital-extended-above",
+      "requiredStops": 4,
+      "items": [
+        3.999999999
+      ],
+      "selectSet": true,
+      "minimumError": -2,
+      "maximumError": 0,
+      "expectedStops": null,
+      "expectedCount": null
+    },
+    {
+      "name": "nonzero-minimum-equivalence-boundary",
+      "requiredStops": 10,
+      "items": [
+        9.7,
+        3.8,
+        6
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 9.7,
+      "expectedCount": 1
+    },
+    {
+      "name": "nonzero-minimum-equivalence-outside",
+      "requiredStops": 10,
+      "items": [
+        9.699999,
+        3.8,
+        6
+      ],
+      "selectSet": true,
+      "minimumError": -0.5,
+      "maximumError": 1,
+      "expectedStops": 9.8,
+      "expectedCount": 2
+    }
+  ]
+}

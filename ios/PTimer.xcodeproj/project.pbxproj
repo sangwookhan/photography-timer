@@ -61,6 +61,7 @@
 		A0000000000000000000092E /* NDWheelPickerPollingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092F /* NDWheelPickerPollingTests.swift */; };
 		A00000000000000000000930 /* FilterSetLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000931 /* FilterSetLocalizationTests.swift */; };
 		A00000000000000000000940 /* FilterStatusRegionAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */; };
+		F24200000000000000000021 /* TargetNDSettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24200000000000000000020 /* TargetNDSettingsStoreTests.swift */; };
 		A00000000000000000000950 /* StagedNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */; };
 		A00000000000000000000960 /* CustomFilmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000961 /* CustomFilmEditorView.swift */; };
 		A0000000000000000000096A /* UserDefaultsCustomFilmLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */; };
@@ -96,6 +97,7 @@
 		EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */; };
 		EE0000000000000000000C92 /* CustomFilmTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000C93 /* CustomFilmTestSupport.swift */; };
 		EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */; };
+		F24200000000000000000011 /* UserDefaultsTargetNDSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24200000000000000000010 /* UserDefaultsTargetNDSettingsStore.swift */; };
 		F2210A11B7C3D4E5F6071A01 /* AuxiliaryFilterSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2210A11B7C3D4E5F6071A02 /* AuxiliaryFilterSummaryView.swift */; };
 		F2210A11B7C3D4E5F6071A03 /* ShootingFilterSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2210A11B7C3D4E5F6071A04 /* ShootingFilterSelectionView.swift */; };
 		F2214F1D4F6B9B617788E938 /* FilterItemEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */; };
@@ -193,6 +195,7 @@
 		A0000000000000000000092F /* NDWheelPickerPollingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerPollingTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000931 /* FilterSetLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetLocalizationTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterStatusRegionAccessibilityTests.swift; sourceTree = "<group>"; };
+		F24200000000000000000020 /* TargetNDSettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetNDSettingsStoreTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000951 /* StagedNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000961 /* CustomFilmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmEditorView.swift; sourceTree = "<group>"; };
 		A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCustomFilmLibraryStore.swift; sourceTree = "<group>"; };
@@ -224,6 +227,7 @@
 		EE0000000000000000000012 /* UserDefaultsCameraSlotSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStore.swift; sourceTree = "<group>"; };
 		EE0000000000000000000C93 /* CustomFilmTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFilmTestSupport.swift; sourceTree = "<group>"; };
 		EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsDisplaySettingStore.swift; sourceTree = "<group>"; };
+		F24200000000000000000010 /* UserDefaultsTargetNDSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsTargetNDSettingsStore.swift; sourceTree = "<group>"; };
 		F2210A11B7C3D4E5F6071A02 /* AuxiliaryFilterSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuxiliaryFilterSummaryView.swift; sourceTree = "<group>"; };
 		F2210A11B7C3D4E5F6071A04 /* ShootingFilterSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingFilterSelectionView.swift; sourceTree = "<group>"; };
 		F2213CB61AB51EF61B8BDF25 /* FilterItemEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterItemEditorView.swift; sourceTree = "<group>"; };
@@ -438,6 +442,7 @@
 				A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */,
 				A00000000000000000000971 /* AuxiliaryFilterSummaryStabilityTests.swift */,
 				A00000000000000000000941 /* FilterStatusRegionAccessibilityTests.swift */,
+				F24200000000000000000020 /* TargetNDSettingsStoreTests.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -482,6 +487,7 @@
 				A0000000000000000000096B /* UserDefaultsCustomFilmLibraryStore.swift */,
 				EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */,
 				EE000000000000000000D000 /* UserDefaultsDisplaySettingStore.swift */,
+				F24200000000000000000010 /* UserDefaultsTargetNDSettingsStore.swift */,
 			);
 			path = FilmContext;
 			sourceTree = "<group>";
@@ -688,6 +694,7 @@
 				A00000000000000000000001 /* PTimerApp.swift in Sources */,
 				EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */,
 				EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */,
+				F24200000000000000000011 /* UserDefaultsTargetNDSettingsStore.swift in Sources */,
 				EE0000000000000000000013 /* UserDefaultsCameraSlotSessionStore.swift in Sources */,
 				B31E9B9F060479C0C502910B /* UserDefaultsCameraNameSequenceStore.swift in Sources */,
 				A00000000000000000000002 /* ContentView.swift in Sources */,
@@ -771,6 +778,7 @@
 				A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */,
 				A00000000000000000000970 /* AuxiliaryFilterSummaryStabilityTests.swift in Sources */,
 				A00000000000000000000940 /* FilterStatusRegionAccessibilityTests.swift in Sources */,
+				F24200000000000000000021 /* TargetNDSettingsStoreTests.swift in Sources */,
 				A00000000000000000000143 /* B4TimerLifecycleBaselineTests.swift in Sources */,
 				A0000000000000000000096C /* PersistentCustomFilmLibraryTests.swift in Sources */,
 				A00000000000000000000D01 /* CustomFilmLibraryQuarantineTests.swift in Sources */,

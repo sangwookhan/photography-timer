@@ -859,6 +859,7 @@ private struct ExposureWorkspaceMainContent: View {
 /// the photographer's swipe-paging gesture clean even on a brief
 /// peek where the wheel is partially exposed.
 private struct CameraSlotCalculatorPage: View {
+    @State private var showsTargetNDSettings = false
     let pageState: CameraSlotPageState
     @ObservedObject var viewModel: ExposureCalculatorViewModel
     let style: ExposureWorkspaceMainLayoutStyle
@@ -913,6 +914,7 @@ private struct CameraSlotCalculatorPage: View {
                 onShowAbout: pageState.isActive ? onShowAbout : {},
                 onShowFilterManagement: pageState.isActive ? onShowFilterManagement : {},
                 onShowCameraManagement: pageState.isActive ? onShowCameraManagement : {},
+                onShowTargetNDSettings: { if pageState.isActive { showsTargetNDSettings = true } },
                 style: style
             )
             // Header carries required visible content (camera title
@@ -1078,6 +1080,9 @@ private struct CameraSlotCalculatorPage: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .allowsHitTesting(pageState.isActive)
         .accessibilityIdentifier("camera-slot-page-\(pageState.slotID.rawValue)")
+        .sheet(isPresented: $showsTargetNDSettings) {
+            TargetNDSettingsView(model: viewModel.targetNDSettingsModel)
+        }
     }
 
     /// Routes the wheel picker's `Binding<Double>` to live state when
@@ -1157,6 +1162,7 @@ private struct HeaderView: View {
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
     let onShowCameraManagement: () -> Void
+    let onShowTargetNDSettings: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     /// Gates the destructive reset behind an explicit confirmation so a
@@ -1214,6 +1220,8 @@ private struct HeaderView: View {
                         .accessibilityIdentifier("settings-camera-management")
                     Button("Filter management", systemImage: "camera.filters", action: onShowFilterManagement)
                         .accessibilityIdentifier("settings-filter-management")
+                    Button("Target Shutter", systemImage: "scope", action: onShowTargetNDSettings)
+                        .accessibilityIdentifier("settings-target-shutter")
                     Button("About", systemImage: "info.circle", action: onShowAbout)
                         .accessibilityHint("Opens app version, legal, support, and film data information")
                         .accessibilityIdentifier("about-ptimer-button")

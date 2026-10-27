@@ -17,6 +17,7 @@ public struct ViewModelDependencies {
     /// in-memory store so existing call sites and tests stay unchanged.
     public let cameraNameSequenceStore: CameraNameSequenceStoring
     public let metadataPersistenceStore: TimerMetadataPersistenceStoring
+    public let targetNDSettingsStore: TargetNDSettingsStoring
     public let displaySettingStore: DisplaySettingStoring
     public let lockScreenTargetExposer: any LockScreenTimerTargetExposing
     public let customFilmLibrary: CustomFilmLibrary
@@ -39,7 +40,8 @@ public struct ViewModelDependencies {
         lockScreenTargetExposer: any LockScreenTimerTargetExposing,
         customFilmLibrary: CustomFilmLibrary,
         filterInventoryStore: FilterInventoryStoring = NoOpFilterInventoryStore(),
-        initialFilterInventory: FilterInventory = .empty
+        initialFilterInventory: FilterInventory = .empty,
+        targetNDSettingsStore: TargetNDSettingsStoring = NoOpTargetNDSettingsStore()
     ) {
         self.calculator = calculator
         self.timerManager = timerManager
@@ -49,6 +51,7 @@ public struct ViewModelDependencies {
         self.cameraNameSequenceStore = cameraNameSequenceStore
         self.metadataPersistenceStore = metadataPersistenceStore
         self.displaySettingStore = displaySettingStore
+        self.targetNDSettingsStore = targetNDSettingsStore
         self.lockScreenTargetExposer = lockScreenTargetExposer
         self.customFilmLibrary = customFilmLibrary
         self.filterInventoryStore = filterInventoryStore

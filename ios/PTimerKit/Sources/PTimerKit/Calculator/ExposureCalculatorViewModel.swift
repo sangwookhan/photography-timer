@@ -204,6 +204,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     let filterInventoryModel: FilterInventoryModel
     /// App-global display-settings store (ND notation mode). Display
     /// preferences only; never participates in calculation.
+    public let targetNDSettingsModel: TargetNDSettingsModel
     private let displaySettingStore: DisplaySettingStoring
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
@@ -308,6 +309,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         self.isFilterStackOrderingSuspended = isFilterStackOrderingSuspended
         calculatorModel.applyFilterInventory(resolvedInventory.inventory)
         self.displaySettingStore = dependencies.displaySettingStore
+        self.targetNDSettingsModel = TargetNDSettingsModel(store: dependencies.targetNDSettingsStore)
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraList = resolvedSlotSession.cameras
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
@@ -392,6 +394,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         self.isFilterStackOrderingSuspended = isFilterStackOrderingSuspended
         calculatorModel.applyFilterInventory(resolvedInventory.inventory)
         self.displaySettingStore = displaySettingStore
+        self.targetNDSettingsModel = TargetNDSettingsModel()
         self.activeCameraSlotID = resolvedSlotSession.activeSlotID
         self.cameraList = resolvedSlotSession.cameras
         self.lockScreenTargetCoordinator = LockScreenTimerCoordinator(
@@ -2810,6 +2813,40 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// the Total's visibility precondition.
     public var occupiedFilterSpaceCount: Int {
         calculatorModel.ndFilterSteps.count + (calculatorModel.filterStack.hasAuxiliaryFilters ? 1 : 0)
+    }
+
+    /// Snapshot shared by inverse/search and the eventual UI action. It is
+    /// rebuilt from the current owners so Apply can detect same-ID edits too.
+    public var targetNDProposalInput: TargetNDProposalInput? {
+        guard targetNDSettingsModel.settings.isEnabled,
+              let camera = activeCameraSlotID, let target = targetShutterSeconds else { return nil }
+        let film = activeCalculatorContext.selectedPresetFilm
+        let profile = activeCalculatorContext.selectedProfileOverride ?? film?.profiles.first
+        let medium: TargetNDMedium = film.map { $0.polarity == .negative ? .negative : .positive } ?? .digital
+        return TargetNDProposalInput(
+            cameraID: camera.rawValue, baseSeconds: baseShutter, targetSeconds: target,
+            profile: profile, inventory: filterInventory,
+            selectedSets: calculatorModel.candidateFilterSetIDs, current: calculatorModel.filterStack,
+            settings: targetNDSettingsModel.settings, medium: medium, filmID: film?.id, filmColor: film?.color
+        )
+    }
+
+    /// Commit boundary independent of the transient UI composition. The
+    /// proposal is checked again before a single ND-only model mutation.
+    public func applyTargetNDProposal(_ input: TargetNDProposalInput, result: TargetNDSelectionResult) -> Result<Void, TargetNDApplyFailure> {
+        guard isNDWheelInteractionQuiet, targetNDProposalInput == input else { return .failure(.stale) }
+        guard input.evaluate() == result, case .available(_, let candidate) = result,
+              !candidate.isCurrent else { return .failure(.unavailable) }
+        let ordering: FilterStackCommitOrderingPolicy = isFilterStackOrderingSuspended || needsFilterStackOrderReconciliation
+            ? .preserveCurrentOrder : .automatic
+        guard calculatorModel.applyTargetNDStack(candidate.stack, orderingPolicy: ordering) else { return .failure(.stale) }
+        clearFilterRejectionNotice()
+        enterNDWheelReshaping()
+        syncNDStepMirrorFromModel()
+        objectWillChange.send()
+        persistCalculatorContext()
+        reexamineNDWheelCleanup()
+        return .success(())
     }
 
     /// Refreshes the published `ndStep` mirror from the model's

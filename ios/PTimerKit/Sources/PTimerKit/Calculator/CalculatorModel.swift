@@ -204,6 +204,27 @@ public final class CalculatorModel {
         }
     }
 
+    /// Atomic ND-only replacement for a revalidated Target proposal. The
+    /// existing auxiliary choices, selected Sets and Plus memory are retained.
+    @discardableResult
+    public func applyTargetNDStack(_ proposed: FilterStack, orderingPolicy: FilterStackCommitOrderingPolicy) -> Bool {
+        guard proposed.auxiliaryFilters == filterStack.auxiliaryFilters,
+              let validated = FilterStack.validated(wheels: proposed.wheels, auxiliaryFilters: filterStack.auxiliaryFilters, inventory: filterInventory) else { return false }
+        let previous = filterStack.wheels
+        var wheels = validated.wheels
+        if orderingPolicy == .preserveCurrentOrder {
+            wheels.sort { (previous.firstIndex(of: $0) ?? previous.count) < (previous.firstIndex(of: $1) ?? previous.count) }
+        }
+        guard let replacement = FilterStack.validated(wheels: wheels, auxiliaryFilters: filterStack.auxiliaryFilters, inventory: filterInventory) else { return false }
+        let oldIDs = ndFilterWheelIDs
+        ndFilterWheelIDs = wheels.map { wheel in
+            previous.firstIndex(of: wheel).map { oldIDs[$0] } ?? makeNDFilterWheelID()
+        }
+        filterStack = replacement
+        if orderingPolicy == .automatic { applyCommitOrder(to: replacement) }
+        return true
+    }
+
     /// Replaces the resolution inventory and re-resolves the committed
     /// stack against it: a wheel whose Filter Set vanished is dropped
     /// (its identity with it), an item that vanished reads Empty, an

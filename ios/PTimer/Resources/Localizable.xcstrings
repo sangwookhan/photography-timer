@@ -5363,6 +5363,102 @@
           }
         }
       }
+    },
+    "Suggest ND selection" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest ND selection"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ND 자동 선택 제안"
+          }
+        }
+      }
+    },
+    "Adjust Base to see required ND and an Apply action. Filters change only when you apply a suggestion." : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust Base to see required ND and an Apply action. Filters change only when you apply a suggestion."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Base를 조작하면 필요 ND와 적용 버튼이 표시됩니다. 제안을 적용할 때만 필터가 변경됩니다."
+          }
+        }
+      }
+    },
+    "Allowed exposure error" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allowed exposure error"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용 노출 오차"
+          }
+        }
+      }
+    },
+    "These are app selection allowances, not guaranteed film or sensor limits. Digital Extended assumes RAW processing." : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These are app selection allowances, not guaranteed film or sensor limits. Digital Extended assumes RAW processing."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱의 필터 선택 허용값이며 필름·센서의 성능 보장값이 아닙니다. Digital 확장은 RAW 보정을 전제로 합니다."
+          }
+        }
+      }
+    },
+    "Extended" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extended"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확장"
+          }
+        }
+      }
+    },
+    "Default" : {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

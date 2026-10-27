@@ -352,9 +352,17 @@ can resolve within the rules in this document are not escalated.
 ## 10. Spec PR / Code PR model
 
 A behavior change that creates or revises the approved product contract uses
-a **Spec PR** plus one or more **Code PRs**. Platform implementations may
-proceed sequentially or in parallel; iOS and Android have no workflow-defined
-priority.
+a **Spec PR** plus one or more **Code PRs**.
+
+For new or changed UI, declare a single review platform before feature
+implementation. Until the user approves the actual UI on that platform,
+limit implementation and verification of the feature to that platform.
+Spec approval and passing automated tests alone do not constitute UI
+approval. Record the user's UI approval and its reviewed evidence in the
+working PR; start other-platform implementation afterward using the approved
+UI and behavior contract. After that checkpoint, remaining platform work may
+proceed sequentially or in parallel. UI approval authorizes porting, not merge
+or final platform conformance.
 
 A later platform may also implement a contract that is already merged on
 `main` without opening a new Spec PR. That Code PR is a normal path, not an
@@ -369,9 +377,10 @@ exception.
 - Is revised in place as product decisions change. A change of mind does not
   produce a new PR; the same Spec PR is updated until the contract is approved.
 - **Initial approval** means the user and ChatGPT agree that the revision is
-  the contract implementations should target. Initial approval may unlock
-  Code PRs for any supported platforms, including multiple platform Code PRs
-  in parallel.
+  the contract implementations should target. For a UI change, it unlocks
+  implementation on the single declared review platform; other-platform
+  implementation follows the user UI-approval checkpoint in §10. Changes
+  without a UI impact may use multiple platform Code PRs in parallel.
 - If implementation surfaces a `[SPEC-CONFLICT]`,
   `[SPEC-OBJECTION]`, or `[SPEC-QUESTION]` (§12) that changes the
   contract, the Spec PR is revised. Every in-progress Code PR that targets the
@@ -408,7 +417,7 @@ The recorded baseline is part of the Code PR's review contract.
 - For a merged living spec, use the `main` commit SHA containing the
   relevant approved spec content.
 - Multiple platform Code PRs may consume the same initially approved Spec PR
-  revision in parallel.
+  revision, subject to the user UI-approval checkpoint in §10.
 - If the relevant Spec PR or merged living spec changes while a Code PR is in
   progress, the Code PR is checked against the newer approved revision before
   final review. Either it already conforms, or its implementation and tests
@@ -421,8 +430,8 @@ The recorded baseline is part of the Code PR's review contract.
 For a new or revised contract, the Spec PR moves through:
 
 1. **Proposed** — product behavior is being drafted/discussed.
-2. **Initially approved** — implementation may start on any supported
-   platform against this exact revision.
+2. **Initially approved** — implementation may start against this exact
+   revision, on the single declared review platform when UI is affected.
 3. **Implementation in progress** — one or more Code PRs consume an approved
    revision. A contract-changing feedback item returns the affected behavior to
    the Spec PR for revision and re-approval.
@@ -459,8 +468,9 @@ included in that group are on `main`.
 A Spec PR is not intentionally merged by itself. At least one implementation
 increment accompanies its first merge. Additional platform Code PRs do not
 need to wait for that first platform to merge before development starts:
-after initial Spec approval they may develop in parallel against the same
-recorded revision.
+for UI changes they start after the user's UI approval on the review
+platform; for changes without UI impact they may start after initial Spec
+approval. All consume the applicable recorded revision.
 
 After the Spec revision is on `main`, a later platform Code PR that
 implements it without changing the contract may merge independently after its

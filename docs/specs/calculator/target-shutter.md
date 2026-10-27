@@ -139,12 +139,13 @@ them rather than define a second stack model.
   overexposure relative to the user's Base reference. Calculations and
   eligibility shall use precise values; displayed rounding shall not decide
   validity. Base and Target shall remain fixed throughout evaluation.
-- **TARGET-ND-CALC-003** — Required attenuation shall be labeled
-  **Required ND** / **필요 ND**, rendered as a single total in stops to one
-  decimal place, independent of global ND notation. It is not an increment
-  to the mounted filters. The existing Target row continues to display its
-  time-ratio comparison; that value shall not be reused as the film ND
-  adjustment or the candidate's remaining exposure error.
+- **TARGET-ND-CALC-003** — During Base interaction, required attenuation
+  shall be labeled **Required ND** / **필요 ND**, rendered as a single total
+  in stops to one decimal place, independent of global ND notation. It is
+  not an increment to the mounted filters. This live guidance replaces the
+  ordinary status content, including the current Total. The existing Target
+  row continues to display its time-ratio comparison; that value shall not
+  be reused as the film ND adjustment or the candidate's remaining error.
 - **TARGET-ND-CALC-004** — No quantified inverse, multiple inverse solutions,
   invalid/non-finite calculation, and a negative required total shall produce
   understandable unavailable guidance and no Apply action. A negative total
@@ -154,11 +155,12 @@ them rather than define a second stack model.
   longer-exposure guidance is non-quantified.
 - **TARGET-ND-CALC-005** — Numeric continuation beyond a profile's source
   range remains eligible. If the inverse or chosen candidate relies on
-  out-of-source-range evaluation, Apply shall use a warning color distinct
-  from the ordinary action and show an explicit source-range warning.
-  Color shall not be the only warning cue; accessibility shall expose it.
-  Existing forward result categories and warnings remain authoritative.
-
+  out-of-source-range evaluation, the candidate-total action shall use a
+  warning color distinct from the ordinary action and the status row shall
+  show a short explicit **Beyond source range** / **출처 범위 밖** warning.
+  Color shall not be the only warning cue; the action's complete meaning
+  and source warning shall remain accessible. Existing forward result
+  categories and warnings remain authoritative.
 #### Candidate selection
 
 - **TARGET-ND-SELECT-001** — If the active camera's selected Filter Sets
@@ -208,24 +210,42 @@ them rather than define a second stack model.
   its initial Base still qualifies. Accessibility adjustment shall use the
   same value-commit rule.
 - **TARGET-ND-UI-002** — After settlement and evaluation, a valid changed
-  candidate shall show **Apply**, identify the proposed ND combination and
-  distinguish its signed remaining exposure error. No-combination, already
-  suitable and inverse-unavailable results shall show the corresponding
-  explanation instead. Full proposal and reason remain accessible.
+  candidate shall replace the ordinary current Total with one right-aligned
+  candidate-total action: **Apply total <value> stops** / **합계 <value> 스톱
+  적용**. Its value is the proposed combined total, including unchanged
+  auxiliary attenuation, expressed in stops independently of ND notation.
+  Format actual fractional totals faithfully using the ordinary Total's
+  numeric presentation. Preserve the existing hierarchy of caption words
+  and emphasized numeric value on one baseline. The entire phrase is one
+  action; do not show a separate Apply beside the currently mounted total.
+  The ordinary proposal has no leading text; an out-of-source proposal
+  shows the short warning from TARGET-ND-CALC-005 on the leading side.
+  Individual candidate ND composition and numeric residual shall not appear
+  in this visual status row. Precise error evaluation and ranking remain
+  unchanged. No-combination, already-suitable and inverse-unavailable results
+  shall show short accurate explanations with no Apply. Complete action
+  meaning and reasons remain accessible without another navigation flow.
 - **TARGET-ND-UI-003** — The settled result/action shall remain for five
   seconds from when the result is ready, then return to the ordinary
   status presentation. A new qualifying interaction starts a fresh result
   lifetime; an earlier timeout shall not dismiss a later result. While a
   screen reader focuses the action, expiry shall be suspended so it can be
   activated. Transient proposals shall not be persisted or restored.
-- **TARGET-ND-UI-004** — Use the existing status area immediately below the
-  Base/ND wheels. Required guidance occupies the leading content and Apply
-  is trailing; preserve the mixed-stack Total's readability under
-  FILTER-STACK-008. Content may replace the ordinary source/detail text
-  within that stable region; complete details remain accessible. Appearance,
-  expiry and failure shall not move the wheels, obscure results/timers,
-  add a permanent panel or expand the shooting page vertically. Ordinary
-  status returns after the proposal ends.
+- **TARGET-ND-UI-004** — Use the existing single visual status row
+  immediately below the Base/ND wheels. Preserve its baseline, typography
+  hierarchy, padding, height, card height, wheel viewports and touch centers,
+  and neighboring result/timer positions. Live Base guidance occupies this
+  row without a competing current Total. A settled proposal uses the
+  candidate-total action in TARGET-ND-UI-002 where the ordinary Total sat;
+  its accent or warning color and light border or compact cue distinguish
+  it as actionable. Do not add a second line, a tall standalone action,
+  a panel or a detail route, shrink established wheel numerals, or expand
+  the shooting page. The usable action hit region shall remain within the
+  existing status space and shall not overlap or steal touches from wheels,
+  Plus, results or timers. Appearance, expiry and failure shall not move
+  surrounding controls. Restore ordinary status behavior after the
+  transient state ends. FILTER-STACK-008 governs the ordinary status;
+  these Target ND states replace its current-total presentation.
 - **TARGET-ND-UI-005** — Base reinteraction, ND/auxiliary/selected-Set or
   inventory change, film/profile or classification change, Target change,
   allowance change, camera switch, feature disable, and leaving Main shall

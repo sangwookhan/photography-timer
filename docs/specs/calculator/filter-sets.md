@@ -567,8 +567,8 @@ unchanged under the localization contract.
   While a wheel or Plus is moving, the region shall replace the idle content
   with exactly one visual row: current item or source detail aligned to the
   leading side and the current live total aligned to the trailing side. A
-  rejection shall use the same row for its reason and unchanged total. In every
-  state the total shall remain visible and untruncated; leading detail or reason
+  rejection shall use the same row for its reason and unchanged total. In these ordinary
+  filter-interaction states the total shall remain visible and untruncated; leading detail or reason
   shall yield space first and truncate at its trailing edge without wrapping.
   The complete item detail, source name, contribution, and rejection reason
   shall remain available to accessibility. After the existing transient
@@ -580,10 +580,11 @@ unchanged under the localization contract.
   `nd-filters.md`.
 
   During Base interaction with Target ND suggestions active, the temporary
-  guidance and Apply contract in `target-shutter.md` replaces the ordinary
-  leading status content. The existing Total remains readable and
-  untruncated, and the one-row geometry and wheel alignment remain stable.
-  After that interaction/proposal ends, restore the ordinary status here.
+  guidance and candidate-total action contract in `target-shutter.md`
+  replaces this ordinary status presentation, including its current Total.
+  Preserve this row's existing geometry, numeric hierarchy, wheel alignment
+  and neighboring control positions. After that interaction/proposal ends,
+  restore the ordinary status here.
 
 ### Plus wheel and per-camera source memory
 

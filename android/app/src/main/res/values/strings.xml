@@ -468,4 +468,12 @@
     <string name="film_black_and_white">Black &amp; White</string>
     <string name="film_color">Color</string>
     <string name="recip_details_film_identity">%1$s %2$s · ISO %3$d</string>
+    <string name="target_nd_suggest">Suggest ND selection</string>
+    <string name="target_nd_explanation">Adjust Base to see required ND and an Apply action. Filters change only when you apply a suggestion.</string>
+    <string name="target_nd_allowance">Allowed exposure error</string>
+    <string name="target_nd_caveat">These are app selection allowances, not guaranteed film or sensor limits. Digital Extended assumes RAW processing.</string>
+    <string name="target_nd_default">Default</string>
+    <string name="target_nd_extended">Extended</string>
+    <string name="target_nd_digital">Digital</string>
+    <string name="target_nd_done">Done</string>
 </resources>

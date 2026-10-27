@@ -3,6 +3,7 @@
 
 package com.sangwook.ptimer.app.ui
 
+import com.sangwook.ptimer.app.ui.shooting.TargetNDSettingsDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -140,6 +141,8 @@ fun ShootingApp(
         ShootingAppViewModel(
             films = bootstrap.presetFilms + bootstrap.library.customFilms,
             library = bootstrap.library,
+            targetNDSettingsStore = bootstrap.targetNDSettingsStore,
+            initialTargetNDSettings = bootstrap.initialTargetNDSettings,
             initialCameraList = bootstrap.initialCameraList,
             timerStore = DataStoreTimerWorkspaceStore.create(context),
             alarmPlayer = AndroidTimerAlarmPlayer.instance(context),
@@ -333,6 +336,8 @@ fun ShootingApp(
     // the inventory live so an edit inside it redraws the list.
     var editedFilterSetId by rememberSaveable(stateSaver = FilterSetIdSaver) { mutableStateOf<FilterSetId?>(null) }
     val filterInventory by holder.filterInventory.collectAsStateWithLifecycle()
+    var showTargetNDSettings by rememberSaveable { mutableStateOf(false) }
+    val targetNDSettings by holder.targetNDSettings.settings.collectAsStateWithLifecycle()
     var showExactAlarmInfo by rememberSaveable { mutableStateOf(false) }
     var mainReturnBadgeToken by remember { mutableStateOf(0) }
     var wasMainSurfaceCovered by remember { mutableStateOf(false) }
@@ -354,7 +359,7 @@ fun ShootingApp(
     // (PTIMER-219: it only opens by tapping a compact card, never by
     // dragging).
     val expanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
-    val isMainSurfaceCovered = details != null || showAbout || showFilterManagement
+    val isMainSurfaceCovered = details != null || showAbout || showTargetNDSettings || showFilterManagement
         || showShootingFilters || editedFilterSetId != null || showExactAlarmInfo || expanded
     LaunchedEffect(isMainSurfaceCovered) {
         if (FilmClassificationBadgeVisibility.isMainReturn(wasMainSurfaceCovered, isMainSurfaceCovered)) {
@@ -654,6 +659,7 @@ fun ShootingApp(
                     },
                     onReferencePoints = { input, anchors -> controller.referencePoints(input, anchors) },
                     onOpenAbout = { showAbout = true },
+                    onOpenTargetNDSettings = { showTargetNDSettings = true },
                     onOpenFilterManagement = { showFilterManagement = true },
                     showExactAlarmSettingsAction = exactAlarmWarningRelevant,
                     onOpenExactAlarmSettings = { showExactAlarmInfo = true },
@@ -831,6 +837,14 @@ fun ShootingApp(
                 onDismiss = { editedFilterSetId = null },
             )
           }
+        }
+
+        if (showTargetNDSettings) {
+            TargetNDSettingsDialog(
+                settings = targetNDSettings,
+                onChange = holder.targetNDSettings::update,
+                onDismiss = { showTargetNDSettings = false },
+            )
         }
 
         if (showAbout) {

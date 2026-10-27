@@ -444,4 +444,12 @@
     <string name="film_black_and_white">흑백</string>
     <string name="film_color">컬러</string>
     <string name="recip_details_film_identity">%1$s %2$s · ISO %3$d</string>
+    <string name="target_nd_suggest">ND 자동 선택 제안</string>
+    <string name="target_nd_explanation">Base를 조작하면 필요 ND와 적용 버튼이 표시됩니다. 제안을 적용할 때만 필터가 변경됩니다.</string>
+    <string name="target_nd_allowance">허용 노출 오차</string>
+    <string name="target_nd_caveat">앱의 필터 선택 허용값이며 필름·센서의 성능 보장값이 아닙니다. Digital 확장은 RAW 보정을 전제로 합니다.</string>
+    <string name="target_nd_default">기본</string>
+    <string name="target_nd_extended">확장</string>
+    <string name="target_nd_digital">Digital</string>
+    <string name="target_nd_done">완료</string>
 </resources>

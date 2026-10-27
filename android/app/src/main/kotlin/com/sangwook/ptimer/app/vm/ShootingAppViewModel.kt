@@ -3,6 +3,9 @@
 
 package com.sangwook.ptimer.app.vm
 
+import com.sangwook.ptimer.core.persistence.TargetNDSettingsStoring
+import com.sangwook.ptimer.core.persistence.NoOpTargetNDSettingsStore
+import com.sangwook.ptimer.core.exposure.TargetNDSettings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sangwook.ptimer.app.notify.TimerAlarmPlayer
@@ -105,7 +108,11 @@ class ShootingAppViewModel(
     needsInitialCameraListSave: Boolean = false,
     /** Localized `Camera N`, frozen as stored text when a camera is created. */
     defaultCameraName: (Int) -> String = { "Camera $it" },
+    targetNDSettingsStore: TargetNDSettingsStoring = NoOpTargetNDSettingsStore(),
+    initialTargetNDSettings: TargetNDSettings = TargetNDSettings(),
 ) : ViewModel() {
+
+    val targetNDSettings = TargetNDSettingsModel(initialTargetNDSettings, targetNDSettingsStore, persistence)
 
     /** Timer workspace state holder (unchanged pure Kotlin type). */
     val timers = ShootingViewModel(

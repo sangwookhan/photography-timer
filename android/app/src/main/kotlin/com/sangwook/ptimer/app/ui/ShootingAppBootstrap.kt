@@ -3,6 +3,10 @@
 
 package com.sangwook.ptimer.app.ui
 
+import com.sangwook.ptimer.core.persistence.TargetNDSettingsStoring
+import com.sangwook.ptimer.core.persistence.NoOpTargetNDSettingsStore
+import com.sangwook.ptimer.core.exposure.TargetNDSettings
+import com.sangwook.ptimer.app.persistence.DataStoreTargetNDSettingsStore
 import android.content.Context
 import com.sangwook.ptimer.app.persistence.AppPersistenceWriter
 import com.sangwook.ptimer.app.persistence.AsyncWriteCustomFilmLibraryStore
@@ -58,6 +62,8 @@ class ShootingAppBootstrap(
     val displaySettingsStore: DataStoreDisplaySettingsStore,
     val initialNdNotationMode: NDNotationMode,
     val initialExactAlarmWarningDismissed: Boolean,
+    val targetNDSettingsStore: TargetNDSettingsStoring = NoOpTargetNDSettingsStore(),
+    val initialTargetNDSettings: TargetNDSettings = TargetNDSettings(),
 ) {
     companion object {
         /**
@@ -78,6 +84,7 @@ class ShootingAppBootstrap(
             )
             val displaySettingsStore = DataStoreDisplaySettingsStore.create(context)
             val inventoryStore = DataStoreFilterInventoryStore.create(context)
+            val targetNDStore = DataStoreTargetNDSettingsStore.create(context)
             // Library writes happen in main-thread UI callbacks; the async-write
             // decorator keeps those callbacks non-blocking (PTIMER-217).
             val libraryStore = AsyncWriteCustomFilmLibraryStore(DataStoreCustomFilmLibraryStore.create(context))
@@ -98,6 +105,8 @@ class ShootingAppBootstrap(
                     displaySettingsStore = displaySettingsStore,
                     initialNdNotationMode = displaySettingsStore.loadNdNotationMode(),
                     initialExactAlarmWarningDismissed = displaySettingsStore.loadExactAlarmWarningDismissed(),
+                    targetNDSettingsStore = targetNDStore,
+                    initialTargetNDSettings = targetNDStore.loadSettings()?.restored ?: TargetNDSettings(),
                 )
             }
         }

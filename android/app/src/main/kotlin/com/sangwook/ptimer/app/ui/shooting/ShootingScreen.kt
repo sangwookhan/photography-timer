@@ -191,6 +191,7 @@ fun ShootingScreen(
     fold: WindowFold? = null,
     /** Root-level modal return event for Details and management surfaces. */
     mainReturnBadgeToken: Int = 0,
+    onOpenTargetNDSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // rememberSaveable (PTIMER-218): these gate which dialog/sheet is on
@@ -310,6 +311,7 @@ fun ShootingScreen(
                         onManageCameras = { openManagement(CameraManagementOrigin.Settings) },
                         onOpenFilterManagement = onOpenFilterManagement,
                         onOpenAbout = onOpenAbout,
+                        onOpenTargetNDSettings = onOpenTargetNDSettings,
                     )
                 }
                 EmptyCameraPager(
@@ -456,6 +458,7 @@ fun ShootingScreen(
                                 onManageCameras = { openManagement(CameraManagementOrigin.Settings) },
                                 onOpenFilterManagement = onOpenFilterManagement,
                                 onOpenAbout = onOpenAbout,
+                                onOpenTargetNDSettings = onOpenTargetNDSettings,
                             )
                         }
                     }
@@ -839,6 +842,7 @@ private fun SettingsMenuButton(
     onManageCameras: () -> Unit,
     onOpenFilterManagement: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenTargetNDSettings: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
@@ -850,6 +854,10 @@ private fun SettingsMenuButton(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.target_shutter_label)) },
+                onClick = { expanded = false; onOpenTargetNDSettings() },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_manage_cameras)) },
                 onClick = {

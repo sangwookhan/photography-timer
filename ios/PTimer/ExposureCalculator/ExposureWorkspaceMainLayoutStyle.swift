@@ -981,7 +981,8 @@ struct VariableSectionView: View {
                     idleSourceSummary: idleSourceSummary
                 ),
                 occupiedSpaceCount: occupiedSpaceCount,
-                style: style
+                style: style,
+                previewTotal: ndStackTotalDisplayState
             )
         }
         .sectionCardStyle(style: style)
@@ -1000,11 +1001,27 @@ struct VariableSectionView: View {
 /// (FILTER-A11Y-005): the total is focusable directly, without first
 /// listening through the source summary or item detail.
 struct FilterStatusRegionView: View {
+    @Environment(\.targetNDProposalPreview) private var preview
+    @Environment(\.locale) private var locale
+    @State private var previewApplied = false
     let content: FilterStatusRegionContent?
     /// ND wheels plus the auxiliary summary: selects the ND numeral
     /// size the Total's value matches (FILTER-STACK-008).
     let occupiedSpaceCount: Int
     let style: ExposureWorkspaceMainLayoutStyle
+
+    var previewTotal: NDStackTotalDisplayState?
+
+    private var previewContent: FilterStatusRegionContent? {
+        guard let total = previewTotal else { return content }
+        return FilterStatusRegionContent(
+            primaryText: nil,
+            secondaryText: FilterStatusRegionPresenter.totalText(total),
+            isHeld: true,
+            totalValueText: total.totalStopsText,
+            isTotalAtMaximum: total.isAtMaximum
+        )
+    }
 
     @StateObject private var controller = FilterStatusRegionViewModel()
     /// The two caption lines grow with Dynamic Type; the reserved
@@ -1038,7 +1055,9 @@ struct FilterStatusRegionView: View {
         // while it shows nothing, so `onAppear` applies the first
         // content and the reserved height never collapses.
         VStack(alignment: .leading, spacing: 0) {
-            if let visible = displayedContent {
+            if let preview {
+                proposalRow((previewApplied ? TargetNDProposalPreview.applied : preview).displayState(locale: locale))
+            } else if let visible = displayedContent {
                 // Exactly one visual row in every state (FILTER-STACK-
                 // 007/008): the leading text yields space and truncates
                 // at its tail; the total keeps layout priority and is
@@ -1087,6 +1106,38 @@ struct FilterStatusRegionView: View {
             controller.apply(newValue)
         }
         .accessibilityIdentifier("filter-status-region")
+    }
+
+    /// The first measured composition keeps every required visual field in
+    /// the approved one-row slot. The explicit DEBUG fixture exposes overflow
+    /// for review; it does not silently hide proposal details or shrink Total.
+    private func proposalRow(_ proposal: TargetNDProposalDisplayState) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("[Dummy] " + proposal.fullText)
+                .font(style.filterStatusRegionFont)
+                .foregroundStyle(proposal.warningText == nil ? Color.primary : Color.orange)
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .clipped()
+                .accessibilityIdentifier("target-nd-proposal-text")
+            if let visible = previewContent, let spoken = visible.secondaryText {
+                totalText(visible, spoken: spoken)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityIdentifier("target-nd-proposal-total")
+            }
+            if proposal.canApply {
+                Button(locale.language.languageCode?.identifier == "ko" ? "적용" : "Apply") {
+                    previewApplied = true
+                }
+                .font(.caption.weight(.semibold))
+                .tint(proposal.warningText == nil ? .accentColor : .orange)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+                .accessibilityLabel(Text("Dummy Apply. Actual filters remain unchanged."))
+                .accessibilityIdentifier("target-nd-proposal-apply")
+            }
+        }
+        .onChange(of: preview) { _, _ in previewApplied = false }
     }
 
     /// The trailing Total (FILTER-STACK-008): the caption word, the

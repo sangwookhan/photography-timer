@@ -14,6 +14,7 @@ struct PTimerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .modifier(TargetNDPreviewLaunchModifier())
         }
     }
 }
@@ -138,5 +139,20 @@ final class ActivityKitLockScreenTimerTargetExposer: LockScreenTimerTargetExposi
         Activity<TimerTargetLiveActivityAttributes>.activities.contains {
             $0.attributes.surfaceID == TimerTargetLiveActivityAttributes.lockScreenSurfaceID
         }
+    }
+}
+
+/// An explicitly requested DEBUG preview on the real Main layout. It never
+/// changes inputs or uses test-runtime detection.
+private struct TargetNDPreviewLaunchModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let index = arguments.firstIndex(of: "--target-nd-preview")
+        let preview = index.flatMap { arguments.indices.contains($0 + 1) ? TargetNDProposalPreview(rawValue: arguments[$0 + 1]) : nil }
+        content.environment(\.targetNDProposalPreview, preview)
+        #else
+        content
+        #endif
     }
 }

@@ -108,3 +108,54 @@ final class FilterStatusRegionAccessibilityTests: XCTestCase {
         }
     }
 }
+
+/// Measurement checkpoint for Spec #99 at 8ca4e9ac. These measurements
+/// report a contract-fit obstruction; they do not claim UI conformance.
+@MainActor
+final class TargetNDProposalLayoutCheckpointTests: XCTestCase {
+    func testMeasureOrdinaryAndWarningProposalsOnIPhone17() throws {
+        let style = ExposureWorkspaceMainLayoutStyle.compact
+        let available = UIScreen.main.bounds.width - 2 * style.horizontalPadding - 2 * style.sectionCardPadding
+        for language in ["en", "ko"] {
+            for appearance in [UIUserInterfaceStyle.light, .dark] {
+                for fixture in [TargetNDProposalPreview.ordinary, .warning] {
+                    let locale = Locale(identifier: language)
+                    let proposal = fixture.displayState(locale: locale)
+                    let caption = UIFont.preferredFont(forTextStyle: style.filterStatusRegionTextStyle)
+                    let leadingWidth = (("[Dummy] " + proposal.fullText) as NSString).size(withAttributes: [.font: caption]).width
+                    let totalWidth = ("Total " as NSString).size(withAttributes: [.font: caption]).width
+                        + ("13" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: style.filterStatusTotalValuePointSize(forOccupiedSpaceCount: 2), weight: .semibold)]).width
+                        + (" stops" as NSString).size(withAttributes: [.font: caption]).width + 6
+                    let required = leadingWidth + totalWidth + 44 + 12
+                    let measurement = "TARGET_ND_FIT language=\(language) appearance=\(appearance.rawValue) state=\(fixture.rawValue) available=\(available) required=\(required) rowHeight=\(style.filterStatusRegionHeight) applyHeight=44"
+                    print(measurement)
+                    let metrics = XCTAttachment(string: measurement)
+                    metrics.name = "metrics-\(language)-\(appearance.rawValue)-\(fixture.rawValue)"
+                    metrics.lifetime = .keepAlways
+                    add(metrics)
+                    XCTAssertGreaterThan(required, available, "Record the confirmed single-row width obstruction.")
+                    XCTAssertLessThan(style.filterStatusRegionHeight, 44, "A 44pt action also needs a non-overlapping vertical allocation.")
+                    let total = NDStackTotalDisplayState(totalStopsText: "13", isAtMaximum: false, wheelCount: 2)
+                    let view = FilterStatusRegionView(content: nil, occupiedSpaceCount: 2, style: style, previewTotal: total)
+                        .environment(\.targetNDProposalPreview, fixture)
+                        .environment(\.locale, locale)
+                        .frame(width: available)
+                    let host = UIHostingController(rootView: view)
+                    host.overrideUserInterfaceStyle = appearance
+                    let window = UIWindow(frame: UIScreen.main.bounds)
+                    window.rootViewController = host
+                    window.isHidden = false
+                    host.view.layoutIfNeeded()
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+                    let renderer = UIGraphicsImageRenderer(bounds: host.view.bounds)
+                    let image = renderer.image { _ in host.view.drawHierarchy(in: host.view.bounds, afterScreenUpdates: true) }
+                    let attachment = XCTAttachment(image: image)
+                    attachment.name = "target-nd-\(language)-\(appearance.rawValue)-\(fixture.rawValue)"
+                    attachment.lifetime = .keepAlways
+                    add(attachment)
+                    window.isHidden = true
+                }
+            }
+        }
+    }
+}

@@ -150,7 +150,16 @@ private struct TargetNDPreviewLaunchModifier: ViewModifier {
         let arguments = ProcessInfo.processInfo.arguments
         let index = arguments.firstIndex(of: "--target-nd-preview")
         let preview = index.flatMap { arguments.indices.contains($0 + 1) ? TargetNDProposalPreview(rawValue: arguments[$0 + 1]) : nil }
+        let reviewIndex = arguments.firstIndex(of: "--target-nd-review")
+        let review = reviewIndex.flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
         content.environment(\.targetNDProposalPreview, preview)
+            .environment(\.targetNDReviewLayout, ["A", "B"].contains(review ?? "") ? review : nil)
+            .overlay(alignment: .top) {
+                if let reviewIndex = arguments.firstIndex(of: "--target-nd-review"), arguments.indices.contains(reviewIndex + 1) {
+                    Text("Single row" + (preview == nil ? " · Real inputs/Apply" : " · Dummy inputs/Apply"))
+                        .font(.caption2).padding(3).background(.yellow).foregroundStyle(.black).allowsHitTesting(false)
+                }
+            }
         #else
         content
         #endif

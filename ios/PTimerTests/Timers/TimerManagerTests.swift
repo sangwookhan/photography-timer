@@ -8,6 +8,62 @@ import PTimerKit
 
 final class TimerManagerTests: XCTestCase {
     @MainActor
+    func testTargetNDApplyKeepsRunningTimerAndCapturedMetadata() async throws {
+        let suite = "target-nd-running-timer-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let metadata = UserDefaultsTimerMetadataStore(userDefaults: defaults)
+        var now = Date(timeIntervalSince1970: 1_000)
+        let manager = TimerManager(tickInterval: 0.01, dateProvider: { now })
+        let vm = ExposureCalculatorViewModel(
+            calculator: ExposureCalculator(), timerManager: manager,
+            metadataPersistenceStore: metadata
+        )
+        vm.baseShutter = 1
+        vm.setTargetShutter(1024)
+        vm.startTargetShutterTimer()
+        let running = try XCTUnwrap(manager.timers.first)
+        let captured = try XCTUnwrap(metadata.loadSnapshot())
+        XCTAssertEqual(running.status, .running)
+        XCTAssertEqual(running.duration, 1024)
+
+        vm.baseWheelInteractionBegan()
+        vm.baseWheelPreview(0.5)
+        vm.baseWheelCommitted(1)
+        let deadline = Date().addingTimeInterval(2)
+        while vm.targetNDProposalModel.session.phase != .result && Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(vm.targetNDProposalModel.session.phase, .result)
+        try vm.applyPendingTargetNDProposal().get()
+        XCTAssertEqual(vm.ndStep.stops, 10)
+        XCTAssertEqual(vm.baseShutter, 1)
+        XCTAssertEqual(vm.targetShutterSeconds, 1024)
+        XCTAssertEqual(manager.timers, [running])
+        XCTAssertEqual(metadata.loadSnapshot(), captured)
+
+        now = now.addingTimeInterval(3)
+        let tickingDeadline = Date().addingTimeInterval(2)
+        while manager.currentDate < now && Date() < tickingDeadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(manager.currentDate, now)
+        let advanced = try XCTUnwrap(manager.timers.first)
+        XCTAssertEqual(advanced.id, running.id)
+        XCTAssertEqual(advanced.status, .running)
+        XCTAssertEqual(advanced.endDate, running.endDate)
+        XCTAssertEqual(advanced.remainingTime(at: now), 1021, accuracy: 0.0001)
+        XCTAssertEqual(metadata.loadSnapshot(), captured)
+
+        vm.startTargetShutterTimer()
+        XCTAssertEqual(manager.timers.count, 2)
+        let restored = try XCTUnwrap(metadata.loadSnapshot())
+        XCTAssertEqual(restored.timers.first { $0.id == running.id }, captured.timers.first)
+        XCTAssertEqual(manager.timers.last?.duration, 1024)
+        XCTAssertNotEqual(manager.timers.last?.id, running.id)
+    }
+
+    @MainActor
     func testStartAddsMultipleRunningTimers() throws {
         let now = Date(timeIntervalSince1970: 100)
         let manager = TimerManager(

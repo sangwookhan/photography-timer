@@ -27,6 +27,7 @@ struct TargetShutterSectionView: View {
     let onClearTarget: () -> Void
     let onStartTargetTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
+    var onOpenEditor: () -> Void = {}
 
     @State private var inputSheetVisible = false
 
@@ -34,7 +35,7 @@ struct TargetShutterSectionView: View {
         TargetShutterCard(
             displayState: displayState,
             canStartTimer: canStartTimer,
-            onEdit: { inputSheetVisible = true },
+            onEdit: { onOpenEditor(); inputSheetVisible = true },
             onStartTimer: onStartTargetTimer,
             layout: TargetShutterCardLayout(
                 timerAction: TimerActionMetrics(
@@ -114,7 +115,7 @@ extension WheelTelemetry {
     /// App-owned live wheel telemetry backed by `WheelPickerContinuousObserver`
     /// (UIKit `UIPickerView` + `CADisplayLink`). Injected into the Kit sheet so
     /// it can report the wheel's centre row mid-spin without the kit importing
-    /// UIKit. The same observer drives the Base Shutter / ND Filter wheels.
+    /// UIKit. Main Base/ND wheels own their delegates separately.
     static let uiKitWheelObserver = WheelTelemetry { onRow in
         AnyView(
             WheelPickerContinuousObserver(

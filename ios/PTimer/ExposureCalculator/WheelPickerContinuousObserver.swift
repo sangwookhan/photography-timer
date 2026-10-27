@@ -9,8 +9,8 @@ import UIKit
 /// updates while the user spins the wheel, before the gesture commits
 /// to a value.
 ///
-/// Used ONLY by the Base Shutter wheel (`ShutterSelectionRow` in
-/// Screen.swift). The ND wheels moved to the OWNED picker
+/// Used by the Target Shutter sheet through the host telemetry seam.
+/// Base now uses its owned final-settlement picker. ND wheels use the OWNED picker
 /// (`NDWheelPickerView`, PTIMER-199 v2) and no longer observe
 /// through this bridge.
 

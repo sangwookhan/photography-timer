@@ -217,9 +217,21 @@ public final class CalculatorModel {
         }
         guard let replacement = FilterStack.validated(wheels: wheels, auxiliaryFilters: filterStack.auxiliaryFilters, inventory: filterInventory) else { return false }
         let oldIDs = ndFilterWheelIDs
-        ndFilterWheelIDs = wheels.map { wheel in
-            previous.firstIndex(of: wheel).map { oldIDs[$0] } ?? makeNDFilterWheelID()
+        var unclaimed = Array(previous.indices)
+        var origins = [Int?](repeating: nil, count: wheels.count)
+        for (index, wheel) in wheels.enumerated() {
+            if let oldIndex = unclaimed.first(where: { previous[$0] == wheel }) {
+                origins[index] = oldIndex
+                unclaimed.removeAll { $0 == oldIndex }
+            }
         }
+        for (index, wheel) in wheels.enumerated() where origins[index] == nil {
+            if wheel.isStandard, unclaimed.contains(index), previous[index].isStandard {
+                origins[index] = index
+                unclaimed.removeAll { $0 == index }
+            }
+        }
+        ndFilterWheelIDs = origins.map { $0.map { oldIDs[$0] } ?? makeNDFilterWheelID() }
         filterStack = replacement
         if orderingPolicy == .automatic { applyCommitOrder(to: replacement) }
         return true

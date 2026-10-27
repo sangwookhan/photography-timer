@@ -48,6 +48,19 @@ final class TargetNDApplicationTests: XCTestCase {
         }
     }
 
+    func testApplyKeepsSamePositionStandardIdentityAndDoesNotReuseDuplicateIDs() {
+        let calculator = CalculatorModel(calculator: ExposureCalculator())
+        let originalID = calculator.ndFilterWheelIDs[0]
+        XCTAssertTrue(calculator.applyTargetNDStack(.init(standardSteps: [NDStep(stops: 10)]), orderingPolicy: .preserveCurrentOrder))
+        XCTAssertEqual(calculator.ndFilterWheelIDs[0], originalID)
+        let duplicate = FilterStack(standardSteps: [NDStep(stops: 0), NDStep(stops: 0)])
+        XCTAssertTrue(calculator.applyTargetNDStack(duplicate, orderingPolicy: .preserveCurrentOrder))
+        let ids = calculator.ndFilterWheelIDs
+        XCTAssertEqual(Set(ids).count, 2)
+        XCTAssertTrue(calculator.applyTargetNDStack(duplicate, orderingPolicy: .preserveCurrentOrder))
+        XCTAssertEqual(calculator.ndFilterWheelIDs, ids)
+    }
+
     func testAtomicModelCommitRetainsExactAuxSetsAndPlusSource() throws {
         let nd = FilterItem(name: "ND6", behavior: .fixed(.init(value: 6, unit: .stops)))
         let aux = FilterItem(name: "CPL", behavior: .cpl(.init(fields: [1, 2])))

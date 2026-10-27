@@ -205,6 +205,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// App-global display-settings store (ND notation mode). Display
     /// preferences only; never participates in calculation.
     public let targetNDSettingsModel: TargetNDSettingsModel
+    public let targetNDProposalModel = TargetNDProposalModel()
+    private var isCommittingManualBase = false
+    private var isApplyingTransientProposal = false
     private let displaySettingStore: DisplaySettingStoring
     private let lockScreenTargetCoordinator: LockScreenTimerCoordinator
     private var cancellables: Set<AnyCancellable> = []
@@ -336,6 +339,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
         bindFilterInventoryChanges()
+        targetNDProposalModel.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        targetNDSettingsModel.$settings.dropFirst().sink { [weak self] _ in
+            self?.targetNDProposalModel.invalidate()
+        }.store(in: &cancellables)
     }
 
     public init(
@@ -415,6 +424,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
         bindFilterInventoryChanges()
+        targetNDProposalModel.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+        targetNDSettingsModel.$settings.dropFirst().sink { [weak self] _ in
+            self?.targetNDProposalModel.invalidate()
+        }.store(in: &cancellables)
     }
 
     /// Every inventory mutation flows through here: the published
@@ -1238,6 +1253,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// the end so the on-disk state always matches a single slot's
     /// view of the world.
     private func applyCameraSlotSnapshot(_ snapshot: CameraSlotCalculatorSnapshot) {
+        targetNDProposalModel.invalidate()
         // A slot switch discards every interaction trace — pending
         // selections, unresolved motion, touches, and the cleanup
         // timer all belong to the outgoing slot's transient UI state
@@ -2181,6 +2197,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               calculatorModel.ndFilterWheelIDs.contains(wheelID) else {
             return
         }
+        targetNDProposalModel.invalidate()
         if ndWheelInteractionState == .idle {
             ndWheelInteractionState = .scrolling
         }
@@ -2199,6 +2216,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               ndWheelInteractionState != .reshaping else {
             return
         }
+        targetNDProposalModel.invalidate()
         commitNDWheelSelection(selection, wheelID: wheelID)
     }
 
@@ -2207,6 +2225,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               ndWheelInteractionState != .reshaping else {
             return
         }
+        targetNDProposalModel.invalidate()
         touchedNDWheelIDs.insert(wheelID)
     }
 
@@ -2815,6 +2834,33 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         calculatorModel.ndFilterSteps.count + (calculatorModel.filterStack.hasAuxiliaryFilters ? 1 : 0)
     }
 
+    /// The owned Base picker emits begin even when the gesture returns to
+    /// the same value. A touch-up alone never reaches the final-commit path.
+    public func baseWheelInteractionBegan() {
+        targetNDProposalModel.begin(targetNDProposalInput)
+    }
+
+    public func baseWheelPreview(_ seconds: Double) {
+        updateLiveBaseShutter(seconds)
+        targetNDProposalModel.preview(base: seconds)
+    }
+
+    public func baseWheelCommitted(_ seconds: Double) {
+        isCommittingManualBase = true
+        baseShutter = seconds
+        clearLiveBaseShutterPreview()
+        isCommittingManualBase = false
+        targetNDProposalModel.settle(targetNDProposalInput, filtersAreQuiet: isNDWheelInteractionQuiet)
+    }
+
+    public func applyPendingTargetNDProposal() -> Result<Void, TargetNDApplyFailure> {
+        isApplyingTransientProposal = true
+        defer { isApplyingTransientProposal = false }
+        return targetNDProposalModel.apply(current: targetNDProposalInput, filtersAreQuiet: isNDWheelInteractionQuiet) {
+            self.applyTargetNDProposal($0, result: $1)
+        }
+    }
+
     /// Snapshot shared by inverse/search and the eventual UI action. It is
     /// rebuilt from the current owners so Apply can detect same-ID edits too.
     public var targetNDProposalInput: TargetNDProposalInput? {
@@ -3018,6 +3064,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     func persistCalculatorContext() {
+        if !isCommittingManualBase && !isApplyingTransientProposal {
+            targetNDProposalModel.reconcile(targetNDProposalInput)
+        }
         // During a camera-slot snapshot apply we suppress per-mutation
         // persistence so the transition writes a single coherent
         // snapshot at the end (see `applyCameraSlotSnapshot`).

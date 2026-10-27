@@ -34,6 +34,12 @@ public struct TargetNDProposalInput: Equatable {
         self.filmColor = filmColor
     }
 
+    public func replacingBase(_ seconds: Double) -> Self {
+        .init(cameraID: cameraID, baseSeconds: seconds, targetSeconds: targetSeconds,
+              profile: profile, inventory: inventory, selectedSets: selectedSets,
+              current: current, settings: settings, medium: medium, filmID: filmID, filmColor: filmColor)
+    }
+
     public func evaluate() -> TargetNDSelectionResult {
         TargetNDSelection().evaluate(
             baseSeconds: baseSeconds, targetSeconds: targetSeconds,

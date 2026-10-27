@@ -532,7 +532,9 @@ struct ExposureCalculatorScreen: View {
                 .boundedTaskPresentation()
             }
         }
+        .onDisappear { viewModel.targetNDProposalModel.invalidate() }
         .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active { viewModel.targetNDProposalModel.invalidate() }
             guard newPhase == .active else {
                 return
             }
@@ -549,6 +551,7 @@ struct ExposureCalculatorScreen: View {
             )
         }
         .onChange(of: isMainSurfaceCovered) { wasCovered, isCovered in
+            if isCovered { viewModel.targetNDProposalModel.invalidate() }
             if FilmClassificationBadgeVisibility.isMainReturn(
                 wasCovered: wasCovered,
                 isCovered: isCovered
@@ -939,7 +942,8 @@ private struct CameraSlotCalculatorPage: View {
                     : { _ in },
                 onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
                 onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
-                style: style
+                style: style,
+                onOpenEditor: viewModel.targetNDProposalModel.invalidate
             )
             .layoutPriority(1)
 
@@ -973,17 +977,22 @@ private struct CameraSlotCalculatorPage: View {
                 formatShutter: viewModel.formatShutterStepLabel,
                 ndNotationMode: viewModel.ndNotationMode,
                 onSelectNotationMode: { viewModel.ndNotationMode = $0 },
+                proposalState: pageState.isActive ? TargetNDProposalPresenter.display(viewModel.targetNDProposalModel.session, locale: Locale.current) : nil,
+                onApplyProposal: { _ = viewModel.applyPendingTargetNDProposal() },
+                onProposalFocus: { [generation = viewModel.targetNDProposalModel.session.generation] focused in
+                    viewModel.targetNDProposalModel.focusAction(focused, generation: generation)
+                },
                 onContinuousBaseShutterChange: { value in
                     guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.updateLiveBaseShutter(value)
-                    }
+                    viewModel.baseWheelPreview(value)
                 },
-                onBaseShutterInteractionEnd: {
+                onBaseShutterInteractionBegan: {
                     guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.clearLiveBaseShutterPreview()
-                    }
+                    viewModel.baseWheelInteractionBegan()
+                },
+                onBaseShutterCommitted: { value in
+                    guard pageState.isActive else { return }
+                    viewModel.baseWheelCommitted(value)
                 },
                 // Owned-picker measurements (PTIMER-199 v2): no gate,
                 // no animation scope here — the ViewModel's state
@@ -1080,6 +1089,9 @@ private struct CameraSlotCalculatorPage: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .allowsHitTesting(pageState.isActive)
         .accessibilityIdentifier("camera-slot-page-\(pageState.slotID.rawValue)")
+        .onChange(of: showsTargetNDSettings) { _, showing in
+            if showing { viewModel.targetNDProposalModel.invalidate() }
+        }
         .sheet(isPresented: $showsTargetNDSettings) {
             TargetNDSettingsView(model: viewModel.targetNDSettingsModel)
         }

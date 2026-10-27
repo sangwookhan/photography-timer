@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F24200000000000000000041 /* BaseWheelPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24200000000000000000040 /* BaseWheelPickerView.swift */; };
 		A00000000000000000000001 /* PTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* PTimerApp.swift */; };
 		A00000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* ContentView.swift */; };
 		A00000000000000000000003 /* ExposureCalculatorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* ExposureCalculatorScreen.swift */; };
@@ -138,6 +139,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F24200000000000000000040 /* BaseWheelPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseWheelPickerView.swift; sourceTree = "<group>"; };
 		A00000000000000000000010 /* PTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A00000000000000000000011 /* PTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTimerApp.swift; sourceTree = "<group>"; };
 		A00000000000000000000012 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -344,6 +346,7 @@
 				A00000000000000000000840 /* CompactTimerRailPlacement.swift */,
 				A00000000000000000000860 /* BoundedTaskPresentation.swift */,
 				A0000000000000000000014A /* WheelPickerContinuousObserver.swift */,
+				F24200000000000000000040 /* BaseWheelPickerView.swift */,
 				A0000000000000000000014C /* NDWheelPickerView.swift */,
 				A00000000000000000000209 /* CameraSlot */,
 				A000000000000000000000F0 /* FilmContext */,
@@ -730,6 +733,7 @@
 				A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */,
 				A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */,
 				A0000000000000000000014B /* WheelPickerContinuousObserver.swift in Sources */,
+				F24200000000000000000041 /* BaseWheelPickerView.swift in Sources */,
 				A0000000000000000000014D /* NDWheelPickerView.swift in Sources */,
 				A00000000000000000000204 /* CameraSlotPagerIndicator.swift in Sources */,
 				A0000000000000000000021F /* CameraSlotRenameSheet.swift in Sources */,

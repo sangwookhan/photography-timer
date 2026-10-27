@@ -824,8 +824,12 @@ struct VariableSectionView: View {
     let formatShutter: (TimeInterval) -> String
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
+    var proposalState: TargetNDProposalDisplayState?
+    var onApplyProposal: () -> Void = {}
+    var onProposalFocus: (Bool) -> Void = { _ in }
     let onContinuousBaseShutterChange: (Double) -> Void
-    let onBaseShutterInteractionEnd: () -> Void
+    let onBaseShutterInteractionBegan: () -> Void
+    let onBaseShutterCommitted: (Double) -> Void
     /// Owned-picker measurements (PTIMER-199 v2), keyed by wheel
     /// IDENTITY and stamped with the generation they were issued
     /// under. The ViewModel's state machine judges them; the view
@@ -874,6 +878,7 @@ struct VariableSectionView: View {
     /// (FILTER-PLUS-002); rendered in the status region below the
     /// row, never over a picker.
     @State private var browsingChoice: FilterPlusChoice?
+    @State private var selectionsBeforeTargetApply: [Int: FilterWheelSelection] = [:]
 
     private var browsingName: String? {
         switch browsingChoice {
@@ -916,7 +921,8 @@ struct VariableSectionView: View {
                     shutterSpeeds: shutterSpeeds,
                     formatShutter: formatShutter,
                     onContinuousSelectionChange: onContinuousBaseShutterChange,
-                    onInteractionEnd: onBaseShutterInteractionEnd,
+                    onInteractionBegan: onBaseShutterInteractionBegan,
+                    onCommitted: onBaseShutterCommitted,
                     ndWheelCount: occupiedSpaceCount,
                     labelRowHeight: style.filterWheelLabelRowHeight,
                     pickerHeight: style.pickerHeight,
@@ -950,6 +956,8 @@ struct VariableSectionView: View {
                     isWheelResolved: isNDWheelResolved,
                     areWheelsInteractive: areNDWheelsInteractive,
                     ndWheelGeneration: ndWheelGeneration,
+                    isTargetNDJustApplied: proposalState?.isApplied == true,
+                    selectionsBeforeTargetApply: selectionsBeforeTargetApply,
                     showsAddFilterWheelControl: showsAddFilterWheelControl,
                     isFilterInteractionQuiet: isFilterInteractionQuiet,
                     onAddFilterWheel: onAddFilterWheel,
@@ -982,7 +990,13 @@ struct VariableSectionView: View {
                 ),
                 occupiedSpaceCount: occupiedSpaceCount,
                 style: style,
-                previewTotal: ndStackTotalDisplayState
+                previewTotal: ndStackTotalDisplayState,
+                proposalState: proposalState,
+                onApplyProposal: {
+                    selectionsBeforeTargetApply = Dictionary(uniqueKeysWithValues: zip(ndFilterWheelIDs, filterWheels.map(\.selection)))
+                    onApplyProposal()
+                },
+                onProposalFocus: onProposalFocus
             )
         }
         .sectionCardStyle(style: style)
@@ -1004,6 +1018,7 @@ struct FilterStatusRegionView: View {
     @Environment(\.targetNDProposalPreview) private var preview
     @Environment(\.locale) private var locale
     @State private var previewApplied = false
+    @State private var proposalActionWidth: CGFloat = 0
     let content: FilterStatusRegionContent?
     /// ND wheels plus the auxiliary summary: selects the ND numeral
     /// size the Total's value matches (FILTER-STACK-008).
@@ -1011,6 +1026,13 @@ struct FilterStatusRegionView: View {
     let style: ExposureWorkspaceMainLayoutStyle
 
     var previewTotal: NDStackTotalDisplayState?
+    var proposalState: TargetNDProposalDisplayState?
+    var onApplyProposal: () -> Void = {}
+    var onProposalFocus: (Bool) -> Void = { _ in }
+    var onReviewFrame: ((String, CGRect) -> Void)?
+    @AccessibilityFocusState private var isApplyFocused: Bool
+
+    @Environment(\.targetNDReviewLayout) private var reviewLayout
 
     private var previewContent: FilterStatusRegionContent? {
         guard let total = previewTotal else { return content }
@@ -1055,7 +1077,9 @@ struct FilterStatusRegionView: View {
         // while it shows nothing, so `onAppear` applies the first
         // content and the reserved height never collapses.
         VStack(alignment: .leading, spacing: 0) {
-            if let preview {
+            if let proposalState, preview == nil {
+                proposalRow(proposalState)
+            } else if let preview {
                 proposalRow((previewApplied ? TargetNDProposalPreview.applied : preview).displayState(locale: locale))
             } else if let visible = displayedContent {
                 // Exactly one visual row in every state (FILTER-STACK-
@@ -1099,6 +1123,13 @@ struct FilterStatusRegionView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: style.filterStatusRegionHeight * max(1, textScale), alignment: .bottom)
+        .overlay(alignment: .trailing) { proposalAction }
+        .background {
+            GeometryReader { proxy in
+                Color.clear.onAppear { onReviewFrame?("region", proxy.frame(in: .global)) }
+            }
+        }
+        .contentShape(Rectangle())
         .clipped()
         .animation(isShowingHeldDetail ? nil : .easeInOut(duration: 0.15), value: displayedContent)
         .onAppear { controller.apply(content) }
@@ -1108,36 +1139,99 @@ struct FilterStatusRegionView: View {
         .accessibilityIdentifier("filter-status-region")
     }
 
-    /// The first measured composition keeps every required visual field in
-    /// the approved one-row slot. The explicit DEBUG fixture exposes overflow
-    /// for review; it does not silently hide proposal details or shrink Total.
+    private var renderedProposal: TargetNDProposalDisplayState? {
+        if let preview { return (previewApplied ? TargetNDProposalPreview.applied : preview).displayState(locale: locale) }
+        return proposalState
+    }
+
+    /// Text shares the ordinary Total's baseline. The separate transparent
+    /// action overlay is bounded by the existing row rather than font leading.
     private func proposalRow(_ proposal: TargetNDProposalDisplayState) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("[Dummy] " + proposal.fullText)
-                .font(style.filterStatusRegionFont)
-                .foregroundStyle(proposal.warningText == nil ? Color.primary : Color.orange)
-                .lineLimit(1)
-                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                .clipped()
-                .accessibilityIdentifier("target-nd-proposal-text")
-            if let visible = previewContent, let spoken = visible.secondaryText {
-                totalText(visible, spoken: spoken)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .accessibilityIdentifier("target-nd-proposal-total")
-            }
-            if proposal.canApply {
-                Button(locale.language.languageCode?.identifier == "ko" ? "적용" : "Apply") {
-                    previewApplied = true
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            if proposal.canApply, let value = proposal.candidateTotalText {
+                if let warning = proposal.warningText {
+                    Text(warning)
+                        .font(style.filterStatusRegionFont)
+                        .foregroundStyle(.orange)
+                        .lineLimit(1)
+                        .background { reviewFrame("leading") }
+                        .accessibilityIdentifier("target-nd-proposal-text")
                 }
-                .font(.caption.weight(.semibold))
-                .tint(proposal.warningText == nil ? .accentColor : .orange)
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-                .accessibilityLabel(Text("Dummy Apply. Actual filters remain unchanged."))
-                .accessibilityIdentifier("target-nd-proposal-apply")
+                Spacer(minLength: 0)
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(locale.language.languageCode?.identifier == "ko" ? "합계" : "Apply total")
+                        .font(style.filterStatusRegionFont)
+                    Text(value)
+                        .font(style.filterStatusTotalValueFont(forOccupiedSpaceCount: occupiedSpaceCount))
+                        .monospacedDigit()
+                    Text(locale.language.languageCode?.identifier == "ko" ? "스톱 적용" : "stops")
+                        .font(style.filterStatusRegionFont)
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 3)
+                .foregroundStyle(proposal.warningText == nil ? Color.accentColor : .orange)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.onAppear { proposalActionWidth = proxy.size.width }
+                            .onChange(of: proxy.size.width) { _, width in proposalActionWidth = width }
+                    }
+                }
+                .accessibilityHidden(true)
+                .layoutPriority(1)
+            } else {
+                if proposal.isLive { Spacer(minLength: 0) }
+                Text(proposal.requiredText)
+                    .font(style.filterStatusRegionFont)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .fixedSize(horizontal: proposal.isLive, vertical: false)
+                    .accessibilityLabel(Text(proposal.fullText))
+                    .background { if proposal.isLive { reviewFrame("live") } }
+                    .accessibilityIdentifier("target-nd-proposal-text")
+                if proposal.isNoCombination,
+                   let current = previewContent ?? content,
+                   let total = current.secondaryText {
+                    Spacer(minLength: 0)
+                    totalText(current, spoken: total)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .background { reviewFrame("current-total") }
+                        .accessibilityIdentifier("target-nd-current-total")
+                } else if !proposal.isLive {
+                    Spacer(minLength: 0)
+                }
             }
         }
         .onChange(of: preview) { _, _ in previewApplied = false }
+    }
+
+    @ViewBuilder
+    private var proposalAction: some View {
+        if let proposal = renderedProposal, proposal.canApply, proposalActionWidth > 0 {
+            Button {
+                if preview != nil { previewApplied = true } else { onApplyProposal() }
+            } label: {
+                Color.clear.frame(width: proposalActionWidth, height: max(0, style.filterStatusRegionHeight * max(1, textScale) - 4))
+                    .contentShape(Rectangle())
+                    .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(lineWidth: 0.5))
+                    .background { reviewFrame("apply") }
+            }
+            .frame(height: style.filterStatusRegionHeight * max(1, textScale), alignment: .bottom)
+            .buttonStyle(.plain)
+            .foregroundStyle(proposal.warningText == nil ? Color.accentColor : .orange)
+            .accessibilityFocused($isApplyFocused)
+            .onChange(of: isApplyFocused) { _, focused in onProposalFocus(focused) }
+            .accessibilityLabel(Text(proposal.actionText ?? "Apply"))
+            .accessibilityValue(Text(proposal.fullText))
+            .accessibilityHint(Text(preview != nil ? "Actual filters remain unchanged." : ""))
+            .accessibilityIdentifier("target-nd-proposal-apply")
+        }
+    }
+
+    private func reviewFrame(_ name: String) -> some View {
+        GeometryReader { proxy in
+            Color.clear.onAppear { onReviewFrame?(name, proxy.frame(in: .global)) }
+        }
     }
 
     /// The trailing Total (FILTER-STACK-008): the caption word, the
@@ -1217,6 +1311,7 @@ struct FilterStatusRegionView: View {
 /// cleanup has no separate Remove action and announces an actual
 /// removal once (FILTER-STACK-006).
 private struct NDFilterGroupView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let ndFilterSteps: [NDStep]
     let filterWheels: [FilterWheel]
     let filterRows: [ResolvedFilterRow]
@@ -1244,6 +1339,8 @@ private struct NDFilterGroupView: View {
     let isWheelResolved: (Int) -> Bool
     let areWheelsInteractive: Bool
     let ndWheelGeneration: Int
+    let isTargetNDJustApplied: Bool
+    let selectionsBeforeTargetApply: [Int: FilterWheelSelection]
     let showsAddFilterWheelControl: Bool
     let isFilterInteractionQuiet: Bool
     /// Adds one wheel for the given source (FILTER-PLUS-003).
@@ -1337,6 +1434,7 @@ private struct NDFilterGroupView: View {
                         isResolved: isWheelResolved(slot.id),
                         isInputEnabled: areWheelsInteractive,
                         generation: ndWheelGeneration,
+                        isTargetNDJustApplied: isTargetNDJustApplied && selectionsBeforeTargetApply[slot.id] != filterWheels[index].selection,
                         onRowObserved: { onWheelRowObserved(slot.id, $0, $1) },
                         onSelected: { onWheelSelected(slot.id, $0, $1) },
                         onTouchBegan: { onWheelTouchBegan(slot.id, $0) },
@@ -1378,7 +1476,8 @@ private struct NDFilterGroupView: View {
             // transitions (incl. the delayed auto-removal fired from the
             // view model, which mutates state outside any withAnimation
             // scope).
-            .animation(.easeInOut(duration: 0.35), value: occupiedSpaceCount)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: occupiedSpaceCount)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: ndFilterWheelIDs)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         // A plain container: every assistive command lives on the
@@ -1466,6 +1565,7 @@ private struct NDWheelView: View {
     let isResolved: Bool
     let isInputEnabled: Bool
     let generation: Int
+    let isTargetNDJustApplied: Bool
     let onRowObserved: (FilterWheelSelection, Int) -> Void
     let onSelected: (FilterWheelSelection, Int) -> Void
     let onTouchBegan: (Int) -> Void
@@ -1477,6 +1577,9 @@ private struct NDWheelView: View {
     let totalDisplayState: NDStackTotalDisplayState
     let pickerHeight: CGFloat
     let style: ExposureWorkspaceMainLayoutStyle
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var applyEmphasis = false
 
     private var isCompact: Bool {
         occupiedSpaceCount > 1
@@ -1627,6 +1730,25 @@ private struct NDWheelView: View {
                 style: style,
                 layout: layout
             )
+        }
+        .overlay {
+            if applyEmphasis {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color.accentColor, lineWidth: 1.5)
+                    .frame(height: style.pickerSelectionBandHeight)
+                    .padding(.horizontal, style.pickerSelectionBandHorizontalInset)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .task(id: isTargetNDJustApplied) {
+            guard isTargetNDJustApplied, !reduceMotion else {
+                applyEmphasis = false
+                return
+            }
+            applyEmphasis = true
+            do { try await Task.sleep(for: .milliseconds(650)) } catch { return }
+            applyEmphasis = false
         }
     }
 
@@ -1980,7 +2102,8 @@ private struct ShutterSelectionRow: View {
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
     let onContinuousSelectionChange: (Double) -> Void
-    let onInteractionEnd: () -> Void
+    let onInteractionBegan: () -> Void
+    let onCommitted: (Double) -> Void
     /// ND wheels sharing the row (PTIMER-199). At 3+ the Base column
     /// is width-capped (`baseShutterColumnMaxWidth`), so the value
     /// font and band metrics condense with it — otherwise labels like
@@ -2019,34 +2142,21 @@ private struct ShutterSelectionRow: View {
                 Color.clear
                     .frame(height: labelRowHeight)
 
-                Picker("Base Shutter", selection: $baseShutter) {
-                    ForEach(shutterSpeeds, id: \.self) { speed in
-                        ShutterPickerValue(
-                            valueText: shutterValueText(for: speed),
-                            style: style,
-                            layout: layout,
-                            ndWheelCount: ndWheelCount,
-                            isCondensed: isCondensed
-                        )
-                        .tag(speed)
-                    }
-                }
-                .pickerStyle(.wheel)
+                BaseWheelPickerView(
+                    steps: shutterSpeeds, selected: baseShutter,
+                    rowHeight: style.pickerSelectionBandHeight, renderingKey: AnyHashable(ndWheelCount),
+                    rowContent: { speed in
+                        ShutterPickerValue(valueText: shutterValueText(for: speed), style: style,
+                                           layout: layout, ndWheelCount: ndWheelCount, isCondensed: isCondensed)
+                    },
+                    onBegin: onInteractionBegan,
+                    onPreview: onContinuousSelectionChange,
+                    onCommit: onCommitted, accessibilityValue: formatShutter
+                )
+                .accessibilityLabel(Text("Base Shutter"))
                 .frame(maxWidth: .infinity)
                 .frame(height: pickerHeight)
                 .clipped()
-                .background {
-                    WheelPickerContinuousObserver(
-                        onSelectedRowChange: { row in
-                            guard shutterSpeeds.indices.contains(row) else {
-                                return
-                            }
-
-                            onContinuousSelectionChange(shutterSpeeds[row])
-                        },
-                        onInteractionEnd: onInteractionEnd
-                    )
-                }
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {

@@ -239,8 +239,11 @@ them rather than define a second stack model.
 - **TARGET-ND-UI-004** — Use the existing single visual status row
   immediately below the Base/ND wheels. Preserve its baseline, typography
   hierarchy, padding, height, card height, wheel viewports and touch centers,
-  and neighboring result/timer positions. Live Base guidance occupies this
-  row without a competing current Total. A settled proposal uses the
+  and neighboring result/timer positions. During manual Base interaction
+  with a Target, live Required ND guidance is right-aligned in this row
+  below the ND wheels, in the same trailing area used by the ordinary Total;
+  it shall not also appear on the leading side or compete with current Total.
+  A settled proposal uses the
   candidate-total action in TARGET-ND-UI-002 where the ordinary Total sat;
   its accent or warning color and light border or compact cue distinguish
   it as actionable. Do not add a second line, a tall standalone action,

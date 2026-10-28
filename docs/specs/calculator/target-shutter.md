@@ -272,14 +272,28 @@ them rather than define a second stack model.
   Plus memory, other cameras and captured timers; persist the resulting
   stack under the existing camera contract and briefly acknowledge success
   before ordinary status resumes.
-- **TARGET-ND-UI-007** — A successful ND Apply shall visibly distinguish the
-  resulting arrangement: retained physical wheels keep their identity while
-  insertions, removals and moves transition briefly, and a changed selection
-  at the same position receives a short value transition or emphasis. The
-  final legal stack is committed once; transitional visuals shall not create
-  intermediate exposure, timer or persistence states. Base and auxiliary
-  controls remain stable. Follow the platform's existing motion conventions
-  and reduced-motion setting.
+- **TARGET-ND-UI-007** — A successful ND Apply shall visibly connect the
+  previous and final arrangements. Removed wheels collapse and fade, retained
+  wheels move with their identities, and inserted wheels expand into place;
+  the structural transition is approximately 300–400 ms. When a retained
+  wheel's row list remains compatible, a changed selection rotates from its
+  previous position toward the final value in approximately 250–400 ms;
+  large differences use a short bounded movement, and unchanged values do
+  not rotate. If a changed wheel's list is replaced or it is newly created,
+  briefly dim the changed ND area, replace its displayed content, then restore
+  brightness (approximately 100 ms dim and 200 ms restore). Use the rotation
+  and dim transitions together when different wheels require them. A color or
+  outline cue alone does not substitute for these transitions.
+- **TARGET-ND-UI-008** — Apply commits the validated final stack once.
+  Transitional visuals shall not emit intermediate selection, exposure,
+  timer or persistence states. Block input to changing ND controls during
+  their short transition, prevent duplicate Apply, and restore interaction on
+  completion. Leaving Main or changing camera or inputs cancels the transition
+  and displays the current valid state; stale completion callbacks shall not
+  overwrite it. Base and auxiliary controls remain stable. Under reduced
+  motion or disabled system animations, omit rotation and width movement and
+  use a brief fade or immediate final presentation with the same input
+  recovery. Do not add a spinner or artificial wait to an immediate Apply.
 
 ## Timer creation
 

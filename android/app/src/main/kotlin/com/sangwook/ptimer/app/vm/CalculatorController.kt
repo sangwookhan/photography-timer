@@ -152,6 +152,8 @@ data class CalculatorUiState(
      * camera management. Populated only on the top-level state.
      */
     val cameras: List<CameraListEntry> = emptyList(),
+    val requiredND: RequiredNDGuidanceState = RequiredNDGuidanceState(),
+    val showRequiredND: Boolean = true,
 ) {
     /** The wheel under a finger, found by its stable id so a settled
      *  reorder can never point it at a different wheel; `null` at rest. */
@@ -415,6 +417,7 @@ class CalculatorController(
      *  finger (true) or has gone quiet (false). Quiescence triggers
      *  the set commit. */
     fun setNdWheelActive(wheelId: Int, isActive: Boolean) {
+        if (isActive) { requiredND.invalidate(); requiredNDContext = null }
         if (isActive) {
             if (wheelId in ndWheelIds) activeNdWheelIds.add(wheelId)
         } else {
@@ -1282,6 +1285,46 @@ class CalculatorController(
         syncNdWheelIds()
     }
 
+    private val requiredND = RequiredNDGuidanceModel()
+    private var requiredNDContext: List<Any?>? = null
+    private var showRequiredND = true
+
+    private fun requiredNDContext() = listOf(session.activeSlotId,
+        session.activeSnapshot.copy(shutterIndex = 0), resolvedProfile(), inventory)
+
+    fun beginBaseInteraction() {
+        val target = session.activeSnapshot.targetSeconds ?: return
+        if (!showRequiredND || session.activeSlotId == null) return
+        requiredNDContext = requiredNDContext()
+        requiredND.begin(ExposureScale.oneThirdStop.shutterSteps[shutterIndex].seconds, target, resolvedProfile())
+        publish()
+    }
+
+    fun finishBaseInteraction(index: Int) {
+        setShutterIndex(index)
+        requiredND.settle(ExposureScale.oneThirdStop.shutterSteps[shutterIndex].seconds)
+        publish()
+    }
+
+    fun completeRequiredNDCrossfade(token: Int) {
+        requiredND.complete(token)
+        publish()
+    }
+
+    fun invalidateRequiredND() {
+        if (requiredND.state.phase == RequiredNDGuidanceState.Phase.Ordinary) return
+        requiredND.invalidate()
+        requiredNDContext = null
+        publish()
+    }
+
+    fun setShowRequiredND(enabled: Boolean) {
+        if (showRequiredND == enabled) return
+        showRequiredND = enabled
+        if (!enabled) invalidateRequiredND()
+        publish()
+    }
+
     private val _state = MutableStateFlow(compute())
     val state: StateFlow<CalculatorUiState> = _state.asStateFlow()
 
@@ -1290,6 +1333,7 @@ class CalculatorController(
 
     fun setShutterIndex(index: Int) {
         session.updateActiveSnapshot { it.copy(shutterIndex = index.coerceIn(shutterLabels.indices)) }
+        requiredND.update(ExposureScale.oneThirdStop.shutterSteps[shutterIndex].seconds)
         publish()
     }
 
@@ -1560,6 +1604,10 @@ class CalculatorController(
     }
 
     private fun publish() {
+        if (requiredNDContext != null && requiredNDContext != requiredNDContext()) {
+            requiredND.invalidate()
+            requiredNDContext = null
+        }
         reorderIfPending()
         _state.value = compute()
     }
@@ -1806,6 +1854,8 @@ class CalculatorController(
             startEnabled = result.startEnabled,
             hint = result.hint,
             targetDisplay = TargetShutterPresenter.makeDisplayState(snapshot.targetSeconds, comparisonSource(result)),
+            requiredND = if (isActiveSlot) requiredND.state else RequiredNDGuidanceState(),
+            showRequiredND = showRequiredND,
         )
     }
 

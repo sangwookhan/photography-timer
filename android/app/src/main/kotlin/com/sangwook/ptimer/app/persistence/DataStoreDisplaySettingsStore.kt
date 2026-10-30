@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 
 private val Context.displaySettingsDataStore by preferencesDataStore(name = "display_settings")
+private val SHOW_REQUIRED_ND_KEY = booleanPreferencesKey("show_required_nd")
 private val ND_NOTATION_MODE_KEY = stringPreferencesKey("nd_notation_mode")
 private val EXACT_ALARM_WARNING_DISMISSED_KEY = booleanPreferencesKey("exact_alarm_warning_dismissed")
 
@@ -32,6 +33,16 @@ private val EXACT_ALARM_WARNING_DISMISSED_KEY = booleanPreferencesKey("exact_ala
 class DataStoreDisplaySettingsStore(
     private val dataStore: DataStore<Preferences>,
 ) {
+
+    fun showRequiredNDFlow(): Flow<Boolean> = dataStore.data.map { it[SHOW_REQUIRED_ND_KEY] ?: true }
+
+    fun loadShowRequiredND(): Boolean = runCatching {
+        runBlocking { dataStore.data.firstOrNull()?.get(SHOW_REQUIRED_ND_KEY) ?: true }
+    }.getOrDefault(true)
+
+    suspend fun setShowRequiredND(enabled: Boolean) {
+        runCatching { dataStore.edit { it[SHOW_REQUIRED_ND_KEY] = enabled } }
+    }
 
     /** Reactive ND notation mode; emits the default until a value is written. */
     fun ndNotationModeFlow(): Flow<NDNotationMode> =

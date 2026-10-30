@@ -30,6 +30,20 @@ class DataStoreDisplaySettingsStoreTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
+    @Test
+    fun requiredNDPrefDefaultsOnAndRoundTripsWithoutChangingNotation() = runBlocking {
+        val store = DataStoreDisplaySettingsStore(newDataStore("required-nd.preferences_pb"))
+        assertTrue(store.loadShowRequiredND())
+        store.setNdNotationMode(NDNotationMode.OPTICAL_DENSITY)
+        store.setShowRequiredND(false)
+        assertFalse(store.loadShowRequiredND())
+        assertEquals(NDNotationMode.OPTICAL_DENSITY, store.loadNdNotationMode())
+        store.setNdNotationMode(NDNotationMode.FILTER_FACTOR)
+        assertFalse(store.loadShowRequiredND())
+        store.setShowRequiredND(true)
+        assertTrue(store.loadShowRequiredND())
+    }
+
     private val ndNotationModeKey = stringPreferencesKey("nd_notation_mode")
 
     private fun newDataStore(name: String): DataStore<Preferences> {

@@ -468,4 +468,16 @@
     <string name="film_black_and_white">Black &amp; White</string>
     <string name="film_color">Color</string>
     <string name="recip_details_film_identity">%1$s %2$s · ISO %3$d</string>
+    <string name="required_nd_setting">Show required ND</string>
+    <string name="required_nd_setting_body">Display required total attenuation while adjusting Base.</string>
+    <string name="required_nd_label">Required ND</string>
+    <string name="required_nd_stops">%1$s stops</string>
+    <string name="required_nd_beyond">Beyond source range</string>
+    <string name="required_nd_invalid">Invalid exposure</string>
+    <string name="required_nd_no_inverse">No quantified inverse</string>
+    <string name="required_nd_multiple">Multiple inverse solutions</string>
+    <string name="required_nd_numerical">Cannot calculate</string>
+    <string name="required_nd_negative">Target needs less than zero attenuation</string>
+    <string name="required_nd_beyond_short">Beyond range</string>
+    <string name="required_nd_negative_short">Cannot attenuate</string>
 </resources>

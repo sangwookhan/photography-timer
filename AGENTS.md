@@ -192,6 +192,16 @@ scope captured in the task spec.
 
 When something is unclear, say what is ambiguous instead of guessing.
 
+### Single-platform implementation until UI approval
+
+For new or changed UI, declare one review platform and limit feature
+implementation and verification to that platform until the user approves
+the actual UI. Start other-platform implementation only after that approval,
+using the approved UI and behavior contract. Spec approval or passing tests
+alone does not satisfy this UI checkpoint. See
+`docs/development/SpecificationWorkflow.md` §10.
+
+
 ---
 
 ## Scope Discipline

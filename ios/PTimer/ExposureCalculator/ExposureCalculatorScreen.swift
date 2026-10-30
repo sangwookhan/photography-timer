@@ -532,7 +532,9 @@ struct ExposureCalculatorScreen: View {
                 .boundedTaskPresentation()
             }
         }
+        .onDisappear { viewModel.invalidateRequiredNDGuidance() }
         .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active { viewModel.invalidateRequiredNDGuidance() }
             guard newPhase == .active else {
                 return
             }
@@ -549,6 +551,7 @@ struct ExposureCalculatorScreen: View {
             )
         }
         .onChange(of: isMainSurfaceCovered) { wasCovered, isCovered in
+            if isCovered { viewModel.invalidateRequiredNDGuidance() }
             if FilmClassificationBadgeVisibility.isMainReturn(
                 wasCovered: wasCovered,
                 isCovered: isCovered
@@ -913,6 +916,8 @@ private struct CameraSlotCalculatorPage: View {
                 onShowAbout: pageState.isActive ? onShowAbout : {},
                 onShowFilterManagement: pageState.isActive ? onShowFilterManagement : {},
                 onShowCameraManagement: pageState.isActive ? onShowCameraManagement : {},
+                showRequiredND: viewModel.showRequiredND,
+                onSetShowRequiredND: { viewModel.showRequiredND = $0 },
                 style: style
             )
             // Header carries required visible content (camera title
@@ -971,17 +976,21 @@ private struct CameraSlotCalculatorPage: View {
                 formatShutter: viewModel.formatShutterStepLabel,
                 ndNotationMode: viewModel.ndNotationMode,
                 onSelectNotationMode: { viewModel.ndNotationMode = $0 },
+                onBaseShutterInteractionBegin: {
+                    guard pageState.isActive else { return }
+                    viewModel.beginBaseShutterInteraction()
+                },
                 onContinuousBaseShutterChange: { value in
                     guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.updateLiveBaseShutter(value)
-                    }
+                    viewModel.updateLiveBaseShutter(value)
+                },
+                onBaseShutterInteractionRelease: {
+                    guard pageState.isActive else { return }
+                    viewModel.releaseBaseShutterInteraction()
                 },
                 onBaseShutterInteractionEnd: {
                     guard pageState.isActive else { return }
-                    Task { @MainActor in
-                        viewModel.clearLiveBaseShutterPreview()
-                    }
+                    viewModel.finishBaseShutterInteraction()
                 },
                 // Owned-picker measurements (PTIMER-199 v2): no gate,
                 // no animation scope here — the ViewModel's state
@@ -1043,6 +1052,14 @@ private struct CameraSlotCalculatorPage: View {
                         effectiveStep: pageState.ndStep,
                         wheelCount: 1
                     ),
+                requiredNDGuidance: pageState.isActive ? viewModel.requiredNDGuidanceDisplayState : nil,
+                requiredNDPhase: pageState.isActive ? viewModel.requiredNDGuidancePhase : .ordinary,
+                requiredNDGeneration: viewModel.requiredNDGuidanceGeneration,
+                onRequiredNDTransitionComplete: { phase, token in
+                    guard pageState.isActive else { return }
+                    viewModel.completeRequiredNDTransition(phase, token: token)
+                },
+                onFilterStatusInteraction: viewModel.invalidateRequiredNDGuidance,
                 style: style
             )
         } results: {
@@ -1157,6 +1174,8 @@ private struct HeaderView: View {
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
     let onShowCameraManagement: () -> Void
+    let showRequiredND: Bool
+    let onSetShowRequiredND: (Bool) -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
     /// Gates the destructive reset behind an explicit confirmation so a
@@ -1210,6 +1229,13 @@ private struct HeaderView: View {
                 // and About. Camera-specific Shooting Filters stays on the
                 // wheel header, Plus, and the summary.
                 Menu {
+                    Section {
+                        Toggle("Show required ND", isOn: Binding(get: { showRequiredND }, set: onSetShowRequiredND))
+                            .accessibilityHint("Show total attenuation needed while adjusting Base.")
+                            .accessibilityIdentifier("settings-required-nd")
+                    } header: {
+                        Text("Show total attenuation needed while adjusting Base.")
+                    }
                     Button("Cameras", systemImage: "camera", action: onShowCameraManagement)
                         .accessibilityIdentifier("settings-camera-management")
                     Button("Filter management", systemImage: "camera.filters", action: onShowFilterManagement)

@@ -55,6 +55,7 @@ struct NDWheelPickerView<Row: Hashable, RowContent: View>: UIViewRepresentable {
     let onTouchBegan: (Int) -> Void
     let onTouchEnded: () -> Void
     let onOverscrollReleased: (Int) -> Void
+    var onSettled: (Row, Int) -> Void = { _, _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(view: self)
@@ -271,6 +272,7 @@ struct NDWheelPickerView<Row: Hashable, RowContent: View>: UIViewRepresentable {
                 // Deceleration has ended on a row; the poll has nothing
                 // left to observe until the next touch.
                 stopPolling()
+                view.onSettled(view.steps[row], view.generation)
             }
             view.onSelected(view.steps[row], view.generation)
         }
@@ -298,8 +300,11 @@ struct NDWheelPickerView<Row: Hashable, RowContent: View>: UIViewRepresentable {
             // half a second at rest on the selected row ends the poll.
             if !isTouchActive, row == picker.selectedRow(inComponent: 0) {
                 settledTicks += 1
-                if settledTicks >= settledTicksBeforePause {
+                if settledTicks >= settledTicksBeforePause, isPolling {
                     stopPolling()
+                    if view.steps.indices.contains(row) {
+                        view.onSettled(view.steps[row], view.generation)
+                    }
                 }
             } else {
                 settledTicks = 0

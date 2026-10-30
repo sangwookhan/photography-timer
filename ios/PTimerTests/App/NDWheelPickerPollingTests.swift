@@ -13,7 +13,7 @@ import XCTest
 final class NDWheelPickerPollingTests: XCTestCase {
     private typealias Picker = NDWheelPickerView<Int, Text>
 
-    private func makeCoordinator() -> (Picker.Coordinator, UIPickerView) {
+    private func makeCoordinator(onSettled: @escaping (Int, Int) -> Void = { _, _ in }) -> (Picker.Coordinator, UIPickerView) {
         let view = Picker(
             steps: [0, 1, 2],
             selectedStep: 0,
@@ -28,7 +28,8 @@ final class NDWheelPickerPollingTests: XCTestCase {
             onSelected: { _, _ in },
             onTouchBegan: { _ in },
             onTouchEnded: {},
-            onOverscrollReleased: { _ in }
+            onOverscrollReleased: { _ in },
+            onSettled: onSettled
         )
         let coordinator = view.makeCoordinator()
         let picker = UIPickerView(frame: CGRect(x: 0, y: 0, width: 80, height: 160))
@@ -74,4 +75,27 @@ final class NDWheelPickerPollingTests: XCTestCase {
             XCTAssertFalse(coordinator.isPolling, "Half a second at rest on the selected row ends the poll.")
         }
     }
+    func testSettlementIsNotEmittedDuringTouchAndReleaseAloneDoesNotCommit() {
+        var settled: [Int] = []
+        let (coordinator, picker) = makeCoordinator { row, _ in settled.append(row) }
+        coordinator.setTouchActiveForTesting(true)
+        coordinator.pickerView(picker, didSelectRow: 1, inComponent: 0)
+        XCTAssertTrue(settled.isEmpty)
+        coordinator.setTouchActiveForTesting(false)
+        XCTAssertTrue(settled.isEmpty, "Touch release does not commit Base")
+        coordinator.pickerView(picker, didSelectRow: 2, inComponent: 0)
+        XCTAssertEqual(settled, [2])
+    }
+
+    func testNoChangeGestureSettlesExactlyOnceAfterQuietPolls() {
+        var settled: [Int] = []
+        let (coordinator, picker) = makeCoordinator { row, _ in settled.append(row) }
+        withExtendedLifetime(picker) {
+            coordinator.setTouchActiveForTesting(true)
+            coordinator.setTouchActiveForTesting(false)
+            for _ in 0..<30 { coordinator.handleTick() }
+            XCTAssertEqual(settled, [0])
+        }
+    }
+
 }

@@ -43,6 +43,7 @@ extension ExposureCalculatorViewModel {
     /// wheel interaction is discarded first — the edit came from the
     /// management surface, never mid-gesture.
     func applyFilterInventoryChange(_ inventory: FilterInventory) {
+        invalidateRequiredNDGuidance()
         filterInventory = inventory
         resetNDWheelInteractionState()
         calculatorModel.applyFilterInventory(inventory)

@@ -579,6 +579,13 @@ unchanged under the localization contract.
   touch center. A Standard-only stack retains the existing status behavior in
   `nd-filters.md`.
 
+  Required ND guidance under `target-shutter.md` TARGET-ND-GUIDE temporarily
+  replaces the trailing current Total in this same region during manual Base
+  interaction. Its label, color, warning and unavailable states are governed
+  there, including return to ordinary status. The actual current total remains
+  accessible under `nd-filters.md` ND-A11Y-003; this visual exception does not
+  change the one-row geometry or ordinary filter-interaction behavior.
+
 ### Plus wheel and per-camera source memory
 
 - **FILTER-PLUS-001** — Plus shall remain at the right end while the applicable

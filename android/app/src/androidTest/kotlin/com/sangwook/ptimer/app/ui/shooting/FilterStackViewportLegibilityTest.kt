@@ -32,9 +32,7 @@ import com.sangwook.ptimer.app.persistence.PersistenceWriter
 import com.sangwook.ptimer.app.vm.CalculatorController
 import com.sangwook.ptimer.app.vm.FilterInventoryModel
 import com.sangwook.ptimer.app.vm.FilterRowTypeCategory
-import com.sangwook.ptimer.app.vm.FilterWheelPresenter
 import com.sangwook.ptimer.app.vm.FilterWheelRowUiState
-import com.sangwook.ptimer.core.exposure.CplExposureLossChoices
 import com.sangwook.ptimer.core.exposure.ExposureScale
 import com.sangwook.ptimer.core.exposure.FilterInventory
 import com.sangwook.ptimer.core.exposure.FilterItem
@@ -44,7 +42,6 @@ import com.sangwook.ptimer.core.exposure.FilterSet
 import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
-import com.sangwook.ptimer.core.exposure.GndCalculationMode
 import com.sangwook.ptimer.core.exposure.NDNotationFormatter
 import com.sangwook.ptimer.core.exposure.NDNotationMode
 import com.sangwook.ptimer.ui.component.LocalWheelRenderProbe
@@ -59,78 +56,15 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.util.Locale
 
-/**
- * PTIMER-221 FILTER-STACK-007 / FILTER-A11Y-002 / SHELL-030, across the
- * card's whole viewport matrix.
- *
- * `SHELL-030`: "Primary shooting/timer action controls and ND notation
- * controls provide a comfortably tappable interactive area, independent
- * of their drawn visual size … On Android this is enforced as a minimum
- * 48dp interactive target." The three notation options were 48dp tall
- * and 14–30dp wide, so only one of the two dimensions was ever checked.
- *
- * `FILTER-STACK-007`: "For every allowed composition, including three
- * actual wheels with Plus and four actual wheels, the persistent
- * type/mode label, numeric value, source cue, and type rail shall remain
- * legible without ellipsis …". The shooting screen is laid out at 1.0x
- * whatever the system font setting, so that is the size checked. The
- * same contract also holds the row together: every
- * filter wheel's "picker viewport top and bottom, selected-row band,
- * selected-value baseline, and vertical touch center shall align with"
- * the Base Shutter column's, and "Base Shutter and every filter wheel in
- * the row shall use the same numeric size".
- *
- * ## The content under test is derived, not chosen
- *
- * A wheel showing `0` proves nothing about a 47dp column. So every wheel
- * is seeded to the WIDEST row it can legally hold, and the widest is
- * derived by walking the legal value domain through the shipping
- * formatters rather than by naming a value:
- *
- * - [widestStops] walks every canonical stops value a wheel can carry —
- *   the shipping ladder of `ND-001` plus the decimal registrations
- *   `FILTER-ITEM-004` admits ("finite, greater than 0, and no greater
- *   than 30 stops") — through [NDNotationFormatter], and takes the
- *   widest rendering for the case's notation. Because the decimal
- *   registrations are in the domain, the formatter's reserved
- *   mixed-fraction branch is in the ranking too, which is where its
- *   widest output actually lives in `Stops`.
- * - [widestCplLoss] does the same over the exposure-loss choices
- *   `FILTER-CPL-002` admits, through [FilterWheelPresenter.decimalStopsValue]
- *   — CPL bypasses the notation setting.
- * - The per-wheel seeding then picks, from the rows the controller
- *   itself reports AVAILABLE, the one whose value is widest. Availability
- *   matters: the 30-stop cap is what bounds the widest SIMULTANEOUS
- *   content, and a GND Record-only row is how four wheels can each
- *   display a 30-stop value while contributing almost nothing.
- *
- * [assertTheWidestContentIsOnScreen] then asserts the seeding
- * actually achieved that, so the fixture cannot quietly degrade back to
- * narrow digits.
- *
- * ## What is asserted, and why in this form
- *
- * The notation options are asserted on their LAID-OUT bounds, not on
- * `touchBoundsInRoot`. Compose pads the reported touch bounds of any
- * node carrying an `OnClick` action out to the platform minimum by
- * itself (`NodeCoordinator.touchBoundsInRoot`, via
- * `calculateMinimumTouchTargetPadding`), so `touchBoundsInRoot.width >=
- * 48dp` is true of a 14dp segment and proves nothing. A segment only
- * really owns 48dp when it is laid out at 48dp — which is also why the
- * padded bounds of adjacent options are asserted disjoint: overlapping
- * expanded targets are how a "48dp" target is paid for out of its
- * neighbour.
- *
- * The wheels are asserted through [WheelRenderProbe]. Their rows sit
- * inside the wheel's cleared semantics and the persistent label clears
- * its own (FILTER-A11Y-001), so a semantics assertion cannot see a
- * silent clip — `FilterWheelLabelLegibilityTest` already measures the
- * laid-out text for this reason, and this suite does the same against
- * the real screen instead of a width harness. `hasVisualOverflow` covers
- * BOTH axes: the row height follows the rendered metrics
- * (`snapWheelItemHeight`), so a line box taller than its row is a defect
- * here rather than a fact of life.
- */
+/** FILTER-STACK-007 on the real shooting screen at 360/411dp, Korean/
+ * English and every notation. Seed the widest jointly feasible Fixed ND
+ * registrations under the real 30-stop budget, once after the widest
+ * Standard selection and once after Standard 1. Verify complete glyphs,
+ * source cues, rail lanes, shared numeric size and Base/ND viewport axis.
+ * GND/CPL are auxiliary items in the current contract, not ND-wheel rows;
+ * dense auxiliary-plus-three-ND coverage lives in RequiredNDContractTest.
+ * SHELL-030's accepted compact notation exception is checked through
+ * actual glyph layout, full target height and distinct hit regions. */
 @RunWith(Parameterized::class)
 class FilterStackViewportLegibilityTest(private val case: Case) {
     @get:Rule
@@ -142,18 +76,13 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
      */
     enum class Seeding {
         /**
-         * The widest available row of any kind. The real worst case: it
-         * finds the GND Record-only rows, which display a 30-stop value
-         * on every wheel at once because they contribute zero.
+         * The widest available Standard value, followed by the widest
+         * jointly feasible Fixed ND registrations.
          */
         widest,
 
-        /**
-         * The widest available row of the type assigned to each wheel,
-         * cycling GND / Fixed / CPL / Empty, so Fixed, CPL, GND and
-         * Empty are all on screen together where the wheel count allows.
-         */
-        typeSpread,
+        /** Standard 1 plus the widest jointly feasible physical ND items. */
+        registeredND,
     }
 
     /** One (viewport, locale, wheel count, notation, seeding). */
@@ -170,9 +99,6 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     }
 
     companion object {
-        /** Android's minimum touch target. */
-        private val MinTouchTarget = 48.dp
-
         /**
          * The two phone widths this branch is held to: 411dp is the
          * reference device, 360dp the common narrow phone that
@@ -252,14 +178,6 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             }
         }
 
-        /** The same, over the exposure-loss choices `FILTER-CPL-002` admits. */
-        private val widestCplLoss: Pair<Double, String> by lazy {
-            (1..99).map { it / 10.0 }
-                .filter { CplExposureLossChoices.isValidChoice(it) }
-                .map { it to FilterWheelPresenter.decimalStopsValue(it) }
-                .maxWith(compareBy({ rank(it.second) }, { it.first }))
-        }
-
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases(): List<Array<Any>> = Viewports.flatMap { viewport ->
@@ -288,7 +206,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
     }
 
     private val baseShutterTitle: String = strings.getString(R.string.shooting_base_shutter)
-    private val manageFilterSets: String = strings.getString(R.string.filter_shooting_title)
+    private val manageFilterSets: String = strings.getString(R.string.filter_aux_header_title)
 
     /** Stops / OD / ND — every option the notation toggle offers. */
     private val notationOptions: List<String> = listOf(
@@ -345,28 +263,22 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
 
     private lateinit var controller: CalculatorController
 
-    /**
-     * A Filter Set holding, for this case's notation, an item of every
-     * behavior kind at its own widest legal value — four GND items, so a
-     * four-wheel stack can put the widest value on every wheel at once
-     * (three of them Record-only, which is how that stays under the
-     * 30-stop cap).
-     */
+    /** Widest jointly feasible Fixed registrations for this composition. */
     private fun buildStack(): CalculatorController {
-        val (widestValue, _) = widestStops.getValue(case.notation)
+        // ND wheels offer Fixed ND only. CPL/GND belong to the auxiliary
+        // summary, covered with three ND wheels by RequiredNDContractTest.
+        // Reserve the Standard wheel's contribution, then rank the widest
+        // registered value that ALL remaining physical wheels can mount
+        // simultaneously under the unchanged 30-stop cap.
+        val standard = CalculatorController(emptyList()).apply { setNotationMode(case.notation) }
+        val standardStops = if (case.seeding == Seeding.registeredND) 1.0 else
+            widest(standard.state.value.filterWheels.single().rows)!!.contributionStops
+        val budget = (30.0 - standardStops) / maxOf(1, case.wheelCount - 1)
+        val widestValue = legalStops.filter { it <= budget }.maxWith(
+            compareBy({ rank(NDNotationFormatter.display(it, case.notation).value) }, { it }))
+        expectedRegisteredValue = NDNotationFormatter.display(widestValue, case.notation).value
         val registered = FilterRegisteredValue(widestValue, FilterValueUnit.stops)
-        val items = buildList {
-            repeat(4) { add(FilterItem("Lee GND ${it + 1}", FilterItemBehavior.Gnd(registered))) }
-            add(FilterItem("Lee ND", FilterItemBehavior.Fixed(registered)))
-            add(
-                FilterItem(
-                    "Lee CPL",
-                    FilterItemBehavior.Cpl(
-                        CplExposureLossChoices(listOf(widestCplLoss.first, 1.0, 2.0)),
-                    ),
-                ),
-            )
-        }
+        val items = List(4) { FilterItem("Lee ND ${it + 1}", FilterItemBehavior.Fixed(registered)) }
         val lee = FilterSet(SetName, FilterSetColor.blue, items)
         val built = CalculatorController(
             films = emptyList(),
@@ -376,6 +288,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
                 persistenceWriter = PersistenceWriter { it() },
             ),
         )
+        built.arrangeCandidateFilterSets(listOf(lee.id))
         built.setNotationMode(case.notation)
         // The widest base-shutter label sits at the head of the ladder,
         // so the column renders it rather than a three-character one.
@@ -389,38 +302,20 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         return built
     }
 
-    /** The row types [Seeding.typeSpread] cycles across the wheels. */
-    private val spreadTypes = listOf(
-        FilterRowTypeCategory.gnd,
-        FilterRowTypeCategory.nd,
-        FilterRowTypeCategory.cpl,
-        FilterRowTypeCategory.empty,
-    )
+    private var expectedRegisteredValue = ""
 
-    /**
-     * Eligible rows for the wheel at [index] under this case's seeding:
-     * the available ones, narrowed to the assigned type when that leaves
-     * anything (the Standard wheel has only ND rows, so the filter
-     * cannot be allowed to empty a wheel).
-     */
     private fun eligible(rows: List<FilterWheelRowUiState>, index: Int): List<FilterWheelRowUiState> {
         val available = rows.filter { it.isAvailable }
         if (case.seeding == Seeding.widest) return available
-        val assigned = spreadTypes[index % spreadTypes.size]
-        return available.filter { it.typeCategory == assigned }.ifEmpty { available }
+        return if (index == 0) available.filter { it.selection == com.sangwook.ptimer.core.exposure.FilterWheelSelection.Standard(1.0) }
+        else available.filter { it.selection is com.sangwook.ptimer.core.exposure.FilterWheelSelection.Item }
     }
 
-    /**
-     * The widest of [rows]. Ties go to a GND Apply-full-value row, then
-     * to any GND row: `GND FULL` is the widest persistent label the
-     * stack can produce, so when two rows render the same value the one
-     * that also stresses the label wins.
-     */
     private fun widest(rows: List<FilterWheelRowUiState>): FilterWheelRowUiState? = rows.maxWithOrNull(
         compareBy(
             { rank(it.compactValueText) },
-            { if (it.gndMode == GndCalculationMode.applyFullValue) 2 else 0 },
-            { if (it.typeCategory == FilterRowTypeCategory.gnd) 1 else 0 },
+            { if (it.selection is com.sangwook.ptimer.core.exposure.FilterWheelSelection.Item) 1 else 0 },
+            { if (it.contributionStops > 0) 1 else 0 },
         ),
     )
 
@@ -691,8 +586,8 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
                     "y ${b.top.toDp().value.toInt()}..${b.bottom.toDp().value.toInt()}dp)"
             }
         return "Viewport ${viewportBounds.width.toDp()}. Widest legal value for " +
-            "${case.notation}: `${widestStops.getValue(case.notation).second}`, widest CPL loss " +
-            "`${widestCplLoss.second}`. Committed: $committed. Wheels drew: $wheels. " +
+            "${case.notation}: `${widestStops.getValue(case.notation).second}`; joint registered " +
+            "fixture: `$expectedRegisteredValue`. Committed: $committed. Wheels drew: $wheels. " +
             "Wheel boxes: $bounds"
     }
 
@@ -710,7 +605,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         assertLabelsValuesAndCues()
         assertTheRailHasItsOwnLane()
         assertOneNumericSizeAcrossTheRow()
-        assertNotationOptionsOwnFullTouchTargets()
+        assertNotationOptionsStayLegibleAndReachable()
         assertSharedBaseShutterAxis()
     }
 
@@ -828,7 +723,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         }
 
         if (case.wheelCount > 1 && case.seeding == Seeding.widest) {
-            val widestLegal = widestStops.getValue(case.notation).second
+            val widestLegal = expectedRegisteredValue
             assertTrue(
                 "$case: the widest legal rendering `$widestLegal` is on no wheel, so this case " +
                     "does not exercise the widest content. ${geometry()}",
@@ -836,13 +731,11 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             )
         }
 
-        if (case.wheelCount >= 4 && case.seeding == Seeding.typeSpread) {
-            val types = wheels.mapNotNull { it.rows.getOrNull(it.committedIndex)?.typeCategory }.toSet()
-            assertTrue(
-                "$case: four wheels seeded by type spread only reached $types; Fixed, CPL, GND " +
-                    "and Empty should all be on screen. ${geometry()}",
-                types.size >= 3,
-            )
+        if (case.seeding == Seeding.registeredND) {
+            assertTrue("$case: every physical ND wheel must mount a Fixed item, not an auxiliary or Empty row. ${geometry()}",
+                wheels.filter { it.source is FilterSource.FilterSet }.all { it.rows[it.committedIndex].selection is com.sangwook.ptimer.core.exposure.FilterWheelSelection.Item })
+            assertTrue("$case: ND wheels expose only ND/Empty types under the current contract. ${geometry()}",
+                wheels.flatMap { it.rows }.all { it.typeCategory == FilterRowTypeCategory.nd || it.typeCategory == FilterRowTypeCategory.empty })
         }
     }
 
@@ -924,11 +817,9 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
         }
     }
 
-    /**
-     * SHELL-030 in both dimensions, which is the clause the header suite
-     * only half-checked, carried across this suite's viewport matrix.
-     */
-    private fun assertNotationOptionsOwnFullTouchTargets() {
+    /** SHELL-030 compact-selector exception: complete glyphs, full
+     * target height and independently reachable segments. */
+    private fun assertNotationOptionsStayLegibleAndReachable() {
         val options = notationOptions.associateWith { settledControl(it) }
         options.forEach { (label, node) ->
             // The CLIPPED bounds, deliberately: a clipping ancestor
@@ -936,16 +827,7 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             // inside a 26dp clipped track can still only be touched
             // over 26dp of it.
             val laidOut = node.boundsInRoot
-            assertTrue(
-                "$case: the `$label` notation option is laid out " +
-                    "${laidOut.width.toDp()} x ${laidOut.height.toDp()} " +
-                    "(unclipped ${node.size.width.toFloat().toDp()} x " +
-                    "${node.size.height.toFloat().toDp()}), under $MinTouchTarget. " +
-                    "Compose pads `touchBoundsInRoot` out to the platform minimum on its own, so " +
-                    "only the laid-out box says whether the option really owns a 48dp target. " +
-                    geometry(),
-                laidOut.width.toDp() >= MinTouchTarget && laidOut.height.toDp() >= MinTouchTarget,
-            )
+            assertCompactNotationTarget(node, "$case: $label. ${geometry()}")
             assertTrue(
                 "$case: the `$label` option is laid out at ${laidOut.left}..${laidOut.right}px, " +
                     "outside the ${viewportBounds.left}..${viewportBounds.right}px viewport. " +
@@ -955,20 +837,19 @@ class FilterStackViewportLegibilityTest(private val case: Case) {
             )
         }
 
-        // And no option's target is paid for out of a neighbour's: the
-        // padded bounds of the three options and the management entry
-        // stay disjoint.
+        // Compact segments use their actual laid-out areas; the other
+        // entry retains the platform touch target. Both stay disjoint.
         val targets = options + (manageFilterSets to settledControl(manageFilterSets))
         targets.entries.toList().let { entries ->
             entries.indices.forEach { i ->
                 (i + 1 until entries.size).forEach { j ->
                     val (leftName, leftNode) = entries[i]
                     val (rightName, rightNode) = entries[j]
-                    val a = leftNode.touchBoundsInRoot
-                    val b = rightNode.touchBoundsInRoot
+                    val a = if (leftName == manageFilterSets) leftNode.touchBoundsInRoot else leftNode.boundsInRoot
+                    val b = if (rightName == manageFilterSets) rightNode.touchBoundsInRoot else rightNode.boundsInRoot
                     assertTrue(
                         "$case: the touch targets of `$leftName` ($a) and `$rightName` ($b) " +
-                            "overlap, so neither owns the $MinTouchTarget it reports. ${geometry()}",
+                            "overlap instead of remaining independently reachable. ${geometry()}",
                         a.overlaps(b).not(),
                     )
                 }

@@ -444,4 +444,16 @@
     <string name="film_black_and_white">흑백</string>
     <string name="film_color">컬러</string>
     <string name="recip_details_film_identity">%1$s %2$s · ISO %3$d</string>
+    <string name="required_nd_setting">필요 ND 표시</string>
+    <string name="required_nd_setting_body">Base 조작 중 필요한 총 감광량을 표시합니다.</string>
+    <string name="required_nd_label">필요 ND</string>
+    <string name="required_nd_stops">%1$s스톱</string>
+    <string name="required_nd_beyond">출처 범위 밖</string>
+    <string name="required_nd_invalid">유효하지 않은 노출</string>
+    <string name="required_nd_no_inverse">정량 역산 불가</string>
+    <string name="required_nd_multiple">역산 결과가 여러 개</string>
+    <string name="required_nd_numerical">계산 불가</string>
+    <string name="required_nd_negative">감광으로 도달할 수 없는 Target</string>
+    <string name="required_nd_beyond_short">출처 밖</string>
+    <string name="required_nd_negative_short">감광 불가</string>
 </resources>

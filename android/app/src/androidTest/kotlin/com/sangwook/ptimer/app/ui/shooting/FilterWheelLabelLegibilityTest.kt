@@ -37,7 +37,6 @@ import com.sangwook.ptimer.core.exposure.FilterSetColor
 import com.sangwook.ptimer.core.exposure.FilterSource
 import com.sangwook.ptimer.core.exposure.FilterValueUnit
 import com.sangwook.ptimer.core.exposure.FilterWheelSelection
-import com.sangwook.ptimer.core.exposure.GndCalculationMode
 import com.sangwook.ptimer.ui.theme.PTimerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -86,11 +85,6 @@ class FilterWheelLabelLegibilityTest {
         val GndLabels = listOf("GND REC", "GND FULL")
     }
 
-    private fun gnd(name: String, stops: Double) = FilterItem(
-        name,
-        FilterItemBehavior.Gnd(FilterRegisteredValue(stops, FilterValueUnit.stops)),
-    )
-
     private fun fixed(name: String, stops: Double) = FilterItem(
         name,
         FilterItemBehavior.Fixed(FilterRegisteredValue(stops, FilterValueUnit.stops)),
@@ -98,11 +92,11 @@ class FilterWheelLabelLegibilityTest {
 
     /**
      * A stack of [wheelCount] actual wheels whose Filter Set wheel sits
-     * on its GND row in Apply full value mode. Four wheels is the cap,
+     * on a registered Fixed ND row (auxiliary kinds are not ND rows). Four wheels is the cap,
      * and hides Plus.
      */
-    private fun stackWithGndFull(wheelCount: Int): CalculatorController {
-        val soft = gnd("Lee soft GND", 3.0)
+    private fun stackWithRegisteredNd(wheelCount: Int): CalculatorController {
+        val soft = fixed("Lee ND", 3.0)
         val lee = FilterSet(
             "Lee holder",
             FilterSetColor.blue,
@@ -116,10 +110,11 @@ class FilterWheelLabelLegibilityTest {
                 persistenceWriter = PersistenceWriter { it() },
             ),
         )
+        controller.arrangeCandidateFilterSets(listOf(lee.id))
         // The stack starts with one Standard wheel.
         repeat(wheelCount - 1) { controller.addFilterWheel(FilterSource.FilterSet(lee.id)) }
         val target = FilterWheelSelection.Item(
-            FilterRowSelection(soft.id, FilterRowChoice.Gnd(GndCalculationMode.applyFullValue)),
+            FilterRowSelection(soft.id, FilterRowChoice.Fixed),
         )
         val wheel = controller.state.value.filterWheels
             .first { candidate -> candidate.rows.any { it.selection == target } }
@@ -152,7 +147,7 @@ class FilterWheelLabelLegibilityTest {
     }
 
     private fun assertColumnsAtLeast(wheelCount: Int, harness: Dp) {
-        val controller = stackWithGndFull(wheelCount)
+        val controller = stackWithRegisteredNd(wheelCount)
         composeTestRule.setContent {
             val state by controller.state.collectAsState()
             PTimerTheme { ShootingScreenHarness(state) }

@@ -63,6 +63,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -141,6 +142,11 @@ import com.sangwook.ptimer.ui.component.SnapWheel
 fun ShootingScreen(
     state: CalculatorUiState,
     onShutterIndex: (Int) -> Unit,
+    onBaseInteractionBegin: () -> Unit = {},
+    onBaseSettled: (Int) -> Unit = {},
+    onRequiredNDComplete: (Int) -> Unit = {},
+    onInvalidateRequiredND: () -> Unit = {},
+    onShowRequiredND: (Boolean) -> Unit = {},
     // Mixed Filter Stack (PTIMER-199 / PTIMER-221): per-wheel activity and
     // selection, the Plus addition for a chosen source, the assistive row
     // scan, and the overscroll removal — all keyed by wheel identity.
@@ -226,7 +232,10 @@ fun ShootingScreen(
         || showTarget || showEditor || showResetConfirm || managementOrigin != null || isUtilityPageShowing
     var wasShootingSurfaceCovered by remember { mutableStateOf(false) }
     var shootingSurfaceReturnToken by remember { mutableStateOf(0) }
+    DisposableEffect(Unit) { onDispose { onInvalidateRequiredND() } }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { onInvalidateRequiredND() }
     LaunchedEffect(isShootingSurfaceCovered) {
+        if (isShootingSurfaceCovered) onInvalidateRequiredND()
         if (FilmClassificationBadgeVisibility.isMainReturn(wasShootingSurfaceCovered, isShootingSurfaceCovered)) {
             shootingSurfaceReturnToken++
         }
@@ -307,6 +316,9 @@ fun ShootingScreen(
                     }
                     SettingsMenuButton(
                         canManageCameras = cameraActions.isEditable,
+                        showRequiredND = state.showRequiredND,
+                        onShowRequiredND = onShowRequiredND,
+                        onOpening = onInvalidateRequiredND,
                         onManageCameras = { openManagement(CameraManagementOrigin.Settings) },
                         onOpenFilterManagement = onOpenFilterManagement,
                         onOpenAbout = onOpenAbout,
@@ -453,6 +465,9 @@ fun ShootingScreen(
                             }
                             SettingsMenuButton(
                                 canManageCameras = cameraActions.isEditable,
+                        showRequiredND = state.showRequiredND,
+                        onShowRequiredND = onShowRequiredND,
+                        onOpening = onInvalidateRequiredND,
                                 onManageCameras = { openManagement(CameraManagementOrigin.Settings) },
                                 onOpenFilterManagement = onOpenFilterManagement,
                                 onOpenAbout = onOpenAbout,
@@ -561,6 +576,8 @@ fun ShootingScreen(
                         // the filter sub-column; the wheels come back
                         // through the slot to sit beside Base Shutter.
                         FilterStackGroup(
+                            onRequiredNDComplete = onRequiredNDComplete,
+                            onInvalidateRequiredND = onInvalidateRequiredND,
                             state = pageState,
                             onWheelActive = if (writesActiveSlot) onNdWheelActive else { _, _ -> },
                             onWheelValue = if (writesActiveSlot) onNdWheelValue else { _, _ -> },
@@ -616,6 +633,18 @@ fun ShootingScreen(
                                                 pageState.shutterLabels,
                                                 pageState.shutterIndex,
                                                 onShutterForPage,
+                                                onActiveChange = {},
+                                                onTouchBegan = { if (writesActiveSlot) onBaseInteractionBegin() },
+                                                onSettledSelection = { if (writesActiveSlot) onBaseSettled(it) },
+                                                onAccessibilityAdjust = { forward ->
+                                                    val next = pageState.shutterIndex + if (forward) 1 else -1
+                                                    if (writesActiveSlot && next in pageState.shutterLabels.indices) {
+                                                        onBaseInteractionBegin()
+                                                        onShutterForPage(next)
+                                                        onBaseSettled(next)
+                                                        true
+                                                    } else false
+                                                },
                                                 visibleCount = 3,
                                                 // The filter wheels' own minimum, not a
                                                 // second literal that has to agree with it
@@ -836,13 +865,16 @@ internal fun mainLabelStyle(): androidx.compose.ui.text.TextStyle =
 @Composable
 private fun SettingsMenuButton(
     canManageCameras: Boolean,
+    showRequiredND: Boolean,
+    onShowRequiredND: (Boolean) -> Unit,
+    onOpening: () -> Unit,
     onManageCameras: () -> Unit,
     onOpenFilterManagement: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { expanded = true }, modifier = Modifier.testTag("shooting-settings-menu")) {
+        IconButton(onClick = { onOpening(); expanded = true }, modifier = Modifier.testTag("shooting-settings-menu")) {
             Icon(
                 Icons.Outlined.Settings,
                 contentDescription = stringResource(R.string.shooting_settings_cd),
@@ -850,6 +882,17 @@ private fun SettingsMenuButton(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = {
+                    Column {
+                        Text(stringResource(R.string.required_nd_setting))
+                        Text(stringResource(R.string.required_nd_setting_body), style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                trailingIcon = { androidx.compose.material3.Checkbox(checked = showRequiredND, onCheckedChange = null) },
+                onClick = { onShowRequiredND(!showRequiredND) },
+                modifier = Modifier.testTag("show-required-nd-setting"),
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_manage_cameras)) },
                 onClick = {
@@ -1139,8 +1182,11 @@ private fun NdFilterHeaderRow(
         val height = constraints.maxHeight
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val button = measurables[1].measure(loose)
+        val captionInset = (MainLabelInset - NdCardHorizontalPadding).roundToPx()
+        // The caption is placed inside this inset; reserve it before sharing
+        // remaining width so the visible caption-to-button gap stays 12dp.
         val fixed = button.width + NdHeaderButtonNotationGap.roundToPx() +
-            NdHeaderCaptionGroupGap.roundToPx()
+            NdHeaderCaptionGroupGap.roundToPx() + captionInset
         val notationWidth = (width - fixed - captionNatural)
             .coerceAtMost(MinTouchTargetSize.roundToPx() * NotationOptionModes.size)
             .coerceAtLeast(0)
@@ -1151,7 +1197,7 @@ private fun NdFilterHeaderRow(
         layout(width, height) {
             val notationX = width - notationWidth
             val buttonX = notationX - NdHeaderButtonNotationGap.roundToPx() - button.width
-            caption.placeRelative(MainLabelInset.roundToPx() - NdCardHorizontalPadding.roundToPx(), (height - caption.height) / 2)
+            caption.placeRelative(captionInset, (height - caption.height) / 2)
             button.placeRelative(buttonX, (height - button.height) / 2)
             notation.placeRelative(notationX, 0)
         }
@@ -1219,8 +1265,8 @@ private fun ShootingFiltersHeaderButton(enabled: Boolean, onClick: () -> Unit) {
  *
  * The three options divide the track evenly rather than taking their
  * label widths, so the widest and the narrowest option get the same
- * target, never less than 48 x 48dp (SHELL-030); on the one header row
- * [NdFilterHeaderRow] gives it at 360dp that is 48dp each. Each option is
+ * target. SHELL-030 preserves the approved compact Main selector's
+ * sub-48dp widths; this does not claim a 48dp-wide segment. Each option is
  * laid out 48dp tall independently of the track it is drawn in — the
  * spec asks for interactive area, not for paint.
  */
@@ -1257,8 +1303,8 @@ internal fun NotationToggle(
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
             )
             // The three options are contiguous: no side inset and no gap
-            // between them, so each keeps a full 48dp at 360dp (owner
-            // decision on #67).
+            // between them, preserving the compact width handed down by
+            // the Main header while keeping the full interactive height.
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,

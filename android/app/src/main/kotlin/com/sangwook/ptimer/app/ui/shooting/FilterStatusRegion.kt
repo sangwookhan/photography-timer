@@ -3,8 +3,18 @@
 
 package com.sangwook.ptimer.app.ui.shooting
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.testTag
+import com.sangwook.ptimer.app.vm.RequiredNDGuidanceState
+import com.sangwook.ptimer.core.exposure.RequiredNDResult
+import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -132,16 +142,26 @@ internal fun FilterStatusRegion(
      *  ND value size of the same layout (FILTER-STACK-008). */
     totalValueText: String? = null,
     totalValueStyle: TextStyle = MaterialTheme.typography.labelSmall,
+    requiredND: RequiredNDGuidanceState = RequiredNDGuidanceState(),
+    onRequiredNDComplete: (Int) -> Unit = {},
+    actualTotal: String = "",
+    guidanceSourceSummary: List<FilterSourceSummaryItem>? = null,
 ) {
     var visible by remember { mutableStateOf(content) }
     var lastWheelCount by remember { mutableIntStateOf(wheelCount) }
 
-    LaunchedEffect(content, wheelCount) {
+    LaunchedEffect(content, wheelCount, requiredND.phase) {
         val added = wheelCount > lastWheelCount
         lastWheelCount = wheelCount
         val current = visible
         if (content == null) {
             visible = null
+            return@LaunchedEffect
+        }
+        // Keep current ordinary content mounted while guidance owns the
+        // row; restart the existing lifetime when the crossfade completes.
+        if (requiredND.phase != RequiredNDGuidanceState.Phase.Ordinary) {
+            visible = content
             return@LaunchedEffect
         }
         // Settlement after movement or browsing: keep the expanded detail
@@ -160,42 +180,121 @@ internal fun FilterStatusRegion(
         }
     }
 
-    val shown = visible
-    Box(modifier = modifier.fillMaxWidth().height(filterStatusRegionHeight(totalValueStyle))) {
-        if (shown == null) return@Box
-        val leading = leadingContent(shown.leading, notationMode)
-        Row(
-            modifier = Modifier.fillMaxWidth().align(Alignment.Center),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (leading != null) {
-                Text(
-                    text = leading.annotated,
-                    inlineContent = leading.inlineContent,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = when {
-                        shown.isWarning -> MaterialTheme.colorScheme.error
-                        shown.isSecondaryEmphasis -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .weight(1f)
-                        .semantics { contentDescription = leading.plainText },
-                )
-                Spacer(Modifier.width(6.dp))
-            } else {
-                Spacer(Modifier.weight(1f))
+    val shown = if (requiredND.result != null) content else visible
+    val progress = remember(requiredND.generation) { Animatable(if (requiredND.phase == RequiredNDGuidanceState.Phase.Ordinary) 1f else 0f) }
+    LaunchedEffect(requiredND.phase, requiredND.generation) {
+        when (requiredND.phase) {
+            RequiredNDGuidanceState.Phase.Ordinary -> progress.snapTo(1f)
+            RequiredNDGuidanceState.Phase.Tracking -> progress.snapTo(0f)
+            RequiredNDGuidanceState.Phase.Crossfading -> {
+                progress.animateTo(1f, tween(500, easing = LinearEasing))
+                onRequiredNDComplete(requiredND.generation)
             }
-            Text(
-                text = prominentTotal(shown.total, totalValueText, totalValueStyle),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                softWrap = false,
-            )
         }
+    }
+    Box(modifier = modifier.fillMaxWidth().height(filterStatusRegionHeight(totalValueStyle))) {
+        if (requiredND.result != null) {
+            RequiredNDRow(requiredND.result, guidanceSourceSummary, actualTotal, notationMode, totalValueStyle,
+                Modifier.fillMaxWidth().align(Alignment.Center).alpha(1f - progress.value))
+        }
+        if (shown != null) {
+            val leading = leadingContent(shown.leading, notationMode)
+            Row(
+                modifier = Modifier.fillMaxWidth().align(Alignment.Center).alpha(progress.value)
+                    .then(if (requiredND.result != null) Modifier.clearAndSetSemantics {} else Modifier),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (leading != null) {
+                    Text(
+                        text = leading.annotated,
+                        inlineContent = leading.inlineContent,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when {
+                            shown.isWarning -> MaterialTheme.colorScheme.error
+                            shown.isSecondaryEmphasis -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = leading.plainText },
+                    )
+                    Spacer(Modifier.width(6.dp))
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Text(
+                    text = prominentTotal(shown.total, totalValueText, totalValueStyle),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+        }
+        }
+}
+
+@Composable
+private fun RequiredNDRow(
+    result: RequiredNDResult,
+    sourceSummary: List<FilterSourceSummaryItem>?,
+    actualTotal: String,
+    notationMode: NDNotationMode,
+    valueStyle: TextStyle,
+    modifier: Modifier,
+) {
+    val reason = when (result) {
+        is RequiredNDResult.Value -> if (result.beyondSourceRange) stringResource(R.string.required_nd_beyond) else null
+        is RequiredNDResult.Unavailable -> stringResource(when (result.reason) {
+            RequiredNDResult.Reason.InvalidInput -> R.string.required_nd_invalid
+            RequiredNDResult.Reason.NoQuantifiedInverse -> R.string.required_nd_no_inverse
+            RequiredNDResult.Reason.MultipleSolutions -> R.string.required_nd_multiple
+            RequiredNDResult.Reason.NumericalFailure -> R.string.required_nd_numerical
+            RequiredNDResult.Reason.NegativeAttenuation -> R.string.required_nd_negative
+        })
+    }
+    val value = if (result is RequiredNDResult.Value) {
+        String.format(Locale.ROOT, "%.1f", result.stops).removeSuffix(".0")
+    } else "—"
+    val label = stringResource(R.string.required_nd_label)
+    val valueText = if (result is RequiredNDResult.Value) stringResource(R.string.required_nd_stops, value) else value
+    val spoken = listOfNotNull(reason, "$label $valueText", actualTotal).joinToString(". ")
+    val source = if (reason == null) sourceSummary?.let {
+        leadingContent(FilterStatusLeading.IdleSummary(it), notationMode)
+    } else null
+    val compactReason = when (result) {
+        is RequiredNDResult.Value -> if (result.beyondSourceRange) stringResource(R.string.required_nd_beyond_short) else null
+        is RequiredNDResult.Unavailable -> when (result.reason) {
+            RequiredNDResult.Reason.NegativeAttenuation -> stringResource(R.string.required_nd_negative_short)
+            else -> reason
+        }
+    }
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val reasonStyle = MaterialTheme.typography.labelSmall
+    val warning = reason != null
+    val color = if (warning) Color(0xFFB35A00) else Color(0xFF0085FF)
+    Row(modifier.clearAndSetSemantics { contentDescription = spoken }
+        .testTag("required-nd-guidance"), verticalAlignment = Alignment.CenterVertically) {
+        if (reason != null) {
+            BoxWithConstraints(Modifier.weight(1f)) {
+                val fits = measurer.measure(reason, reasonStyle, maxLines = 1, softWrap = false).size.width <= with(density) { maxWidth.toPx() }
+                Text(if (fits) reason else compactReason ?: reason, style = reasonStyle, color = color,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        } else if (source != null) {
+            Text(source.annotated, inlineContent = source.inlineContent, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        } else Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(10.dp))
+        Text(buildAnnotatedString {
+            append("$label ")
+            withStyle(SpanStyle(fontSize = valueStyle.fontSize, fontWeight = FontWeight.SemiBold)) { append(value) }
+            if (result is RequiredNDResult.Value) append(valueText.removePrefix(value))
+        }, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
     }
 }
 

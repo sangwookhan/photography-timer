@@ -144,6 +144,8 @@ internal fun FilterStackGroup(
     onOverscrollRemove: (Int) -> Unit,
     onOpenShootingFilters: () -> Unit,
     modifier: Modifier = Modifier,
+    onRequiredNDComplete: (Int) -> Unit = {},
+    onInvalidateRequiredND: () -> Unit = {},
     wheelRow: @Composable (wheels: @Composable () -> Unit) -> Unit = { it() },
 ) {
     val wheels = state.filterWheels
@@ -231,7 +233,7 @@ internal fun FilterStackGroup(
                                     onAdd = onAddFilterWheel,
                                     onOpenAuxiliaryFilters = onOpenShootingFilters,
                                     browsing = browsing,
-                                    onBrowsingChanged = { browsing = it },
+                                    onBrowsingChanged = { onInvalidateRequiredND(); browsing = it },
                                 )
                             }
                         }
@@ -241,6 +243,10 @@ internal fun FilterStackGroup(
         }
 
         FilterStatusRegion(
+            requiredND = state.requiredND,
+            onRequiredNDComplete = onRequiredNDComplete,
+            actualTotal = totalText,
+            guidanceSourceSummary = state.filterStatus.idleSourceSummary,
             content = FilterStatusRegionPresenter.content(
                 moving = state.movingFilterWheel?.let { wheel ->
                     wheel.rows.getOrNull(wheel.selectedIndex)?.let { row ->

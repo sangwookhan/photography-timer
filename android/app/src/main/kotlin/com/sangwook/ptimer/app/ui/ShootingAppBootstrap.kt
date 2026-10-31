@@ -57,6 +57,7 @@ class ShootingAppBootstrap(
     val inventoryStore: DataStoreFilterInventoryStore,
     val displaySettingsStore: DataStoreDisplaySettingsStore,
     val initialNdNotationMode: NDNotationMode,
+    val initialShowRequiredND: Boolean = true,
     val initialExactAlarmWarningDismissed: Boolean,
 ) {
     companion object {
@@ -97,6 +98,7 @@ class ShootingAppBootstrap(
                     inventoryStore = inventoryStore,
                     displaySettingsStore = displaySettingsStore,
                     initialNdNotationMode = displaySettingsStore.loadNdNotationMode(),
+                    initialShowRequiredND = displaySettingsStore.loadShowRequiredND(),
                     initialExactAlarmWarningDismissed = displaySettingsStore.loadExactAlarmWarningDismissed(),
                 )
             }

@@ -236,6 +236,7 @@ class FilterStatusRegionLayoutTest {
                 persistenceWriter = PersistenceWriter { it() },
             ),
         )
+        controller.arrangeCandidateFilterSets(listOf(lee.id))
         controller.addFilterWheel(FilterSource.FilterSet(lee.id))
         return controller.state.value
     }

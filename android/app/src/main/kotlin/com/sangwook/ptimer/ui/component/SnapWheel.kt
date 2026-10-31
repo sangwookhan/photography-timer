@@ -4,6 +4,8 @@
 package com.sangwook.ptimer.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -28,6 +30,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +49,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -122,6 +128,9 @@ private object WheelNestedScrollFence : NestedScrollConnection {
 internal interface WheelRenderProbe {
     /** One numeric row of the wheel named [wheel], as it was laid out. */
     fun onRow(wheel: String, index: Int, isCenter: Boolean, hasRail: Boolean, layout: TextLayoutResult)
+
+    /** Rendered row center, including fractional movement during a spin. */
+    fun onRowPosition(wheel: String, index: Int, centerY: Float) {}
 
     /** The persistent type/mode label above [wheel]'s viewport. */
     fun onLabel(wheel: String, hasSourceCue: Boolean, layout: TextLayoutResult)
@@ -212,6 +221,9 @@ fun SnapWheel(
     /** Reports true while the wheel is under a finger or scrolling,
      *  false at quiescence — the stack's set-commit signal. */
     onActiveChange: ((Boolean) -> Unit)? = null,
+    onTouchBegan: (() -> Unit)? = null,
+    /** Once per touch, after the complete fling/snap and stable central alignment. */
+    onSettledSelection: ((Int) -> Unit)? = null,
     /** Overscroll-past-zero removal (§4.2.3): pulling the wheel down
      *  past its top (0-stop) end by at least one item height and
      *  releasing invokes [onOverscrollRemoval]. */
@@ -244,7 +256,21 @@ fun SnapWheel(
     val rowHeight = snapWheelItemHeight(itemHeight)
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    var flingInProgress by remember { mutableStateOf(false) }
+    val trackedFlingBehavior = remember(snapFlingBehavior) {
+        object : FlingBehavior {
+            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                flingInProgress = true
+                return try {
+                    with(snapFlingBehavior) { performFling(initialVelocity) }
+                } finally {
+                    flingInProgress = false
+                }
+            }
+        }
+    }
+    val flingBehavior = if (onSettledSelection != null) trackedFlingBehavior else snapFlingBehavior
 
     // Index of the item whose center is nearest the viewport center. Reading
     // layoutInfo here makes this recompute every frame while the list is
@@ -279,17 +305,46 @@ fun SnapWheel(
     // scroll — still counts as active and keeps the caller's set commit
     // open until the finger lifts.
     var pressed by remember { mutableStateOf(false) }
+    var touchGeneration by remember { mutableIntStateOf(0) }
     val currentOnActiveChange by rememberUpdatedState(onActiveChange)
+    val currentOnTouchBegan by rememberUpdatedState(onTouchBegan)
+    val currentOnSettledSelection by rememberUpdatedState(onSettledSelection)
     if (onActiveChange != null) {
         LaunchedEffect(listState) {
             snapshotFlow { pressed || listState.isScrollInProgress }
                 .distinctUntilChanged()
-                .collect { currentOnActiveChange?.invoke(it) }
+                .collect { active ->
+                    currentOnActiveChange?.invoke(active)
+                }
         }
         // A wheel can leave composition mid-interaction (slot switch,
         // removal): never leave the caller thinking it is still active.
         DisposableEffect(Unit) {
             onDispose { currentOnActiveChange?.invoke(false) }
+        }
+    }
+
+    if (onSettledSelection != null) {
+        LaunchedEffect(listState, touchGeneration) {
+            if (touchGeneration == 0) return@LaunchedEffect
+            val gate = SnapWheelSettlementGate()
+            while (true) {
+                withFrameNanos { }
+                val info = listState.layoutInfo
+                val row = centeredIndex
+                val item = info.visibleItemsInfo.firstOrNull { it.index == row }
+                val distance = item?.let {
+                    it.offset + it.size / 2f - (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                } ?: Float.POSITIVE_INFINITY
+                val settled = gate.observe(SnapWheelSettlementFrame(
+                    pressed, listState.isScrollInProgress, flingInProgress, row,
+                    listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset, distance,
+                ))
+                if (settled != null) {
+                    currentOnSettledSelection?.invoke(settled)
+                    break
+                }
+            }
         }
     }
 
@@ -448,6 +503,8 @@ fun SnapWheel(
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 pressed = true
+                if (currentOnSettledSelection != null) touchGeneration++
+                currentOnTouchBegan?.invoke()
                 try {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Final)
@@ -493,7 +550,12 @@ fun SnapWheel(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(rowHeight),
+                        .height(rowHeight)
+                        .then(if (renderProbe != null && accessibilityLabel != null) {
+                            Modifier.onGloballyPositioned { coordinates ->
+                                renderProbe.onRowPosition(accessibilityLabel, index, coordinates.boundsInRoot().center.y)
+                            }
+                        } else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     // Type-color rail inside the row's own bounds

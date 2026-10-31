@@ -270,6 +270,10 @@ fun ShootingApp(
     val ndNotationMode by notationModeFlow.collectAsStateWithLifecycle(initialValue = initialNotationMode)
     LaunchedEffect(ndNotationMode) { controller.setNotationMode(ndNotationMode) }
 
+    val requiredNDPreference = remember { displaySettingsStore.showRequiredNDFlow() }
+    val showRequiredND by requiredNDPreference.collectAsStateWithLifecycle(initialValue = bootstrap.initialShowRequiredND)
+    LaunchedEffect(showRequiredND) { controller.setShowRequiredND(showRequiredND) }
+
     // Persisted exact-alarm warning acknowledgment (PTIMER-219): once the user
     // dismisses the banner, it stops reappearing on every active timer. The
     // underlying info stays reachable via a small icon instead.
@@ -357,6 +361,7 @@ fun ShootingApp(
     val isMainSurfaceCovered = details != null || showAbout || showFilterManagement
         || showShootingFilters || editedFilterSetId != null || showExactAlarmInfo || expanded
     LaunchedEffect(isMainSurfaceCovered) {
+        if (isMainSurfaceCovered) controller.invalidateRequiredND()
         if (FilmClassificationBadgeVisibility.isMainReturn(wasMainSurfaceCovered, isMainSurfaceCovered)) {
             mainReturnBadgeToken++
         }
@@ -565,12 +570,20 @@ fun ShootingApp(
                     },
                     state = calcState,
                     onShutterIndex = controller::setShutterIndex,
+                    onBaseInteractionBegin = controller::beginBaseInteraction,
+                    onBaseSettled = controller::finishBaseInteraction,
+                    onRequiredNDComplete = controller::completeRequiredNDCrossfade,
+                    onInvalidateRequiredND = controller::invalidateRequiredND,
+                    onShowRequiredND = { enabled ->
+                        controller.setShowRequiredND(enabled)
+                        scope.launch { displaySettingsStore.setShowRequiredND(enabled) }
+                    },
                     onNdWheelActive = controller::setNdWheelActive,
                     onNdWheelValue = controller::setNdWheelValue,
                     onAddFilterWheel = controller::addFilterWheel,
                     onAdjustFilterWheel = controller::adjustFilterWheel,
                     onRemoveNdWheelOverscroll = controller::removeNdWheelFromOverscroll,
-                    onOpenShootingFilters = { showShootingFilters = true },
+                    onOpenShootingFilters = { controller.invalidateRequiredND(); showShootingFilters = true },
                     onSelectNotation = { mode ->
                         controller.setNotationMode(mode)
                         scope.launch { displaySettingsStore.setNdNotationMode(mode) }

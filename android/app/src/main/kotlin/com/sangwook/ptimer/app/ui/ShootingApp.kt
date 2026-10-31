@@ -691,6 +691,9 @@ fun ShootingApp(
                         MiniTimerBar(
                             state = timerState,
                             onOpen = openTimers,
+                            readablePhoneText = fold == null &&
+                                with(density) { windowSize.width.toDp() in 360.dp..<600.dp &&
+                                    windowSize.height.toDp() >= 800.dp },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .windowInsetsPadding(sideInsets)

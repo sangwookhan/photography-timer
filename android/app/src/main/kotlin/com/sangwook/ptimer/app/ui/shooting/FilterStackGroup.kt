@@ -185,7 +185,7 @@ internal fun FilterStackGroup(
                 // left them at the old size and pushed Plus out of the
                 // row until the next wheel gesture (FILTER-PLUS-001).
                 val columnWidth = rememberUpdatedState(wheelWidth)
-                val viewportHeight = snapWheelItemHeight(WheelItemHeight) * WheelVisibleCount
+                val viewportHeight = snapWheelItemHeight(mainWheelItemHeight) * WheelVisibleCount
 
                 LazyRow(
                     userScrollEnabled = false,
@@ -357,7 +357,7 @@ private fun FilterWheelColumn(
             onSelectedIndexChange = onSelectedIndexChange,
             modifier = Modifier.fillMaxWidth(),
             visibleCount = WheelVisibleCount,
-            itemHeight = WheelItemHeight,
+            itemHeight = mainWheelItemHeight,
             accessibilityLabel = wheelDescription,
             dense = dense,
             onActiveChange = onActiveChange,

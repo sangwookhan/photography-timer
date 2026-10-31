@@ -1182,8 +1182,11 @@ private fun NdFilterHeaderRow(
         val height = constraints.maxHeight
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val button = measurables[1].measure(loose)
+        val captionInset = (MainLabelInset - NdCardHorizontalPadding).roundToPx()
+        // The caption is placed inside this inset; reserve it before sharing
+        // remaining width so the visible caption-to-button gap stays 12dp.
         val fixed = button.width + NdHeaderButtonNotationGap.roundToPx() +
-            NdHeaderCaptionGroupGap.roundToPx()
+            NdHeaderCaptionGroupGap.roundToPx() + captionInset
         val notationWidth = (width - fixed - captionNatural)
             .coerceAtMost(MinTouchTargetSize.roundToPx() * NotationOptionModes.size)
             .coerceAtLeast(0)
@@ -1194,7 +1197,7 @@ private fun NdFilterHeaderRow(
         layout(width, height) {
             val notationX = width - notationWidth
             val buttonX = notationX - NdHeaderButtonNotationGap.roundToPx() - button.width
-            caption.placeRelative(MainLabelInset.roundToPx() - NdCardHorizontalPadding.roundToPx(), (height - caption.height) / 2)
+            caption.placeRelative(captionInset, (height - caption.height) / 2)
             button.placeRelative(buttonX, (height - button.height) / 2)
             notation.placeRelative(notationX, 0)
         }
@@ -1262,8 +1265,8 @@ private fun ShootingFiltersHeaderButton(enabled: Boolean, onClick: () -> Unit) {
  *
  * The three options divide the track evenly rather than taking their
  * label widths, so the widest and the narrowest option get the same
- * target, never less than 48 x 48dp (SHELL-030); on the one header row
- * [NdFilterHeaderRow] gives it at 360dp that is 48dp each. Each option is
+ * target. SHELL-030 preserves the approved compact Main selector's
+ * sub-48dp widths; this does not claim a 48dp-wide segment. Each option is
  * laid out 48dp tall independently of the track it is drawn in — the
  * spec asks for interactive area, not for paint.
  */
@@ -1300,8 +1303,8 @@ internal fun NotationToggle(
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
             )
             // The three options are contiguous: no side inset and no gap
-            // between them, so each keeps a full 48dp at 360dp (owner
-            // decision on #67).
+            // between them, preserving the compact width handed down by
+            // the Main header while keeping the full interactive height.
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,

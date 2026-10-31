@@ -110,6 +110,8 @@ class FilterStackInteractionTest {
         // The second item keeps the source addable (FILTER-PLUS-005).
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(threeStop, stops("Soft", 1.0)))
         val c = controller(FilterInventory(listOf(lee)))
+        // Filter Sets enter the offered sources only after Shooting Filters selection.
+        c.arrangeCandidateFilterSets(listOf(lee.id))
         commit(c, 0, FilterWheelSelection.Standard(2.0))
         c.addFilterWheel(FilterSource.FilterSet(lee.id))
         val leeWheel = c.state.value.filterWheels.indexOfFirst { it.source is FilterSource.FilterSet }
@@ -196,6 +198,8 @@ class FilterStackInteractionTest {
         val onlyItem = stops("Lee ND 3", 3.0)
         val lee = FilterSet("Lee holder", FilterSetColor.blue, listOf(onlyItem))
         val c = controller(FilterInventory(listOf(lee)))
+        // Filter Sets enter the offered sources only after Shooting Filters selection.
+        c.arrangeCandidateFilterSets(listOf(lee.id))
         // Two Lee wheels first (while the item is still unmounted), then
         // mount the single item on one of them. The other wheel's only
         // non-Empty row is now unavailable: any settle on it is refused.

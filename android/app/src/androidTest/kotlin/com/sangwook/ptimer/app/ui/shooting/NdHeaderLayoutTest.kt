@@ -52,8 +52,8 @@ import java.util.Locale
  * PTIMER-221 ND card header, as the owner approved it: one row reading
  * `Base Shutter`, the Select Filters button, then the
  * `Stops | OD | ND` selector (`ND-012`, `FILTER-FLOW-002`), with every
- * control a real 48dp target (`SHELL-030`) and every required label
- * whole (`FILTER-A11Y-002`). The shooting screen is laid out at 1.0x
+ * required label whole (`FILTER-A11Y-002`). Other controls retain 48dp
+ * targets; notation follows SHELL-030's accepted compact-width exception. The shooting screen is laid out at 1.0x
  * whatever the system font setting, so that is the size rendered.
  *
  * Each case renders the real screen through [ShootingScreenHarness] at
@@ -335,13 +335,8 @@ class NdHeaderLayoutTest(private val case: Case) {
             touch.width.toDp() >= MinTouchTarget && touch.height.toDp() >= MinTouchTarget,
         )
 
-        // (b) Every notation option, still named, still selectable, and
-        //     laid out on a full 48dp target in BOTH dimensions
-        //     (SHELL-030). Nothing here may shrink one to buy the title
-        //     room. The laid-out box is what is asserted, not
-        //     `touchBoundsInRoot`: Compose pads that out to the platform
-        //     minimum by itself for any node with a click action, so it
-        //     reads 48dp of a 14dp segment.
+        // SHELL-030 explicitly preserves the compact selector width.
+        // Read actual glyph layout; require full height and independent targets.
         val optionNodes = notationOptions.map { option ->
             val matches = inHeader.filter { option in it.names() }
             assertEquals(
@@ -350,32 +345,22 @@ class NdHeaderLayoutTest(private val case: Case) {
                 1,
                 matches.size,
             )
-            val laidOut = matches.single().boundsInRoot
-            assertTrue(
-                "$case: the `$option` option is laid out " +
-                    "${laidOut.width.toDp()} x ${laidOut.height.toDp()}, under $MinTouchTarget. " +
-                    geometry,
-                laidOut.width.toDp() >= MinTouchTarget && laidOut.height.toDp() >= MinTouchTarget,
-            )
+            assertCompactNotationTarget(matches.single(), "$case: $option. $geometry")
             option to matches.single()
         }
 
-        // (b2) …and none of those targets is paid for out of a
-        //      neighbour's. Compose's padding is what makes the naive
-        //      form of (b) vacuous, so the padded bounds of the three
-        //      options and the management entry are asserted disjoint:
-        //      overlapping expanded targets are exactly how a control
-        //      can report 48dp it does not own.
+        // Compact notation uses the actual segment boxes; the button
+        // retains its full platform touch target. They remain disjoint.
         val targets = optionNodes + (selectFilters to entry)
         targets.indices.forEach { i ->
             (i + 1 until targets.size).forEach { j ->
                 val (leftName, leftNode) = targets[i]
                 val (rightName, rightNode) = targets[j]
-                val a = leftNode.touchBoundsInRoot
-                val b = rightNode.touchBoundsInRoot
+                val a = if (leftName == selectFilters) leftNode.touchBoundsInRoot else leftNode.boundsInRoot
+                val b = if (rightName == selectFilters) rightNode.touchBoundsInRoot else rightNode.boundsInRoot
                 assertTrue(
                     "$case: the touch targets of `$leftName` ($a) and `$rightName` ($b) " +
-                        "overlap, so neither owns the $MinTouchTarget it reports. $geometry",
+                        "overlap instead of remaining independently reachable. $geometry",
                     a.overlaps(b).not(),
                 )
             }

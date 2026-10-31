@@ -1,6 +1,193 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+  "required-nd-beyond-source-range": {
+    "extractionState": "manual",
+    "localizations": {
+      "en": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Beyond source range"
+        }
+      },
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "출처 범위 밖"
+        }
+      }
+    }
+  },
+  "Out of range": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "범위 밖"
+        }
+      }
+    }
+  },
+  "Target too short": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Target이 너무 짧음"
+        }
+      }
+    }
+  },
+  "No inverse": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "역산 불가"
+        }
+      }
+    }
+  },
+  "Multiple inverses": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "여러 역산 해"
+        }
+      }
+    }
+  },
+  "Invalid input": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "입력 오류"
+        }
+      }
+    }
+  },
+  "Calculation failed": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "계산 실패"
+        }
+      }
+    }
+  },
+  "Required ND": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "필요 ND"
+        }
+      }
+    }
+  },
+  "Required ND %@ stops": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "필요 ND %@스톱"
+        }
+      }
+    }
+  },
+  "Required ND unavailable": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "필요 ND 계산 불가"
+        }
+      }
+    }
+  },
+  "Show required ND": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "필요 ND 표시"
+        }
+      }
+    }
+  },
+  "Show total attenuation needed while adjusting Base.": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "Base를 조작하는 동안 Target에 필요한 총 감광량을 표시합니다."
+        }
+      }
+    }
+  },
+  "Attenuation cannot reach Target": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "감광으로 Target 도달 불가"
+        }
+      }
+    }
+  },
+  "No quantified inverse": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "정량 역산 불가"
+        }
+      }
+    }
+  },
+  "Multiple inverse solutions": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "역산 해가 여러 개임"
+        }
+      }
+    }
+  },
+  "Invalid exposure input": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "유효하지 않은 노출 입력"
+        }
+      }
+    }
+  },
+  "Inverse calculation failed": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "역산 계산 실패"
+        }
+      }
+    }
+  },
+  "Current Total": {
+    "localizations": {
+      "ko": {
+        "stringUnit": {
+          "state": "translated",
+          "value": "현재 합계"
+        }
+      }
+    }
+  },
     "Polarity": {
       "localizations": {
         "ko": {

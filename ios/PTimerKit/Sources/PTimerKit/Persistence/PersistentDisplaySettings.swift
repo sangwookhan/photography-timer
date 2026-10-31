@@ -8,16 +8,20 @@ import PTimerCore
 /// slot or a calculator context. Persisted under its own key so it
 /// stays independent of the per-context calculator snapshot.
 ///
-/// Currently holds only the ND notation mode. The raw value is stored
+/// Holds ND notation and the read-only required-ND preference. The raw value is stored
 /// as an optional string with a `.stops` fallback so an absent field
 /// or an unknown future case decodes to the shipping default rather
 /// than failing.
 public struct PersistentDisplaySettings: Codable, Equatable {
     public let ndNotationModeRaw: String?
+    public let showRequiredND: Bool?
 
-    public init(ndNotationMode: NDNotationMode) {
+    public init(ndNotationMode: NDNotationMode, showRequiredND: Bool = true) {
         self.ndNotationModeRaw = ndNotationMode.rawValue
+        self.showRequiredND = showRequiredND
     }
+
+    public var restoredShowRequiredND: Bool { showRequiredND ?? true }
 
     public var restoredNDNotationMode: NDNotationMode {
         guard let raw = ndNotationModeRaw,

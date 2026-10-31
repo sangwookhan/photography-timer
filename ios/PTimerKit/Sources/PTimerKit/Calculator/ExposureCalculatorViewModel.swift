@@ -104,6 +104,45 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             persistDisplaySettings()
         }
     }
+    @Published public var showRequiredND = true {
+        didSet {
+            guard oldValue != showRequiredND else { return }
+            if !showRequiredND { invalidateRequiredNDGuidance() }
+            persistDisplaySettings()
+        }
+    }
+    private let requiredNDGuidance = RequiredNDGuidanceModel()
+    public var requiredNDGuidanceDisplayState: RequiredNDGuidanceDisplayState? {
+        requiredNDGuidance.result.map(RequiredNDGuidanceDisplayState.init)
+    }
+
+    public var requiredNDGuidancePhase: RequiredNDGuidanceModel.Phase { requiredNDGuidance.phase }
+    public var requiredNDGuidanceGeneration: Int { requiredNDGuidance.generation }
+
+    public func releaseBaseShutterInteraction() {
+        requiredNDGuidance.release()
+    }
+
+    public func completeRequiredNDTransition(_ phase: RequiredNDGuidanceModel.Phase, token: Int) {
+        requiredNDGuidance.complete(phase, token: token)
+    }
+
+    public func beginBaseShutterInteraction() {
+        guard showRequiredND, let target = targetShutterModel.targetSeconds,
+              activeCameraSlotID != nil else { return }
+        let profile = filmSelectionModel.selectedProfileOverride ?? selectedPresetFilm?.profiles.first
+        requiredNDGuidance.begin(base: calculatorModel.effectiveBaseShutter, target: target, profile: profile)
+    }
+
+    public func finishBaseShutterInteraction() {
+        clearLiveBaseShutterPreview()
+        requiredNDGuidance.settle(base: baseShutter)
+    }
+
+    public func invalidateRequiredNDGuidance() {
+        requiredNDGuidance.invalidate()
+    }
+
     @Published public private(set) var timers: [RunningTimerItem] = []
     /// Active camera-slot id mirrored from `cameraSlotSessionModel`.
     /// The slot picker UI binds to this so a slot switch driven by
@@ -334,6 +373,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
         bindFilterInventoryChanges()
+        requiredNDGuidance.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     public init(
@@ -412,6 +454,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         restorePersistedCalculatorContext()
         bindLockScreenCoordinatorToTimerPublisher()
         bindFilterInventoryChanges()
+        requiredNDGuidance.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
     }
 
     /// Every inventory mutation flows through here: the published
@@ -730,6 +775,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public func selectEntry(_ entry: FilmSelectorEntry) {
+        invalidateRequiredNDGuidance()
         filmSelectionModel.selectEntry(entry)
         // The multi-slot session store is the restore source of truth;
         // `FilmSelectionModel` only writes the legacy single-context
@@ -754,6 +800,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// relaunch (e.g. Tri-X "Table"/"App formula" or Portra
     /// "Official" reverting to a stale session value) (PTIMER-168).
     public func selectProfileVariant(profileID: String) {
+        invalidateRequiredNDGuidance()
         guard let film = selectedPresetFilm else { return }
         if let alternate = AlternateReciprocityModels
             .alternates(forFilmID: film.id)
@@ -865,12 +912,14 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public func selectPresetFilm(_ film: FilmIdentity) {
+        invalidateRequiredNDGuidance()
         filmSelectionModel.selectPresetFilm(film)
         // Capture the selection in the session store (see `selectEntry`).
         persistCalculatorContext()
     }
 
     public func clearSelectedPresetFilm() {
+        invalidateRequiredNDGuidance()
         filmSelectionModel.clearSelectedPresetFilm()
         // Capture the cleared selection in the session store too, so a
         // deselect survives relaunch instead of resurfacing a stale film.
@@ -878,6 +927,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     }
 
     public func resetFilmModeWorkingContext() {
+        invalidateRequiredNDGuidance()
         resetNDWheelInteractionState()
         filmSelectionModel.dropActiveSelectionWithoutPersisting()
         calculatorModel.clearLiveBaseShutterPreview()
@@ -933,6 +983,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// transition does not call any film/calc reset path, so inactive
     /// cameras stay intact.
     public func selectCameraSlot(_ targetSlotID: CameraSlotID) {
+        invalidateRequiredNDGuidance()
         guard targetSlotID != cameraSlotSessionModel.activeSlotID else {
             return
         }
@@ -1235,6 +1286,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// the end so the on-disk state always matches a single slot's
     /// view of the world.
     private func applyCameraSlotSnapshot(_ snapshot: CameraSlotCalculatorSnapshot) {
+        invalidateRequiredNDGuidance()
         // A slot switch discards every interaction trace — pending
         // selections, unresolved motion, touches, and the cleanup
         // timer all belong to the outgoing slot's transient UI state
@@ -1448,6 +1500,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// active slot's snapshot so the new target survives a relaunch on
     /// the same slot.
     public func setTargetShutter(_ seconds: TimeInterval?) {
+        invalidateRequiredNDGuidance()
         targetShutterModel.setTarget(seconds)
         persistCalculatorContext()
     }
@@ -1456,6 +1509,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// stops rendering the comparison and the start-target-timer
     /// affordance. Persists so the cleared state survives a relaunch.
     public func clearTargetShutter() {
+        invalidateRequiredNDGuidance()
         targetShutterModel.clear()
         persistCalculatorContext()
     }
@@ -1791,6 +1845,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     public func updateLiveBaseShutter(_ value: Double) {
         calculatorModel.updateLiveBaseShutter(value)
+        requiredNDGuidance.update(base: value)
     }
 
     public func updateLiveNDStop(_ value: Int) {
@@ -1931,6 +1986,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// was. A fresh Standard wheel is 0 stops and cleanable, so the
     /// cleanup timer re-arms (A3); an actual add persists (M2).
     public func addFilterWheel(from source: FilterSource) {
+        invalidateRequiredNDGuidance()
         exitNDWheelReshapingForCommand()
         defer { attemptFilterStackOrderReconciliation() }
         guard filterInventory.contains(source) else {
@@ -1966,6 +2022,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         selectedFilterSetIDs selected: [FilterSetID],
         mounts: [MountedAuxiliaryFilter]
     ) -> FilterStackRejection? {
+        invalidateRequiredNDGuidance()
         exitNDWheelReshapingForCommand()
         defer { attemptFilterStackOrderReconciliation() }
         let stackBefore = calculatorModel.filterStack
@@ -2032,6 +2089,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Filter Set Empty, or a mounted item row) through the same
     /// set-commit path the pickers use.
     func setWheelSelection(_ selection: FilterWheelSelection, at index: Int) {
+        invalidateRequiredNDGuidance()
         // Programmatic surface (tests): a command arriving inside the
         // RESHAPING window force-completes it first — real picker
         // input cannot arrive there (input is blocked), so this
@@ -2178,6 +2236,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               calculatorModel.ndFilterWheelIDs.contains(wheelID) else {
             return
         }
+        invalidateRequiredNDGuidance()
         if ndWheelInteractionState == .idle {
             ndWheelInteractionState = .scrolling
         }
@@ -2196,6 +2255,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               ndWheelInteractionState != .reshaping else {
             return
         }
+        invalidateRequiredNDGuidance()
         commitNDWheelSelection(selection, wheelID: wheelID)
     }
 
@@ -2204,6 +2264,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
               ndWheelInteractionState != .reshaping else {
             return
         }
+        invalidateRequiredNDGuidance()
         touchedNDWheelIDs.insert(wheelID)
     }
 
@@ -2968,6 +3029,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         guard let settings = displaySettingStore.loadSettings() else {
             return
         }
+        showRequiredND = settings.restoredShowRequiredND
         let restored = settings.restoredNDNotationMode
         if ndNotationMode != restored {
             ndNotationMode = restored
@@ -2976,7 +3038,7 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
     private func persistDisplaySettings() {
         displaySettingStore.saveSettings(
-            PersistentDisplaySettings(ndNotationMode: ndNotationMode)
+            PersistentDisplaySettings(ndNotationMode: ndNotationMode, showRequiredND: showRequiredND)
         )
     }
 

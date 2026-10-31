@@ -824,7 +824,9 @@ struct VariableSectionView: View {
     let formatShutter: (TimeInterval) -> String
     let ndNotationMode: NDNotationMode
     let onSelectNotationMode: (NDNotationMode) -> Void
+    let onBaseShutterInteractionBegin: () -> Void
     let onContinuousBaseShutterChange: (Double) -> Void
+    let onBaseShutterInteractionRelease: () -> Void
     let onBaseShutterInteractionEnd: () -> Void
     /// Owned-picker measurements (PTIMER-199 v2), keyed by wheel
     /// IDENTITY and stamped with the generation they were issued
@@ -868,6 +870,11 @@ struct VariableSectionView: View {
     /// the view model, `nil` for a Standard-only stack.
     let idleSourceSummary: [FilterStatusSourceSummaryItem]?
     let ndStackTotalDisplayState: NDStackTotalDisplayState
+    var requiredNDGuidance: RequiredNDGuidanceDisplayState?
+    var requiredNDPhase: RequiredNDGuidanceModel.Phase = .ordinary
+    var requiredNDGeneration: Int = 0
+    var onRequiredNDTransitionComplete: (RequiredNDGuidanceModel.Phase, Int) -> Void = { _, _ in }
+    var onFilterStatusInteraction: () -> Void = {}
     let style: ExposureWorkspaceMainLayoutStyle
 
     /// Candidate choice while the Plus wheel is being browsed
@@ -915,6 +922,8 @@ struct VariableSectionView: View {
                     baseShutter: $baseShutter,
                     shutterSpeeds: shutterSpeeds,
                     formatShutter: formatShutter,
+                    onInteractionBegin: onBaseShutterInteractionBegin,
+                    onInteractionRelease: onBaseShutterInteractionRelease,
                     onContinuousSelectionChange: onContinuousBaseShutterChange,
                     onInteractionEnd: onBaseShutterInteractionEnd,
                     ndWheelCount: occupiedSpaceCount,
@@ -959,7 +968,10 @@ struct VariableSectionView: View {
                     auxiliarySummary: auxiliarySummary,
                     occupiedSpaceCount: occupiedSpaceCount,
                     filterPlusChoices: filterPlusChoices,
-                    onBrowsingChoiceChanged: { browsingChoice = $0 },
+                    onBrowsingChoiceChanged: {
+                        browsingChoice = $0
+                        if $0 != nil { onFilterStatusInteraction() }
+                    },
                     totalDisplayState: ndStackTotalDisplayState,
                     pickerHeight: style.pickerHeight,
                     style: style
@@ -981,15 +993,20 @@ struct VariableSectionView: View {
                     idleSourceSummary: idleSourceSummary
                 ),
                 occupiedSpaceCount: occupiedSpaceCount,
-                style: style
+                style: style,
+                requiredND: requiredNDGuidance,
+                guidancePhase: requiredNDPhase,
+                guidanceGeneration: requiredNDGeneration,
+                onTransitionComplete: onRequiredNDTransitionComplete,
+                guidanceSourceSummary: idleSourceSummary,
+                actualTotal: FilterStatusRegionPresenter.totalText(ndStackTotalDisplayState)
             )
         }
         .sectionCardStyle(style: style)
     }
 }
 
-/// Renders the single stable status region: two caption lines in a
-/// fixed-height slot. Content, priority, and the one-at-a-time rule
+/// Renders the single stable status region in a fixed-height slot. Content, priority, and the one-at-a-time rule
 /// come from `FilterStatusRegionPresenter`; timing and stale-task
 /// safety come from `FilterStatusRegionViewModel`. The persistent
 /// idle source summary renders at secondary emphasis (system secondary
@@ -1000,15 +1017,22 @@ struct VariableSectionView: View {
 /// (FILTER-A11Y-005): the total is focusable directly, without first
 /// listening through the source summary or item detail.
 struct FilterStatusRegionView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let content: FilterStatusRegionContent?
     /// ND wheels plus the auxiliary summary: selects the ND numeral
     /// size the Total's value matches (FILTER-STACK-008).
     let occupiedSpaceCount: Int
     let style: ExposureWorkspaceMainLayoutStyle
+    var requiredND: RequiredNDGuidanceDisplayState?
+    var guidancePhase: RequiredNDGuidanceModel.Phase = .ordinary
+    var guidanceGeneration: Int = 0
+    var onTransitionComplete: (RequiredNDGuidanceModel.Phase, Int) -> Void = { _, _ in }
+    var guidanceSourceSummary: [FilterStatusSourceSummaryItem]?
+    var actualTotal: String = ""
 
     @StateObject private var controller = FilterStatusRegionViewModel()
-    /// The two caption lines grow with Dynamic Type; the reserved
-    /// height grows with them so the persistent summary and total stay
+    /// The row grows with Dynamic Type; its reserved height grows
+    /// with it so the persistent summary and total stay
     /// complete at every supported standard text size. The region is
     /// below every picker, so growing it never moves a touch center.
     @ScaledMetric(relativeTo: .caption) private var textScale: CGFloat = 1
@@ -1037,56 +1061,114 @@ struct FilterStatusRegionView: View {
         // A concrete container (not `Group`): the region must exist even
         // while it shows nothing, so `onAppear` applies the first
         // content and the reserved height never collapses.
-        VStack(alignment: .leading, spacing: 0) {
-            if let visible = displayedContent {
-                // Exactly one visual row in every state (FILTER-STACK-
-                // 007/008): the leading text yields space and truncates
-                // at its tail; the total keeps layout priority and is
-                // never truncated. No second line, no font shrinking.
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    if let leading = leadingText(for: visible), let leadingLabel = visible.primaryText {
-                        leading
-                            .font(style.filterStatusRegionFont.weight(visible.isSecondaryEmphasis ? .regular : .semibold))
-                            .foregroundStyle(primaryStyle(for: visible))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            // The complete leading text, however much
-                            // of it the row could show.
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(Text(leadingLabel))
-                            .accessibilityIdentifier("filter-status-leading")
-                        Spacer(minLength: 0)
-                    }
-                    if let trailing = visible.secondaryText {
-                        totalText(visible, spoken: trailing)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .layoutPriority(1)
-                            // Its own focusable target: Total is reached
-                            // directly, never behind the leading text.
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(Text(trailing))
-                            .accessibilityIdentifier("filter-status-total")
-                    }
+        Color.clear
+            .frame(height: style.filterStatusRegionHeight * max(1, textScale))
+            .overlay(alignment: .bottomLeading) {
+                RequiredNDStatusTransition(
+                    reduceMotion: reduceMotion,
+                    phase: guidancePhase,
+                    generation: guidanceGeneration,
+                    onComplete: onTransitionComplete,
+                    outgoing: { if let requiredND { requiredRow(requiredND) } },
+                    incoming: { if let visible = guidancePhase == .ordinary ? displayedContent : content { ordinaryRow(visible) } }
+                )
+                .id(guidanceGeneration)
+                .transition(.identity)
+                // The shared baseline sits one caption descent above the bottom
+                // edge, so the Total's numerals rise into the reserved cap
+                // height and every descender stays inside the region.
+                .alignmentGuide(.bottom) { dimensions in
+                    dimensions[.firstTextBaseline] + style.filterStatusRegionBaselineDescent * max(1, textScale)
                 }
-                .accessibilityElement(children: .contain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: style.filterStatusRegionHeight * max(1, textScale), alignment: .bottom)
             }
-        }
-        // The shared baseline sits one caption descent above the bottom
-        // edge, so the Total's numerals rise into the reserved cap
-        // height and every descender stays inside the region.
-        .alignmentGuide(.bottom) { dimensions in
-            dimensions[.firstTextBaseline] + style.filterStatusRegionBaselineDescent * max(1, textScale)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: style.filterStatusRegionHeight * max(1, textScale), alignment: .bottom)
         .clipped()
-        .animation(isShowingHeldDetail ? nil : .easeInOut(duration: 0.15), value: displayedContent)
+        .animation(guidancePhase == .ordinary && !isShowingHeldDetail ? .easeInOut(duration: 0.15) : nil, value: displayedContent)
+        .onChange(of: guidancePhase) { _, phase in
+            if phase == .crossfading || phase == .ordinary { controller.apply(content) }
+        }
         .onAppear { controller.apply(content) }
         .onChange(of: content) { _, newValue in
             controller.apply(newValue)
         }
         .accessibilityIdentifier("filter-status-region")
+    }
+
+    private func ordinaryRow(_ visible: FilterStatusRegionContent) -> some View {
+        // Exactly one visual row in every state (FILTER-STACK-
+        // 007/008): the leading text yields space and truncates
+        // at its tail; the total keeps layout priority and is
+        // never truncated. No second line, no font shrinking.
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            if let leading = leadingText(for: visible), let leadingLabel = visible.primaryText {
+                leading
+                    .font(style.filterStatusRegionFont.weight(visible.isSecondaryEmphasis ? .regular : .semibold))
+                    .foregroundStyle(primaryStyle(for: visible))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    // The complete leading text, however much
+                    // of it the row could show.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(leadingLabel))
+                    .accessibilityIdentifier("filter-status-leading")
+                Spacer(minLength: 0)
+            }
+            if let trailing = visible.secondaryText {
+                totalText(visible, spoken: trailing)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
+                    // Its own focusable target: Total is reached
+                    // directly, never behind the leading text.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(trailing))
+                    .accessibilityIdentifier("filter-status-total")
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func requiredRow(_ guidance: RequiredNDGuidanceDisplayState) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            if let reason = guidance.reason {
+                ViewThatFits(in: .horizontal) {
+                    Text(reason).fixedSize()
+                    Text(guidance.compactReason ?? reason).fixedSize()
+                }
+                    .font(style.filterStatusRegionFont.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .accessibilityLabel(Text(reason))
+                    .accessibilityIdentifier("filter-status-leading")
+            } else if let summary = guidanceSourceSummary {
+                summaryText(summary)
+                    .font(style.filterStatusRegionFont)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .accessibilityLabel(Text(FilterStatusRegionPresenter.summaryText(summary)))
+                    .accessibilityIdentifier("filter-status-leading")
+            }
+            Spacer(minLength: 0)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(guidance.label).font(style.filterStatusRegionFont)
+                Text(guidance.valueText)
+                    .font(style.filterStatusTotalValueFont(forOccupiedSpaceCount: occupiedSpaceCount))
+                    .monospacedDigit()
+                if !guidance.unit.isEmpty {
+                    Text(guidance.unit).font(style.filterStatusRegionFont)
+                }
+            }
+            .foregroundStyle(guidance.isWarning ? Color.orange : Color.blue)
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(guidance.spokenValue))
+            .accessibilityCustomContent(Text("Current Total"), Text(actualTotal), importance: .high)
+            .accessibilityIdentifier("required-nd-value")
+        }
     }
 
     /// The trailing Total (FILTER-STACK-008): the caption word, the
@@ -1151,6 +1233,48 @@ struct FilterStatusRegionView: View {
             return .orange
         }
         return content.isSecondaryEmphasis ? Color.secondary : Color.primary
+    }
+}
+
+/// Both rows are mounted before one shared opacity progress starts. The
+/// guidance model retains the final outgoing value until completion.
+struct RequiredNDStatusTransition<Outgoing: View, Incoming: View>: View {
+    let reduceMotion: Bool
+    let phase: RequiredNDGuidanceModel.Phase
+    let generation: Int
+    let onComplete: (RequiredNDGuidanceModel.Phase, Int) -> Void
+    @ViewBuilder let outgoing: () -> Outgoing
+    @ViewBuilder let incoming: () -> Incoming
+    @State private var progress = 0.0
+
+    var body: some View {
+        ZStack(alignment: Alignment(horizontal: .leading, vertical: .firstTextBaseline)) {
+            incoming()
+                .opacity(progress)
+                .accessibilityHidden(phase != .ordinary)
+            outgoing()
+                .opacity(1 - progress)
+                .accessibilityHidden(phase == .ordinary)
+        }
+        .onChange(of: phase, initial: true) { _, phase in
+            switch phase {
+            case .tracking, .ordinary:
+                var transaction = Transaction(animation: nil)
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { progress = phase == .ordinary ? 1 : 0 }
+            case .crossfading:
+                if reduceMotion {
+                    progress = 1
+                    onComplete(phase, generation)
+                } else {
+                    withAnimation(.linear(duration: RequiredNDGuidanceModel.crossfadeDuration), completionCriteria: .logicallyComplete) {
+                        progress = 1
+                    } completion: {
+                        onComplete(phase, generation)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1926,8 +2050,11 @@ private struct NDNotationToggle: View {
 
 private struct ShutterSelectionRow: View {
     @Binding var baseShutter: Double
+    @State private var isMoving = false
     let shutterSpeeds: [Double]
     let formatShutter: (TimeInterval) -> String
+    let onInteractionBegin: () -> Void
+    let onInteractionRelease: () -> Void
     let onContinuousSelectionChange: (Double) -> Void
     let onInteractionEnd: () -> Void
     /// ND wheels sharing the row (PTIMER-199). At 3+ the Base column
@@ -1968,8 +2095,16 @@ private struct ShutterSelectionRow: View {
                 Color.clear
                     .frame(height: labelRowHeight)
 
-                Picker("Base Shutter", selection: $baseShutter) {
-                    ForEach(shutterSpeeds, id: \.self) { speed in
+                NDWheelPickerView(
+                    steps: shutterSpeeds,
+                    selectedStep: baseShutter,
+                    isCleanableRow: { _ in false },
+                    isResolved: !isMoving,
+                    isInputEnabled: true,
+                    generation: 0,
+                    rowConfiguration: AnyHashable(ndWheelCount),
+                    rowHeight: 32,
+                    rowContent: { speed in
                         ShutterPickerValue(
                             valueText: shutterValueText(for: speed),
                             style: style,
@@ -1977,24 +2112,38 @@ private struct ShutterSelectionRow: View {
                             ndWheelCount: ndWheelCount,
                             isCondensed: isCondensed
                         )
-                        .tag(speed)
+                    },
+                    onRowObserved: { value, _ in onContinuousSelectionChange(value) },
+                    onSelected: { _, _ in },
+                    onTouchBegan: { _ in
+                        isMoving = true
+                        onInteractionBegin()
+                    },
+                    onTouchEnded: onInteractionRelease,
+                    onOverscrollReleased: { _ in },
+                    onSettled: { value, _ in
+                        // Final commitment never starts or restores guidance.
+                        // Accessibility has its own explicit interaction below.
+                        baseShutter = value
+                        isMoving = false
+                        onInteractionEnd()
                     }
-                }
-                .pickerStyle(.wheel)
+                )
                 .frame(maxWidth: .infinity)
                 .frame(height: pickerHeight)
                 .clipped()
-                .background {
-                    WheelPickerContinuousObserver(
-                        onSelectedRowChange: { row in
-                            guard shutterSpeeds.indices.contains(row) else {
-                                return
-                            }
-
-                            onContinuousSelectionChange(shutterSpeeds[row])
-                        },
-                        onInteractionEnd: onInteractionEnd
-                    )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("Base Shutter"))
+                .accessibilityIdentifier("base-shutter-picker")
+                .accessibilityValue(Text(formatShutter(baseShutter)))
+                .accessibilityAdjustableAction { direction in
+                    guard let index = shutterSpeeds.firstIndex(of: baseShutter) else { return }
+                    let next = direction == .increment ? index + 1 : index - 1
+                    guard shutterSpeeds.indices.contains(next) else { return }
+                    onInteractionBegin()
+                    baseShutter = shutterSpeeds[next]
+                    onInteractionRelease()
+                    onInteractionEnd()
                 }
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

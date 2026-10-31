@@ -339,6 +339,9 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-9.4** The user shall be able to start a timer from the Target Shutter. A timer started this way shall use the target duration itself as its duration and shall carry a distinct exposure-source identity that keeps it distinguishable from Adjusted Shutter and Corrected Exposure timers across the timer's lifetime (extends FR-4.6). (Scenarios 3, 5)
 - **FR-9.5** Target Shutter state shall be scoped per managed camera (extends FR-8.2). Switching the active camera shall replace the target along with the rest of that camera's inputs; another camera's stored target shall not surface on it, and per-camera persistence shall not be seeded from session-global last-used target memory. (Persona 1.3)
 
+- **FR-9.6** While manually adjusting Base with a Target set, the photographer shall be able to read the total attenuation needed for that Target, including the selected film reciprocity correction, without the app selecting filters or changing the shot. Guidance shall remain useful when the available filters cannot realize that attenuation. (Scenarios 1, 2, 9)
+- **FR-9.7** Required attenuation shall be distinguishable from the current mounted total, shall report unavailable numeric guidance honestly, and shall identify numeric continuation beyond source range. The photographer shall be able to disable this guidance through a preference retained across cameras and relaunch. (Scenarios 1, 2)
+
 ---
 
 ## 4. Non-functional requirements

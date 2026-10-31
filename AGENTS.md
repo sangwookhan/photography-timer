@@ -67,6 +67,14 @@ in addition to its own.
 
 ---
 
+## GitHub Access for Coding Agents
+
+- Claude Code and Codex CLI must use only the `gh` and `git` command-line tools for all access to github.com, including repository, branch, commit, pull request, review, comment, file, and release operations.
+- Do not use a GitHub connector, browser UI, direct HTTP/API client, or another tool to access github.com from Claude Code or Codex CLI.
+- This restriction applies to Claude Code and Codex CLI coding-agent workflows; it does not define which connected tools ChatGPT may use under its own instructions.
+
+---
+
 ## Repository Context
 
 - Primary product target: iPhone app

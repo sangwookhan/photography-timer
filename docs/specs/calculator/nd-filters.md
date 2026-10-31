@@ -51,6 +51,8 @@ construction rather than by clamping after the fact.
   shall be a pure, deterministic function of (stops value, notation mode).
   Explicitly labeled auxiliary contributions and Total remain in canonical
   stops under `filter-sets.md`; they are not global-notation displays.
+  Required ND guidance uses the explicitly labeled stops presentation owned
+  by `target-shutter.md` TARGET-ND-GUIDE-011.
 - **ND-005** — In `Stops` notation, a value renders as a bare
   integer/decimal with unit `stops` (e.g. `9 stops`).
 - **ND-006** — In `OD` notation, a value renders as `stops × 0.3` to one
@@ -173,6 +175,11 @@ construction rather than by clamping after the fact.
   last change. At the 30-stop cap it shall read `Total 30 stops · Maximum`.
   The overlay shall never intercept touch. FILTER-STACK-008 owns the common
   status-row geometry and Total prominence, including mixed/auxiliary stacks.
+  During qualifying Base interaction, `target-shutter.md` TARGET-ND-GUIDE
+  temporarily replaces this visual Total with required attenuation or
+  unavailable guidance, including for Standard-only stacks. That contract
+  owns guidance appearance and return to ordinary status; the actual total
+  remains accessible under ND-A11Y-003.
 
 ### Accessibility
 

@@ -16,8 +16,10 @@ data supports a quantified prediction.
 
 ## Current behavior
 
-Reciprocity is strictly post-processing: it consumes the Adjusted Shutter
-and never feeds back into base exposure or ND calculation.
+Forward reciprocity calculation consumes the Adjusted Shutter and does not
+mutate base exposure or filters. Read-only Required ND guidance under
+`calculator/target-shutter.md` may reverse that same evaluation for a fixed
+Target; these queries preserve source data, forward rules and result semantics.
 
 ## Requirements
 

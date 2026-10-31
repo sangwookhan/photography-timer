@@ -195,6 +195,35 @@ compact presence, not folded into the shooting screen itself.
   readable required information and operable controls at the maximum system
   font scale. Unaffected screens shall retain their established presentation.
 
+### Android phone shooting balance
+
+- **SHELL-024** — On regular Android phones in portrait at default display
+  and font settings, the Main shooting surface shall use readable baseline
+  typography throughout its labels, auxiliary descriptions, selected wheel
+  values, and exposure results. The camera/film header, Target Shutter,
+  shutter/filter controls, and result rows shall have heights and internal
+  spacing that support that typography and a visual scale comparable to
+  equivalent iPhone shooting content. Selected values and results shall
+  remain visually prominent.
+- **SHELL-025** — With a film and an active Target Shutter, the Main shooting
+  surface shall simultaneously show Target Shutter, the ND-adjusted shutter,
+  Reciprocity status with its Details entry, and Corrected Exposure, together
+  with camera/film context, any applicable model selection, shutter/filter
+  controls, and compact timer presence, subject to SHELL-057. Existing
+  capability-owned visibility and action rules continue to apply.
+- **SHELL-026** — Available vertical space shall support balanced component
+  heights and internal spacing across the shooting surface, reducing
+  excessive unused space below the results. Space allocation shall account
+  for the complete applicable content, including additional result rows and
+  compact timers. It shall not hide content, reduce text to an unreadable
+  size, or create oversized gaps or unbounded stretching merely to fill
+  the viewport.
+- **SHELL-027** — Horizontal margins may bound the regular-phone shooting
+  column to improve its visual proportions, provided that all supported
+  filter configurations retain readable values and usable controls.
+  The font-scale, touch-target, and no-vertical-scrolling contracts in
+  this file continue to apply.
+
 ### Touch targets
 
 - **SHELL-030** — Primary shooting/timer action controls and ND notation

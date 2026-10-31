@@ -63,6 +63,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -127,6 +129,7 @@ fun MiniTimerBar(
     modifier: Modifier = Modifier,
     soundingAlarmId: UUID? = null,
     onStopAlarm: () -> Unit = {},
+    readablePhoneText: Boolean = false,
 ) {
     // active/history already carry their final newest-first order (PTIMER-194);
     // consumed verbatim, no reversal here.
@@ -168,7 +171,7 @@ fun MiniTimerBar(
             // While this timer's alarm is sounding, a tap stops it; otherwise a
             // tap expands the sheet and focuses this timer.
             val alarmSounding = card.id == soundingAlarmId
-            MiniTimerCard(card, now, isAlarmSounding = alarmSounding) {
+            MiniTimerCard(card, now, isAlarmSounding = alarmSounding, readablePhoneText = readablePhoneText) {
                 if (alarmSounding) onStopAlarm() else onOpen(card.id)
             }
         }
@@ -426,15 +429,34 @@ private fun MiniTimerCard(
     card: TimerCardState,
     now: Instant,
     isAlarmSounding: Boolean = false,
+    readablePhoneText: Boolean = false,
     onClick: () -> Unit,
 ) {
     val terminal = card.status == TimerStatus.completed || card.status == TimerStatus.canceled
     val active = card.status == TimerStatus.running || card.status == TimerStatus.paused
+    val primaryText = when (card.status) {
+        TimerStatus.completed -> stringResource(R.string.status_done)
+        TimerStatus.canceled -> stringResource(R.string.status_canceled)
+        else -> calc.formatExtendedClock(card.remainingSeconds)
+    }
+    val primaryStyle = MaterialTheme.typography.titleMedium.copy(
+        fontSize = if (readablePhoneText) 18.sp else MaterialTheme.typography.titleMedium.fontSize,
+        fontWeight = FontWeight.Bold,
+        fontFamily = if (terminal) FontFamily.Default else FontFamily.Monospace,
+    )
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    // Keep full precision. Widen only the phone strip's card, never the existing side rail.
+    val cardWidth = if (readablePhoneText) {
+        val widest = maxOf(primaryText.length, calc.formatExtendedClock(card.durationSeconds).length)
+        val measured = measurer.measure("8".repeat(widest), primaryStyle, maxLines = 1, softWrap = false).size.width
+        maxOf(96.dp, with(density) { measured.toDp() } + 22.dp)
+    } else 96.dp
     // Tall portrait card mirroring the iOS compact dock, top→bottom:
     // [status dot+label · compact total cue] / big remaining (or relative
     // terminal) value / film cue / layered progress + slot badge at the foot.
     Card(
-        modifier = Modifier.width(96.dp).height(MiniCardHeight).clickable { onClick() },
+        modifier = Modifier.width(cardWidth).height(MiniCardHeight).clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         // Alarm-sounding cue: tapping (handled by the caller) stops the alarm.
         colors = CardDefaults.cardColors(
@@ -498,14 +520,8 @@ private fun MiniTimerCard(
             // Done/Canceled state with the relative completion time below.
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    when (card.status) {
-                        TimerStatus.completed -> stringResource(R.string.status_done)
-                        TimerStatus.canceled -> stringResource(R.string.status_canceled)
-                        else -> calc.formatExtendedClock(card.remainingSeconds)
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontFamily = if (terminal) FontFamily.Default else FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
+                    primaryText,
+                    style = primaryStyle,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),

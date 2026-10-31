@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.vm.AuxiliaryFilterSummaryDisplayState
 import com.sangwook.ptimer.app.vm.AuxiliaryFilterSummaryItemDisplay
@@ -150,7 +151,8 @@ private fun SummaryCue(text: String) {
  */
 @Composable
 private fun AuxiliarySummaryRow(item: AuxiliaryFilterSummaryItemDisplay) {
-    val nameStyle = MaterialTheme.typography.bodySmall
+    val nameStyle = if (LocalPhoneShooting.current) MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp)
+        else MaterialTheme.typography.bodySmall
     val valueStyle = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         item.opticalColor?.let {

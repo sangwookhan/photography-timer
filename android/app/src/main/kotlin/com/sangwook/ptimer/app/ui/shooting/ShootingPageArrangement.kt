@@ -184,6 +184,7 @@ fun ShootingPageArrangement(
     fold: WindowFold? = null,
     onRoom: (ShootingPageRoom) -> Unit = {},
 ) {
+    val phonePresentation = LocalPhoneShooting.current
     var blocks by remember { mutableStateOf<BlockHeights?>(null) }
     // The page's position in the window, to place the fold in page pixels.
     var origin by remember { mutableStateOf(IntOffset.Zero) }
@@ -272,10 +273,15 @@ fun ShootingPageArrangement(
                     record(h, i, r)
                     val total = h.height + i.height + gap + r.height
                     val x = (width - columnWidth) / 2
-                    layout(width, total) {
+                    // Spend only bounded spare height, after the complete page fits.
+                    val extraGap = if (phonePresentation) {
+                        ((availableHeight.roundToPx() - total - 8.dp.roundToPx()) / 2)
+                            .coerceIn(0, 12.dp.roundToPx())
+                    } else 0
+                    layout(width, total + extraGap * 2) {
                         h.place(x, 0)
-                        i.place(x, h.height)
-                        r.place(x, h.height + i.height + gap)
+                        i.place(x, h.height + extraGap)
+                        r.place(x, h.height + i.height + gap + extraGap * 2)
                     }
                 }
                 ShootingArrangement.SideBySide -> {

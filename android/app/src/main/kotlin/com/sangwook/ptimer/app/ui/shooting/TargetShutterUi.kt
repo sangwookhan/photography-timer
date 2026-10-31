@@ -78,7 +78,7 @@ internal fun TargetShutterRow(
         Row(
             // Matches the film/wheel/result cards' shared 8dp padding
             // (PTIMER-219) instead of its own one-off value.
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(if (LocalPhoneShooting.current) 10.dp else 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -93,7 +93,7 @@ internal fun TargetShutterRow(
             when (display) {
                 is TargetShutterDisplayState.Unavailable -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.common_off), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.common_off), style = if (LocalPhoneShooting.current) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
@@ -124,7 +124,7 @@ internal fun TargetShutterRow(
                             }
                             Text(
                                 arrow,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = if (LocalPhoneShooting.current) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = tint,
                             )
@@ -141,13 +141,13 @@ internal fun TargetShutterRow(
                                         diff.signedMagnitudeText,
                                     )
                                 },
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = if (LocalPhoneShooting.current) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
                                 color = tint,
                             )
                         }
                         Text(
                             targetClock.formatCoarse(display.state.targetSeconds),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = if (LocalPhoneShooting.current) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )

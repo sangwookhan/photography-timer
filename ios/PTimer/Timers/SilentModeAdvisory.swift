@@ -94,10 +94,7 @@ final class SilentModeAdvisoryController: ObservableObject {
     private var hasProbedThisSession = false
     private var openedFromNotification = false
 
-    // Constructs no main-actor state beyond storing the probe, so it is safe as
-    // the initializer for the nonisolated `shared` static (mirrors
-    // `AVAudioTimerAlarmPlayer`).
-    nonisolated init(probe: MuteLikelihoodProbing = SystemSoundMuteProbe()) {
+    init(probe: MuteLikelihoodProbing = SystemSoundMuteProbe()) {
         self.probe = probe
     }
 

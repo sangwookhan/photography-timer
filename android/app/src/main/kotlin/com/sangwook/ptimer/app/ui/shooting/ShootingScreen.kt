@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
@@ -93,6 +94,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -923,12 +927,25 @@ private fun SettingsMenuButton(
                 text = {
                     Column {
                         Text(stringResource(R.string.required_nd_setting))
-                        Text(stringResource(R.string.required_nd_setting_body), style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            stringResource(R.string.required_nd_setting_body),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 },
-                trailingIcon = { androidx.compose.material3.Checkbox(checked = showRequiredND, onCheckedChange = null) },
+                trailingIcon = {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp).alpha(if (showRequiredND) 1f else 0f),
+                    )
+                },
                 onClick = { onShowRequiredND(!showRequiredND) },
-                modifier = Modifier.testTag("show-required-nd-setting"),
+                modifier = Modifier.heightIn(min = 72.dp).testTag("show-required-nd-setting").semantics {
+                    role = Role.Checkbox
+                    toggleableState = ToggleableState(showRequiredND)
+                },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_manage_cameras)) },

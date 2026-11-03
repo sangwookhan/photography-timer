@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -78,7 +79,7 @@ internal fun TargetShutterRow(
         Row(
             // Matches the film/wheel/result cards' shared 8dp padding
             // (PTIMER-219) instead of its own one-off value.
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(if (LocalPhoneShooting.current) 4.dp else 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -93,7 +94,7 @@ internal fun TargetShutterRow(
             when (display) {
                 is TargetShutterDisplayState.Unavailable -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.common_off), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.common_off), style = if (LocalPhoneShooting.current) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
@@ -102,7 +103,7 @@ internal fun TargetShutterRow(
                     }
                 }
                 is TargetShutterDisplayState.Available -> {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (LocalPhoneShooting.current) 2.dp else 8.dp)) {
                         // Stop-difference first so the variable-width arrow + text
                         // floats on the LEFT; the target value stays pinned next to
                         // ▶ on the right and no longer slides as the stops change.
@@ -124,7 +125,7 @@ internal fun TargetShutterRow(
                             }
                             Text(
                                 arrow,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = if (LocalPhoneShooting.current) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = tint,
                             )
@@ -141,13 +142,13 @@ internal fun TargetShutterRow(
                                         diff.signedMagnitudeText,
                                     )
                                 },
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = if (LocalPhoneShooting.current) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium,
                                 color = tint,
                             )
                         }
                         Text(
                             targetClock.formatCoarse(display.state.targetSeconds),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = if (LocalPhoneShooting.current) MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, lineHeight = 26.sp) else MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )

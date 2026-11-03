@@ -225,13 +225,13 @@ class FilterWheelLabelLegibilityTest {
 
 /** Minimal wiring: only the stack's own callbacks do anything. */
 @Composable
-internal fun ShootingScreenHarness(state: CalculatorUiState) {
+internal fun ShootingScreenHarness(state: CalculatorUiState, onAdd: (FilterSource) -> Unit = {}) {
     ShootingScreen(
         state = state,
         onShutterIndex = {},
         onNdWheelActive = { _, _ -> },
         onNdWheelValue = { _, _ -> },
-        onAddFilterWheel = {},
+        onAddFilterWheel = onAdd,
         onAdjustFilterWheel = { _, _ -> FilterWheelAdjustmentOutcome.Boundary },
         onRemoveNdWheelOverscroll = {},
         onOpenShootingFilters = {},

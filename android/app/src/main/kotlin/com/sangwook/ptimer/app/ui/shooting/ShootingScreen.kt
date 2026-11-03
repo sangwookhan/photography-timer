@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.selection.selectable
@@ -399,13 +400,35 @@ fun ShootingScreen(
                 // as before; otherwise nothing moves.
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                 val pageHeight = maxHeight
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                val pageWidth = maxWidth
+                val phonePresentation = usesPhoneShootingPresentation(
+                    pageWidth, pageHeight, LocalConfiguration.current.smallestScreenWidthDp, fold != null,
+                )
+                var phoneExtra by remember(page, pageHeight, phonePresentation, pageState.hasFilm) { mutableStateOf(0) }
+                Column(Modifier.fillMaxSize().testTag("shooting-page-scroll-$page").verticalScroll(rememberScrollState())) {
+                PhoneShootingPresentation(phonePresentation, extra = phoneExtra.dp) {
                 ShootingPageArrangement(
                     availableHeight = pageHeight,
                     fold = fold,
                     // Only the page being edited decides where the compact
                     // timers go; neighbouring pages are display-only.
-                    onRoom = if (writesActiveSlot) onPageRoom else { _ -> },
+                    onRoom = { room ->
+                        if (writesActiveSlot) onPageRoom(room)
+                        if (phonePresentation) {
+                            // Three wheel rows and the visible result rows grow within the measured room.
+                            val resultRows = if (pageState.hasFilm) 3 else 1
+                            val factor = 3f + resultRows / 2f
+                            val applied = 3f * phoneExtra + resultRows * maxOf(0, phoneExtra) / 2f
+                            val baseHeight = room.needed.singleColumn.value - applied
+                            // Removing the model's old spacer should not enlarge
+                            // the wheel or results merely to consume that space.
+                            val removedModelSpacing = if (pageState.modelOptions.isNotEmpty()) 8f else 0f
+                            val spare = room.height.value - baseHeight - removedModelSpacing - 4f
+                            val next = if (spare < 0f) kotlin.math.floor(spare / 3f).toInt() else (spare / factor).toInt()
+                            val boundedNext = next.coerceIn(-6, 18)
+                            if (boundedNext != phoneExtra) phoneExtra = boundedNext
+                        }
+                    },
                     // The header carries the camera and film context, which
                     // stays together above a tabletop fold (SHELL-062).
                     header = { Column {
@@ -475,6 +498,32 @@ fun ShootingScreen(
                         }
                     }
 
+                    val modelPicker: @Composable () -> Unit = {
+                    if (pageState.modelOptions.isNotEmpty()) {
+                        if (!LocalPhoneShooting.current) Spacer(Modifier.height(8.dp))
+                        // Equal width per option (PTIMER-219): without weight(),
+                        // the first chip's wrap-content width claims whatever it
+                        // needs and squeezes a longer-labeled sibling into a
+                        // narrow, character-wrapped column at large font scale.
+                        // Both labels are fitted to one line inside the chip's
+                        // own height, so the two chips are the same size and
+                        // neither grows to hold a wrapped label.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            pageState.modelOptions.forEach { option ->
+                                FilterChip(
+                                    selected = option.id == pageState.selectedProfileId,
+                                    onClick = { onSelectProfile(option.id) },
+                                    label = { ModelChipLabel(option.label) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                    }
+
                     // Film selector. No standalone "Film" label: the "No
                     // film" placeholder value already names it for a
                     // first-time user, and once a film is picked the row's
@@ -493,13 +542,17 @@ fun ShootingScreen(
                         ) {
                             Text(
                                 localizedFilmName(pageState.selectedFilmName),
-                                style = MaterialTheme.typography.titleMedium,
+                                style = if (LocalPhoneShooting.current) {
+                                    MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                } else MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Box(
-                                modifier = Modifier.width(132.dp).heightIn(min = 24.dp),
+                                modifier = Modifier
+                                    .then(if (LocalPhoneShooting.current) Modifier.widthIn(min = 132.dp) else Modifier.width(132.dp))
+                                    .heightIn(min = 24.dp),
                                 contentAlignment = Alignment.CenterEnd,
                             ) {
                                 if (selectedFilm != null) {
@@ -530,34 +583,13 @@ fun ShootingScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        if (LocalPhoneShooting.current) modelPicker()
                     }
 
-                    if (pageState.modelOptions.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        // Equal width per option (PTIMER-219): without weight(),
-                        // the first chip's wrap-content width claims whatever it
-                        // needs and squeezes a longer-labeled sibling into a
-                        // narrow, character-wrapped column at large font scale.
-                        // Both labels are fitted to one line inside the chip's
-                        // own height, so the two chips are the same size and
-                        // neither grows to hold a wrapped label.
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            pageState.modelOptions.forEach { option ->
-                                FilterChip(
-                                    selected = option.id == pageState.selectedProfileId,
-                                    onClick = { onSelectProfile(option.id) },
-                                    label = { ModelChipLabel(option.label) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
+                    if (!LocalPhoneShooting.current) modelPicker()
                     } },
                     inputs = { Column {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(if (LocalPhoneShooting.current) 1.dp else 8.dp))
 
                     // Target Shutter row (value + stop-diff + ▶), tap to edit.
                     TargetShutterRow(
@@ -566,7 +598,7 @@ fun ShootingScreen(
                         onStartTarget = onStartTarget,
                     )
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(if (LocalPhoneShooting.current) 1.dp else 8.dp))
 
                     // Base shutter + ND wheels (compact: 3 visible rows).
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
@@ -649,7 +681,8 @@ fun ShootingScreen(
                                                 // The filter wheels' own minimum, not a
                                                 // second literal that has to agree with it
                                                 // (FILTER-STACK-007).
-                                                itemHeight = WheelItemHeight,
+                                                itemHeight = mainWheelItemHeight,
+                                                highlightSelection = LocalPhoneShooting.current,
                                                 accessibilityLabel = baseShutterCaption,
                                                 // FILTER-STACK-007: the
                                                 // whole row steps down
@@ -687,6 +720,7 @@ fun ShootingScreen(
                     )
                     },
                 )
+                }
                 }
                 }
             }
@@ -838,7 +872,8 @@ private fun FilmClassificationBadge(label: String, testTag: String) {
 
 /** Shared content padding for the film/wheel/result cards (PTIMER-219): one
  *  consistent value instead of each card picking its own (was 16/8/12dp). */
-private val CardRowPadding = 8.dp
+private val CardRowPadding: Dp
+    @Composable get() = if (LocalPhoneShooting.current) 4.dp else 8.dp
 
 /** The ND card's left and right content padding. */
 private val NdCardHorizontalPadding = 2.dp
@@ -849,12 +884,14 @@ private val NdCardHorizontalPadding = 2.dp
  * size (see [mainLabelSizeSp]) and the same inset from the card edge, so they
  * never differ from each other.
  */
-internal val MainLabelInset = CardRowPadding
+internal val MainLabelInset: Dp
+    @Composable get() = CardRowPadding
 
 @Composable
 internal fun mainLabelStyle(): androidx.compose.ui.text.TextStyle =
     MaterialTheme.typography.titleSmall.copy(
-        fontSize = mainLabelSizeSp(LocalConfiguration.current.fontScale).sp,
+        fontSize = (mainLabelSizeSp(LocalConfiguration.current.fontScale) *
+            if (LocalPhoneShooting.current) 16f / 14f else 1f).sp,
     )
 
 /**
@@ -1103,7 +1140,10 @@ private fun ndCardColumnSplit(
     val labelStyle = MaterialTheme.typography.labelLarge
     // The centered row of a non-dense SnapWheel: what the base-shutter
     // values are drawn with.
-    val valueStyle = MaterialTheme.typography.titleMedium
+    val valueStyle = if (LocalPhoneShooting.current &&
+        isDenseFilterWheelRow(wheelCount)) {
+        MaterialTheme.typography.bodyMedium
+    } else MaterialTheme.typography.titleMedium
 
     fun textWidth(text: String, style: TextStyle) = with(density) {
         measurer.measure(
@@ -1124,7 +1164,7 @@ private fun ndCardColumnSplit(
     val shutterNeed = maxOf(valueNeed, captionNeed)
     // What the wheel row is laid out from, mirrored from FilterStackGroup
     // so the column the card hands over is the column the wheels divide.
-    val wheelsNeed = FilterWheelWantedWidth * wheelCount +
+    val wheelsNeed = (if (LocalPhoneShooting.current) 61.dp else FilterWheelWantedWidth) * wheelCount +
         FilterWheelRowSpacing * (wheelCount - 1) +
         (if (plusVisible) FilterPlusControlWidth + FilterWheelRowSpacing else 0.dp)
     val ndNeed = wheelsNeed
@@ -1161,6 +1201,7 @@ private fun NdFilterHeaderRow(
     val captionNatural = remember(baseShutterCaption, captionStyle) {
         measurer.measure(baseShutterCaption, captionStyle, maxLines = 1, softWrap = false).size.width
     }
+    val captionInsetDp = MainLabelInset - NdCardHorizontalPadding
     Layout(
         content = {
             Text(
@@ -1182,7 +1223,7 @@ private fun NdFilterHeaderRow(
         val height = constraints.maxHeight
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val button = measurables[1].measure(loose)
-        val captionInset = (MainLabelInset - NdCardHorizontalPadding).roundToPx()
+        val captionInset = captionInsetDp.roundToPx()
         // The caption is placed inside this inset; reserve it before sharing
         // remaining width so the visible caption-to-button gap stays 12dp.
         val fixed = button.width + NdHeaderButtonNotationGap.roundToPx() +
@@ -1424,14 +1465,14 @@ private fun ResultCard(
             )
 
             if (state.hasFilm) {
-                HorizontalDivider()
+                HorizontalDivider(color = if (LocalPhoneShooting.current) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant)
                 // Reciprocity status + details entry (ⓘ) between the two values.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    BoundedScaledLabel(Modifier.weight(1f, fill = false), slotHeight = MinTouchTargetSize, scale = false) {
+                    BoundedScaledLabel(Modifier.weight(1f, fill = false), slotHeight = mainResultRowHeight, scale = false) {
                         Text(
                             stringResource(R.string.shooting_reciprocity),
                             style = mainLabelStyle(),
@@ -1447,7 +1488,7 @@ private fun ResultCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(onClickLabel = detailsLabel, role = Role.Button, onClick = onOpenDetails)
-                            .heightIn(min = MinTouchTargetSize)
+                            .heightIn(min = mainResultRowHeight)
                             .padding(start = 8.dp, end = 12.dp)
                             .semantics(mergeDescendants = true) {}
                             .testTag("reciprocity-details-entry"),
@@ -1462,7 +1503,7 @@ private fun ResultCard(
                         )
                     }
                 }
-                HorizontalDivider()
+                HorizontalDivider(color = if (LocalPhoneShooting.current) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant)
                 ResultRow(
                     label = stringResource(R.string.shooting_corrected_exposure),
                     value = state.correctedText ?: stringResource(R.string.shooting_no_corrected_value),
@@ -1489,6 +1530,10 @@ private fun ResultRow(
     startEnabled: Boolean,
     startContentDescription: String,
 ) {
+    if (LocalPhoneShooting.current) {
+        PhoneExposureResultRow(label, value, secondary, valueColor, numeric, onStart, startEnabled, startContentDescription)
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1496,7 +1541,7 @@ private fun ResultRow(
     ) {
         // The label takes the whole remaining width (no spacer competing
         // for it), so it only ellipsizes when the value truly needs the room.
-        BoundedScaledLabel(Modifier.weight(1f), slotHeight = MinTouchTargetSize, scale = false) {
+        BoundedScaledLabel(Modifier.weight(1f), slotHeight = mainResultRowHeight, scale = false) {
             Text(
                 label,
                 style = mainLabelStyle(),
@@ -1509,7 +1554,7 @@ private fun ResultRow(
         // the row height never changes whether or not the seconds are shown
         // (iOS dual-duration display).
         secondary?.let {
-            BoundedScaledLabel(slotHeight = MinTouchTargetSize, style = MaterialTheme.typography.labelSmall, scale = false) {
+            BoundedScaledLabel(slotHeight = mainResultRowHeight, style = MaterialTheme.typography.labelSmall, scale = false) {
                 Text(
                     it,
                     style = MaterialTheme.typography.labelSmall,

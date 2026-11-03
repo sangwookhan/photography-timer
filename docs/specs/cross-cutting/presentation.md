@@ -195,6 +195,44 @@ compact presence, not folded into the shooting screen itself.
   readable required information and operable controls at the maximum system
   font scale. Unaffected screens shall retain their established presentation.
 
+### Android phone shooting presentation
+
+The following presentation applies to regular Android phones and may also
+apply on folded outer displays with phone-class space. Existing inner Fold,
+dual-screen, tablet, landscape, and split-window layouts remain unchanged.
+Typography eligibility does not determine compact timer placement.
+
+- **SHELL-024** — Where this presentation applies, the camera and film context,
+  Target Shutter, shutter/filter controls, and exposure results form four consecutive
+  visual regions separated by small, consistent gaps. Thin boundaries and
+  internal spacing distinguish the regions. Film name, applicable model
+  description and switching, and existing classification badges form one context; no empty
+  model row is reserved when switching is unavailable.
+- **SHELL-025** — With a film and an active Target Shutter, the Main shooting
+  surface shall simultaneously show Target Shutter, the ND-adjusted shutter,
+  Reciprocity status with its Details entry, and Corrected Exposure, together
+  with camera/film context, applicable model selection, shutter/filter controls,
+  and compact timer presence, subject to SHELL-057. Existing capability-owned
+  visibility and action rules continue to apply.
+- **SHELL-026** — Selected Base and ND values and primary result times shall
+  have visual priority. Selected wheel values share a size and center line,
+  use a clear selected background, and remain stable as the selected value
+  changes. Unselected values, secondary seconds, and source descriptions use
+  a subordinate but readable hierarchy. Thin dividers separate the three
+  result rows when present. Target time and film name remain readily readable.
+- **SHELL-027** — Size each element from the space available after system
+  insets, page indicators, and compact timer presence, accounting for the
+  complete applicable content. Allocate suitable spare space to wheel and
+  primary result elements before increasing gaps or padding. Use the available
+  phone width with consistent side margins. Adjust width allocation and line
+  arrangement before reducing text; do not hide required information or make
+  it unreadable to force a fit. Existing font-scale, touch-target and Main
+  no-vertical-scrolling contracts continue to apply.
+- **SHELL-028** — Align result labels, primary times, secondary seconds, and
+  Start actions consistently. A long result may place secondary seconds on a
+  separate line while retaining the primary time and action. This presentation
+  does not change time formatting, calculation, or timer behavior.
+
 ### Touch targets
 
 - **SHELL-030** — Primary shooting/timer action controls and ND notation

@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sangwook.ptimer.R
 import com.sangwook.ptimer.app.vm.AuxiliaryFilterSummaryDisplayState
 import com.sangwook.ptimer.app.vm.AuxiliaryFilterSummaryItemDisplay
@@ -103,7 +104,7 @@ internal fun AuxiliaryFilterSummaryColumn(
             // at the top (FILTER-AUX-002).
             summary.visibleItems.forEach { item ->
                 Spacer(Modifier.weight(1f))
-                AuxiliarySummaryRow(item)
+                AuxiliarySummaryRow(item, canStack = summary.visibleItems.size == 1 && moreText == null)
             }
             if (moreText != null) {
                 Spacer(Modifier.weight(1f))
@@ -149,9 +150,32 @@ private fun SummaryCue(text: String) {
  * of being cut (FILTER-AUX-002).
  */
 @Composable
-private fun AuxiliarySummaryRow(item: AuxiliaryFilterSummaryItemDisplay) {
-    val nameStyle = MaterialTheme.typography.bodySmall
+internal fun AuxiliarySummaryRow(item: AuxiliaryFilterSummaryItemDisplay, canStack: Boolean) {
+    val nameStyle = if (LocalPhoneShooting.current) MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp)
+        else MaterialTheme.typography.bodySmall
     val valueStyle = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (LocalPhoneShooting.current && canStack && maxWidth < 60.dp) {
+            val label = fittingLabel(item.compactLabels, nameStyle, maxWidth)
+            Column {
+                Text(label, style = nameStyle, maxLines = 1, softWrap = false,
+                    autoSize = TextAutoSize.StepBased(minFontSize = nameStyle.fontSize * 0.8f, maxFontSize = nameStyle.fontSize))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    item.opticalColor?.let {
+                        SourceCue(filterSetColor(it), size = 6.dp)
+                        Spacer(Modifier.width(3.dp))
+                    }
+                    Text(item.contributionText, style = valueStyle, maxLines = 1, softWrap = false)
+                }
+            }
+        } else {
+            AuxiliarySummaryInlineRow(item, nameStyle, valueStyle)
+        }
+    }
+}
+
+@Composable
+private fun AuxiliarySummaryInlineRow(item: AuxiliaryFilterSummaryItemDisplay, nameStyle: TextStyle, valueStyle: TextStyle) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         item.opticalColor?.let {
             SourceCue(filterSetColor(it), size = 6.dp)

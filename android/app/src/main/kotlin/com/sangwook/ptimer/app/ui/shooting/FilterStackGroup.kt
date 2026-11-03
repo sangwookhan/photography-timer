@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -185,7 +186,7 @@ internal fun FilterStackGroup(
                 // left them at the old size and pushed Plus out of the
                 // row until the next wheel gesture (FILTER-PLUS-001).
                 val columnWidth = rememberUpdatedState(wheelWidth)
-                val viewportHeight = snapWheelItemHeight(WheelItemHeight) * WheelVisibleCount
+                val viewportHeight = snapWheelItemHeight(mainWheelItemHeight) * WheelVisibleCount
 
                 LazyRow(
                     userScrollEnabled = false,
@@ -243,6 +244,7 @@ internal fun FilterStackGroup(
         }
 
         FilterStatusRegion(
+            modifier = if (LocalPhoneShooting.current) Modifier.padding(vertical = 3.dp) else Modifier,
             requiredND = state.requiredND,
             onRequiredNDComplete = onRequiredNDComplete,
             actualTotal = totalText,
@@ -357,7 +359,8 @@ private fun FilterWheelColumn(
             onSelectedIndexChange = onSelectedIndexChange,
             modifier = Modifier.fillMaxWidth(),
             visibleCount = WheelVisibleCount,
-            itemHeight = WheelItemHeight,
+            itemHeight = mainWheelItemHeight,
+            highlightSelection = LocalPhoneShooting.current,
             accessibilityLabel = wheelDescription,
             dense = dense,
             onActiveChange = onActiveChange,

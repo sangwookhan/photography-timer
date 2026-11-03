@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
@@ -102,6 +103,16 @@ class FilterStackInteractionTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun plusTouchAddsStandardWheel() {
+        val c = controller(FilterInventory(emptyList()))
+        commit(c, 0, FilterWheelSelection.Standard(1.0))
+        composeTestRule.setContent { StackRow(c) }
+        composeTestRule.onNodeWithContentDescription("Add filter").performTouchInput { click() }
+        composeTestRule.waitForIdle()
+        assertEquals(2, c.state.value.filterWheels.size)
     }
 
     @Test

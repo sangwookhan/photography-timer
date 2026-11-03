@@ -246,6 +246,7 @@ fun SnapWheel(
     /** Overrides the default `labels[selectedIndex]` state description
      *  (FILTER-A11Y-005). */
     accessibilityValue: String? = null,
+    highlightSelection: Boolean = false,
 ) {
     require(visibleCount % 2 == 1) { "visibleCount must be odd so one item sits dead-center" }
     val halfVisible = visibleCount / 2
@@ -400,6 +401,15 @@ fun SnapWheel(
             centeredIndex != selectedIndex &&
             selectedIndex in labels.indices
         ) {
+            listState.scrollToItem(selectedIndex)
+        }
+    }
+
+    // A resized row changes the snap grid even if the selected index did not
+    // change. Keep the selected value centered after the new grid is measured.
+    LaunchedEffect(rowHeight, highlightSelection) {
+        if (highlightSelection && !listState.isScrollInProgress && selectedIndex in labels.indices) {
+            androidx.compose.runtime.withFrameNanos { }
             listState.scrollToItem(selectedIndex)
         }
     }
@@ -631,7 +641,8 @@ fun SnapWheel(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
-                .height(rowHeight),
+                .height(rowHeight)
+                .background(if (highlightSelection) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent),
         ) {
             HorizontalDivider(modifier = Modifier.align(Alignment.TopCenter), color = boundColor)
             HorizontalDivider(modifier = Modifier.align(Alignment.BottomCenter), color = boundColor)

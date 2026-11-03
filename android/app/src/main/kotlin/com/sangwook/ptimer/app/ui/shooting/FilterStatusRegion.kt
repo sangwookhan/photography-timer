@@ -220,7 +220,7 @@ internal fun FilterStatusRegion(
                             .weight(1f)
                             .semantics { contentDescription = leading.plainText },
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(if (LocalPhoneShooting.current) 12.dp else 6.dp))
                 } else {
                     Spacer(Modifier.weight(1f))
                 }

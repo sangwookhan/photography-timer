@@ -7,7 +7,7 @@ title: Release Notes
 
 {% include platform-toggle.html %}
 
-## 1.1.2
+## 1.1.5 — Upcoming
 
 Common changes:
 

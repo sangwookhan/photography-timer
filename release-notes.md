@@ -12,7 +12,8 @@ title: Release Notes
 Common changes:
 
 - **Foldable and wide screens**
-  - Supports iPhone Duo on iOS and Galaxy Fold and tablets on Android. Phone layouts are unchanged.
+  - Supports iPhone Duo on iOS and Galaxy Fold and tablets on Android.
+  - Improves shooting screen readability and spacing on Android phones, including wider phones such as the Galaxy A15.
   - On a wide screen the shooting page uses the extra room: a wider single column, or inputs and results side by side.
   - When the device is half open, the page, page dots and timers stay clear of the fold.
   - Running timers can sit in a column beside the page: up to three cards, with View all for the rest.

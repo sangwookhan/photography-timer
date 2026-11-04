@@ -1230,9 +1230,14 @@ private struct HeaderView: View {
                 // wheel header, Plus, and the summary.
                 Menu {
                     Section {
-                        Toggle("Show required ND", isOn: Binding(get: { showRequiredND }, set: onSetShowRequiredND))
-                            .accessibilityHint("Show total attenuation needed while adjusting Base.")
-                            .accessibilityIdentifier("settings-required-nd")
+                        Button(
+                            "Show required ND",
+                            systemImage: showRequiredND ? "checkmark.square" : "square",
+                            action: toggleRequiredND
+                        )
+                        .menuActionDismissBehavior(.disabled)
+                        .accessibilityHint("Show total attenuation needed while adjusting Base.")
+                        .accessibilityIdentifier("settings-required-nd")
                     } header: {
                         Text("Show total attenuation needed while adjusting Base.")
                     }
@@ -1255,6 +1260,7 @@ private struct HeaderView: View {
                 }
                 .tint(Color.secondary)
                 .accessibilityLabel(Text("Settings"))
+                .accessibilityValue(Text("Show required ND: \(requiredNDStateText(showRequiredND))"))
                 .accessibilityIdentifier("settings-button")
             }
 
@@ -1289,6 +1295,20 @@ private struct HeaderView: View {
         }
         .onDisappear { badgeHideTask?.cancel() }
         .sectionCardStyle(style: style)
+    }
+
+    private func requiredNDStateText(_ enabled: Bool) -> String {
+        enabled ? String(localized: "required-nd-setting-on") : String(localized: "required-nd-setting-off")
+    }
+
+    private func toggleRequiredND() {
+        let enabled = !showRequiredND
+        onSetShowRequiredND(enabled)
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: String(localized: "Show required ND: \(requiredNDStateText(enabled))")
+        )
     }
 
     private func revealClassificationBadge() {

@@ -223,11 +223,16 @@ class FilterWheelLabelLegibilityTest {
     private fun key(label: String, wheels: Int) = "$label at ${wheels}w"
 }
 
-/** Minimal wiring: only the stack's own callbacks do anything. */
+/** Minimal wiring: tests opt in to the callbacks they exercise. */
 @Composable
-internal fun ShootingScreenHarness(state: CalculatorUiState, onAdd: (FilterSource) -> Unit = {}) {
+internal fun ShootingScreenHarness(
+    state: CalculatorUiState,
+    onAdd: (FilterSource) -> Unit = {},
+    onShowRequiredND: (Boolean) -> Unit = {},
+) {
     ShootingScreen(
         state = state,
+        onShowRequiredND = onShowRequiredND,
         onShutterIndex = {},
         onNdWheelActive = { _, _ -> },
         onNdWheelValue = { _, _ -> },

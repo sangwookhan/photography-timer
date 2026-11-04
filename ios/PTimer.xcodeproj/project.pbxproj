@@ -18,7 +18,7 @@
 		A0000000000000000000000F /* LockScreenTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* LockScreenTimerLiveActivity.swift */; };
 		A000000000000000000000A0 /* PTimerWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* PTimerWidgetsBundle.swift */; };
 		A000000000000000000000A1 /* LockScreenTimerTargetWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* LockScreenTimerTargetWidget.swift */; };
-		A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A000000000000000000000A2 /* PTimerWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* PTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A000000000000000000000BF /* ExposureCalculatorViewModelContextPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000CE /* ExposureCalculatorViewModelContextPersistenceTests.swift */; };
 		A000000000000000000000D2 /* BottomSheetWorkspaceShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */; };
 		A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000101 /* ExposureCalculatorLayoutMetrics.swift */; };
@@ -39,11 +39,13 @@
 		A00000000000000000000226 /* TargetShutterSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000227 /* TargetShutterSectionView.swift */; };
 		A00000000000000000000300 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000C5 /* Assets.xcassets */; };
 		A00000000000000000000811 /* ExposureWorkspaceMainLayoutStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */; };
-		A00000000000000000000821 /* ExposureWorkspacePageArrangement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */; };
-		A00000000000000000000841 /* CompactTimerRailPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000840 /* CompactTimerRailPlacement.swift */; };
-		A00000000000000000000861 /* BoundedTaskPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000860 /* BoundedTaskPresentation.swift */; };
 		A00000000000000000000813 /* FilmSelectorOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000812 /* FilmSelectorOverlayView.swift */; };
 		A00000000000000000000815 /* ExposureCalculatorResultViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000814 /* ExposureCalculatorResultViews.swift */; };
+		A00000000000000000000821 /* ExposureWorkspacePageArrangement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */; };
+		A00000000000000000000831 /* ExposureWorkspacePageArrangementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */; };
+		A00000000000000000000841 /* CompactTimerRailPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000840 /* CompactTimerRailPlacement.swift */; };
+		A00000000000000000000851 /* CompactTimerRailPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */; };
+		A00000000000000000000861 /* BoundedTaskPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000860 /* BoundedTaskPresentation.swift */; };
 		A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000901 /* TimerManagerTestSupport.swift */; };
 		A00000000000000000000902 /* TimerManagerCompletionAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */; };
 		A00000000000000000000904 /* TimerManagerNotificationSchedulingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */; };
@@ -53,8 +55,6 @@
 		A0000000000000000000091C /* CalculatorTimerLockScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */; };
 		A00000000000000000000920 /* BottomSheetWorkspaceShellTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */; };
 		A00000000000000000000926 /* BottomSheetWorkspaceLayoutMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */; };
-		A00000000000000000000831 /* ExposureWorkspacePageArrangementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */; };
-		A00000000000000000000851 /* CompactTimerRailPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */; };
 		A00000000000000000000928 /* ExposureWorkspaceMainLayoutStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */; };
 		A0000000000000000000092A /* NDWheelPickerCenterRowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */; };
 		A0000000000000000000092C /* FilterSourcePlusControlAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */; };
@@ -86,7 +86,6 @@
 		B3A6DC75BC0B7A2BEF2BA814 /* CameraDataUnavailableScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */; };
 		B3C1FFC9B64BE426D19A513E /* SheetCloseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B205C1FFC9B64BE426D19A51 /* SheetCloseButton.swift */; };
 		B3D078E6EB4FEF1874E970A6 /* CameraManagementAccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */; };
-		F24300000000000000000001 /* FilmClassificationBadgeVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */; };
 		EE0000000000000000000003 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
 		EE0000000000000000000005 /* PTimerKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000004 /* PTimerKit */; };
 		EE0000000000000000000006 /* PTimerCore in Frameworks */ = {isa = PBXBuildFile; productRef = EE0000000000000000000002 /* PTimerCore */; };
@@ -102,6 +101,7 @@
 		F22177F9D59D35FB8E0F26E7 /* UserDefaultsFilterInventoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */; };
 		F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */; };
 		F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */; };
+		F24300000000000000000001 /* FilmClassificationBadgeVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,15 +122,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		A00000000000000000000098 /* Embed App Extensions */ = {
+		A00000000000000000000098 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				A000000000000000000000A2 /* PTimerWidgets.appex in Embed App Extensions */,
+				A000000000000000000000A2 /* PTimerWidgets.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -171,11 +171,13 @@
 		A0000000000000000000021E /* CameraSlotRenameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSlotRenameSheet.swift; sourceTree = "<group>"; };
 		A00000000000000000000227 /* TargetShutterSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetShutterSectionView.swift; sourceTree = "<group>"; };
 		A00000000000000000000810 /* ExposureWorkspaceMainLayoutStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyle.swift; sourceTree = "<group>"; };
-		A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangement.swift; sourceTree = "<group>"; };
-		A00000000000000000000840 /* CompactTimerRailPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacement.swift; sourceTree = "<group>"; };
-		A00000000000000000000860 /* BoundedTaskPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedTaskPresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000812 /* FilmSelectorOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSelectorOverlayView.swift; sourceTree = "<group>"; };
 		A00000000000000000000814 /* ExposureCalculatorResultViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureCalculatorResultViews.swift; sourceTree = "<group>"; };
+		A00000000000000000000820 /* ExposureWorkspacePageArrangement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangement.swift; sourceTree = "<group>"; };
+		A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangementTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000840 /* CompactTimerRailPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacement.swift; sourceTree = "<group>"; };
+		A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacementTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000860 /* BoundedTaskPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundedTaskPresentation.swift; sourceTree = "<group>"; };
 		A00000000000000000000901 /* TimerManagerTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerCompletionAlertTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000905 /* TimerManagerNotificationSchedulingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerManagerNotificationSchedulingTests.swift; sourceTree = "<group>"; };
@@ -185,8 +187,6 @@
 		A0000000000000000000091D /* CalculatorTimerLockScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorTimerLockScreenTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000921 /* BottomSheetWorkspaceShellTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceShellTestSupport.swift; sourceTree = "<group>"; };
 		A00000000000000000000927 /* BottomSheetWorkspaceLayoutMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetWorkspaceLayoutMetricsTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000830 /* ExposureWorkspacePageArrangementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspacePageArrangementTests.swift; sourceTree = "<group>"; };
-		A00000000000000000000850 /* CompactTimerRailPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactTimerRailPlacementTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000929 /* ExposureWorkspaceMainLayoutStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureWorkspaceMainLayoutStyleTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092B /* NDWheelPickerCenterRowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDWheelPickerCenterRowTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000092D /* FilterSourcePlusControlAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControlAccessibilityTests.swift; sourceTree = "<group>"; };
@@ -217,7 +217,6 @@
 		B2772717057DB6829867D209 /* UserDefaultsCameraSlotSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraSlotSessionStoreTests.swift; sourceTree = "<group>"; };
 		B285A6DC75BC0B7A2BEF2BA8 /* CameraDataUnavailableScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDataUnavailableScreenTests.swift; sourceTree = "<group>"; };
 		B299D078E6EB4FEF1874E970 /* CameraManagementAccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagementAccessibilityTests.swift; sourceTree = "<group>"; };
-		F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmClassificationBadgeVisibilityTests.swift; sourceTree = "<group>"; };
 		B2D710092EFA3E9194D8630E /* SheetCloseButtonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetCloseButtonTests.swift; sourceTree = "<group>"; };
 		B2EF4676CCD0494A730F584A /* UserDefaultsCameraNameSequenceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCameraNameSequenceStoreTests.swift; sourceTree = "<group>"; };
 		EE0000000000000000000010 /* UserDefaultsCalculatorContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsCalculatorContextStore.swift; sourceTree = "<group>"; };
@@ -230,6 +229,7 @@
 		F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSetManagementView.swift; sourceTree = "<group>"; };
 		F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSourcePlusControl.swift; sourceTree = "<group>"; };
 		F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsFilterInventoryStore.swift; sourceTree = "<group>"; };
+		F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmClassificationBadgeVisibilityTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -542,15 +542,12 @@
 				A00000000000000000000021 /* Sources */,
 				A00000000000000000000020 /* Frameworks */,
 				A00000000000000000000022 /* Resources */,
-				A00000000000000000000098 /* Embed App Extensions */,
+				A00000000000000000000098 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				A000000000000000000000A4 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				A00000000000000000000031 /* PTimer */,
 			);
 			name = PTimer;
 			packageProductDependencies = (
@@ -595,9 +592,6 @@
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				A00000000000000000000094 /* PTimerWidgets */,
-			);
 			name = PTimerWidgets;
 			packageProductDependencies = (
 				EE0000000000000000000002 /* PTimerCore */,
@@ -614,7 +608,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2603;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					A00000000000000000000040 = {
 						CreatedOnToolsVersion = 26.3;
@@ -872,6 +866,7 @@
 			baseConfigurationReference = A0000000000000000000EF01 /* Config/Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -932,6 +927,7 @@
 			baseConfigurationReference = A0000000000000000000EF01 /* Config/Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";

@@ -25,6 +25,7 @@ itself.
 | Filter inventory, camera Set selection, auxiliary filters, and ND sources | `calculator/filter-sets.md` |
 | Target Shutter | `calculator/target-shutter.md` |
 | Managed cameras, pager switching, camera names | `shooting/camera-slots.md` |
+| Shooting Collections and preserved timer records | `shooting/collections.md` |
 | Reset behavior | `shooting/reset.md` |
 | Reciprocity evaluation and result categories | `reciprocity/calculation.md` |
 | Preset film dataset and catalog policy | `reciprocity/catalog.md` |

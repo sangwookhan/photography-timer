@@ -33,5 +33,10 @@ ptimer_claude_*_pack_*/
 ptimer_claude_handoff_*/
 scratch/
 
+# Session-local Spec Kit delivery artifacts (never product contracts)
+/specs/
+/.specify/feature.json
+/.specify/local/
+
 # Xcode auto-generated workspace data (not tracked upstream)
 ios/PTimer.xcodeproj/project.xcworkspace/contents.xcworkspacedata

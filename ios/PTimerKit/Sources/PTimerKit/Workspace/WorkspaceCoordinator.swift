@@ -18,6 +18,7 @@ import PTimerCore
 /// so the screen can use `@StateObject` for lifetime ownership.
 @MainActor
 public final class WorkspaceCoordinator: ObservableObject {
+    public let shootingCollectionModel: ShootingCollectionModel
     public let calculatorModel: CalculatorModel
     public let reciprocityModel: ReciprocityModel
     public let timerWorkspaceModel: TimerWorkspaceModel
@@ -59,6 +60,7 @@ public final class WorkspaceCoordinator: ObservableObject {
         )
         let targetShutterModel = TargetShutterModel()
         let filterInventoryModel = FilterInventoryModel(store: dependencies.filterInventoryStore, initial: dependencies.initialFilterInventory)
+        self.shootingCollectionModel = ShootingCollectionModel(store: dependencies.shootingCollectionStore)
         self.calculatorModel = calculatorModel
         self.reciprocityModel = reciprocityModel
         self.timerWorkspaceModel = timerWorkspaceModel

@@ -102,6 +102,12 @@
 		F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */; };
 		F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */; };
 		F24300000000000000000001 /* FilmClassificationBadgeVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */; };
+		F24510000000000000000000 /* FileShootingCollectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000000 /* FileShootingCollectionStore.swift */; };
+		F24510000000000000000001 /* ShootingCollectionBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000001 /* ShootingCollectionBrowser.swift */; };
+		F24510000000000000000002 /* ShootingCollectionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000002 /* ShootingCollectionSelectionView.swift */; };
+		F24510000000000000000003 /* ShootingRecordSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000003 /* ShootingRecordSummaryView.swift */; };
+		F24510000000000000000004 /* ShootingRecordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000004 /* ShootingRecordDetailView.swift */; };
+		F24510000000000000000010 /* ShootingCollectionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000010 /* ShootingCollectionStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +237,12 @@
 		F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsFilterInventoryStore.swift; sourceTree = "<group>"; };
 		F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmClassificationBadgeVisibilityTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
+		F24500000000000000000000 /* FileShootingCollectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileShootingCollectionStore.swift; sourceTree = "<group>"; };
+		F24500000000000000000001 /* ShootingCollectionBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingCollectionBrowser.swift; sourceTree = "<group>"; };
+		F24500000000000000000002 /* ShootingCollectionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingCollectionSelectionView.swift; sourceTree = "<group>"; };
+		F24500000000000000000003 /* ShootingRecordSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingRecordSummaryView.swift; sourceTree = "<group>"; };
+		F24500000000000000000004 /* ShootingRecordDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingRecordDetailView.swift; sourceTree = "<group>"; };
+		F24500000000000000000010 /* ShootingCollectionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingCollectionStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -395,6 +407,7 @@
 		A000000000000000000000C8 /* Timers */ = {
 			isa = PBXGroup;
 			children = (
+				F24500000000000000000000 /* FileShootingCollectionStore.swift */,
 				A00000000000000000000015 /* TimerManager.swift */,
 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
 				A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */,
@@ -452,6 +465,7 @@
 		A000000000000000000000CD /* Timers */ = {
 			isa = PBXGroup;
 			children = (
+				F24500000000000000000010 /* ShootingCollectionStoreTests.swift */,
 				A00000000000000000000017 /* TimerManagerTests.swift */,
 				A00000000000000000000901 /* TimerManagerTestSupport.swift */,
 				A00000000000000000000903 /* TimerManagerCompletionAlertTests.swift */,
@@ -470,6 +484,10 @@
 		A000000000000000000000D0 /* Workspace */ = {
 			isa = PBXGroup;
 			children = (
+				F24500000000000000000004 /* ShootingRecordDetailView.swift */,
+				F24500000000000000000003 /* ShootingRecordSummaryView.swift */,
+				F24500000000000000000002 /* ShootingCollectionSelectionView.swift */,
+				F24500000000000000000001 /* ShootingCollectionBrowser.swift */,
 				A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */,
 			);
 			path = Workspace;
@@ -679,6 +697,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F24510000000000000000004 /* ShootingRecordDetailView.swift in Sources */,
+				F24510000000000000000003 /* ShootingRecordSummaryView.swift in Sources */,
+				F24510000000000000000002 /* ShootingCollectionSelectionView.swift in Sources */,
+				F24510000000000000000001 /* ShootingCollectionBrowser.swift in Sources */,
+				F24510000000000000000000 /* FileShootingCollectionStore.swift in Sources */,
 				A00000000000000000000001 /* PTimerApp.swift in Sources */,
 				EE0000000000000000000011 /* UserDefaultsCalculatorContextStore.swift in Sources */,
 				EE000000000000000000D001 /* UserDefaultsDisplaySettingStore.swift in Sources */,
@@ -729,6 +752,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F24510000000000000000010 /* ShootingCollectionStoreTests.swift in Sources */,
 				EE0000000000000000000C92 /* CustomFilmTestSupport.swift in Sources */,
 				A00000000000000000000007 /* TimerManagerTests.swift in Sources */,
 				A00000000000000000000900 /* TimerManagerTestSupport.swift in Sources */,
@@ -819,7 +843,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -850,7 +874,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -985,7 +1009,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1006,7 +1030,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1033,7 +1057,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.dev.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1060,7 +1084,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.5;
+				MARKETING_VERSION = 1.1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sangwook.PTimer.PTimerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

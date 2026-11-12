@@ -77,7 +77,9 @@ acting on every timer at once.
   results.
 - **WORKSPACE-022** — *Cancel*, from a paused row, stops the timer and
   keeps it as a canceled record; it does not delete it. This is distinct
-  from *remove*, which deletes the record entirely.
+  from *remove*, which removes the timer from the workspace. A record
+  already preserved in a Shooting Collection remains available there, as
+  governed by `shooting/collections.md` (COLLECTION-012).
 - **WORKSPACE-023** — *Start again* (repeat), from a terminal row, creates
   a new timer from the record's captured setup and full duration, leaving
   the source terminal record untouched.

@@ -643,6 +643,7 @@ struct BottomSheetLargeWorkspaceView: View {
     let onCollapse: () -> Void
     var soundingAlarmTimerID: UUID?
     var onStopAlarm: () -> Void = {}
+    var onSelectHistory: (() -> Void)?
     @State private var hasAppliedInitialFocus = false
     /// Pending Clone/Cancel/Remove action awaiting confirmation; nil when
     /// no confirmation dialog is shown.
@@ -749,6 +750,10 @@ struct BottomSheetLargeWorkspaceView: View {
             Spacer(minLength: 8)
 
             if section.isCompletedSection {
+                if let onSelectHistory {
+                    Button("Select", action: onSelectHistory)
+                        .accessibilityIdentifier("history-select-records")
+                }
                 Button("Clear") {
                     showClearConfirm = true
                 }
@@ -1307,6 +1312,11 @@ struct FullScreenTimersWindow: View {
     var soundingAlarmTimerID: UUID?
     var onStopAlarm: () -> Void = {}
 
+    var collectionModel: ShootingCollectionModel?
+    var history: [RunningTimerItem] = []
+    @State private var showCollections = false
+    @State private var startsSelecting = false
+
     var body: some View {
         NavigationStack {
             BottomSheetLargeWorkspaceView(
@@ -1320,7 +1330,11 @@ struct FullScreenTimersWindow: View {
                 onClearCompletedTimers: onClearCompletedTimers,
                 onCollapse: onClose,
                 soundingAlarmTimerID: soundingAlarmTimerID,
-                onStopAlarm: onStopAlarm
+                onStopAlarm: onStopAlarm,
+                onSelectHistory: collectionModel == nil ? nil : {
+                    startsSelecting = true
+                    showCollections = true
+                }
             )
             .padding(.horizontal, 18)
             .padding(.top, 4)
@@ -1328,6 +1342,14 @@ struct FullScreenTimersWindow: View {
             .navigationTitle(BottomSheetWorkspaceCopy.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if collectionModel != nil {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Collections", systemImage: "rectangle.stack") {
+                            startsSelecting = false
+                            showCollections = true
+                        }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         onClose()
@@ -1337,6 +1359,11 @@ struct FullScreenTimersWindow: View {
                     .accessibilityLabel(Text("Close timers"))
                     .accessibilityIdentifier("full-screen-timers-close-button")
                 }
+            }
+        }
+        .sheet(isPresented: $showCollections) {
+            if let collectionModel {
+                ShootingCollectionBrowser(model: collectionModel, history: history, startsSelecting: startsSelecting)
             }
         }
         .accessibilityIdentifier("full-screen-timers-window")

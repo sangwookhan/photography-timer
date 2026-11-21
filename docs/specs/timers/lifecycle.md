@@ -115,7 +115,8 @@ belongs to, captured once at start time and frozen thereafter.
 
 ## Non-goals
 
-- Multi-timer selection, batch actions, or cross-timer linking are not
-  currently specified.
+- Runtime batch actions and cross-timer runtime linking are not currently
+  specified. History selection for preservation is governed separately by
+  `shooting/collections.md`.
 - A defined retention policy for completed timers (e.g. "recent items
   only") does not currently exist.

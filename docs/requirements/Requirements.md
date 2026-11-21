@@ -217,6 +217,22 @@ without losing access to controls or the current task.
 - Changing the window must not discard edits, switch the selected camera,
   reset shooting settings, or interrupt or duplicate a timer.
 
+### Scenario 11 — Preserve and revisit shooting records
+
+**Goal.** Keep selected finished exposures together so the photographer can
+review the captured records after leaving and reopening the app.
+
+1. Finish or cancel one or more timers and select their History events.
+2. Preserve the selection in a Shooting Collection.
+3. Open the Collection and inspect individual records, including after an
+   app restart or removal of the original History entries.
+
+**Boundary conditions.**
+
+- Older events may have less captured information; current shooting settings
+  must not be used to invent that missing context.
+- Ordinary timer work continues independently of record preservation.
+
 ## 3. Functional requirements
 
 Each requirement is a "system shall" obligation with a back-reference to the originating scenario. The wording is intentionally close to acceptance-criteria style.
@@ -343,6 +359,15 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-9.7** Required attenuation shall be distinguishable from the current mounted total, shall report unavailable numeric guidance honestly, and shall identify numeric continuation beyond source range. The photographer shall be able to disable this guidance through a preference retained across cameras and relaunch. (Scenarios 1, 2)
 
 ---
+
+### 3.10 Shooting Collections
+
+- **FR-10.1** The system shall let the photographer preserve selected terminal
+  History events as a Collection and revisit individual captured records
+  after app restart, independently of History removal. (Scenario 11)
+- **FR-10.2** The system shall preserve each event in at most one Collection
+  without changing ordinary timer operation or inventing unavailable shooting
+  information. (Scenario 11)
 
 ## 4. Non-functional requirements
 

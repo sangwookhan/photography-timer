@@ -1,6 +1,390 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ + %lld more" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ + %lld more"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 외 %lld대"
+          }
+        }
+      }
+    },
+    "Camera not recorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera not recorded"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 정보 없음"
+          }
+        }
+      }
+    },
+    "Location not recorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location not recorded"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "장소 정보 없음"
+          }
+        }
+      }
+    },
+    "Camera missing in %lld records" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera missing in %lld records"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 정보 없는 기록 %lld건"
+          }
+        }
+      }
+    },
+    "Started %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Started %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시작 %@"
+          }
+        }
+      }
+    },
+    "Ended %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ended %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "종료 %@"
+          }
+        }
+      }
+    },
+    "Start not recorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start not recorded"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시작 정보 없음"
+          }
+        }
+      }
+    },
+    "End not recorded" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End not recorded"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "종료 정보 없음"
+          }
+        }
+      }
+    },
+    "End missing in %lld records" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End missing in %lld records"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "종료 정보 없는 기록 %lld건"
+          }
+        }
+      }
+    },
+    "%lld records will leave this Collection. The Timer list is unchanged. Captured records remain available in Uncollected records." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld records will leave this Collection. The Timer list is unchanged. Captured records remain available in Uncollected records."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록 %lld건을 이 Collection에서 제외합니다. Timer 목록은 변경하지 않습니다. 촬영 기록은 미분류 기록에서 계속 확인할 수 있습니다."
+          }
+        }
+      }
+    },
+    "Create another Collection before moving these records." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create another Collection before moving these records."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 Collection을 먼저 만든 뒤 기록을 이동하세요."
+          }
+        }
+      }
+    },
+    "Move" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이동"
+          }
+        }
+      }
+    },
+    "Move %lld records to" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move %lld records to"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록 %lld건을 이동할 Collection"
+          }
+        }
+      }
+    },
+    "Move records" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move records"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록 이동"
+          }
+        }
+      }
+    },
+    "No destination Collection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No destination Collection"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이동할 Collection 없음"
+          }
+        }
+      }
+    },
+    "No records" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No records"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록 없음"
+          }
+        }
+      }
+    },
+    "Records couldn't be moved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records couldn't be moved"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록을 이동하지 못했습니다"
+          }
+        }
+      }
+    },
+    "Records couldn't be removed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records couldn't be removed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록을 제외하지 못했습니다"
+          }
+        }
+      }
+    },
+    "Records removed from a Collection remain preserved here." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records removed from a Collection remain preserved here."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collection에서 제외한 촬영 기록은 여기에 보존됩니다."
+          }
+        }
+      }
+    },
+    "Remove from Collection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from Collection"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collection에서 제외"
+          }
+        }
+      }
+    },
+    "Remove from Collection?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from Collection?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collection에서 제외할까요?"
+          }
+        }
+      }
+    },
+    "This Collection has no records." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Collection has no records."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Collection에는 기록이 없습니다."
+          }
+        }
+      }
+    },
+    "Uncollected records" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uncollected records"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미분류 기록"
+          }
+        }
+      }
+    },
+    "Your records and selection are unchanged. Try again or cancel." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your records and selection are unchanged. Try again or cancel."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록과 선택은 그대로 유지됩니다. 다시 시도하거나 취소하세요."
+          }
+        }
+      }
+    },
     "Same start time" : {
       "localizations": {
         "ko": {

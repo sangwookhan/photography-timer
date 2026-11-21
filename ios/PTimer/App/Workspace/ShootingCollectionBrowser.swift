@@ -4,9 +4,10 @@
 import PTimerKit
 import SwiftUI
 
-private enum ShootingCollectionRoute: Hashable {
+enum ShootingCollectionRoute: Hashable {
     case collection(UUID)
-    case record(UUID, UUID)
+    case uncollected
+    case record(UUID)
 }
 
 struct ShootingCollectionBrowser: View {
@@ -15,6 +16,7 @@ struct ShootingCollectionBrowser: View {
     let history: [RunningTimerItem]
     @State private var path: [ShootingCollectionRoute] = []
     @State private var isSelecting = false
+    @State private var isEditing = false
 
     init(model: ShootingCollectionModel, history: [RunningTimerItem], startsSelecting: Bool = false) {
         self.model = model
@@ -39,7 +41,7 @@ struct ShootingCollectionBrowser: View {
             .navigationTitle(isSelecting ? String(localized: "Select History") : String(localized: "Collections"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !isSelecting {
+                if !isSelecting && path.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Close", systemImage: "xmark") { dismiss() }
                     }
@@ -48,22 +50,17 @@ struct ShootingCollectionBrowser: View {
             .navigationDestination(for: ShootingCollectionRoute.self) { route in
                 switch route {
                 case .collection(let id):
-                    if let collection = model.collections.first(where: { $0.id == id }) {
-                        List(collection.records) { record in
-                            NavigationLink(value: ShootingCollectionRoute.record(id, record.id)) {
-                                ShootingRecordSummaryView(record: record)
-                            }
-                        }
-                        .navigationTitle(collection.title)
-                    }
-                case .record(let collectionID, let eventID):
-                    if let record = model.collections.first(where: { $0.id == collectionID })?
-                        .records.first(where: { $0.id == eventID }) {
+                    ShootingCollectionRecordsView(model: model, collectionID: id, isEditing: $isEditing)
+                case .uncollected:
+                    ShootingCollectionRecordsView(model: model, collectionID: nil, isEditing: $isEditing)
+                case .record(let eventID):
+                    if let record = model.record(id: eventID) {
                         ShootingRecordDetailView(record: record)
                     }
                 }
             }
         }
+        .interactiveDismissDisabled(isEditing)
     }
 
     private var collectionList: some View {
@@ -75,6 +72,11 @@ struct ShootingCollectionBrowser: View {
                     Button("Select from History", systemImage: "checklist") { isSelecting = true }
                         .disabled(history.isEmpty)
                         .accessibilityIdentifier("collections-select-history")
+                    NavigationLink(value: ShootingCollectionRoute.uncollected) {
+                        Label("Uncollected records", systemImage: "tray")
+                            .badge(model.uncollectedRecords.count)
+                    }
+                    .accessibilityIdentifier("collections-uncollected-records")
                 }
                 if model.collections.isEmpty {
                     ContentUnavailableView(

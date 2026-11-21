@@ -4,6 +4,7 @@
 import Combine
 import SwiftUI
 import UIKit
+import Vision
 import XCTest
 import PTimerKit
 import PTimerCore
@@ -134,10 +135,23 @@ final class TimerManagerPauseResumeTests: XCTestCase {
         let row = LargeWorkspaceTimerRowView(
             item: item, isFocused: false, onAction: { _ in }, isAlarmSounding: isAlarmSounding
         )
-        let host = UIHostingController(rootView: row
+        let configuredRow = row
             .environment(\.dynamicTypeSize, textSize)
-            .environment(\.locale, Locale(identifier: localeID)))
-        return host.sizeThatFits(in: CGSize(width: width, height: 2_000)).height
+            .environment(\.locale, Locale(identifier: localeID))
+        let host = UIHostingController(rootView: configuredRow)
+        let height = host.sizeThatFits(in: CGSize(width: width, height: 2_000)).height
+        if status == .canceled, width == 320, textSize == .accessibility1,
+           localeID == "en", elapsed == 0, !isAlarmSounding {
+            let renderer = ImageRenderer(content: configuredRow.frame(width: width))
+            renderer.scale = 3
+            let image = try XCTUnwrap(renderer.cgImage)
+            let request = VNRecognizeTextRequest()
+            try VNImageRequestHandler(cgImage: image).perform([request])
+            let text = request.results?.compactMap { $0.topCandidates(1).first?.string }
+                .joined(separator: " ") ?? ""
+            XCTAssertTrue(text.contains("01:00 left"), "Rendered cancellation duration missing: \(text)")
+        }
+        return height
     }
 
     @MainActor

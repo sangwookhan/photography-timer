@@ -932,9 +932,10 @@ struct BottomSheetLargeWorkspaceView: View {
     private func confirmMessage(for pending: PendingTimerConfirm) -> String {
         switch pending.action {
         case .clone:
-            let source = snapshot.sections.flatMap(\.items).first { $0.id == pending.timerID }
-            if source?.status == .paused {
-                return String(localized: "A new timer will start with the same settings. This paused timer will be canceled and moved to History.")
+            if snapshot.sections.contains(where: { section in
+                section.items.contains { $0.status == .paused }
+            }) {
+                return String(localized: "A new timer will start with the same settings. All paused timers will be canceled and moved to History.")
             }
             return String(localized: "A new timer will start with the same settings. This record will stay unchanged.")
         case .cancel:
@@ -1080,7 +1081,7 @@ struct LargeWorkspaceTimerRowView: View {
                                 .overlay(alignment: .leading) {
                                     Text(isAlarmSounding
                                          ? String(localized: "Alarm sounding — tap to stop")
-                                         : (item.resumeCountdownText ?? timingText))
+                                         : (item.resumeCountdownText ?? item.remainingAtCancellationText ?? timingText))
                                         .font(.footnote)
                                         .monospacedDigit()
                                         .foregroundStyle(isAlarmSounding ? .red : (item.resumeCountdownText == nil ? .secondary : .orange))

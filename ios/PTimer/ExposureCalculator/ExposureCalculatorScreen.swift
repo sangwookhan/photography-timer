@@ -957,7 +957,8 @@ private struct CameraSlotCalculatorPage: View {
                     : { _ in },
                 onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
                 onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
-                style: style
+                style: style,
+                cancellationNoticeModel: viewModel.timerCancellationNoticeModel
             )
             .layoutPriority(1)
 

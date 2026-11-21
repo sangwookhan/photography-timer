@@ -82,6 +82,7 @@ public struct BottomSheetLargeItem: Identifiable, Equatable {
     public let remainingText: String
     public let totalDurationText: String?
     public let timingText: String?
+    public let remainingAtCancellationText: String?
     public let resumeNoticeText: String?
     public let resumeCountdownText: String?
     public let cancellationReasonText: String?
@@ -301,6 +302,7 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                     // (no slash-separated pair). PTIMER-187.
                     totalDurationText: nil,
                     timingText: largeTimingText(for: timer, timeContext: timeContext),
+                    remainingAtCancellationText: cancellationRemainingText(for: timer),
                     resumeNoticeText: resumeNoticeText(for: timer),
                     resumeCountdownText: timer.resumeTimeRemaining.map {
                         String(format: String(localized: "Resume in %@ · auto-cancel"), resumeCountdownText($0))
@@ -606,16 +608,18 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         timeContext: (RunningTimerItem) -> String?
     ) -> String? {
         let base = timeContext(timer)
-        guard timer.status == .canceled,
-              let remaining = timer.canceledRemainingTime,
-              remaining > 0 else {
-            return base
-        }
-        let remainingMeta = "\(compactDurationText(remaining)) left"
+        guard let remainingMeta = cancellationRemainingText(for: timer) else { return base }
         guard let base, !base.isEmpty else {
             return remainingMeta
         }
         return "\(base) · \(remainingMeta)"
+    }
+
+    private static func cancellationRemainingText(for timer: RunningTimerItem) -> String? {
+        guard timer.status == .canceled, let remaining = timer.canceledRemainingTime else {
+            return nil
+        }
+        return String(format: Copy.remainingSuffix, compactDurationText(remaining))
     }
 
     private static func cancellationReasonText(for timer: RunningTimerItem) -> String? {

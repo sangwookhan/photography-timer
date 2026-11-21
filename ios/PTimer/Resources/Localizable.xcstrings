@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A new timer will start with the same settings. All paused timers will be canceled and moved to History.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 설정으로 새 타이머를 시작합니다. 일시정지된 모든 타이머는 취소되어 History로 이동합니다."
+          }
+        }
+      }
+    },
     "A new timer will start with the same settings. This paused timer will be canceled and moved to History.": {
       "extractionState": "manual",
       "localizations": {

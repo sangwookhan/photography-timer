@@ -91,6 +91,7 @@ final class BottomSheetStartAgainTests: XCTestCase {
         // remaining-at-cancel moves to the meta line (PTIMER-198).
         XCTAssertEqual(item.remainingText, "Canceled")
         XCTAssertEqual(item.timingText, "Canceled recently · 51s left")
+        XCTAssertEqual(item.remainingAtCancellationText, "51s left")
         XCTAssertEqual(item.statusLabel, "Canceled")
         // Stable numeric id = the timer's creation order, bare number.
         XCTAssertEqual(item.sequenceNumberText, "7")
@@ -321,6 +322,36 @@ final class BottomSheetStartAgainTests: XCTestCase {
             XCTAssertEqual(Set(harness.viewModel.timers.filter { $0.status == .running }.map(\.id)), running)
         }
         XCTAssertEqual(harness.viewModel.timers.count, 4)
+    }
+
+    @MainActor
+    func testRepeatFromEverySourceCancelsAllPausedTimers() throws {
+        for status in [TimerStatus.running, .paused, .completed, .canceled] {
+            let harness = makeRuntimeHarness(now: 100)
+            harness.viewModel.startTimer(from: status == .completed ? 1 : 600)
+            let sourceID = try XCTUnwrap(harness.viewModel.timers.first?.id)
+            if status == .completed {
+                harness.currentDate = Date(timeIntervalSince1970: 102)
+                harness.timerManager.tick(now: harness.currentDate)
+            } else if status == .canceled {
+                harness.viewModel.cancelTimer(id: sourceID)
+            }
+            harness.viewModel.startTimer(from: 600)
+            harness.viewModel.startTimer(from: 600)
+            let otherIDs = harness.viewModel.timers.map(\.id).filter { $0 != sourceID }
+            for id in otherIDs { harness.viewModel.pauseTimer(id: id) }
+            if status == .paused { harness.viewModel.pauseTimer(id: sourceID) }
+
+            let source = try XCTUnwrap(harness.viewModel.timers.first { $0.id == sourceID })
+            XCTAssertEqual(source.status, status)
+            let newID = try XCTUnwrap(harness.viewModel.cloneTimer(from: source))
+            for id in otherIDs {
+                XCTAssertEqual(harness.viewModel.timers.first { $0.id == id }?.status, .canceled)
+            }
+            let expectedSource = status == .paused ? TimerStatus.canceled : status
+            XCTAssertEqual(harness.viewModel.timers.first { $0.id == sourceID }?.status, expectedSource)
+            XCTAssertEqual(harness.viewModel.timers.first { $0.id == newID }?.status, .running)
+        }
     }
 
     @MainActor

@@ -232,6 +232,8 @@ review the captured records after leaving and reopening the app.
 - Older events may have less captured information; current shooting settings
   must not be used to invent that missing context.
 - Ordinary timer work continues independently of record preservation.
+- Related records can be suggested together, but remain under the
+  photographer's explicit selection control before preservation.
 
 ## 3. Functional requirements
 
@@ -368,6 +370,10 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-10.2** The system shall preserve each event in at most one Collection
   without changing ordinary timer operation or inventing unavailable shooting
   information. (Scenario 11)
+- **FR-10.3** The system shall help the photographer select related History
+  events through a visible time-based suggestion that requires an explicit
+  action to apply and remains individually adjustable before saving.
+  (Scenario 11)
 
 ## 4. Non-functional requirements
 

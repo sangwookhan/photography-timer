@@ -32,6 +32,47 @@ record after leaving and reopening the app.
   Creating from a nonempty selection requires no title-entry step and opens
   the newly created Collection's detail only after saving succeeds.
 
+### Suggested selection
+
+- **COLLECTION-SELECT-001** — Selecting an event checks only that event.
+  The first currently selected event in selection order is the suggestion
+  anchor. If it is deselected, the next remaining selected event becomes
+  the anchor. No selection means no suggestion.
+- **COLLECTION-SELECT-002** — Suggested events are unselected, uncollected
+  completed or canceled events still present in History whose start times
+  are within 30 minutes before or after the anchor's start time, including
+  both boundaries. This compares actual instants, including across midnight;
+  camera and film differences do not exclude an otherwise eligible event.
+  Location is not used or inferred.
+- **COLLECTION-SELECT-003** — When at least one suggested event exists, the
+  selection screen shows a marker immediately below the anchor record,
+  with the additional event count and a labelled View action. Suggested
+  candidate rows carry a visible time-suggestion badge distinct from their
+  checkbox. Neither marker nor badges change selection. No marker is shown
+  when there are no additional eligible events.
+- **COLLECTION-SELECT-004** — Confirming the preview adds only the chosen
+  preview candidates that remain eligible to the existing selection, without
+  removing any selection or expanding the time window through additions.
+  The user may select or deselect individual events afterward. Counts reflect
+  current selection and eligibility. This does not create or save a Collection;
+  the explicit creation action remains required.
+- **COLLECTION-SELECT-005** — View or a long press on the anchor record opens
+  a compact, scrollable suggestion preview. Both routes open the same preview
+  without toggling a checkbox. Checking, unchecking, changing the anchor, and
+  updating suggestions never automatically open the preview. The visible View
+  action remains available so discovery does not depend on a gesture.
+- **COLLECTION-SELECT-006** — The preview lists the suggested records, including
+  their available captured identity, start times, and start-time differences
+  from the anchor. Candidates begin checked within this preview and can be
+  individually unchecked before the explicit Select together action. Records
+  outside the main list's visible area remain inspectable in the preview.
+  With no preview candidates checked, confirmation is unavailable.
+- **COLLECTION-SELECT-007** — Closing or dismissing the preview discards its
+  working checks and leaves the main selection unchanged. It can be reopened
+  on request with the then-current candidates. Confirmation never adds newly
+  appeared events that were not shown in that preview or events that have
+  since become ineligible. A changed anchor invalidates the earlier preview.
+
 ### Review and preservation
 
 - **COLLECTION-010** — The user can reach the Collection list from the timer
@@ -77,5 +118,7 @@ record after leaving and reopening the app.
 - Editing a Collection title or its shooting context.
 - Adding, removing, or moving records after Collection creation.
 - Hiding or automatic retention cleanup.
+- Group selection without preview confirmation, or opening the preview
+  automatically while checking records.
 - Location capture, field photos, external manually recorded shots, export,
   backup, sharing, and cross-device synchronization.

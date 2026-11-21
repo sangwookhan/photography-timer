@@ -49,20 +49,77 @@ final class ShootingCollectionStoreTests: XCTestCase {
         try capture(NavigationStack { ShootingRecordDetailView(record: record) }, name: "Captured record")
     }
 
-    private func capture<Content: View>(_ content: Content, name: String) throws {
+    func testTimeSuggestionSurfacesBeforeAndAfterConfirmation() throws {
+        let model = ShootingCollectionModel(store: NoOpShootingCollectionStore())
+        let anchor = sampleTimer()
+        let near = sampleTimer(startOffset: 300)
+        let otherNear = sampleTimer(startOffset: 600)
+        let far = sampleTimer(startOffset: 4_000)
+        let collected = sampleTimer(startOffset: 900)
+        _ = try model.create(from: [collected], at: Date(), timeZone: .gmt).get()
+        let history = [anchor, near, otherNear, collected, far]
+        var selection = ShootingCollectionSelection()
+        selection.toggle(anchor.id)
+        try capture(NavigationStack {
+            ShootingCollectionSelectionView(
+                model: model, history: history, initialSelection: selection,
+                onCreated: { _ in }, onCancel: {}
+            ).navigationTitle("Select History")
+                .navigationBarTitleDisplayMode(.inline)
+        }, name: "Time suggestion before confirmation")
+        XCTAssertEqual(selection.selectedIDs, [anchor.id])
+        let distantHistory = (1...8).map { sampleTimer(startOffset: Double($0) * 10_000) }
+        try capture(NavigationStack {
+            ShootingCollectionSelectionView(
+                model: model, history: distantHistory + Array(history.dropFirst()) + [anchor],
+                initialSelection: selection, onCreated: { _ in }, onCancel: {}
+            ).navigationTitle("Select History")
+                .navigationBarTitleDisplayMode(.inline)
+        }, name: "Anchor marker near list end")
+        let suggestion = try XCTUnwrap(selection.suggestion(from: history, collectedIDs: model.collectedEventIDs))
+        try capture(NavigationStack {
+            ShootingCollectionSelectionView(
+                model: model, history: history, initialSelection: selection,
+                onCreated: { _ in }, onCancel: {}
+            ).navigationTitle("Select History")
+                .navigationBarTitleDisplayMode(.inline)
+        }.sheet(item: .constant(Optional(suggestion))) { preview in
+            ShootingCollectionSuggestionView(suggestion: preview, onConfirm: { _ in })
+        }, name: "Time suggestion preview", expectsSheet: true)
+        selection.confirmSuggestion(suggestion, choosing: [near.id], from: history, collectedIDs: model.collectedEventIDs)
+        try capture(NavigationStack {
+            ShootingCollectionSelectionView(
+                model: model, history: history, initialSelection: selection,
+                onCreated: { _ in }, onCancel: {}
+            ).navigationTitle("Select History")
+                .navigationBarTitleDisplayMode(.inline)
+        }, name: "Time suggestion after confirmation")
+        XCTAssertEqual(selection.selectedIDs, [anchor.id, near.id])
+        XCTAssertEqual(model.collections.count, 1, "Selecting together does not create a Collection.")
+    }
+
+    private func capture<Content: View>(_ content: Content, name: String, expectsSheet: Bool = false) throws {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let window = try XCTUnwrap(scene.windows.first)
         let previous = window.rootViewController
-        defer { window.rootViewController = previous }
         let host = UIHostingController(rootView: content)
+        defer {
+            host.dismiss(animated: false)
+            window.rootViewController = previous
+        }
         window.rootViewController = host
         window.makeKeyAndVisible()
         RunLoop.main.run(until: Date().addingTimeInterval(0.5))
         host.view.frame = window.bounds
         host.view.layoutIfNeeded()
         XCTAssertGreaterThan(host.view.bounds.height, 0)
-        let image = UIGraphicsImageRenderer(bounds: host.view.bounds).image { _ in
-            host.view.drawHierarchy(in: host.view.bounds, afterScreenUpdates: true)
+        if expectsSheet {
+            XCTAssertNotNil(host.presentedViewController, "The explicit preview request presents a sheet.")
+        } else {
+            XCTAssertNil(host.presentedViewController, "Checkbox changes must not automatically present a preview.")
+        }
+        let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
         }
         let attachment = XCTAttachment(image: image)
         attachment.name = name
@@ -70,11 +127,11 @@ final class ShootingCollectionStoreTests: XCTestCase {
         add(attachment)
     }
 
-    private func sampleTimer() -> RunningTimerItem {
+    private func sampleTimer(startOffset: TimeInterval = 0) -> RunningTimerItem {
         RunningTimerItem(
             id: UUID(), order: 1, name: "Camera 1", basisSummary: "Base 1/30s · 6 stops",
-            duration: 100, startDate: Date(timeIntervalSince1970: 1_794_450_000),
-            endDate: Date(timeIntervalSince1970: 1_794_450_100), pausedRemainingTime: nil,
+            duration: 100, startDate: Date(timeIntervalSince1970: 1_794_450_000 + startOffset),
+            endDate: Date(timeIntervalSince1970: 1_794_450_100 + startOffset), pausedRemainingTime: nil,
             pausedAt: nil, status: .completed, referenceDate: Date(),
             filmDisplayName: "ILFORD HP5 PLUS", exposureSource: .filmCorrectedExposure,
             selectedModelLabel: "App formula", ndStops: 6, baseShutterSeconds: 1.0 / 30,

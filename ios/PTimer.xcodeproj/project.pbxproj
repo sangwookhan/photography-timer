@@ -108,6 +108,7 @@
 		F24510000000000000000003 /* ShootingRecordSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000003 /* ShootingRecordSummaryView.swift */; };
 		F24510000000000000000004 /* ShootingRecordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000004 /* ShootingRecordDetailView.swift */; };
 		F24510000000000000000010 /* ShootingCollectionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000010 /* ShootingCollectionStoreTests.swift */; };
+		F24510000000000000000020 /* ShootingCollectionSuggestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24500000000000000000020 /* ShootingCollectionSuggestionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -243,6 +244,7 @@
 		F24500000000000000000003 /* ShootingRecordSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingRecordSummaryView.swift; sourceTree = "<group>"; };
 		F24500000000000000000004 /* ShootingRecordDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingRecordDetailView.swift; sourceTree = "<group>"; };
 		F24500000000000000000010 /* ShootingCollectionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingCollectionStoreTests.swift; sourceTree = "<group>"; };
+		F24500000000000000000020 /* ShootingCollectionSuggestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingCollectionSuggestionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -484,6 +486,7 @@
 		A000000000000000000000D0 /* Workspace */ = {
 			isa = PBXGroup;
 			children = (
+				F24500000000000000000020 /* ShootingCollectionSuggestionView.swift */,
 				F24500000000000000000004 /* ShootingRecordDetailView.swift */,
 				F24500000000000000000003 /* ShootingRecordSummaryView.swift */,
 				F24500000000000000000002 /* ShootingCollectionSelectionView.swift */,
@@ -697,6 +700,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F24510000000000000000020 /* ShootingCollectionSuggestionView.swift in Sources */,
 				F24510000000000000000004 /* ShootingRecordDetailView.swift in Sources */,
 				F24510000000000000000003 /* ShootingRecordSummaryView.swift in Sources */,
 				F24510000000000000000002 /* ShootingCollectionSelectionView.swift in Sources */,

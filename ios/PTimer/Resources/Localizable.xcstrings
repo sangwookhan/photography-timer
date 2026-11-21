@@ -1,6 +1,79 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Same start time" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 시작 시각"
+          }
+        }
+      }
+    },
+    "Time suggestion" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간 추천"
+          }
+        }
+      }
+    },
+    "View nearby records" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가까운 시간 기록 보기"
+          }
+        }
+      }
+    },
+    "Nearby records: %lld · View" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가까운 시간 기록 %lld건 · 보기"
+          }
+        }
+      }
+    },
+    "Nearby records" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가까운 시간 기록"
+          }
+        }
+      }
+    },
+    "Start time difference from the selected record" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기준 기록의 시작 시각과의 차이"
+          }
+        }
+      }
+    },
+    "Select together (%lld)" : {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "함께 선택 (%lld건)"
+          }
+        }
+      }
+    },
+
+
+
     "Collection couldn't be saved" : {
       "localizations" : {
         "ko" : {

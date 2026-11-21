@@ -27,6 +27,10 @@ public final class ShootingCollectionModel: ObservableObject {
         collections.first { $0.records.contains { $0.id == eventID } }
     }
 
+    public var collectedEventIDs: Set<UUID> {
+        Set(collections.flatMap { $0.records.map(\.id) })
+    }
+
     public func create(
         from timers: [RunningTimerItem], at now: Date, timeZone: TimeZone,
         id: UUID = UUID()

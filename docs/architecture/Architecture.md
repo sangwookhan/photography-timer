@@ -285,6 +285,15 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   ids, and publishes a new `PersistentShootingCollection` only after a
   successful whole-archive save. `WorkspaceCoordinator` creates it from
   `ShootingCollectionStoring`; it does not own or mutate Timer runtime state.
+  `ShootingCollectionSelection` is the transient value owned by the selection
+  view: ordered checkbox identities, first-remaining-selected anchor, and pure
+  time-window suggestions. `ShootingCollectionSuggestion` freezes the candidates
+  inspected in one preview; confirmation intersects chosen, inspected, and
+  currently eligible identities and checks the anchor. The app preview owns
+  only its working candidate checks. Dismissing it changes nothing; confirming
+  changes only the parent working selection. The archive model remains the sole
+  creation/save boundary. `ShootingCollectionSuggestionPresenter` formats the
+  start-time difference without consulting current shooting context.
   `ShootingRecordPresenter` produces read-only record fields. The app's
   `ShootingCollectionBrowser` renders list/selection navigation and individual
   detail through separate views, observing only the archive model.

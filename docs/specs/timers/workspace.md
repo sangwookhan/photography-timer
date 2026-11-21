@@ -71,10 +71,10 @@ acting on every timer at once.
   remaining and total time, and state-appropriate inline actions: running
   exposes pause and start-new; paused exposes resume, start-new, cancel,
   and remove; completed/canceled exposes start-again (repeat) and remove.
-- **WORKSPACE-021** — *Start new*, from an active row, cancels the current
-  timer (keeping it as a terminal canceled record) and starts a fresh timer
-  from the same setup and full duration — so no duplicate active timer
-  results.
+- **WORKSPACE-021** — *Repeat Shot* from an active row starts a fresh
+  timer from the same setup and full duration. A running source continues
+  unchanged. A paused source is canceled and kept in History under the
+  automatic pause cancellation policy.
 - **WORKSPACE-022** — *Cancel*, from a paused row, stops the timer and
   keeps it as a canceled record; it does not delete it. This is distinct
   from *remove*, which deletes the record entirely.
@@ -82,9 +82,11 @@ acting on every timer at once.
   a new timer from the record's captured setup and full duration, leaving
   the source terminal record untouched.
 
-- **WORKSPACE-024** — When paused timers exist, the new-timer start
-  affordance explains that starting a new timer will cancel them. A separate
-  confirmation step is not required.
+- **WORKSPACE-024** — Every Start or Repeat Shot entry point warns
+  before starting that all paused timers will be canceled when any exist.
+  This includes Repeat Shot from running or History records, whose source
+  remains intact. A separate confirmation step is not required.
+
 
 ### Compact dock
 
@@ -154,7 +156,9 @@ acting on every timer at once.
 
 - **WORKSPACE-CARD-008** — An automatically canceled paused timer appears
   in History as Canceled, with its remaining exposure time shown separately
-  under WORKSPACE-CARD-005. It has no resume action.
+  under WORKSPACE-CARD-005. The remaining time stays readable on narrow
+  screens and at accessibility text sizes without growing the cell.
+  The record has no resume action.
 
 - **WORKSPACE-CARD-009** — While paused, the timer card shows the time
   left to resume as a countdown, separately from frozen remaining exposure

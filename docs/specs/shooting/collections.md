@@ -113,10 +113,78 @@ record after leaving and reopening the app.
   event creates a different event under `timers/workspace.md`; it does not
   inherit the original event's Collection membership.
 
+### Removing and moving preserved records
+
+- **COLLECTION-MEMBERSHIP-001** — The user can request removal or movement of
+  one or more preserved records from a Collection's record list. Removing a record
+  changes only its Collection membership; it does not delete the captured
+  record or its original History event. It must not hide, filter out, or
+  remove that event from the Timer list. Only the Collection membership and
+  its membership indication change; Timer-list contents and order remain
+  unchanged.
+- **COLLECTION-MEMBERSHIP-002** — Before removal, confirmation identifies the
+  record or selected record count and explains that captured information
+  remains preserved without
+  a Collection. Canceling or dismissing confirmation changes nothing. A
+  successfully removed record remains individually inspectable in an
+  uncollected-record view reachable from the Collection list, including when
+  its original History entry has already been removed.
+- **COLLECTION-MEMBERSHIP-003** — The user can move one or more records to a
+  different existing Collection by choosing the destination and explicitly confirming
+  the move. The source Collection is not a valid destination. Canceling or
+  dismissing the destination choice changes nothing. If no valid destination
+  exists, the user is informed and no move occurs.
+- **COLLECTION-MEMBERSHIP-004** — A move preserves the record's identity and
+  captured information and commits the source removal and destination addition
+  together for the entire chosen selection. At no committed point may the record belong to two Collections
+  or disappear between them. A preserved uncollected record can use the same
+  destination-selection flow to join an existing Collection.
+- **COLLECTION-MEMBERSHIP-005** — Removal and movement take effect only after
+  saving succeeds. A failed save retains the previous content, membership and
+  current destination, informs the user, and permits retry. An unreadable
+  archive must not be overwritten. Relaunch preserves successful changes.
+- **COLLECTION-MEMBERSHIP-006** — Removing or moving the last record leaves
+  the source Collection in the list with an explanatory empty detail state.
+  It does not delete or hide that Collection. A destination Collection keeps
+  its title and creation time; included records follow COLLECTION-016.
+- **COLLECTION-MEMBERSHIP-007** — These operations do not modify Timer runtime
+  or History. Recollecting an original event still present in History must
+  reuse its preserved identity and captured record rather than create a
+  second independent record. History entries already removed are not
+  recreated, and an event continues to belong to at most one Collection.
+
+- **COLLECTION-MEMBERSHIP-008** — Normal mode keeps the existing record-row
+  height and information, without permanently visible per-row removal or
+  movement controls. A trailing swipe reveals labelled Move and Remove
+  actions for that record. Edit enters a selection mode with row selection
+  indicators and side-by-side Move and Remove actions in the bottom action
+  area; both require a nonempty selection. Done clears selection and exits
+  editing without rolling back committed actions. Removing or moving a
+  selection uses the same confirmation and failure rules as a single record.
+  Failure retains the selection for retry. Edit mode disables interactive
+  dismissal and swipe actions. Existing chronological record ordering remains
+  unchanged; editing does not introduce drag reordering.
+
+- **COLLECTION-MEMBERSHIP-009** — Movement destinations show the Collection
+  title, record count, earliest captured start and latest available captured
+  terminal time, location information when recorded, and a representative
+  camera. Missing time, location or camera information is indicated without
+  inference from current settings. A partial set of terminal times is labelled
+  as incomplete. The representative camera is the captured camera identity
+  used by the most records; ties choose the camera whose first record starts
+  earliest, then stable record identity. Its displayed name comes from that
+  camera's earliest available captured name. Other captured camera identities
+  are counted separately, and records missing camera information are indicated.
+  Location capture is not introduced by destination presentation. Destination
+  metadata uses the row's available horizontal space and does not change the
+  normal Timer or Collection record-row summaries.
+
 ## Non-goals
 
 - Editing a Collection title or its shooting context.
-- Adding, removing, or moving records after Collection creation.
+- Adding new History events to an existing Collection, apart from assigning
+  an already-preserved uncollected record.
+- Permanent deletion of Collections or preserved records.
 - Hiding or automatic retention cleanup.
 - Group selection without preview confirmation, or opening the preview
   automatically while checking records.

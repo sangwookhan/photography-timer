@@ -374,6 +374,13 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
   events through a visible time-based suggestion that requires an explicit
   action to apply and remains individually adjustable before saving.
   (Scenario 11)
+- **FR-10.4** The system shall let the photographer remove a preserved record
+  from a Collection without deleting its captured information, or move it to
+  another Collection without duplicate membership or an intermediate loss.
+  Uncollected preserved records shall remain inspectable and assignable to a
+  Collection independently of History. Canceled or failed changes shall retain
+  the committed state, and successful changes shall survive restart.
+  (Scenario 11)
 
 ## 4. Non-functional requirements
 

@@ -165,6 +165,20 @@ record after leaving and reopening the app.
   dismissal and swipe actions. Existing chronological record ordering remains
   unchanged; editing does not introduce drag reordering.
 
+- **COLLECTION-MEMBERSHIP-009** — Movement destinations show the Collection
+  title, record count, earliest captured start and latest available captured
+  terminal time, location information when recorded, and a representative
+  camera. Missing time, location or camera information is indicated without
+  inference from current settings. A partial set of terminal times is labelled
+  as incomplete. The representative camera is the captured camera identity
+  used by the most records; ties choose the camera whose first record starts
+  earliest, then stable record identity. Its displayed name comes from that
+  camera's earliest available captured name. Other captured camera identities
+  are counted separately, and records missing camera information are indicated.
+  Location capture is not introduced by destination presentation. Destination
+  metadata uses the row's available horizontal space and does not change the
+  normal Timer or Collection record-row summaries.
+
 ## Non-goals
 
 - Editing a Collection title or its shooting context.

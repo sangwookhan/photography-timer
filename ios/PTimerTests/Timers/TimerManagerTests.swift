@@ -503,7 +503,7 @@ final class TimerWorkspaceCloneIntegrationTests: XCTestCase {
         XCTAssertNotEqual(newID, sourceID)
         XCTAssertEqual(model.timers.count, 2)
         // Source stays paused; clone never cancels.
-        XCTAssertEqual(model.timers.first { $0.id == sourceID }?.status, .paused)
+        XCTAssertEqual(model.timers.first { $0.id == sourceID }?.status, .canceled)
 
         let timerB = try XCTUnwrap(model.timers.first { $0.id == newID })
         XCTAssertEqual(timerB.status, .running)

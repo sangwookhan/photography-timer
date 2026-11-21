@@ -209,6 +209,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Combine subscription, and the record-replay smoke test all
     /// observe the same published collection.
     private let timerWorkspaceModel: TimerWorkspaceModel
+
+    public var timerCancellationNoticeModel: TimerCancellationNoticeModel {
+        timerWorkspaceModel.cancellationNotice
+    }
     /// Preset film catalog, active film identity slice, and the
     /// calculator-context persistence store. The facade republishes
     /// `filmSelectionModel.$activeContext` into its own

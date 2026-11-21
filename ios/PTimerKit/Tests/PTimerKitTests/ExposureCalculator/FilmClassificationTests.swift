@@ -157,8 +157,8 @@ final class FilmClassificationTests: XCTestCase {
         vm.baseShutter = 20
         vm.startFilmCorrectedExposureTimer()
         let pausedID = try XCTUnwrap(vm.timers.first { $0.status == .running }?.id)
-        vm.pauseTimer(id: pausedID)
         vm.startFilmCorrectedExposureTimer()
+        vm.pauseTimer(id: pausedID)
         let timers = vm.timers
         XCTAssertTrue(timers.contains { $0.status == .completed })
         XCTAssertTrue(timers.contains { $0.status == .paused })

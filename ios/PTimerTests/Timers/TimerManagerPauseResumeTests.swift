@@ -1,12 +1,231 @@
 // Copyright © 2026 Sangwook Han
 // SPDX-License-Identifier: Apache-2.0
 
+import Combine
+import SwiftUI
+import UIKit
 import XCTest
 import PTimerKit
 import PTimerCore
 @testable import PTimer
 
 final class TimerManagerPauseResumeTests: XCTestCase {
+    @MainActor
+    func testRepeatShotTransitionReview() throws {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let manager = TimerManager(tickInterval: 60, dateProvider: { now })
+        let model = TimerWorkspaceModel(
+            timerManager: manager, metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),
+            defaultName: { _ in "Exposure" }
+        )
+        let sourceID = try XCTUnwrap(model.startTimer(
+            duration: 90, name: "Tri-X exposure", basisSummary: "Base 1s",
+            cameraSlot: CameraSlotIdentity(id: .camera1), filmDisplayName: "Tri-X 400",
+            exposureSource: .filmCorrectedExposure
+        ))
+        model.pauseTimer(id: sourceID)
+        let source = try XCTUnwrap(model.timers.first)
+        let adapter = BottomSheetWorkspacePresentationAdapter(
+            formatRemaining: { BottomSheetWorkspaceSnapshot.compactDurationText($0) },
+            formatShutter: { String($0) },
+            timeContext: { $0.status == .canceled ? "Canceled just now" : "Started just now" },
+            compactCompletedSupplementaryText: { _ in nil }
+        )
+        let snapshots = BottomSheetWorkspaceSnapshotStore(
+            initialTimers: model.timers, timersPublisher: model.$timers.eraseToAnyPublisher(),
+            ndNotationModePublisher: Just(NDNotationMode.stops).eraseToAnyPublisher(), adapter: adapter
+        )
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previousKeyWindow = scene.windows.first { $0.isKeyWindow }
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+        defer {
+            window.isHidden = true
+            window.rootViewController = nil
+            previousKeyWindow?.makeKeyAndVisible()
+        }
+        let host = UIHostingController(rootView: RepeatShotReviewHost(snapshots: snapshots)
+            .overlay(alignment: .bottom) { TimerCancellationNoticeView(model: model.cancellationNotice) }
+            .environment(\.scenePhase, .active))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        host.view.layoutIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(1))
+        attachRepeatFrame("Repeat-before", view: host.view)
+        var newID: UUID?
+        withAnimation(TimerWorkspaceAnimation.movement(reduceMotion: false)) {
+            newID = model.startTimer(cloning: source)
+        }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        attachRepeatFrame("Repeat-moving", view: host.view)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+        attachRepeatFrame("Repeat-after", view: host.view)
+        XCTAssertNotNil(newID)
+        XCTAssertEqual(model.timers.first?.id, newID)
+        XCTAssertEqual(model.timers.last?.id, sourceID)
+        XCTAssertEqual(model.timers.last?.status, .canceled)
+        RunLoop.main.run(until: Date().addingTimeInterval(1))
+    }
+
+    @MainActor
+    private func attachRepeatFrame(_ name: String, view: UIView) {
+        let image = UIGraphicsImageRenderer(size: view.bounds.size).image { _ in
+            view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
+        }
+        let attachment = XCTAttachment(image: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    func testTimerCellHeightStaysConstantAcrossStatesCountdownAndAlarm() throws {
+        for width in [320.0, 393.0, 430.0] {
+            for textSize in [DynamicTypeSize.large, .xxxLarge, .accessibility1] {
+                for localeID in ["en", "ko"] {
+                    let runningHeight = try timerRowHeight(
+                        status: .running, width: width, textSize: textSize, localeID: localeID
+                    )
+                    for status in [TimerStatus.paused, .completed, .canceled] {
+                        for elapsed in [0.0, 60.0, 119.0] {
+                            let height = try timerRowHeight(
+                                status: status, elapsed: elapsed, width: width,
+                                textSize: textSize, localeID: localeID
+                            )
+                            XCTAssertEqual(height, runningHeight, accuracy: 0.5,
+                                           "\(status), \(elapsed)s, \(width)pt, \(textSize), \(localeID)")
+                        }
+                    }
+                    let alarmHeight = try timerRowHeight(
+                        status: .completed, width: width, textSize: textSize,
+                        localeID: localeID, isAlarmSounding: true
+                    )
+                    XCTAssertEqual(alarmHeight, runningHeight, accuracy: 0.5,
+                                   "Alarm must stay within the existing cell")
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func timerRowHeight(
+        status: TimerStatus, elapsed: TimeInterval = 0, width: CGFloat,
+        textSize: DynamicTypeSize, localeID: String, isAlarmSounding: Bool = false
+    ) throws -> CGFloat {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let timer = RunningTimerItem(
+            id: UUID(), order: 1, name: "Tri-X exposure", basisSummary: "Base 1s",
+            duration: 90, startDate: start, endDate: start.addingTimeInterval(90),
+            pausedRemainingTime: status == .paused ? 60 : nil,
+            pausedAt: status == .paused ? start : nil, status: status,
+            referenceDate: start.addingTimeInterval(elapsed),
+            cameraSlot: CameraSlotIdentity(id: .camera1), filmDisplayName: "Tri-X 400",
+            exposureSource: .filmCorrectedExposure,
+            canceledRemainingTime: status == .canceled ? 60 : nil,
+            cancellationReason: status == .canceled ? .pauseExpired : nil
+        )
+        let snapshot = BottomSheetWorkspaceSnapshot.make(
+            from: [timer], formatRemaining: { BottomSheetWorkspaceSnapshot.compactDurationText($0) },
+            formatShutter: { String($0) }, ndNotationMode: .stops,
+            timeContext: { _ in "\(status.rawValue) 2026-11-22 11:03:00 · just now" },
+            compactCompletedSupplementaryText: { _ in nil }
+        )
+        let item = try XCTUnwrap(snapshot.sections.first?.items.first)
+        let row = LargeWorkspaceTimerRowView(
+            item: item, isFocused: false, onAction: { _ in }, isAlarmSounding: isAlarmSounding
+        )
+        let host = UIHostingController(rootView: row
+            .environment(\.dynamicTypeSize, textSize)
+            .environment(\.locale, Locale(identifier: localeID)))
+        return host.sizeThatFits(in: CGSize(width: width, height: 2_000)).height
+    }
+
+    @MainActor
+    func testPausedAndCanceledWorkspaceRenderForReview() throws {
+        var now = Date(timeIntervalSince1970: 1_000)
+        let manager = TimerManager(tickInterval: 60, dateProvider: { now })
+        let model = TimerWorkspaceModel(
+            timerManager: manager,
+            metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(),
+            defaultName: { _ in "Exposure" }
+        )
+        let id = try XCTUnwrap(model.startTimer(
+            duration: 90, name: "Tri-X exposure", basisSummary: "Base 1s",
+            cameraSlot: CameraSlotIdentity(id: .camera1),
+            filmDisplayName: "Tri-X 400", exposureSource: .filmCorrectedExposure
+        ))
+        now += 30
+        model.pauseTimer(id: id)
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previousKeyWindow = scene.windows.first { $0.isKeyWindow }
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+        defer {
+            window.isHidden = true
+            window.rootViewController = nil
+            previousKeyWindow?.makeKeyAndVisible()
+        }
+        for isExpired in [false, true] {
+            if isExpired {
+                now += 120
+                manager.reconcile()
+            }
+            let snapshot = BottomSheetWorkspaceSnapshot.make(
+                from: model.timers,
+                formatRemaining: { BottomSheetWorkspaceSnapshot.compactDurationText($0) },
+                formatShutter: { String($0) }, ndNotationMode: .stops,
+                timeContext: { _ in isExpired ? "Canceled just now" : "Paused just now" },
+                compactCompletedSupplementaryText: { _ in nil }
+            )
+            let screen = FullScreenTimersWindow(
+                snapshot: snapshot, openFocus: .activeSection(highlightedTimerID: nil),
+                onPauseTimer: { _ in }, onResumeTimer: { _ in }, onCancelTimer: { _ in },
+                onRemoveTimer: { _ in }, onCloneTimer: { _ in },
+                onClearCompletedTimers: {}, onClose: {}
+            )
+            let host = UIHostingController(rootView: screen.overlay(alignment: .bottom) {
+                TimerCancellationNoticeView(model: model.cancellationNotice)
+            }.environment(\.scenePhase, .active))
+            window.rootViewController = host
+            window.makeKeyAndVisible()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+            if isExpired {
+                XCTAssertNotNil(model.cancellationNotice.text)
+                XCTAssertTrue(model.cancellationNotice.pendingTimerIDs.isEmpty)
+            }
+            let image = UIGraphicsImageRenderer(size: host.view.bounds.size).image { _ in
+                host.view.drawHierarchy(in: host.view.bounds, afterScreenUpdates: true)
+            }
+            let attachment = XCTAttachment(image: image)
+            attachment.name = isExpired ? "Pause-expired-History" : "Pause-resume-countdown"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+    }
+
+    @MainActor
+    func testPausedOnlyTimerExpiresFromRunLoopWithoutManualTick() async throws {
+        var now = Date(timeIntervalSince1970: 100)
+        let alerts = CompletionAlertSpy()
+        let manager = TimerManager(
+            tickInterval: 0.01, dateProvider: { now }, completionAlertService: alerts
+        )
+        let id = try XCTUnwrap(manager.start(duration: 90))
+        now += 30
+        manager.pause(id: id)
+        let expired = expectation(description: "Paused-only timer expires on its own")
+        let subscription = manager.$timers
+            .first { $0.first?.status == .canceled }
+            .sink { _ in expired.fulfill() }
+        now += 120
+        await fulfillment(of: [expired], timeout: 2)
+        subscription.cancel()
+        XCTAssertEqual(manager.timers.first?.remainingAtCancel, 60)
+        XCTAssertEqual(manager.timers.first?.endDate, Date(timeIntervalSince1970: 250))
+        XCTAssertTrue(alerts.events.isEmpty)
+    }
+
     @MainActor
     func testPauseFreezesRemainingTimeInResumablePausedState() throws {
         let startDate = Date(timeIntervalSince1970: 100)
@@ -225,7 +444,7 @@ final class TimerManagerPauseResumeTests: XCTestCase {
     }
 
     @MainActor
-    func testResumeAfterLongPauseUsesCorrectRemainingTime() throws {
+    func testResumeAfterExpiredPauseKeepsCanceledRecord() throws {
         let startDate = Date(timeIntervalSince1970: 100)
         var currentDate = startDate
         let manager = TimerManager(
@@ -242,9 +461,9 @@ final class TimerManagerPauseResumeTests: XCTestCase {
         manager.resume(id: id)
 
         let timer = tryUnwrapTimer(withID: id, from: manager.timers)
-        XCTAssertEqual(timer.status(at: currentDate), .running)
-        XCTAssertEqual(timer.remainingTime(at: currentDate), 6, accuracy: 0.0001)
-        XCTAssertEqual(timer.endDate, currentDate.addingTimeInterval(6))
+        XCTAssertEqual(timer.status(at: currentDate), .canceled)
+        XCTAssertEqual(timer.remainingAtCancel, 6)
+        XCTAssertEqual(timer.endDate, startDate.addingTimeInterval(124))
     }
 
     @MainActor
@@ -366,5 +585,18 @@ final class TimerManagerPauseResumeTests: XCTestCase {
                 completionDate: currentDate
             ),
         ])
+    }
+}
+
+private struct RepeatShotReviewHost: View {
+    @ObservedObject var snapshots: BottomSheetWorkspaceSnapshotStore
+
+    var body: some View {
+        FullScreenTimersWindow(
+            snapshot: snapshots.snapshot, openFocus: .activeSection(highlightedTimerID: nil),
+            onPauseTimer: { _ in }, onResumeTimer: { _ in }, onCancelTimer: { _ in },
+            onRemoveTimer: { _ in }, onCloneTimer: { _ in },
+            onClearCompletedTimers: {}, onClose: {}
+        )
     }
 }

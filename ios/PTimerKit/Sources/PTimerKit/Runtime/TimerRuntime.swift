@@ -48,10 +48,10 @@ public final class TimerRuntime: ObservableObject {
         restorePersistedTimersIfNeeded()
     }
 
-    /// Whether any timer is running at the given instant. The OS coordinator
-    /// uses this to decide whether its `RunLoop` ticking loop should run.
-    public func hasRunningTimers(at date: Date) -> Bool {
-        timers.contains { $0.status(at: date) == .running }
+    /// Paused-only collections still need ticks for the resume countdown
+    /// and automatic expiration; terminal-only collections can stop ticking.
+    public var needsTicking: Bool {
+        timers.contains { $0.status == .running || $0.status == .paused }
     }
 
     @discardableResult
@@ -67,7 +67,12 @@ public final class TimerRuntime: ObservableObject {
 
         let now = dateProvider()
         let endDate = now.addingTimeInterval(duration)
-        timers.append(
+        let previousTimers = timers.map { state in
+            guard state.status == .paused else { return state }
+            completionNotificationScheduler.cancelCompletionNotification(forTimerID: state.id)
+            return state.updatingStatus(at: now).canceled(at: now, reason: .newTimerStarted)
+        }
+        timers = previousTimers + [
             TimerState(
                 id: id,
                 duration: duration,
@@ -76,8 +81,8 @@ public final class TimerRuntime: ObservableObject {
                 pausedRemainingTime: nil,
                 pausedAt: nil,
                 status: .running
-            )
-        )
+            ),
+        ]
         completionNotificationScheduler.requestAuthorizationIfNeeded()
         if let timer = timers.last {
             completionNotificationScheduler.scheduleCompletionNotification(for: timer)
@@ -101,6 +106,7 @@ public final class TimerRuntime: ObservableObject {
         guard let index = timers.firstIndex(where: { $0.id == id }) else {
             return
         }
+        guard timers[index].status == .paused else { return }
 
         let currentDate = dateProvider()
         let newState = timers[index].resume(at: currentDate)
@@ -174,8 +180,20 @@ public final class TimerRuntime: ObservableObject {
         }
 
         let now = dateProvider()
-        timers[index] = timers[index].canceled(at: now)
+        let state = timers[index]
+        let resolved = state.status == .paused ? state.updatingStatus(at: now) : state
+        timers[index] = resolved.canceled(at: now)
         completionNotificationScheduler.cancelCompletionNotification(forTimerID: id)
+        persistTimers()
+    }
+
+    public func acknowledgeCancellationNotices(ids: Set<UUID>) {
+        guard timers.contains(where: { ids.contains($0.id) && $0.cancellationNoticePending }) else {
+            return
+        }
+        timers = timers.map { state in
+            ids.contains(state.id) ? state.acknowledgingCancellationNotice() : state
+        }
         persistTimers()
     }
 
@@ -235,12 +253,14 @@ public final class TimerRuntime: ObservableObject {
         now currentDate: Date,
         shouldEmitCompletionAlerts: Bool
     ) {
-        // Only running timers can advance to completed here. Paused timers are
-        // frozen/resumable and keep their preserved remaining time regardless of
-        // wall-clock passage, and completed timers remain completed.
+        // Running timers may complete; expired pauses become canceled without
+        // emitting a completion event. Frozen exposure time is never consumed.
         let previousTimers = timers
         let transitionResult = timers.map { state in
             let updated = state.updatingStatus(at: currentDate)
+            if state.status == .paused && updated.status == .canceled {
+                completionNotificationScheduler.cancelCompletionNotification(forTimerID: state.id)
+            }
             return (updated, completionEvent(from: state, to: updated))
         }
 
@@ -294,8 +314,9 @@ public final class TimerRuntime: ObservableObject {
 
         // Relaunch restore is deterministic and init-only: it reads the
         // saved snapshot once, reconciles only running timers against wall
-        // clock time, preserves paused timers as frozen resumable state, and
-        // writes the normalized result back as the new source.
+        // clock time, cancels expired pauses at their deadlines, and writes
+        // the normalized result back as the new source. Notices stay pending
+        // until an active app surface actually presents them.
         persistTimers()
     }
 

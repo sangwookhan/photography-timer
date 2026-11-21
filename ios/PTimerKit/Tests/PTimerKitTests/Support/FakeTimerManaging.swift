@@ -67,4 +67,5 @@ final class FakeTimerManaging: TimerManaging {
 
     // No-op: reconciliation is a runtime concern — see `RuntimeBackedTimerManaging`.
     func reconcile(now: Date?) {}
+    func acknowledgeCancellationNotices(ids: Set<UUID>) {}
 }

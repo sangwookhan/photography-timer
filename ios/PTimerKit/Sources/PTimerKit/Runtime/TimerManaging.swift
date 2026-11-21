@@ -23,4 +23,5 @@ public protocol TimerManaging: AnyObject {
     func remove(id: UUID)
     func removeCompletedTimers()
     func reconcile(now: Date?)
+    func acknowledgeCancellationNotices(ids: Set<UUID>)
 }

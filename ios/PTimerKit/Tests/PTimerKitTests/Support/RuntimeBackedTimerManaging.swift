@@ -61,4 +61,7 @@ final class RuntimeBackedTimerManaging: TimerManaging {
     func removeCompletedTimers() { runtime.removeCompletedTimers() }
     func reconcile(now: Date? = nil) { runtime.reconcile(now: now) }
     func tick(now: Date? = nil) { runtime.tick(now: now) }
+    func acknowledgeCancellationNotices(ids: Set<UUID>) {
+        runtime.acknowledgeCancellationNotices(ids: ids)
+    }
 }

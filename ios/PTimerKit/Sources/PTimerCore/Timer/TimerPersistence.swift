@@ -21,6 +21,8 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
     public let pausedRemainingDuration: TimeInterval?
     public let pausedAt: Date?
     public let completedAt: Date?
+    public let cancellationReason: TimerCancellationReason?
+    public let cancellationNoticePending: Bool?
 
     public init(
         id: UUID,
@@ -30,7 +32,9 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
         expectedCompletionAt: Date?,
         pausedRemainingDuration: TimeInterval?,
         pausedAt: Date?,
-        completedAt: Date?
+        completedAt: Date?,
+        cancellationReason: TimerCancellationReason? = nil,
+        cancellationNoticePending: Bool? = nil
     ) {
         self.id = id
         self.status = status
@@ -40,6 +44,8 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
         self.pausedRemainingDuration = pausedRemainingDuration
         self.pausedAt = pausedAt
         self.completedAt = completedAt
+        self.cancellationReason = cancellationReason
+        self.cancellationNoticePending = cancellationNoticePending
     }
 
     public init(timer: TimerState) {
@@ -51,6 +57,9 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
         // remaining there); both mean "time left when the timer stopped".
         self.pausedRemainingDuration = timer.pausedRemainingTime ?? timer.remainingAtCancel
         self.pausedAt = timer.pausedAt
+        self.cancellationReason = timer.cancellationReason
+        self.cancellationNoticePending = timer.cancellationReason == nil
+            ? nil : timer.cancellationNoticePending
 
         switch timer.status {
         case .running:
@@ -102,15 +111,10 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
                 status: .running
             )
         case .paused:
-            // `paused` restores as the same frozen, resumable state. It
-            // must not consume wall-clock time or auto-complete while
-            // the app was dead. `expectedCompletionAt` is ignored on
-            // this path: legacy snapshots may carry a non-nil value
-            // while current snapshots write `nil`;
-            // either way the sum-type init for `.paused` discards the
-            // parameter and the computed `PausedTimer.endDate`
-            // reconstructs the hypothetical completion date from
-            // `pausedAt + pausedRemainingDuration`.
+            // Restore the frozen exposure time, then apply the same two-minute
+            // deadline as a live paused timer. Legacy paused/stopped snapshots
+            // already carry pausedAt, so no migration-generated date is needed.
+            // expectedCompletionAt remains irrelevant for paused snapshots.
             //
             // A paused snapshot whose freeze metadata is missing is
             // structurally invalid (the back-compat init would otherwise
@@ -130,20 +134,20 @@ public struct PersistentTimerSnapshot: Codable, Equatable {
                 pausedRemainingTime: pausedRemainingDuration,
                 pausedAt: pausedAt,
                 status: .paused
-            )
+            ).updatingStatus(at: now)
         case .completed:
             return makeCompletedTimer(completionDate: completedAt)
         case .canceled:
-            return TimerState(
+            return .canceled(CanceledTimer(
                 id: id,
                 duration: duration,
                 startDate: startDate,
-                endDate: completedAt ?? startDate.addingTimeInterval(duration),
+                canceledAt: completedAt ?? startDate.addingTimeInterval(duration),
                 // Restores the remaining-at-cancel captured at stop time.
-                pausedRemainingTime: pausedRemainingDuration,
-                pausedAt: nil,
-                status: .canceled
-            )
+                remainingAtCancel: pausedRemainingDuration ?? 0,
+                reason: cancellationReason,
+                noticePending: cancellationNoticePending ?? false
+            ))
         }
     }
 

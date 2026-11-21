@@ -13,12 +13,12 @@ struct FileShootingCollectionStore: ShootingCollectionStoring {
         self.url = url
     }
 
-    func load() throws -> [PersistentShootingCollection] {
+    func load() throws -> PersistentShootingArchive {
         let data: Data
         do {
             data = try Data(contentsOf: url)
         } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
-            return []
+            return PersistentShootingArchive()
         }
         let decoded = ShootingCollectionCodec.decode(data)
         if decoded.indicatesFailure {
@@ -31,8 +31,8 @@ struct FileShootingCollectionStore: ShootingCollectionStoring {
         return decoded.snapshot
     }
 
-    func save(_ collections: [PersistentShootingCollection]) throws {
-        let data = try ShootingCollectionCodec.encode(collections)
+    func save(_ archive: PersistentShootingArchive) throws {
+        let data = try ShootingCollectionCodec.encode(archive)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )

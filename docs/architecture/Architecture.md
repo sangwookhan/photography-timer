@@ -297,6 +297,15 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   `ShootingRecordPresenter` produces read-only record fields. The app's
   `ShootingCollectionBrowser` renders list/selection navigation and individual
   detail through separate views, observing only the archive model.
+  `PersistentShootingArchive` owns Collections plus independently preserved
+  uncollected records in one atomic snapshot. `ShootingCollectionModel` removes
+  or moves complete selected sets only after saving that snapshot, preserves
+  empty Collection identities, and reuses the original capture when History is
+  recollected. Membership commands never call Timer runtime or mutate History.
+  `ShootingCollectionRecordsView` owns transient Edit/Done selection and swipe
+  presentation; `ShootingCollectionMoveView` owns the destination choice.
+  The normal record summary stays unchanged and selected-set actions occupy
+  the bottom area only while editing.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
 - **`CameraSlotSessionModel`** — the managed camera list: the cameras in
@@ -405,14 +414,19 @@ real implementation plus a `NoOp*` implementation that unit tests use.
 
 The shooting archive uses `FileShootingCollectionStore` in app `Timers/`,
 injected by `ViewModelDependencyFactory`. It atomically replaces
-`Application Support/ShootingCollections/archive.json`; existing Timer keys
-and codecs are unchanged. `ShootingCollectionCodec` isolates malformed
+`Application Support/ShootingCollections/archive.json`. Archive version 2 adds
+independent uncollected records; decoding explicitly migrates version 1 and the
+original unversioned shape without inventing missing captured values. Version 2
+requires both arrays, and duplicate event identities resolve first-valid-wins
+across Collections before uncollected records. Unknown versions or malformed
+roots are quarantined and cannot be overwritten as an empty archive. Existing
+Timer keys and codecs are unchanged. `ShootingCollectionCodec` isolates malformed
 Collections and their records and resolves duplicate event ids first-valid-
 wins across the archive. A degraded payload is quarantined before later
-writes. An unreadable or unsupported archive disables creation for the launch
+writes. An unreadable or unsupported archive disables archive mutations for the launch
 rather than allowing an empty fallback to overwrite it. Archive store errors
-are observable because creation must report failure without claiming saved
-membership.
+are observable because mutations must report failure without claiming saved
+content or membership.
 
 Record-collection snapshots (custom-film library, timer state, timer
 metadata) decode through `PTimerCore` `Persistence/`

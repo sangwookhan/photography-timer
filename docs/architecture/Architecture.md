@@ -306,6 +306,12 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
   presentation; `ShootingCollectionMoveView` owns the destination choice.
   The normal record summary stays unchanged and selected-set actions occupy
   the bottom area only while editing.
+  `ShootingCollectionSummaryPresenter` derives destination summaries from captured
+  records: earliest start, latest available terminal time, missing-field counts,
+  and most-used camera identity with a first-shot tie-break. Its immutable
+  `ShootingCollectionSummaryDisplayState` is rendered by
+  `ShootingCollectionDestinationRow`. Missing location remains explicit; this
+  presentation does not capture location or consult current camera settings.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
 - **`CameraSlotSessionModel`** — the managed camera list: the cameras in

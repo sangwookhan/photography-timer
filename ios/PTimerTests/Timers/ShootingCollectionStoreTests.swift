@@ -155,6 +155,29 @@ final class ShootingCollectionStoreTests: XCTestCase {
         XCTAssertEqual(model.uncollectedRecords.count, 3)
     }
 
+    func testSameDateMoveTargetsShowCapturedTimeAndCameraSummaries() throws {
+        let model = ShootingCollectionModel(store: NoOpShootingCollectionStore())
+        let original = sampleTimer()
+        let source = try model.create(from: [original], at: Date(), timeZone: .gmt).get()
+        _ = try model.create(from: [
+            sampleTimer(startOffset: 300, camera: .init(id: .camera1, displayName: "Nikon D850")),
+            sampleTimer(startOffset: 600, camera: .init(id: .camera1, displayName: "Nikon D850")),
+        ], at: Date(), timeZone: .gmt).get()
+        _ = try model.create(from: [
+            sampleTimer(startOffset: 3_600, camera: .init(id: .camera2, displayName: "Nikon F3")),
+            sampleTimer(startOffset: 3_900, camera: .init(id: .camera3, displayName: "Leica M6")),
+        ], at: Date(), timeZone: .gmt).get()
+        _ = try model.create(from: [sampleTimer(startOffset: 7_200)], at: Date(), timeZone: .gmt).get()
+        let destinations = model.collections.filter { $0.id != source }
+        XCTAssertEqual(Set(destinations.map(\.title)).count, 1)
+        let summaries = destinations.map(ShootingCollectionSummaryPresenter.display)
+        XCTAssertEqual(Set(summaries.compactMap(\.startDate)).count, 3)
+        XCTAssertEqual(Set(summaries.compactMap(\.representativeCameraName)), ["Nikon D850", "Nikon F3"])
+        try capture(ShootingCollectionMoveView(
+            model: model, sourceID: source, recordIDs: [original.id], onMoved: {}
+        ), name: "Same-date movement destination summaries")
+    }
+
     private func capture<Content: View>(_ content: Content, name: String, expectsSheet: Bool = false) throws {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let window = try XCTUnwrap(scene.windows.first)
@@ -184,12 +207,12 @@ final class ShootingCollectionStoreTests: XCTestCase {
         add(attachment)
     }
 
-    private func sampleTimer(startOffset: TimeInterval = 0) -> RunningTimerItem {
+    private func sampleTimer(startOffset: TimeInterval = 0, camera: CameraSlotIdentity? = nil) -> RunningTimerItem {
         RunningTimerItem(
             id: UUID(), order: 1, name: "Camera 1", basisSummary: "Base 1/30s · 6 stops",
             duration: 100, startDate: Date(timeIntervalSince1970: 1_794_450_000 + startOffset),
             endDate: Date(timeIntervalSince1970: 1_794_450_100 + startOffset), pausedRemainingTime: nil,
-            pausedAt: nil, status: .completed, referenceDate: Date(),
+            pausedAt: nil, status: .completed, referenceDate: Date(), cameraSlot: camera,
             filmDisplayName: "ILFORD HP5 PLUS", exposureSource: .filmCorrectedExposure,
             selectedModelLabel: "App formula", ndStops: 6, baseShutterSeconds: 1.0 / 30,
             adjustedShutterSeconds: 2.133

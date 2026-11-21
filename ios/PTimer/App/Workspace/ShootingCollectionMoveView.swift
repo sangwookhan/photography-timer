@@ -31,13 +31,9 @@ struct ShootingCollectionMoveView: View {
                             Button {
                                 destinationID = collection.id
                             } label: {
-                                HStack {
-                                    Text(collection.title).foregroundStyle(.primary)
-                                    Spacer()
-                                    if destinationID == collection.id {
-                                        Image(systemName: "checkmark").accessibilityHidden(true)
-                                    }
-                                }
+                                ShootingCollectionDestinationRow(
+                                    collection: collection, isSelected: destinationID == collection.id
+                                )
                             }
                             .accessibilityAddTraits(destinationID == collection.id ? .isSelected : [])
                         }

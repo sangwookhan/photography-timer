@@ -279,6 +279,24 @@ feature (e.g. `FilmDetails/FilmModeDetailsPresenter`,
 - **`ReciprocityModel`** — reciprocity policy/presentation transforms.
 - **`TimerWorkspaceModel`** — timer collection metadata and timer
   lifecycle commands around `TimerManager`.
+- **`ShootingCollectionModel`** — the independent archive owner (Kit
+  `ShootingCollections/`). It copies terminal events into
+  `PersistentShootingRecord` values, derives membership from archived event
+  ids, and publishes a new `PersistentShootingCollection` only after a
+  successful whole-archive save. `WorkspaceCoordinator` creates it from
+  `ShootingCollectionStoring`; it does not own or mutate Timer runtime state.
+  `ShootingCollectionSelection` is the transient value owned by the selection
+  view: ordered checkbox identities, first-remaining-selected anchor, and pure
+  time-window suggestions. `ShootingCollectionSuggestion` freezes the candidates
+  inspected in one preview; confirmation intersects chosen, inspected, and
+  currently eligible identities and checks the anchor. The app preview owns
+  only its working candidate checks. Dismissing it changes nothing; confirming
+  changes only the parent working selection. The archive model remains the sole
+  creation/save boundary. `ShootingCollectionSuggestionPresenter` formats the
+  start-time difference without consulting current shooting context.
+  `ShootingRecordPresenter` produces read-only record fields. The app's
+  `ShootingCollectionBrowser` renders list/selection navigation and individual
+  detail through separate views, observing only the archive model.
 - **`FilmSelectionModel`** — preset-film selection, profile override
   state, and calculator-context persistence.
 - **`CameraSlotSessionModel`** — the managed camera list: the cameras in
@@ -384,6 +402,17 @@ stores live in the app target.
 
 All persistence stores follow a `*Storing` protocol pair pattern with a
 real implementation plus a `NoOp*` implementation that unit tests use.
+
+The shooting archive uses `FileShootingCollectionStore` in app `Timers/`,
+injected by `ViewModelDependencyFactory`. It atomically replaces
+`Application Support/ShootingCollections/archive.json`; existing Timer keys
+and codecs are unchanged. `ShootingCollectionCodec` isolates malformed
+Collections and their records and resolves duplicate event ids first-valid-
+wins across the archive. A degraded payload is quarantined before later
+writes. An unreadable or unsupported archive disables creation for the launch
+rather than allowing an empty fallback to overwrite it. Archive store errors
+are observable because creation must report failure without claiming saved
+membership.
 
 Record-collection snapshots (custom-film library, timer state, timer
 metadata) decode through `PTimerCore` `Persistence/`

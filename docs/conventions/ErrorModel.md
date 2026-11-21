@@ -12,6 +12,13 @@
 | **View** | None -- views do not introduce error handling | Views consume display-state structs and `Result` properties. They switch on success/failure; they never call throwing functions directly. |
 | **Persistence** | `Optional` return for missing data; silent `try?` for encode/decode failures | Persistence load returns `nil` when no snapshot exists. Encode/decode failures are silently absorbed because the app can always start from defaults. |
 
+Shooting Collections are an exception to fallback-to-default persistence:
+their store throws on read or commit failure. The archive model disables
+creation after a failed read and returns a typed failure after a failed save,
+so the UI never reports unsaved membership as saved or overwrites an unreadable
+archive as empty. This implements the creation guarantee in
+`docs/specs/shooting/collections.md` (COLLECTION-004).
+
 ## When to Use Each Mechanism
 
 ### `Optional`

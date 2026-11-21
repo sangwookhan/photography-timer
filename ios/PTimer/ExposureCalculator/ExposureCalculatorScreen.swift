@@ -253,6 +253,7 @@ struct ExposureCalculatorScreen: View {
                     onOpenShootingFilters: {
                         isShootingFilterSelectionPresented = true
                     },
+                    onShowTimers: { bottomSheetStateStore.expand() },
                     onShowAbout: {
                         isAboutPresented = true
                     },
@@ -424,7 +425,9 @@ struct ExposureCalculatorScreen: View {
                     onClearCompletedTimers: viewModel.clearCompletedTimers,
                     onClose: bottomSheetStateStore.collapse,
                     soundingAlarmTimerID: alarmPlayer.soundingTimerID,
-                    onStopAlarm: { alarmPlayer.stop() }
+                    onStopAlarm: { alarmPlayer.stop() },
+                    collectionModel: coordinator.shootingCollectionModel,
+                    history: viewModel.timers.filter { $0.status == .completed || $0.status == .canceled }
                 )
             }
             // Presented via `isPresented` (not `item`) so switching the
@@ -730,20 +733,29 @@ private struct ExposureWorkspaceMainContent: View {
     let onShowFilmDetails: (FilmModeDetailsDisplayState) -> Void
     let onRequestRename: (CameraSlotID) -> Void
     let onOpenShootingFilters: () -> Void
+    var onShowTimers: () -> Void = {}
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
     @Binding var isUtilityPageShowing: Bool
     let onShowCameraManagement: (CameraManagementOrigin) -> Void
 
+    private var timersEntry: some View {
+        Button("Timers", systemImage: "timer", action: onShowTimers)
+            .buttonStyle(.bordered)
+            .padding()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !viewModel.isCameraListEditable {
                 CameraDataUnavailableView()
+                    .overlay(alignment: .topTrailing) { timersEntry }
             } else if viewModel.availableCameraSlots.isEmpty {
                 EmptyCameraPagerView(
                     onManageCameras: { onShowCameraManagement(.emptyState) },
                     onAddCamera: { viewModel.addCamera() }
                 )
+                .overlay(alignment: .topTrailing) { timersEntry }
             } else {
             TabView(selection: pageSelectionBinding) {
                 ForEach(viewModel.availableCameraSlots, id: \.self) { slotID in
@@ -759,6 +771,7 @@ private struct ExposureWorkspaceMainContent: View {
                             onRequestRename(slotID)
                         },
                         onOpenShootingFilters: onOpenShootingFilters,
+                        onShowTimers: onShowTimers,
                         onShowAbout: onShowAbout,
                         onShowFilterManagement: onShowFilterManagement,
                         onShowCameraManagement: { onShowCameraManagement(.settings) }
@@ -874,6 +887,7 @@ private struct CameraSlotCalculatorPage: View {
     /// so the title renders as plain text.
     let onRequestRename: () -> Void
     let onOpenShootingFilters: () -> Void
+    var onShowTimers: () -> Void = {}
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
     let onShowCameraManagement: () -> Void
@@ -913,6 +927,7 @@ private struct CameraSlotCalculatorPage: View {
                 showsResetAction: pageState.isActive && viewModel.canResetFilmModeWorkingContext,
                 onResetFilmModeContext: pageState.isActive ? viewModel.resetFilmModeWorkingContext : {},
                 onRequestRename: pageState.isActive ? onRequestRename : nil,
+                onShowTimers: pageState.isActive ? onShowTimers : {},
                 onShowAbout: pageState.isActive ? onShowAbout : {},
                 onShowFilterManagement: pageState.isActive ? onShowFilterManagement : {},
                 onShowCameraManagement: pageState.isActive ? onShowCameraManagement : {},
@@ -1171,6 +1186,7 @@ private struct HeaderView: View {
     /// active page — inactive pages render the title as plain text
     /// so the photographer cannot rename a slot they are not on.
     let onRequestRename: (() -> Void)?
+    var onShowTimers: () -> Void = {}
     let onShowAbout: () -> Void
     let onShowFilterManagement: () -> Void
     let onShowCameraManagement: () -> Void
@@ -1241,6 +1257,8 @@ private struct HeaderView: View {
                     } header: {
                         Text("Show total attenuation needed while adjusting Base.")
                     }
+                    Button("Timers", systemImage: "timer", action: onShowTimers)
+                        .accessibilityIdentifier("settings-timers")
                     Button("Cameras", systemImage: "camera", action: onShowCameraManagement)
                         .accessibilityIdentifier("settings-camera-management")
                     Button("Filter management", systemImage: "camera.filters", action: onShowFilterManagement)

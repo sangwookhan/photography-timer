@@ -31,6 +31,7 @@ public final class TimerWorkspaceModel: ObservableObject {
     /// model mutates it via persistence + lifecycle paths.
     public private(set) var nextTimerOrder = 1
 
+    public let cancellationNotice: TimerCancellationNoticeModel
     public let timerManager: any TimerManaging
 
     private let metadataPersistenceStore: TimerMetadataPersistenceStoring
@@ -52,6 +53,7 @@ public final class TimerWorkspaceModel: ObservableObject {
         metadataPersistenceStore: TimerMetadataPersistenceStoring,
         defaultName: @escaping (TimeInterval) -> String
     ) {
+        self.cancellationNotice = TimerCancellationNoticeModel(timerManager: timerManager)
         self.timerManager = timerManager
         self.metadataPersistenceStore = metadataPersistenceStore
         self.defaultName = defaultName
@@ -118,19 +120,10 @@ public final class TimerWorkspaceModel: ObservableObject {
         return id
     }
 
-    /// Starts a new timer cloned from a terminal (completed or
-    /// canceled) source record. The new timer gets a fresh id, order,
-    /// and runtime lifecycle from `any TimerManaging`; identity-bearing
-    /// fields (camera slot, film name, profile qualifier, exposure
-    /// source) come from the source's already-captured metadata. The
-    /// source record is read only — its runtime state, ordering, and
-    /// persisted metadata are untouched.
-    ///
-    /// Starts a fresh timer cloned from `source`'s duration and identity
-    /// snapshot, from ANY state (running, paused, completed, or canceled).
-    /// The source timer is left untouched — a timer is canceled only by an
-    /// explicit Cancel, never implicitly by Clone. Returns the new timer's
-    /// id on success; `nil` when `any TimerManaging` rejected the duration.
+    /// Starts a fresh timer from the source's full duration and captured
+    /// setup, with a new identity and order. Running and terminal sources
+    /// remain unchanged; a successful start cancels paused sources under
+    /// the common pause policy. Returns nil if the duration is rejected.
     @discardableResult
     public func startTimer(
         cloning source: RunningTimerItem,
@@ -361,7 +354,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                     adjustedShutterSeconds: metadata?.adjustedShutterSeconds,
                     filterSummary: metadata?.filterSummary,
                     filterReferenceText: metadata?.filterReferenceText,
-                    canceledRemainingTime: state.remainingAtCancel
+                    canceledRemainingTime: state.remainingAtCancel,
+                    cancellationReason: state.cancellationReason
                 )
             }
             .sorted(by: TimerWorkspaceOrdering.areInPresentationOrder(lhs:rhs:))
@@ -393,7 +387,7 @@ public final class TimerWorkspaceModel: ObservableObject {
         // While a timer is running the RunLoop tick path already
         // republishes with a fresh reference date every tick, so the
         // dedicated one-shot is only needed once all timers are terminal.
-        guard !timers.contains(where: { $0.status == .running }) else {
+        guard !timers.contains(where: { $0.status == .running || $0.status == .paused }) else {
             return
         }
 

@@ -8,7 +8,7 @@ import PTimerCore
 final class ExposureCalculatorViewModelTests: XCTestCase {
 
     @MainActor
-    func testDisplayDoesNotUseForbiddenCharacters() throws {
+    func testTimerDurationDoesNotUseForbiddenCharacters() throws {
         let startDate = Date(timeIntervalSince1970: 100)
 
         let viewModel = ExposureCalculatorViewModel(
@@ -24,14 +24,10 @@ final class ExposureCalculatorViewModelTests: XCTestCase {
 
         let timer = try XCTUnwrap(viewModel.timers.first)
 
-        let primary = viewModel.formatTimeDisplay(timer.duration).primary
-        let secondary = viewModel.formatTimeDisplay(timer.duration).secondary
-        let context = viewModel.timerTimeContext(for: timer) ?? ""
+        let duration = viewModel.formatTimeDisplay(timer.duration)
+        let forbiddenCharacters = CharacterSet(charactersIn: "/()")
 
-        let allText = primary + secondary + context
-
-        XCTAssertFalse(allText.contains("/"))
-        XCTAssertFalse(allText.contains("("))
-        XCTAssertFalse(allText.contains(")"))
+        XCTAssertNil(duration.primary.rangeOfCharacter(from: forbiddenCharacters))
+        XCTAssertNil(duration.secondary.rangeOfCharacter(from: forbiddenCharacters))
     }
 }

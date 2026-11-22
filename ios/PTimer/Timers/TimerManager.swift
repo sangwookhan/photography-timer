@@ -100,7 +100,6 @@ final class TimerManager: ObservableObject, TimerManaging {
     }
 
     private let tickInterval: TimeInterval
-    private let dateProvider: () -> Date
     private let runtime: TimerRuntime
     private var timer: Timer?
     private var cancellable: AnyCancellable?
@@ -113,7 +112,6 @@ final class TimerManager: ObservableObject, TimerManaging {
         persistenceStore: TimerPersistenceStoring = NoOpTimerPersistenceStore()
     ) {
         self.tickInterval = tickInterval
-        self.dateProvider = dateProvider
         self.runtime = TimerRuntime(
             dateProvider: dateProvider,
             completionAlertService: completionAlertService,
@@ -153,12 +151,16 @@ final class TimerManager: ObservableObject, TimerManaging {
 
     func tick(now: Date? = nil) {
         runtime.tick(now: now)
-        reconcileTickingLoop(now: now)
+        reconcileTickingLoop()
     }
 
     func reconcile(now: Date? = nil) {
         runtime.reconcile(now: now)
-        reconcileTickingLoop(now: now)
+        reconcileTickingLoop()
+    }
+
+    func acknowledgeCancellationNotices(ids: Set<UUID>) {
+        runtime.acknowledgeCancellationNotices(ids: ids)
     }
 
     func removeCompletedTimers() {
@@ -182,12 +184,11 @@ final class TimerManager: ObservableObject, TimerManaging {
 
     // MARK: - RunLoop ticking (OS I/O)
 
-    /// Starts the RunLoop ticking loop when a timer is running and stops it
+    /// Starts the RunLoop ticking loop while a timer is running or paused and stops it
     /// otherwise. This is the only timer responsibility that requires OS I/O;
     /// every state transition lives in `TimerRuntime`.
-    private func reconcileTickingLoop(now: Date? = nil) {
-        let currentDate = now ?? dateProvider()
-        if runtime.hasRunningTimers(at: currentDate) {
+    private func reconcileTickingLoop() {
+        if runtime.needsTicking {
             ensureTimerLoop()
         } else {
             stopLoop()

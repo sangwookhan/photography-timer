@@ -8,6 +8,8 @@ import UIKit
 
 struct ExposureCalculatorScreen: View {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var pendingRepeatReveal: UUID?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The screen owns `WorkspaceCoordinator` for workspace-lifetime
     /// state. The coordinator itself is wiring-only; redraws are driven
     /// by observed child models and the view-model facade.
@@ -396,7 +398,7 @@ struct ExposureCalculatorScreen: View {
                 }
             }
             .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
-            .fullScreenCover(isPresented: timersWindowBinding) {
+            .fullScreenCover(isPresented: timersWindowBinding, onDismiss: { pendingRepeatReveal = nil }) {
                 FullScreenTimersWindow(
                     snapshot: bottomSheetSnapshotStore.snapshot,
                     openFocus: bottomSheetStateStore.openFocus,
@@ -413,18 +415,25 @@ struct ExposureCalculatorScreen: View {
                         guard let source = viewModel.timers.first(where: { $0.id == id }) else {
                             return
                         }
-                        // Move focus to the freshly started clone so it
-                        // scrolls into view (the Active section header stays
-                        // visible per PTIMER-126) and highlights, instead of
-                        // the list staying on the previously focused row.
-                        if let newID = viewModel.cloneTimer(from: source) {
+                        if source.status == .paused {
+                            pendingRepeatReveal = viewModel.cloneTimer(from: source)
+                        } else if let newID = viewModel.cloneTimer(from: source) {
                             bottomSheetStateStore.focusTimer(newID)
                         }
                     },
                     onClearCompletedTimers: viewModel.clearCompletedTimers,
                     onClose: bottomSheetStateStore.collapse,
                     soundingAlarmTimerID: alarmPlayer.soundingTimerID,
-                    onStopAlarm: { alarmPlayer.stop() }
+                    onStopAlarm: { alarmPlayer.stop() },
+                    cancellationNoticeModel: viewModel.timerCancellationNoticeModel,
+                    pendingRepeatReveal: pendingRepeatReveal,
+                    onRepeatMoveCompleted: { id in
+                        guard pendingRepeatReveal == id else { return }
+                        bottomSheetStateStore.focusTimer(id)
+                    },
+                    onRepeatReveal: { id in
+                        if pendingRepeatReveal == id { pendingRepeatReveal = nil }
+                    }
                 )
             }
             // Presented via `isPresented` (not `item`) so switching the
@@ -581,6 +590,10 @@ struct ExposureCalculatorScreen: View {
         }
         .overlay(alignment: .bottom) {
             silentModeAdvisoryBanner
+        }
+        .overlay(alignment: .top) {
+            TimerCancellationNoticeView(model: viewModel.timerCancellationNoticeModel)
+                .padding(.top, 12)
         }
     }
 
@@ -942,7 +955,8 @@ private struct CameraSlotCalculatorPage: View {
                     : { _ in },
                 onClearTarget: pageState.isActive ? viewModel.clearTargetShutter : {},
                 onStartTargetTimer: pageState.isActive ? viewModel.startTargetShutterTimer : {},
-                style: style
+                style: style,
+                cancellationNoticeModel: viewModel.timerCancellationNoticeModel
             )
             .layoutPriority(1)
 
@@ -1084,7 +1098,8 @@ private struct CameraSlotCalculatorPage: View {
                     }
                     onShowFilmDetails(details)
                 },
-                style: style
+                style: style,
+                cancellationNoticeModel: viewModel.timerCancellationNoticeModel
             )
             // Result card carries the photographer's primary read.
             // The `filmResultCardMinHeight` floor enforced inside

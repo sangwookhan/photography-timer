@@ -82,6 +82,10 @@ public struct BottomSheetLargeItem: Identifiable, Equatable {
     public let remainingText: String
     public let totalDurationText: String?
     public let timingText: String?
+    public let remainingAtCancellationText: String?
+    public let resumeNoticeText: String?
+    public let resumeCountdownText: String?
+    public let cancellationReasonText: String?
     public let contextText: String?
     /// Start-time Filter Set reference string (Filter Set contract,
     /// FILTER-PERSIST-003): descriptive text captured with the timer,
@@ -298,6 +302,12 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
                     // (no slash-separated pair). PTIMER-187.
                     totalDurationText: nil,
                     timingText: largeTimingText(for: timer, timeContext: timeContext),
+                    remainingAtCancellationText: cancellationRemainingText(for: timer),
+                    resumeNoticeText: resumeNoticeText(for: timer),
+                    resumeCountdownText: timer.resumeTimeRemaining.map {
+                        String(format: String(localized: "Resume in %@ · auto-cancel"), resumeCountdownText($0))
+                    },
+                    cancellationReasonText: cancellationReasonText(for: timer),
                     contextText: contextText,
                     filterReferenceText: timer.filterReferenceText,
                     progress: progress(for: timer),
@@ -598,16 +608,39 @@ public struct BottomSheetWorkspaceSnapshot: Equatable {
         timeContext: (RunningTimerItem) -> String?
     ) -> String? {
         let base = timeContext(timer)
-        guard timer.status == .canceled,
-              let remaining = timer.canceledRemainingTime,
-              remaining > 0 else {
-            return base
-        }
-        let remainingMeta = "\(compactDurationText(remaining)) left"
+        guard let remainingMeta = cancellationRemainingText(for: timer) else { return base }
         guard let base, !base.isEmpty else {
             return remainingMeta
         }
         return "\(base) · \(remainingMeta)"
+    }
+
+    private static func cancellationRemainingText(for timer: RunningTimerItem) -> String? {
+        guard timer.status == .canceled, let remaining = timer.canceledRemainingTime else {
+            return nil
+        }
+        return String(format: Copy.remainingSuffix, compactDurationText(remaining))
+    }
+
+    private static func cancellationReasonText(for timer: RunningTimerItem) -> String? {
+        switch timer.cancellationReason {
+        case .pauseExpired: return String(localized: "Resume expired")
+        case .newTimerStarted: return String(localized: "New timer")
+        case nil: return nil
+        }
+    }
+
+    private static func resumeNoticeText(for timer: RunningTimerItem) -> String? {
+        guard let remaining = timer.resumeTimeRemaining else { return nil }
+        return String(
+            format: String(localized: "Resume within %@ or this timer will be canceled."),
+            resumeCountdownText(remaining)
+        )
+    }
+
+    private static func resumeCountdownText(_ remaining: TimeInterval) -> String {
+        let seconds = Int(ceil(remaining))
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
     private static func largeTotalDurationText(

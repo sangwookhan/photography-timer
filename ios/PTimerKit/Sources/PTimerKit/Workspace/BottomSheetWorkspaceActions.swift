@@ -33,9 +33,9 @@ public enum BottomSheetLargeAction: String, Equatable {
     case cancel
     case remove
     /// Starts a fresh timer from the selected timer's setup and full
-    /// duration, leaving the source timer untouched — a timer is canceled
-    /// only by an explicit Cancel, never implicitly by Clone. Surfaced on
-    /// every timer state.
+    /// duration. A successful start cancels paused timers under the shared
+    /// pause policy; running and terminal sources remain unchanged. Surfaced
+    /// on every timer state.
     case clone
 
     public var title: String {

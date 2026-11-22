@@ -209,6 +209,10 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Combine subscription, and the record-replay smoke test all
     /// observe the same published collection.
     private let timerWorkspaceModel: TimerWorkspaceModel
+
+    public var timerCancellationNoticeModel: TimerCancellationNoticeModel {
+        timerWorkspaceModel.cancellationNotice
+    }
     /// Preset film catalog, active film identity slice, and the
     /// calculator-context persistence store. The facade republishes
     /// `filmSelectionModel.$activeContext` into its own
@@ -1622,10 +1626,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         )
     }
 
-    /// Starts a fresh timer cloned from `source`'s setup and full
-    /// duration, from any state, leaving the source timer untouched. A
-    /// timer is canceled only by an explicit Cancel, never implicitly by
-    /// Clone. Returns the new timer's id so the caller can move focus to it.
+    /// Starts a fresh timer from the source's setup and full duration.
+    /// A successful start cancels paused timers under the common pause
+    /// policy. Returns the new timer ID for workspace focus.
     @discardableResult
     public func cloneTimer(from source: RunningTimerItem) -> UUID? {
         timerWorkspaceModel.startTimer(cloning: source)

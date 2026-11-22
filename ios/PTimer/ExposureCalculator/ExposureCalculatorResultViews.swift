@@ -25,6 +25,7 @@ struct ResultSectionView: View {
     let onStartFilmCorrectedExposureTimer: () -> Void
     let onShowFilmDetails: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
+    var cancellationNoticeModel: TimerCancellationNoticeModel?
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.bodySpacing) {
@@ -51,6 +52,10 @@ struct ResultSectionView: View {
                 } else {
                     Text(primaryResultText)
                         .font(.title3.weight(.semibold))
+                }
+
+                if let cancellationNoticeModel {
+                    TimerStartWarningView(model: cancellationNoticeModel)
                 }
 
                 if let validationMessage {

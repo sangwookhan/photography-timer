@@ -618,10 +618,8 @@ private struct CompactOverflowMiniCard: View {
 /// `FullScreenTimersWindow` for the opened state. Kept internal so
 /// the screen layer can compose the navigation chrome around it.
 struct BottomSheetLargeWorkspaceView: View {
-    /// Stable scroll-target identifier for the Active section
-    /// header. Used by `applyFocusIfNeeded` when the photographer
-    /// tapped an active compact card — scrolling the row by id
-    /// would push the `Active` title above the viewport.
+    /// Stable target for the top of the list, where Active starts.
+    /// Focusing a row by its own ID could hide the Active title.
     static let activeSectionScrollID = "timers-section-active"
 
     /// Stable scroll-target identifier for the Recently Completed
@@ -643,6 +641,11 @@ struct BottomSheetLargeWorkspaceView: View {
     let onCollapse: () -> Void
     var soundingAlarmTimerID: UUID?
     var onStopAlarm: () -> Void = {}
+    var pendingRepeatReveal: UUID?
+    var onRepeatMoveCompleted: (UUID) -> Void = { _ in }
+    var onRepeatReveal: (UUID) -> Void = { _ in }
+    @State private var newTimerID: UUID?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasAppliedInitialFocus = false
     /// Pending Clone/Cancel/Remove action awaiting confirmation; nil when
     /// no confirmation dialog is shown.
@@ -677,38 +680,83 @@ struct BottomSheetLargeWorkspaceView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(snapshot.sections) { section in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    sectionHeader(for: section)
-
-                                    ForEach(section.items) { item in
-                                        LargeWorkspaceTimerRowView(
-                                            item: item,
-                                            isFocused: item.id == openFocus.activeTimerID,
-                                            onAction: { action in
-                                                handle(action: action, for: item.id)
-                                            },
-                                            isAlarmSounding: item.id == soundingAlarmTimerID,
-                                            onStopAlarm: onStopAlarm
-                                        )
-                                        .id(item.id)
+                        let entries = TimerWorkspaceListEntry.make(from: snapshot.sections)
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(entries) { entry in
+                                switch entry {
+                                case .header(let title, let isHistory):
+                                    sectionHeader(title: title, isHistory: isHistory)
+                                        .padding(.top, isHistory && snapshot.sections.count > 1 ? 4 : 0)
+                                        .background(pendingRepeatReveal != nil && !reduceMotion
+                                                    ? Color(.systemBackground) : .clear)
+                                        .transition(pendingRepeatReveal != nil && !reduceMotion ? .identity : .opacity)
+                                case .timer(let item):
+                                    LargeWorkspaceTimerRowView(
+                                        item: item,
+                                        isFocused: item.id == openFocus.activeTimerID,
+                                        onAction: { action in
+                                            handle(action: action, for: item.id)
+                                        },
+                                        isAlarmSounding: item.id == soundingAlarmTimerID,
+                                        onStopAlarm: onStopAlarm,
+                                        isRepeatingPausedTimer: pendingRepeatReveal != nil && !reduceMotion
+                                    )
+                                    // Animate the row position in the list, while its
+                                    // status and controls update together.
+                                    .transaction { $0.animation = nil }
+                                    .overlay(alignment: .bottomTrailing) {
+                                        if item.id == newTimerID {
+                                            Text("New")
+                                                .font(.caption.weight(.semibold))
+                                                .padding(5)
+                                                .background(.regularMaterial, in: Capsule())
+                                                .padding(8)
+                                                .allowsHitTesting(false)
+                                        }
                                     }
+                                    .geometryGroup()
+                                    .opacity(item.id == pendingRepeatReveal ? 0 : 1)
+                                    .allowsHitTesting(item.id != pendingRepeatReveal)
+                                    .accessibilityHidden(item.id == pendingRepeatReveal)
+                                    .id(item.id)
+                                    // Keep canceled cards behind the active cards they pass.
+                                    .zIndex(pendingRepeatReveal != nil && item.status == .canceled ? -1 : 0)
+                                    .transition(.opacity)
                                 }
                             }
                         }
+                        // Reduced motion crossfades complete arrangements;
+                        // the normal path retains every row's move identity.
+                        .id(reduceMotion ? entries.map(\.id).joined(separator: "|") : "timer-workspace-rows")
+                        .transition(.opacity)
+                        .transaction(value: pendingRepeatReveal) { transaction in
+                            guard let id = pendingRepeatReveal else { return }
+                            transaction.addAnimationCompletion(criteria: .removed) {
+                                onRepeatMoveCompleted(id)
+                            }
+                        }
+                        .animation(TimerWorkspaceAnimation.movement(reduceMotion: reduceMotion),
+                                   value: entries.map(\.id))
                         .onAppear {
                             applyFocusIfNeeded(using: proxy, animated: false)
                         }
                         .onChange(of: openFocus) { _, _ in
                             applyFocusIfNeeded(using: proxy, animated: true)
                         }
+                        // Anchor the scroll to the whole list so a header
+                        // moving during a reorder cannot affect the target.
+                        .id(Self.activeSectionScrollID)
                     }
                     .padding(.top, 2)
                     .padding(.bottom, 8)
                     .accessibilityIdentifier("bottom-sheet-large-workspace")
                 }
             }
+        }
+        .task(id: newTimerID) {
+            guard newTimerID != nil else { return }
+            do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
+            newTimerID = nil
         }
         .confirmationDialog(
             pendingConfirm.map { confirmTitle(for: $0.action) } ?? "",
@@ -724,7 +772,7 @@ struct BottomSheetLargeWorkspaceView: View {
                 pendingConfirm = nil
             }
         } message: { pending in
-            Text(confirmMessage(for: pending.action))
+            Text(confirmMessage(for: pending))
         }
         .alert(
             "Clear completed timers?",
@@ -740,15 +788,15 @@ struct BottomSheetLargeWorkspaceView: View {
     }
 
     @ViewBuilder
-    private func sectionHeader(for section: TimerWorkspaceSection) -> some View {
+    private func sectionHeader(title: String, isHistory: Bool) -> some View {
         let header = HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(section.title)
+            Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             Spacer(minLength: 8)
 
-            if section.isCompletedSection {
+            if isHistory {
                 Button("Clear") {
                     showClearConfirm = true
                 }
@@ -758,15 +806,10 @@ struct BottomSheetLargeWorkspaceView: View {
             }
         }
 
-        // Tag each section header with a stable scroll id so
-        // `applyFocusIfNeeded` can land on the header (and not on a
-        // row) when the photographer drilled in from a compact
-        // card. Both Active and Recently Completed taps preserve
-        // their section title this way.
-        if section.isCompletedSection {
+        if isHistory {
             header.id(Self.recentlyCompletedSectionScrollID)
         } else {
-            header.id(Self.activeSectionScrollID)
+            header
         }
     }
 
@@ -799,13 +842,30 @@ struct BottomSheetLargeWorkspaceView: View {
             return
         }
 
-        if animated {
-            withAnimation(.easeInOut(duration: 0.22)) {
+        if animated, let id = pendingRepeatReveal, openFocus.activeTimerID == id {
+            if reduceMotion {
                 scroll()
+                revealRepeat(id)
+            } else {
+                withAnimation(.easeInOut(duration: 0.22), completionCriteria: .logicallyComplete) {
+                    scroll()
+                } completion: {
+                    guard pendingRepeatReveal == id else { return }
+                    revealRepeat(id)
+                }
             }
+        } else if animated && !reduceMotion {
+            withAnimation(.easeInOut(duration: 0.22)) { scroll() }
         } else {
             scroll()
             hasAppliedInitialFocus = true
+        }
+    }
+
+    private func revealRepeat(_ id: UUID) {
+        withAnimation(.easeIn(duration: 0.18)) {
+            newTimerID = id
+            onRepeatReveal(id)
         }
     }
 
@@ -870,9 +930,14 @@ struct BottomSheetLargeWorkspaceView: View {
         }
     }
 
-    private func confirmMessage(for action: BottomSheetLargeAction) -> String {
-        switch action {
+    private func confirmMessage(for pending: PendingTimerConfirm) -> String {
+        switch pending.action {
         case .clone:
+            if snapshot.sections.contains(where: { section in
+                section.items.contains { $0.status == .paused }
+            }) {
+                return String(localized: "A new timer will start with the same settings. All paused timers will be canceled and moved to History.")
+            }
             return String(localized: "A new timer will start with the same settings. This record will stay unchanged.")
         case .cancel:
             return String(localized: "This timer will be marked as canceled and moved to history.")
@@ -892,39 +957,18 @@ private struct PendingTimerConfirm: Identifiable {
     var id: UUID { timerID }
 }
 
-private struct LargeWorkspaceTimerRowView: View {
+struct LargeWorkspaceTimerRowView: View {
     let item: BottomSheetLargeItem
     let isFocused: Bool
     let onAction: (BottomSheetLargeAction) -> Void
     var isAlarmSounding: Bool = false
     var onStopAlarm: () -> Void = {}
+    var isRepeatingPausedTimer = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // The informational block is combined into a single
-            // VoiceOver element; the action buttons below stay
-            // OUTSIDE the combined element so Pause/Resume/Repeat
-            // Shot/Cancel/Remove remain individually focusable and
-            // activatable (PTIMER-182).
-            rowInformation
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(item.voiceOverLabel)
-                .accessibilityValue(item.remainingText)
-                .accessibilityIdentifier(rowAccessibilityIdentifier)
-
-            if !item.actions.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(item.actions, id: \.rawValue) { action in
-                        LargeActionButton(
-                            action: action,
-                            tint: tint(for: action),
-                            onTap: {
-                                onAction(action)
-                            }
-                        )
-                    }
-                }
-            }
+            informationRegion
+            actionRegion
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
@@ -935,6 +979,7 @@ private struct LargeWorkspaceTimerRowView: View {
                     ? statusColor(for: item.status).opacity(0.04)
                     : Color(.secondarySystemBackground))
         )
+        .background(isRepeatingPausedTimer ? Color(.secondarySystemBackground) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -942,21 +987,52 @@ private struct LargeWorkspaceTimerRowView: View {
                     isAlarmSounding ? Color.red : statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
                     lineWidth: isAlarmSounding ? 2 : (isFocused ? 1.5 : 1)
                 )
+                .allowsHitTesting(false)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        // While this timer's alarm is sounding, a tap on the row stops it; when
-        // it is not, the row keeps its existing behaviour (the action buttons).
-        .onTapGesture { if isAlarmSounding { onStopAlarm() } }
+    }
+
+    private var informationRegion: some View {
+        Group {
+            if isAlarmSounding {
+                Button(action: onStopAlarm) {
+                    rowInformation.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                rowInformation
+                    .accessibilityElement(children: .combine)
+            }
+        }
+        .accessibilityLabel(item.voiceOverLabel)
+        .accessibilityValue(informationAccessibilityValue)
+        .accessibilityIdentifier(rowAccessibilityIdentifier)
+    }
+
+    private var informationAccessibilityValue: String {
+        [
+            item.remainingText,
+            item.resumeNoticeText,
+            item.cancellationReasonText,
+            item.timingText,
+            isAlarmSounding ? String(localized: "Alarm sounding — tap to stop") : nil
+        ]
+        .compactMap { $0 }
+        .joined(separator: ". ")
+    }
+
+    @ViewBuilder
+    private var actionRegion: some View {
+        if !item.actions.isEmpty {
+            HStack(spacing: 8) {
+                ForEach(item.actions, id: \.rawValue) { action in
+                    LargeActionButton(action: action, tint: tint(for: action), onTap: { onAction(action) })
+                }
+            }
+        }
     }
 
     private var rowInformation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if isAlarmSounding {
-                Text("Alarm sounding — tap to stop")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.red)
-                    .accessibilityIdentifier("bottom-sheet-large-row-alarm-\(item.id.uuidString)")
-            }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if let title = item.title {
@@ -977,7 +1053,11 @@ private struct LargeWorkspaceTimerRowView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                StatusChip(status: item.status, label: item.statusLabel, size: .regular)
+                StatusChip(
+                    status: item.status,
+                    label: item.cancellationReasonText ?? item.statusLabel,
+                    size: .regular
+                )
             }
 
             VStack(alignment: .trailing, spacing: 2) {
@@ -997,6 +1077,9 @@ private struct LargeWorkspaceTimerRowView: View {
                 // countdown. Lower scale floor keeps long values like
                 // "16:09:49.829 left" on one line (PTIMER-198).
                 primaryStateValue
+                    .contentTransition(isRepeatingPausedTimer ? .identity : .opacity)
+                    .animation(isRepeatingPausedTimer ? nil : .easeOut(duration: 0.16),
+                               value: item.status == .canceled)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1006,15 +1089,22 @@ private struct LargeWorkspaceTimerRowView: View {
                 HStack(alignment: .lastTextBaseline, spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
                         if let timingText = item.timingText {
-                            // Up to two lines so the canceled meta
-                            // (canceled time · relative · remaining-left)
-                            // wraps cleanly instead of truncating on one
-                            // crowded line (PTIMER-198).
-                            Text(timingText)
+                            // One existing metadata line in every runtime
+                            // state. Overlaid text cannot resize the slot.
+                            Text(" ")
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                                .truncationMode(.tail)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .overlay(alignment: .leading) {
+                                    Text(isAlarmSounding
+                                         ? String(localized: "Alarm sounding — tap to stop")
+                                         : (item.resumeCountdownText ?? item.remainingAtCancellationText ?? timingText))
+                                        .font(.footnote)
+                                        .monospacedDigit()
+                                        .foregroundStyle(isAlarmSounding ? .red : (item.resumeCountdownText == nil ? .secondary : .orange))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.7)
+                                        .accessibilityIdentifier("timer-metadata-\(item.id.uuidString)")
+                                }
                         }
 
                         if let contextText = item.contextText {
@@ -1306,25 +1396,21 @@ struct FullScreenTimersWindow: View {
     let onClose: () -> Void
     var soundingAlarmTimerID: UUID?
     var onStopAlarm: () -> Void = {}
+    var cancellationNoticeModel: TimerCancellationNoticeModel?
+
+    var pendingRepeatReveal: UUID?
+    var onRepeatMoveCompleted: (UUID) -> Void = { _ in }
+    var onRepeatReveal: (UUID) -> Void = { _ in }
 
     var body: some View {
         NavigationStack {
-            BottomSheetLargeWorkspaceView(
-                snapshot: snapshot,
-                openFocus: openFocus,
-                onPauseTimer: onPauseTimer,
-                onResumeTimer: onResumeTimer,
-                onCancelTimer: onCancelTimer,
-                onRemoveTimer: onRemoveTimer,
-                onCloneTimer: onCloneTimer,
-                onClearCompletedTimers: onClearCompletedTimers,
-                onCollapse: onClose,
-                soundingAlarmTimerID: soundingAlarmTimerID,
-                onStopAlarm: onStopAlarm
-            )
-            .padding(.horizontal, 18)
-            .padding(.top, 4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            VStack(spacing: 0) {
+                timerList
+                // Give the notice its own space so it cannot intercept row actions.
+                if let cancellationNoticeModel {
+                    TimerCancellationNoticeView(model: cancellationNoticeModel)
+                }
+            }
             .navigationTitle(BottomSheetWorkspaceCopy.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1340,5 +1426,27 @@ struct FullScreenTimersWindow: View {
             }
         }
         .accessibilityIdentifier("full-screen-timers-window")
+    }
+
+    private var timerList: some View {
+        BottomSheetLargeWorkspaceView(
+            snapshot: snapshot,
+            openFocus: openFocus,
+            onPauseTimer: onPauseTimer,
+            onResumeTimer: onResumeTimer,
+            onCancelTimer: onCancelTimer,
+            onRemoveTimer: onRemoveTimer,
+            onCloneTimer: onCloneTimer,
+            onClearCompletedTimers: onClearCompletedTimers,
+            onCollapse: onClose,
+            soundingAlarmTimerID: soundingAlarmTimerID,
+            onStopAlarm: onStopAlarm,
+            pendingRepeatReveal: pendingRepeatReveal,
+            onRepeatMoveCompleted: onRepeatMoveCompleted,
+            onRepeatReveal: onRepeatReveal
+        )
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

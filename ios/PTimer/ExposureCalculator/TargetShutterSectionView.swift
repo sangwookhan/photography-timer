@@ -28,21 +28,28 @@ struct TargetShutterSectionView: View {
     let onStartTargetTimer: () -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
+    var cancellationNoticeModel: TimerCancellationNoticeModel?
+
     @State private var inputSheetVisible = false
 
     var body: some View {
-        TargetShutterCard(
-            displayState: displayState,
-            canStartTimer: canStartTimer,
-            onEdit: { inputSheetVisible = true },
-            onStartTimer: onStartTargetTimer,
-            layout: TargetShutterCardLayout(
-                timerAction: TimerActionMetrics(
-                    diameter: style.timerActionSize - 8,
-                    iconPointSize: style.timerActionIconSize - 1
+        VStack(alignment: .leading, spacing: 4) {
+            TargetShutterCard(
+                displayState: displayState,
+                canStartTimer: canStartTimer,
+                onEdit: { inputSheetVisible = true },
+                onStartTimer: onStartTargetTimer,
+                layout: TargetShutterCardLayout(
+                    timerAction: TimerActionMetrics(
+                        diameter: style.timerActionSize - 8,
+                        iconPointSize: style.timerActionIconSize - 1
+                    )
                 )
             )
-        )
+            if canStartTimer, let cancellationNoticeModel {
+                TimerStartWarningView(model: cancellationNoticeModel)
+            }
+        }
         .sectionCardStyle(style: style)
         .accessibilityIdentifier("target-shutter-section")
         .sheet(isPresented: $inputSheetVisible) {

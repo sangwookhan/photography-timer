@@ -81,6 +81,12 @@ public struct RunningTimerItem: Identifiable, Equatable {
     /// only for canceled records; lets the history surface show how
     /// much was left at the stop (e.g. "Canceled · 51s left").
     public let canceledRemainingTime: TimeInterval?
+    public let cancellationReason: TimerCancellationReason?
+
+    public var resumeTimeRemaining: TimeInterval? {
+        guard status == .paused, let pausedAt else { return nil }
+        return max(0, pausedAt.addingTimeInterval(PausedTimer.resumeWindow).timeIntervalSince(referenceDate))
+    }
 
     public init(
         id: UUID,
@@ -106,7 +112,8 @@ public struct RunningTimerItem: Identifiable, Equatable {
         adjustedShutterSeconds: TimeInterval? = nil,
         filterSummary: [FilterSummaryEntry]? = nil,
         filterReferenceText: String? = nil,
-        canceledRemainingTime: TimeInterval? = nil
+        canceledRemainingTime: TimeInterval? = nil,
+        cancellationReason: TimerCancellationReason? = nil
     ) {
         self.id = id
         self.order = order
@@ -132,6 +139,7 @@ public struct RunningTimerItem: Identifiable, Equatable {
         self.filterSummary = filterSummary
         self.filterReferenceText = filterReferenceText
         self.canceledRemainingTime = canceledRemainingTime
+        self.cancellationReason = cancellationReason
     }
 
     /// Convenience packaging of the slot + film + source identity

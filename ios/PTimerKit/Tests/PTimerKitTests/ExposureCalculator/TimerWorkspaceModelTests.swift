@@ -505,7 +505,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCloningFromPausedPreservesSourceAndStartsFromFullDuration() {
+    func testCloningFromPausedCancelsSourceAndStartsFromFullDuration() {
         let dateBox = DateBox(date: Date(timeIntervalSince1970: 100))
         let timerManager = RuntimeBackedTimerManaging(
             tickInterval: 60,
@@ -535,8 +535,8 @@ final class TimerWorkspaceModelTests: XCTestCase {
 
         XCTAssertNotNil(newID)
         XCTAssertEqual(model.timers.count, 2)
-        // Source stays paused; clone never cancels.
-        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .paused)
+        // A successful new start cancels paused timers under the pause policy.
+        XCTAssertEqual(model.timers.first(where: { $0.id == sourceID })?.status, .canceled)
 
         guard let fresh = model.timers.first(where: { $0.id == newID }) else {
             XCTFail("Fresh timer should be in the workspace")

@@ -31,6 +31,7 @@ itself.
 | User-authored reciprocity profiles | `reciprocity/custom-profiles.md` |
 | Reciprocity Details, source/reference presentation | `reciprocity/details-and-guidance.md` |
 | Timer states, pause/resume/cancel/repeat | `timers/lifecycle.md` |
+| Automatic shooting-session membership and browsing | `timers/shooting-sessions.md` |
 | Compact dock, full-screen Timers workspace, and ordering | `timers/workspace.md` |
 | Pre-alerts, completion alerts, lock-screen surface | `timers/alerts.md` |
 | Schema evolution, decode isolation, quarantine | `cross-cutting/persistence.md` |

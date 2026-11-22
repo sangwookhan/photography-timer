@@ -1004,10 +1004,20 @@ struct LargeWorkspaceTimerRowView: View {
             }
         }
         .accessibilityLabel(item.voiceOverLabel)
-        .accessibilityValue([item.remainingText, item.resumeNoticeText, item.cancellationReasonText,
-                             item.timingText, isAlarmSounding ? String(localized: "Alarm sounding — tap to stop") : nil]
-            .compactMap { $0 }.joined(separator: ". "))
+        .accessibilityValue(informationAccessibilityValue)
         .accessibilityIdentifier(rowAccessibilityIdentifier)
+    }
+
+    private var informationAccessibilityValue: String {
+        [
+            item.remainingText,
+            item.resumeNoticeText,
+            item.cancellationReasonText,
+            item.timingText,
+            isAlarmSounding ? String(localized: "Alarm sounding — tap to stop") : nil
+        ]
+        .compactMap { $0 }
+        .joined(separator: ". ")
     }
 
     @ViewBuilder
@@ -1396,6 +1406,7 @@ struct FullScreenTimersWindow: View {
         NavigationStack {
             VStack(spacing: 0) {
                 timerList
+                // Give the notice its own space so it cannot intercept row actions.
                 if let cancellationNoticeModel {
                     TimerCancellationNoticeView(model: cancellationNoticeModel)
                 }

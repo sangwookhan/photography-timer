@@ -68,10 +68,16 @@ eight hours. These windows govern successful starts, not timer duration or
 completion. The debug-only alternative is defined below.
 
 - **SESSION-LINK-001** — Only a successful new timer start shall count as
-  activity for automatic assignment, using its original start time.
+  activity for automatic assignment, using its original start time. A
+  retained Timer record counts as start activity even while its session
+  assignment is pending.
 - **SESSION-LINK-002** — The candidate shall be the session of the most
   recent successful start. Assignment shall not search older sessions by
   camera, reactivate a historical session, or merge existing sessions.
+  Pending assignment shall not cause a retained recent start to be skipped:
+  if A starts at 09:00 and its record is saved with assignment pending, and
+  B starts at 09:30, recovery shall assign both to the same session under
+  the normal time rule.
 - **SESSION-LINK-003** — A new start shall join that candidate only when
   its elapsed time since the most recent successful start is nonnegative
   and no greater than the one-hour connection window W, and its elapsed
@@ -150,13 +156,16 @@ completion. The debug-only alternative is defined below.
   replace known valid membership with an empty result merely because a read
   failed. Existing additive evolution, per-record decode isolation, and
   quarantine rules remain owned by `cross-cutting/persistence.md`.
-- **SESSION-PERSIST-007** — If the new Timer record itself cannot be
-  retained durably, starting it shall report failure with an explanation
-  and shall not be acknowledged as a successful start or advance session
-  activity. Existing records and memberships shall remain intact. A retry
-  shall resolve the same logical start without duplicating a retained
-  record. An assignment-only failure follows SESSION-PERSIST-003 through
-  SESSION-PERSIST-005 and shall not be reported as loss of the Timer.
+- **SESSION-PERSIST-007** — On confirmed failure to save a new Timer
+  record, the user shall be told that the Timer could not start. Its new
+  countdown shall stay stopped, existing paused timers shall remain paused
+  subject to their own deadlines, and session activity shall remain
+  unchanged. If the save outcome is uncertain, the system shall check
+  whether that same Timer record was retained before retrying, so one
+  logical start cannot create duplicate records. An assignment-only failure
+  follows SESSION-PERSIST-003 through SESSION-PERSIST-005: the saved Timer
+  continues to count as activity at its original start time, and membership
+  is confirmed to the user only once durable.
 
 ### iPhone debug timing
 

@@ -967,30 +967,8 @@ struct LargeWorkspaceTimerRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // The informational block is combined into a single
-            // VoiceOver element; the action buttons below stay
-            // OUTSIDE the combined element so Pause/Resume/Repeat
-            // Shot/Cancel/Remove remain individually focusable and
-            // activatable (PTIMER-182).
-            rowInformation
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(item.voiceOverLabel)
-                .accessibilityValue([item.remainingText, item.resumeNoticeText, item.cancellationReasonText, item.timingText, isAlarmSounding ? String(localized: "Alarm sounding — tap to stop") : nil].compactMap { $0 }.joined(separator: ". "))
-                .accessibilityIdentifier(rowAccessibilityIdentifier)
-
-            if !item.actions.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(item.actions, id: \.rawValue) { action in
-                        LargeActionButton(
-                            action: action,
-                            tint: tint(for: action),
-                            onTap: {
-                                onAction(action)
-                            }
-                        )
-                    }
-                }
-            }
+            informationRegion
+            actionRegion
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
@@ -1009,14 +987,38 @@ struct LargeWorkspaceTimerRowView: View {
                     isAlarmSounding ? Color.red : statusColor(for: item.status).opacity(isFocused ? 0.22 : 0.12),
                     lineWidth: isAlarmSounding ? 2 : (isFocused ? 1.5 : 1)
                 )
+                .allowsHitTesting(false)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        // Only install the row-level tap while this timer is sounding.
-        // Otherwise the row's action buttons are the only tap targets.
-        .gesture(
-            TapGesture().onEnded { onStopAlarm() },
-            including: isAlarmSounding ? .all : .subviews
-        )
+    }
+
+    private var informationRegion: some View {
+        Group {
+            if isAlarmSounding {
+                Button(action: onStopAlarm) {
+                    rowInformation.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                rowInformation
+                    .accessibilityElement(children: .combine)
+            }
+        }
+        .accessibilityLabel(item.voiceOverLabel)
+        .accessibilityValue([item.remainingText, item.resumeNoticeText, item.cancellationReasonText,
+                             item.timingText, isAlarmSounding ? String(localized: "Alarm sounding — tap to stop") : nil]
+            .compactMap { $0 }.joined(separator: ". "))
+        .accessibilityIdentifier(rowAccessibilityIdentifier)
+    }
+
+    @ViewBuilder
+    private var actionRegion: some View {
+        if !item.actions.isEmpty {
+            HStack(spacing: 8) {
+                ForEach(item.actions, id: \.rawValue) { action in
+                    LargeActionButton(action: action, tint: tint(for: action), onTap: { onAction(action) })
+                }
+            }
+        }
     }
 
     private var rowInformation: some View {
@@ -1384,6 +1386,7 @@ struct FullScreenTimersWindow: View {
     let onClose: () -> Void
     var soundingAlarmTimerID: UUID?
     var onStopAlarm: () -> Void = {}
+    var cancellationNoticeModel: TimerCancellationNoticeModel?
 
     var pendingRepeatReveal: UUID?
     var onRepeatMoveCompleted: (UUID) -> Void = { _ in }
@@ -1391,25 +1394,12 @@ struct FullScreenTimersWindow: View {
 
     var body: some View {
         NavigationStack {
-            BottomSheetLargeWorkspaceView(
-                snapshot: snapshot,
-                openFocus: openFocus,
-                onPauseTimer: onPauseTimer,
-                onResumeTimer: onResumeTimer,
-                onCancelTimer: onCancelTimer,
-                onRemoveTimer: onRemoveTimer,
-                onCloneTimer: onCloneTimer,
-                onClearCompletedTimers: onClearCompletedTimers,
-                onCollapse: onClose,
-                soundingAlarmTimerID: soundingAlarmTimerID,
-                onStopAlarm: onStopAlarm,
-                pendingRepeatReveal: pendingRepeatReveal,
-                onRepeatMoveCompleted: onRepeatMoveCompleted,
-                onRepeatReveal: onRepeatReveal
-            )
-            .padding(.horizontal, 18)
-            .padding(.top, 4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            VStack(spacing: 0) {
+                timerList
+                if let cancellationNoticeModel {
+                    TimerCancellationNoticeView(model: cancellationNoticeModel)
+                }
+            }
             .navigationTitle(BottomSheetWorkspaceCopy.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1425,5 +1415,27 @@ struct FullScreenTimersWindow: View {
             }
         }
         .accessibilityIdentifier("full-screen-timers-window")
+    }
+
+    private var timerList: some View {
+        BottomSheetLargeWorkspaceView(
+            snapshot: snapshot,
+            openFocus: openFocus,
+            onPauseTimer: onPauseTimer,
+            onResumeTimer: onResumeTimer,
+            onCancelTimer: onCancelTimer,
+            onRemoveTimer: onRemoveTimer,
+            onCloneTimer: onCloneTimer,
+            onClearCompletedTimers: onClearCompletedTimers,
+            onCollapse: onClose,
+            soundingAlarmTimerID: soundingAlarmTimerID,
+            onStopAlarm: onStopAlarm,
+            pendingRepeatReveal: pendingRepeatReveal,
+            onRepeatMoveCompleted: onRepeatMoveCompleted,
+            onRepeatReveal: onRepeatReveal
+        )
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }

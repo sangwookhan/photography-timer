@@ -425,6 +425,7 @@ struct ExposureCalculatorScreen: View {
                     onClose: bottomSheetStateStore.collapse,
                     soundingAlarmTimerID: alarmPlayer.soundingTimerID,
                     onStopAlarm: { alarmPlayer.stop() },
+                    cancellationNoticeModel: viewModel.timerCancellationNoticeModel,
                     pendingRepeatReveal: pendingRepeatReveal,
                     onRepeatMoveCompleted: { id in
                         guard pendingRepeatReveal == id else { return }
@@ -434,9 +435,6 @@ struct ExposureCalculatorScreen: View {
                         if pendingRepeatReveal == id { pendingRepeatReveal = nil }
                     }
                 )
-                .overlay(alignment: .bottom) {
-                    TimerCancellationNoticeView(model: viewModel.timerCancellationNoticeModel)
-                }
             }
             // Presented via `isPresented` (not `item`) so switching the
             // profile/model inside Details refreshes the snapshot in

@@ -140,7 +140,8 @@ belongs to, captured once at start time and frozen thereafter.
 
 ## Non-goals
 
-- Multi-timer selection, batch actions, or cross-timer linking are not
-  currently specified.
+- Multi-timer selection, batch actions, and runtime timer chaining are not
+  specified here. Browsing membership across records is governed by
+  `timers/shooting-sessions.md` and does not link timer execution.
 - A defined retention policy for completed timers (e.g. "recent items
   only") does not currently exist.

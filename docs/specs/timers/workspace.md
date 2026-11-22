@@ -65,6 +65,11 @@ acting on every timer at once.
   closely) is presentation state only; it never reorders, pauses, resumes,
   or otherwise mutates any timer.
 
+- **WORKSPACE-014** — Session identification and navigation follow
+  `timers/shooting-sessions.md`. Session browsing shall preserve the History
+  ordering defined by WORKSPACE-011 and WORKSPACE-012, even when records
+  from different sessions interleave.
+
 ### Full-screen workspace actions
 
 - **WORKSPACE-020** — Each row in the full-screen workspace shows state,

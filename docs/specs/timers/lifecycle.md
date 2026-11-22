@@ -8,6 +8,7 @@
 | TIMER | State machine and time semantics |
 | TIMER-IDENTITY | What a timer captures at start time |
 | TIMER-PERSIST | Persistence and restoration |
+| TIMER-PAUSE | Automatic cancellation of abandoned paused timers |
 
 ## Purpose
 
@@ -36,8 +37,8 @@ canceled — and moves between them only along a fixed set of transitions.
   are rejected before any state is written.
 - **TIMER-004** — A paused timer does not consume wall-clock time toward
   completion; its remaining time is exactly the value frozen at pause.
-- **TIMER-005** — Resume computes a new end time as *now + frozen
-  remaining*; the original end time is not preserved across a pause.
+- **TIMER-005** — Resume of a timer that has not been canceled computes
+  a new end time as *now + frozen remaining*; the original end time is not preserved across a pause.
 - **TIMER-006** — A pause whose remaining time has already reached zero
   short-circuits directly to completed rather than entering a
   zero-remaining paused state.
@@ -90,11 +91,13 @@ belongs to, captured once at start time and frozen thereafter.
 - **TIMER-PERSIST-003** — On restore: a running timer whose end time has
   already passed restores as completed, with the original end time as the
   completion timestamp (not the restoration moment); a paused timer
-  restores with its frozen remaining time intact; a completed timer
+  restores with frozen remaining time intact unless it meets the automatic
+  cancellation conditions below; a completed timer
   restores with its recorded completion time; a canceled timer restores
   with its recorded cancellation time, unaffected by wall clock.
-  Restoration never fires a completion alert, notification, or other
-  user-facing feedback — it is silent state recovery only.
+  Restoration never fires a completion alert or notification. Automatic
+  pause cancellation may be explained through the in-app notice defined in
+  `timers/alerts.md`; other restoration remains silent.
 - **TIMER-PERSIST-004** — A persisted paused timer whose freeze metadata is
   missing or inconsistent is treated as corrupted input and surfaces as
   completed rather than fabricating a plausible-looking timestamp.
@@ -104,7 +107,8 @@ belongs to, captured once at start time and frozen thereafter.
   older release used.
 - **TIMER-PERSIST-006** — When the app returns to the foreground, a running
   timer reconciles against wall clock and updates its state if it completed
-  during the inactive period. This state update is silent; whether and how
+  during the inactive period. Paused timers are also checked for automatic
+  cancellation. Apart from the in-app cancellation notice, this state update is silent; whether and how
   a completion alert may fire is owned by `timers/alerts.md` (ALERT-030),
   not restated here.
 - **TIMER-PERSIST-007** — On Android, terminating and relaunching the app
@@ -112,6 +116,27 @@ belongs to, captured once at start time and frozen thereafter.
   timer's state restores on reopen (per TIMER-PERSIST-003), and its
   ongoing-timer notification (`timers/alerts.md`) remains available
   afterward, not merely up to the moment of termination.
+
+## Automatic cancellation of paused timers
+
+- **TIMER-PAUSE-001** — Successfully starting a new timer cancels all
+  existing paused timers. A failed start leaves those paused timers intact.
+- **TIMER-PAUSE-002** — Each pause allows two minutes to resume, measured
+  from that pause. At or after that deadline the timer becomes canceled,
+  even if no other timer is running. The interval is fixed and has no
+  user-configurable setting. Reopening the app does not restart the window.
+- **TIMER-PAUSE-003** — Before cancellation, resume continues the same timer
+  from its frozen remaining exposure time. A resume request at or after
+  the two-minute deadline cannot resume the timer, even if the displayed
+  state has not refreshed yet. Once canceled, it cannot resume.
+- **TIMER-PAUSE-004** — A paused timer that becomes too old while the app
+  is away or closed appears as canceled on the next return or launch,
+  before the user can resume it. The cancellation timestamp is the
+  pause deadline, not the later discovery time. This rule also applies
+  to readable paused timers saved by older releases.
+- **TIMER-PAUSE-005** — Automatic cancellation preserves the timer record,
+  captured identity and remaining exposure time in History across relaunch.
+  It does not change other running timers or their completion behavior.
 
 ## Non-goals
 

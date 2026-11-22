@@ -107,7 +107,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 **Steps.**
 1. Tap the running timer's pause affordance.
 2. The timer enters paused state. Wall-clock time may pass; the paused timer does not auto-complete.
-3. Tap resume; the timer continues from the *frozen remaining time* at the moment of pause, not from the original end date.
+3. If the timer has not been canceled, tap resume; the timer continues from the *frozen remaining time* at the moment of pause, not from the original end date.
 
 **Boundary conditions.**
 - A pause whose remaining time has already reached zero short-circuits to *completed* rather than entering a zero-remaining paused state. The user never sees a "paused at 0 s" timer.
@@ -149,7 +149,7 @@ Each scenario lists the user goal, the steps the app must support, and the bound
 
 **Steps.**
 1. With timers running and paused in the workspace, force-quit the app or restart the phone.
-2. Reopen the app. The previously running timers are restored — running timers reflect wall-clock progress while the app was dead, paused timers are unchanged.
+2. Reopen the app. The previously running timers are restored — running timers reflect wall-clock progress while the app was dead, paused timers retain their frozen remaining time unless they meet the automatic cancellation conditions.
 3. A running timer whose end date has already passed restores as completed; the completion timestamp is the original end date, not the restoration moment.
 
 **Boundary conditions.**
@@ -280,10 +280,13 @@ Each requirement is a "system shall" obligation with a back-reference to the ori
 - **FR-3.1** The system shall start a timer only with a duration that is strictly positive and finite. Infinite, NaN, or non-positive durations are rejected at the entry point, before any persisted state is written. (Scenario 3 boundary)
 - **FR-3.2** A timer shall move only along these state transitions: *running → paused*, *paused → running*, *running → completed*, *running → canceled*, and *paused → canceled*. *Paused → completed* is not a direct transition — a paused timer must resume before it can complete; a pause attempted with zero remaining time short-circuits directly to completed instead of entering paused (FR-3.5). Other transitions are not representable; *completed* and *canceled* are both terminal and distinct from each other — a canceled timer never becomes completed. (Scenario 3, 4)
 - **FR-3.3** A paused timer shall not consume wall-clock time toward its completion. The frozen remaining time is preserved as the user left it. (Scenario 4)
-- **FR-3.4** Resume shall restart the timer from *now + frozen remaining time*; the original end date is not preserved across pause. (Scenario 4 boundary)
+- **FR-3.4** Resume of a timer that has not been canceled shall restart the timer from *now + frozen remaining time*; the original end date is not preserved across pause. (Scenario 4 boundary)
 - **FR-3.5** A pause whose remaining time has already reached zero shall short-circuit to completed rather than enter a zero-remaining paused state. (Scenario 4 boundary)
 - **FR-3.6** Each transition into completed shall produce exactly one external completion signal to the user. Pending signals shall be cancelled when a timer is removed or transitions running → paused. (Scenario 3)
 - **FR-3.7** Active timers shall be presented most-recent-first; completed and canceled timers together form one terminal group, presented most-recently-terminated-first; ties shall resolve deterministically so the user does not see an unstable order. (Scenario 5)
+
+- **FR-3.8** Paused timers shall be canceled when a new timer starts successfully or after two minutes paused, including during app downtime. The user shall be told they were canceled, and History shall preserve the records and remaining exposure time. Other running timers remain unaffected. (Scenarios 4, 7)
+- **FR-3.9** While a timer is paused, the photographer shall see the time left to resume and understand that it will be canceled afterward. This fixed two-minute window has no customization setting. (Scenario 4)
 
 ### 3.4 Multi-timer + lock-screen
 

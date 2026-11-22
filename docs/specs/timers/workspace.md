@@ -71,16 +71,22 @@ acting on every timer at once.
   remaining and total time, and state-appropriate inline actions: running
   exposes pause and start-new; paused exposes resume, start-new, cancel,
   and remove; completed/canceled exposes start-again (repeat) and remove.
-- **WORKSPACE-021** — *Start new*, from an active row, cancels the current
-  timer (keeping it as a terminal canceled record) and starts a fresh timer
-  from the same setup and full duration — so no duplicate active timer
-  results.
+- **WORKSPACE-021** — *Repeat Shot* from an active row starts a fresh
+  timer from the same setup and full duration. A running source continues
+  unchanged. A paused source is canceled and kept in History under the
+  automatic pause cancellation policy.
 - **WORKSPACE-022** — *Cancel*, from a paused row, stops the timer and
   keeps it as a canceled record; it does not delete it. This is distinct
   from *remove*, which deletes the record entirely.
 - **WORKSPACE-023** — *Start again* (repeat), from a terminal row, creates
   a new timer from the record's captured setup and full duration, leaving
   the source terminal record untouched.
+
+- **WORKSPACE-024** — Every Start or Repeat Shot entry point warns
+  before starting that all paused timers will be canceled when any exist.
+  This includes Repeat Shot from running or History records, whose source
+  remains intact. A separate confirmation step is not required.
+
 
 ### Compact dock
 
@@ -147,6 +153,42 @@ acting on every timer at once.
   identically in compact and full-screen presentation.
 - **WORKSPACE-CARD-007** — A long primary value (e.g. a multi-hour
   remaining time) remains legible on one line without dominating the card.
+
+- **WORKSPACE-CARD-008** — An automatically canceled paused timer appears
+  in History as Canceled, with its remaining exposure time shown separately
+  under WORKSPACE-CARD-005. The remaining time stays readable on narrow
+  screens and at accessibility text sizes without growing the cell.
+  The record has no resume action.
+
+- **WORKSPACE-CARD-009** — While paused, the timer card shows the time
+  left to resume as a countdown, separately from frozen remaining exposure
+  time. The accompanying text explains that the timer will be canceled if
+  not resumed, for example, "Resume within 2:00 or this timer will be
+  canceled." The countdown decreases while exposure time stays frozen.
+  At expiration the card shows Canceled rather than a resumable zero-time
+  countdown. The displayed rounding never extends resume eligibility.
+
+- **WORKSPACE-CARD-010** — Timer cells retain their existing dimensions
+  throughout use under the same viewport and text-size settings. Countdown
+  updates, running, paused, completed and canceled states, focus and alarm
+  feedback shall not change a cell's width or height. Resume and cancellation
+  information shall fit within existing layout slots, without additional
+  status-dependent rows or hidden action controls.
+
+- **WORKSPACE-CARD-011** — Repeating a paused timer first opens a
+  full-height slot at the top of Active while the original card moves
+  toward History as Canceled, retaining its identity. The new card fades
+  into that slot after the original moves. If the slot is outside the
+  viewport, reveal it after scrolling to Active and briefly mark it New.
+  Use the same New cue when the slot is already visible. Preserve cell
+  dimensions and avoid overlapping card content during reveal. With
+  reduced motion enabled, use a brief fade and omit animated scrolling.
+  Ordinary countdown updates do not trigger the transition.
+- **WORKSPACE-CARD-012** — When the photographer cancels a timer, the
+  card visibly changes to Canceled as it moves to History. Keep the
+  existing card dimensions and use a brief fade for the changed value.
+  The History heading and its controls move with the list.
+
 
 ## Mini timer (compact dock card)
 

@@ -87,6 +87,14 @@ completion alert.
   a completion sound or haptic — only the foreground tick does, and only
   while it can be perceived live.
 
+## Automatic pause-cancellation notice
+
+- **ALERT-PAUSE-001** — Automatic cancellation of a paused timer is briefly
+  communicated in the app as Canceled. The same cancellation is not announced
+  again on revisiting or relaunching. Several cancellations may be grouped.
+- **ALERT-PAUSE-002** — This notice does not count as a timer completion
+  alarm. Existing completion alerts for other running timers are unaffected.
+
 ## Lock-screen surface
 
 - **LOCKSCREEN-001** — The system exposes at most one representative

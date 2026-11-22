@@ -618,10 +618,8 @@ private struct CompactOverflowMiniCard: View {
 /// `FullScreenTimersWindow` for the opened state. Kept internal so
 /// the screen layer can compose the navigation chrome around it.
 struct BottomSheetLargeWorkspaceView: View {
-    /// Stable scroll-target identifier for the Active section
-    /// header. Used by `applyFocusIfNeeded` when the photographer
-    /// tapped an active compact card — scrolling the row by id
-    /// would push the `Active` title above the viewport.
+    /// Stable target for the top of the list, where Active starts.
+    /// Focusing a row by its own ID could hide the Active title.
     static let activeSectionScrollID = "timers-section-active"
 
     /// Stable scroll-target identifier for the Recently Completed
@@ -689,7 +687,9 @@ struct BottomSheetLargeWorkspaceView: View {
                                 case .header(let title, let isHistory):
                                     sectionHeader(title: title, isHistory: isHistory)
                                         .padding(.top, isHistory && snapshot.sections.count > 1 ? 4 : 0)
-                                        .transition(.opacity)
+                                        .background(pendingRepeatReveal != nil && !reduceMotion
+                                                    ? Color(.systemBackground) : .clear)
+                                        .transition(pendingRepeatReveal != nil && !reduceMotion ? .identity : .opacity)
                                 case .timer(let item):
                                     LargeWorkspaceTimerRowView(
                                         item: item,
@@ -698,7 +698,8 @@ struct BottomSheetLargeWorkspaceView: View {
                                             handle(action: action, for: item.id)
                                         },
                                         isAlarmSounding: item.id == soundingAlarmTimerID,
-                                        onStopAlarm: onStopAlarm
+                                        onStopAlarm: onStopAlarm,
+                                        isRepeatingPausedTimer: pendingRepeatReveal != nil && !reduceMotion
                                     )
                                     // Animate the row position in the list, while its
                                     // status and controls update together.
@@ -718,6 +719,8 @@ struct BottomSheetLargeWorkspaceView: View {
                                     .allowsHitTesting(item.id != pendingRepeatReveal)
                                     .accessibilityHidden(item.id == pendingRepeatReveal)
                                     .id(item.id)
+                                    // Keep canceled cards behind the active cards they pass.
+                                    .zIndex(pendingRepeatReveal != nil && item.status == .canceled ? -1 : 0)
                                     .transition(.opacity)
                                 }
                             }
@@ -740,6 +743,9 @@ struct BottomSheetLargeWorkspaceView: View {
                         .onChange(of: openFocus) { _, _ in
                             applyFocusIfNeeded(using: proxy, animated: true)
                         }
+                        // Anchor the scroll to the whole list so a header
+                        // moving during a reorder cannot affect the target.
+                        .id(Self.activeSectionScrollID)
                     }
                     .padding(.top, 2)
                     .padding(.bottom, 8)
@@ -800,15 +806,10 @@ struct BottomSheetLargeWorkspaceView: View {
             }
         }
 
-        // Tag each section header with a stable scroll id so
-        // `applyFocusIfNeeded` can land on the header (and not on a
-        // row) when the photographer drilled in from a compact
-        // card. Both Active and Recently Completed taps preserve
-        // their section title this way.
         if isHistory {
             header.id(Self.recentlyCompletedSectionScrollID)
         } else {
-            header.id(Self.activeSectionScrollID)
+            header
         }
     }
 
@@ -962,6 +963,7 @@ struct LargeWorkspaceTimerRowView: View {
     let onAction: (BottomSheetLargeAction) -> Void
     var isAlarmSounding: Bool = false
     var onStopAlarm: () -> Void = {}
+    var isRepeatingPausedTimer = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -999,6 +1001,7 @@ struct LargeWorkspaceTimerRowView: View {
                     ? statusColor(for: item.status).opacity(0.04)
                     : Color(.secondarySystemBackground))
         )
+        .background(isRepeatingPausedTimer ? Color(.secondarySystemBackground) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -1062,8 +1065,9 @@ struct LargeWorkspaceTimerRowView: View {
                 // countdown. Lower scale floor keeps long values like
                 // "16:09:49.829 left" on one line (PTIMER-198).
                 primaryStateValue
-                    .contentTransition(.opacity)
-                    .animation(.easeOut(duration: 0.16), value: item.status == .canceled)
+                    .contentTransition(isRepeatingPausedTimer ? .identity : .opacity)
+                    .animation(isRepeatingPausedTimer ? nil : .easeOut(duration: 0.16),
+                               value: item.status == .canceled)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, alignment: .trailing)

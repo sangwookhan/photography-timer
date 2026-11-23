@@ -641,6 +641,8 @@ struct BottomSheetLargeWorkspaceView: View {
     let onCollapse: () -> Void
     var soundingAlarmTimerID: UUID?
     var onStopAlarm: () -> Void = {}
+    var sessionWorkspace: TimerWorkspaceModel?
+    var onOpenSession: (UUID) -> Void = { _ in }
     var pendingRepeatReveal: UUID?
     var onRepeatMoveCompleted: (UUID) -> Void = { _ in }
     var onRepeatReveal: (UUID) -> Void = { _ in }
@@ -699,7 +701,11 @@ struct BottomSheetLargeWorkspaceView: View {
                                         },
                                         isAlarmSounding: item.id == soundingAlarmTimerID,
                                         onStopAlarm: onStopAlarm,
-                                        isRepeatingPausedTimer: pendingRepeatReveal != nil && !reduceMotion
+                                        isRepeatingPausedTimer: pendingRepeatReveal != nil && !reduceMotion,
+                                        sessionTitle: sessionWorkspace?.sessionLabel(for: item.id),
+                                        onOpenSession: sessionWorkspace?.sessions.membership(for: item.id).map { _ in
+                                            { onOpenSession(item.id) }
+                                        }
                                     )
                                     // Animate the row position in the list, while its
                                     // status and controls update together.
@@ -964,6 +970,8 @@ struct LargeWorkspaceTimerRowView: View {
     var isAlarmSounding: Bool = false
     var onStopAlarm: () -> Void = {}
     var isRepeatingPausedTimer = false
+    var sessionTitle: String?
+    var onOpenSession: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1006,6 +1014,9 @@ struct LargeWorkspaceTimerRowView: View {
         .accessibilityLabel(item.voiceOverLabel)
         .accessibilityValue(informationAccessibilityValue)
         .accessibilityIdentifier(rowAccessibilityIdentifier)
+        .ifLet(onOpenSession) { view, openSession in
+            view.accessibilityAction(named: Text("Open shooting session"), openSession)
+        }
     }
 
     private var informationAccessibilityValue: String {
@@ -1027,6 +1038,26 @@ struct LargeWorkspaceTimerRowView: View {
                 ForEach(item.actions, id: \.rawValue) { action in
                     LargeActionButton(action: action, tint: tint(for: action), onTap: { onAction(action) })
                 }
+
+            }
+        }
+    }
+
+    private func titleLine(_ title: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("bottom-sheet-large-row-title-\(item.id.uuidString)")
+            if let sessionTitle {
+                Text(sessionTitle)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(onOpenSession == nil ? Color.secondary : Color.accentColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: true, vertical: false)
             }
         }
     }
@@ -1036,11 +1067,15 @@ struct LargeWorkspaceTimerRowView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if let title = item.title {
-                        Text(title)
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .accessibilityIdentifier("bottom-sheet-large-row-title-\(item.id.uuidString)")
+                        if let onOpenSession, !isAlarmSounding {
+                            Button(action: onOpenSession) { titleLine(title) }
+                                .buttonStyle(.plain)
+                                .contentShape(Rectangle().inset(by: -12))
+                                .accessibilityHint("Open shooting session")
+                                .accessibilityIdentifier("timer-session-\(item.id.uuidString)")
+                        } else {
+                            titleLine(title)
+                        }
                     }
                     if let subtitle = item.identitySubtitle {
                         Text(subtitle)
@@ -1398,17 +1433,32 @@ struct FullScreenTimersWindow: View {
     var onStopAlarm: () -> Void = {}
     var cancellationNoticeModel: TimerCancellationNoticeModel?
 
+    var sessionWorkspace: TimerWorkspaceModel?
+    @State private var sessionPath: [UUID] = []
     var pendingRepeatReveal: UUID?
     var onRepeatMoveCompleted: (UUID) -> Void = { _ in }
     var onRepeatReveal: (UUID) -> Void = { _ in }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $sessionPath) {
             VStack(spacing: 0) {
                 timerList
+                if let sessionWorkspace, sessionWorkspace.sessions.hasPendingAssignments {
+                    Button("Retry session assignment") { sessionWorkspace.retrySessionAssignments() }
+                        .buttonStyle(.bordered)
+                        .padding(.bottom, 8)
+                }
                 // Give the notice its own space so it cannot intercept row actions.
                 if let cancellationNoticeModel {
                     TimerCancellationNoticeView(model: cancellationNoticeModel)
+                }
+            }
+            .navigationDestination(for: UUID.self) { sessionID in
+                if let sessionWorkspace {
+                    ShootingSessionDetailView(
+                        title: sessionWorkspace.sessions.title(for: sessionID),
+                        sections: sessionWorkspace.sessions.sections(for: sessionID, from: snapshot)
+                    )
                 }
             }
             .navigationTitle(BottomSheetWorkspaceCopy.title)
@@ -1425,6 +1475,7 @@ struct FullScreenTimersWindow: View {
                 }
             }
         }
+        .modifier(TimerStartFailureModifier(workspace: sessionWorkspace))
         .accessibilityIdentifier("full-screen-timers-window")
     }
 
@@ -1441,6 +1492,12 @@ struct FullScreenTimersWindow: View {
             onCollapse: onClose,
             soundingAlarmTimerID: soundingAlarmTimerID,
             onStopAlarm: onStopAlarm,
+            sessionWorkspace: sessionWorkspace,
+            onOpenSession: { timerID in
+                if let membership = sessionWorkspace?.sessions.membership(for: timerID) {
+                    sessionPath.append(membership.sessionID)
+                }
+            },
             pendingRepeatReveal: pendingRepeatReveal,
             onRepeatMoveCompleted: onRepeatMoveCompleted,
             onRepeatReveal: onRepeatReveal

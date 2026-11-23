@@ -502,6 +502,31 @@ The timer runtime layer carries no exposure-source concept on
 its own — those types describe which exposure computation produced
 the timer, which is a calculator-domain concern.
 
+### Automatic shooting sessions
+
+`TimerWorkspaceModel` owns a `ShootingSessionLedger` collaborator within the
+Timer slice. `ShootingSessionPolicy` (Core) performs the pure admission
+comparison. The ledger retains pending and confirmed memberships and the
+latest admission boundary; only confirmed memberships reach session links.
+Per-start `ShootingSessionActivity` captures the original start and timing
+policy so assignment retries and debug-mode changes do not rewrite history.
+
+`TimerRecordRepository` (Kit) encodes one archive containing the existing
+runtime and metadata collection shapes plus an independently decoded
+session collection. Its read/write closures are supplied by the app factory;
+production writes one file atomically. The old UserDefaults timer stores are
+read-only migration sources when the archive is absent, and remain intact
+until the new archive is retained. Missing session activity on legacy
+metadata means unassigned History, not retrospective grouping.
+
+New starts stage metadata before the runtime persists the proposed complete
+Timer state. The runtime publishes the new countdown and cancels paused
+notifications only after a successful save. Uncertain writes are checked
+against the same Timer ID before retry. An assignment-only write failure
+retains start activity for the next assignment and for relaunch recovery.
+The debug timing store changes future admission windows only; production
+uses the no-op store and exposes no debug menu.
+
 ### 1.7b Android managed camera list
 
 The Android counterpart of the camera-slot domain above. Android has no
@@ -618,7 +643,9 @@ selection. Only Apply commits it; Cancel and closing the screen drop it.
 | Active camera's Target Shutter duration | `TargetShutterModel` |
 | Per-camera persisted Target Shutter duration | `CameraSlotCalculatorSnapshot.targetShutterSeconds` |
 | Lock-screen Live Activity lifetime | `LockScreenTimerCoordinator` |
-| Timer persistence | `UserDefaultsTimerPersistenceStore` |
+| Timer and start-metadata persistence | `TimerRecordRepository`, with atomic file I/O supplied by `ViewModelDependencyFactory` |
+| Shooting-session memberships and admission cursor | `ShootingSessionLedger`, owned by `TimerWorkspaceModel` |
+| Debug session timing preference | `ShootingSessionTimingStoring` (debug-only app adapter) |
 | Calculator context persistence | `UserDefaultsCalculatorContextStore` |
 | Local notifications for completion | `TimerCompletionNotificationScheduler` |
 

@@ -99,6 +99,8 @@ final class TimerManager: ObservableObject, TimerManaging {
         runtime.currentDate
     }
 
+    var startSaveResult: TimerSnapshotSaveResult { runtime.startSaveResult }
+
     private let tickInterval: TimeInterval
     private let runtime: TimerRuntime
     private var timer: Timer?

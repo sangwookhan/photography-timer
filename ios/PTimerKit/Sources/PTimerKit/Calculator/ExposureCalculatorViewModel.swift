@@ -209,6 +209,11 @@ public final class ExposureCalculatorViewModel: ObservableObject {
     /// Combine subscription, and the record-replay smoke test all
     /// observe the same published collection.
     private let timerWorkspaceModel: TimerWorkspaceModel
+    public var shootingSessionWorkspace: TimerWorkspaceModel { timerWorkspaceModel }
+    public var shortenedSessionIntervals: Bool {
+        get { timerWorkspaceModel.shortenedSessionIntervals }
+        set { timerWorkspaceModel.shortenedSessionIntervals = newValue }
+    }
 
     public var timerCancellationNoticeModel: TimerCancellationNoticeModel {
         timerWorkspaceModel.cancellationNotice
@@ -282,7 +287,9 @@ public final class ExposureCalculatorViewModel: ObservableObject {
             metadataPersistenceStore: dependencies.metadataPersistenceStore,
             defaultName: { duration in
                 String(localized: "Timer - \(calculatorModel.calculator.formatShutter(duration))")
-            }
+            },
+            sessionStore: dependencies.shootingSessionStore,
+            timingStore: dependencies.shootingSessionTimingStore
         )
         let cameraSlotSessionModel = CameraSlotSessionModel()
         let customLibrary = dependencies.customFilmLibrary
@@ -365,6 +372,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
         // surface used by views.
         timerWorkspaceModel.$timers
             .assign(to: &$timers)
+        timerWorkspaceModel.$shortenedSessionIntervals.dropFirst()
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        timerWorkspaceModel.$startError.dropFirst()
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
         filmSelectionModel.$activeContext
             .assign(to: &$activeCalculatorContext)
         resolvedSlotSession.$activeSlotID
@@ -446,6 +459,12 @@ public final class ExposureCalculatorViewModel: ObservableObject {
 
         timerWorkspaceModel.$timers
             .assign(to: &$timers)
+        timerWorkspaceModel.$shortenedSessionIntervals.dropFirst()
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        timerWorkspaceModel.$startError.dropFirst()
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
         filmSelectionModel.$activeContext
             .assign(to: &$activeCalculatorContext)
         resolvedSlotSession.$activeSlotID

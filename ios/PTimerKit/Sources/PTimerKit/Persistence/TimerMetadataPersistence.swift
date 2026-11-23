@@ -10,11 +10,12 @@ import PTimerCore
 /// what the workspace renders and restores across relaunches.
 ///
 /// The schema is decoupled from `TimerState` persistence on purpose —
-/// `PersistentTimerSnapshot` (in `TimerManager.swift`) owns the
-/// state-machine fields; this snapshot owns the presentation tags.
-/// Both keep their `UserDefaults` keys stable.
+/// `PersistentTimerSnapshot` owns state-machine fields; this snapshot owns
+/// presentation and captured start-activity fields. Production retains both
+/// in one atomic archive. Legacy UserDefaults keys remain migration sources.
 public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
     public let id: UUID
+    public var sessionActivity: ShootingSessionActivity?
     public let order: Int
     public let name: String
     public let basisSummary: String
@@ -100,8 +101,10 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         baseShutterSeconds: Double? = nil,
         adjustedShutterSeconds: Double? = nil,
         filterSummary: [FilterSummaryEntry]? = nil,
-        filterReferenceText: String? = nil
+        filterReferenceText: String? = nil,
+        sessionActivity: ShootingSessionActivity? = nil
     ) {
+        self.sessionActivity = sessionActivity
         self.id = id
         self.order = order
         self.name = name
@@ -139,10 +142,12 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
         case adjustedShutterSeconds
         case filterSummary
         case filterReferenceText
+        case sessionActivity
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.sessionActivity = try container.decodeIfPresent(ShootingSessionActivity.self, forKey: .sessionActivity)
         self.id = try container.decode(UUID.self, forKey: .id)
         self.order = try container.decode(Int.self, forKey: .order)
         self.name = try container.decode(String.self, forKey: .name)
@@ -182,6 +187,7 @@ public struct PersistentTimerMetadataSnapshot: Codable, Equatable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(sessionActivity, forKey: .sessionActivity)
         try container.encode(id, forKey: .id)
         try container.encode(order, forKey: .order)
         try container.encode(name, forKey: .name)
@@ -278,6 +284,14 @@ public protocol TimerMetadataPersistenceStoring {
     func loadSnapshot() -> PersistentTimerMetadataCollection?
     func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection)
     func clearSnapshot()
+    func savePreparingSnapshot(_ snapshot: PersistentTimerMetadataCollection) -> TimerSnapshotSaveResult
+}
+
+public extension TimerMetadataPersistenceStoring {
+    func savePreparingSnapshot(_ snapshot: PersistentTimerMetadataCollection) -> TimerSnapshotSaveResult {
+        saveSnapshot(snapshot)
+        return .saved
+    }
 }
 
 public struct NoOpTimerMetadataPersistenceStore: TimerMetadataPersistenceStoring {

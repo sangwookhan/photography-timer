@@ -109,7 +109,7 @@ final class TimerWorkspaceModelTests: XCTestCase {
         }
 
         XCTAssertEqual(model.timers.count, 1)
-        XCTAssertEqual(store.savedSnapshots.count, 1)
+        XCTAssertEqual(store.savedSnapshots.last?.timers.map(\.id), [id])
 
         model.removeTimer(id: id)
 

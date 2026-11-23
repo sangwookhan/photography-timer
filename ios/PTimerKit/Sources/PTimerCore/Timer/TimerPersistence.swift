@@ -254,6 +254,19 @@ public protocol TimerPersistenceStoring {
     func loadSnapshot() -> PersistentTimerCollectionSnapshot?
     func saveSnapshot(_ snapshot: PersistentTimerCollectionSnapshot)
     func clearSnapshot()
+    func saveStartingSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) -> TimerSnapshotSaveResult
+    func verifyRetainedStart(id: UUID) -> TimerSnapshotSaveResult
+}
+
+public extension TimerPersistenceStoring {
+    func saveStartingSnapshot(_ snapshot: PersistentTimerCollectionSnapshot) -> TimerSnapshotSaveResult {
+        saveSnapshot(snapshot)
+        return .saved
+    }
+
+    func verifyRetainedStart(id: UUID) -> TimerSnapshotSaveResult {
+        loadSnapshot()?.timers.contains(where: { $0.id == id }) == true ? .saved : .failed
+    }
 }
 
 public struct NoOpTimerPersistenceStore: TimerPersistenceStoring {

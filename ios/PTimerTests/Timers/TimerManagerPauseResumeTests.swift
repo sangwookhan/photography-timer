@@ -109,9 +109,107 @@ final class TimerManagerPauseResumeTests: XCTestCase {
     }
 
     @MainActor
+    func testSessionEntryDoesNotIncreaseExistingTimerCellHeight() throws {
+        for width in [320.0, 393.0] {
+            for textSize in [DynamicTypeSize.large, .accessibility1] {
+                for status in [TimerStatus.running, .paused, .completed, .canceled] {
+                    let baseline = try timerRowHeight(status: status, width: width, textSize: textSize, localeID: "en")
+                    let session = try timerRowHeight(status: status, width: width, textSize: textSize,
+                                                    localeID: "en", sessionTitle: "Session 12")
+                    XCTAssertEqual(session, baseline, accuracy: 0.5, "Session entry changes \(status) cell at \(width)pt")
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testStartSaveFailureShowsExplanationWithoutStartingCountdown() throws {
+        struct RejectedMetadata: TimerMetadataPersistenceStoring {
+            func loadSnapshot() -> PersistentTimerMetadataCollection? { nil }
+            func saveSnapshot(_ snapshot: PersistentTimerMetadataCollection) {}
+            func clearSnapshot() {}
+            func savePreparingSnapshot(_ snapshot: PersistentTimerMetadataCollection) -> TimerSnapshotSaveResult { .failed }
+        }
+        let manager = TimerManager(tickInterval: 60)
+        let model = TimerWorkspaceModel(timerManager: manager, metadataPersistenceStore: RejectedMetadata(), defaultName: { _ in "Timer" })
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previous = scene.windows.first { $0.isKeyWindow }
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+        let host = UIHostingController(rootView: Text("Start test").modifier(TimerStartFailureModifier(workspace: model)))
+        defer {
+            window.isHidden = true
+            window.rootViewController = nil
+            previous?.makeKeyAndVisible()
+        }
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        host.view.layoutIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        XCTAssertNil(model.startTimer(duration: 60, name: "Failed start", basisSummary: ""))
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        XCTAssertTrue(manager.timers.isEmpty)
+        XCTAssertNotNil(model.startError)
+        XCTAssertNotNil(host.presentedViewController, "The failed start explanation must be presented")
+    }
+
+    @MainActor
+    func testShootingSessionWorkspaceRenderForReview() throws {
+        var now = Date(timeIntervalSince1970: 1_800_000_000)
+        let epoch = now
+        let manager = TimerManager(tickInterval: 60, dateProvider: { now })
+        let model = TimerWorkspaceModel(timerManager: manager, metadataPersistenceStore: NoOpTimerMetadataPersistenceStore(), defaultName: { _ in "Exposure" })
+        _ = model.startTimer(duration: 10800, name: "Camera A", basisSummary: "Base 1s · 10 stops")
+        now = epoch + 7200
+        _ = model.startTimer(duration: 2, name: "Camera B", basisSummary: "Base 1s · 1 stop")
+        now = epoch + 8400
+        let secondSessionTimer = try XCTUnwrap(model.startTimer(duration: 4200, name: "Camera B", basisSummary: "Base 1s · 12 stops"))
+        now = epoch + 12601
+        manager.reconcile(now: now)
+        _ = model.startTimer(duration: 300, name: "Camera A", basisSummary: "Base 1s · 8 stops")
+        let snapshot = BottomSheetWorkspaceSnapshot.make(
+            from: model.timers, formatRemaining: { BottomSheetWorkspaceSnapshot.compactDurationText($0) },
+            formatShutter: { String($0) }, ndNotationMode: .stops,
+            timeContext: { timer in timer.terminalAt?.formatted(date: .abbreviated, time: .shortened) },
+            compactCompletedSupplementaryText: { _ in nil }
+        )
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previousKeyWindow = scene.windows.first { $0.isKeyWindow }
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+        defer {
+            window.isHidden = true
+            window.rootViewController = nil
+            previousKeyWindow?.makeKeyAndVisible()
+        }
+        let workspace = FullScreenTimersWindow(
+            snapshot: snapshot, openFocus: .none, onPauseTimer: model.pauseTimer,
+            onResumeTimer: model.resumeTimer, onCancelTimer: model.cancelTimer,
+            onRemoveTimer: model.removeTimer, onCloneTimer: { _ in },
+            onClearCompletedTimers: model.clearCompletedTimers, onClose: {}, sessionWorkspace: model
+        )
+        let host = UIHostingController(rootView: workspace)
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        host.view.layoutIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        attachRepeatFrame("Session-History", view: host.view)
+        let membership = try XCTUnwrap(model.sessions.membership(for: secondSessionTimer))
+        let detail = ShootingSessionDetailView(title: model.sessions.title(for: membership.sessionID),
+                                             sections: model.sessions.sections(for: membership.sessionID, from: snapshot))
+        let detailHost = UIHostingController(rootView: NavigationStack { detail })
+        window.rootViewController = detailHost
+        detailHost.view.layoutIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        attachRepeatFrame("Session-Detail", view: detailHost.view)
+        XCTAssertEqual(model.sessions.sections(for: membership.sessionID, from: snapshot).flatMap(\.items).count, 2)
+    }
+
+    @MainActor
     private func timerRowHeight(
         status: TimerStatus, elapsed: TimeInterval = 0, width: CGFloat,
-        textSize: DynamicTypeSize, localeID: String, isAlarmSounding: Bool = false
+        textSize: DynamicTypeSize, localeID: String, isAlarmSounding: Bool = false,
+        sessionTitle: String? = nil
     ) throws -> CGFloat {
         let start = Date(timeIntervalSince1970: 1_000)
         let timer = RunningTimerItem(
@@ -133,7 +231,8 @@ final class TimerManagerPauseResumeTests: XCTestCase {
         )
         let item = try XCTUnwrap(snapshot.sections.first?.items.first)
         let row = LargeWorkspaceTimerRowView(
-            item: item, isFocused: false, onAction: { _ in }, isAlarmSounding: isAlarmSounding
+            item: item, isFocused: false, onAction: { _ in }, isAlarmSounding: isAlarmSounding,
+            sessionTitle: sessionTitle, onOpenSession: sessionTitle == nil ? nil : {}
         )
         let configuredRow = row
             .environment(\.dynamicTypeSize, textSize)

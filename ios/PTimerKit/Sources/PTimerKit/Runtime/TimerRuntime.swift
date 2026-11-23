@@ -23,6 +23,9 @@ public final class TimerRuntime: ObservableObject {
         dateProvider()
     }
 
+    public private(set) var startSaveResult: TimerSnapshotSaveResult = .saved
+    private var uncertainStart: (id: UUID, states: [TimerState])?
+
     private let dateProvider: () -> Date
     private let completionAlertService: TimerCompletionAlerting
     private let completionNotificationScheduler: TimerCompletionNotificationScheduling
@@ -65,30 +68,69 @@ public final class TimerRuntime: ObservableObject {
             return nil
         }
 
+        if timers.contains(where: { $0.id == id }) { return id }
         let now = dateProvider()
-        let endDate = now.addingTimeInterval(duration)
-        let previousTimers = timers.map { state in
-            guard state.status == .paused else { return state }
-            completionNotificationScheduler.cancelCompletionNotification(forTimerID: state.id)
-            return state.updatingStatus(at: now).canceled(at: now, reason: .newTimerStarted)
+        let isRetry = uncertainStart != nil
+        let candidate: [TimerState]
+        if let pending = uncertainStart {
+            guard pending.id == id else {
+                startSaveResult = .uncertain
+                return nil
+            }
+            switch persistenceStore.verifyRetainedStart(id: id) {
+            case .saved:
+                startSaveResult = .saved
+                candidate = pending.states
+            case .failed:
+                candidate = startCandidate(id: id, duration: duration, now: now)
+                startSaveResult = persistenceStore.saveStartingSnapshot(.init(timers: candidate))
+            case .uncertain:
+                startSaveResult = .uncertain
+                return nil
+            }
+        } else {
+            candidate = startCandidate(id: id, duration: duration, now: now)
+            startSaveResult = persistenceStore.saveStartingSnapshot(.init(timers: candidate))
         }
-        timers = previousTimers + [
-            TimerState(
-                id: id,
-                duration: duration,
-                startDate: now,
-                endDate: endDate,
-                pausedRemainingTime: nil,
-                pausedAt: nil,
-                status: .running
-            ),
-        ]
-        completionNotificationScheduler.requestAuthorizationIfNeeded()
-        if let timer = timers.last {
+        if startSaveResult == .uncertain {
+            startSaveResult = persistenceStore.verifyRetainedStart(id: id)
+        }
+        guard startSaveResult == .saved else {
+            uncertainStart = startSaveResult == .uncertain ? (id, candidate) : nil
+            return nil
+        }
+        uncertainStart = nil
+        let pausedIDs = timers.filter { $0.status == .paused }.map(\.id)
+        pausedIDs.forEach { completionNotificationScheduler.cancelCompletionNotification(forTimerID: $0) }
+        if isRetry {
+            let live = Dictionary(timers.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            timers = candidate.compactMap { state in
+                if state.id == id { return state.updatingStatus(at: now) }
+                guard let current = live[state.id] else { return nil }
+                return state.cancellationReason == .newTimerStarted ? state : current
+            }
+        } else {
+            timers = candidate
+        }
+        if timers != candidate { persistTimers() }
+        if let timer = timers.first(where: { $0.id == id }), timer.status == .running {
+            completionNotificationScheduler.requestAuthorizationIfNeeded()
             completionNotificationScheduler.scheduleCompletionNotification(for: timer)
         }
-        persistTimers()
         return id
+    }
+
+    private func startCandidate(id: UUID, duration: TimeInterval, now: Date) -> [TimerState] {
+        let previous = timers.map { state in
+            state.status == .paused
+                ? state.updatingStatus(at: now).canceled(at: now, reason: .newTimerStarted)
+                : state
+        }
+        return previous + [
+            TimerState(id: id, duration: duration, startDate: now,
+                       endDate: now.addingTimeInterval(duration), pausedRemainingTime: nil,
+                       pausedAt: nil, status: .running),
+        ]
     }
 
     public func pause(id: UUID) {
@@ -321,6 +363,7 @@ public final class TimerRuntime: ObservableObject {
     }
 
     private func persistTimers() {
+        guard uncertainStart == nil else { return }
         guard !timers.isEmpty else {
             persistenceStore.clearSnapshot()
             return

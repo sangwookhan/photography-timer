@@ -398,6 +398,9 @@ struct ExposureCalculatorScreen: View {
                 }
             }
             .animation(.easeInOut(duration: 0.16), value: isFilmSelectorPresented)
+            .modifier(TimerStartFailureModifier(
+                workspace: bottomSheetStateStore.isExpanded ? nil : viewModel.shootingSessionWorkspace
+            ))
             .fullScreenCover(isPresented: timersWindowBinding, onDismiss: { pendingRepeatReveal = nil }) {
                 FullScreenTimersWindow(
                     snapshot: bottomSheetSnapshotStore.snapshot,
@@ -426,6 +429,7 @@ struct ExposureCalculatorScreen: View {
                     soundingAlarmTimerID: alarmPlayer.soundingTimerID,
                     onStopAlarm: { alarmPlayer.stop() },
                     cancellationNoticeModel: viewModel.timerCancellationNoticeModel,
+                    sessionWorkspace: viewModel.shootingSessionWorkspace,
                     pendingRepeatReveal: pendingRepeatReveal,
                     onRepeatMoveCompleted: { id in
                         guard pendingRepeatReveal == id else { return }
@@ -931,7 +935,9 @@ private struct CameraSlotCalculatorPage: View {
                 onShowCameraManagement: pageState.isActive ? onShowCameraManagement : {},
                 showRequiredND: viewModel.showRequiredND,
                 onSetShowRequiredND: { viewModel.showRequiredND = $0 },
-                style: style
+                style: style,
+                shortenedSessionIntervals: viewModel.shortenedSessionIntervals,
+                onSetShortenedSessionIntervals: { viewModel.shortenedSessionIntervals = $0 }
             )
             // Header carries required visible content (camera title
             // and film selector), so it shares the priority of the
@@ -1193,6 +1199,9 @@ private struct HeaderView: View {
     let onSetShowRequiredND: (Bool) -> Void
     let style: ExposureWorkspaceMainLayoutStyle
 
+    var shortenedSessionIntervals = false
+    var onSetShortenedSessionIntervals: (Bool) -> Void = { _ in }
+
     /// Gates the destructive reset behind an explicit confirmation so a
     /// single accidental tap (Reset sits next to About) cannot wipe the
     /// slot's shooting setup. PTIMER-208.
@@ -1263,6 +1272,17 @@ private struct HeaderView: View {
                     Button("About", systemImage: "info.circle", action: onShowAbout)
                         .accessibilityHint("Opens app version, legal, support, and film data information")
                         .accessibilityIdentifier("about-ptimer-button")
+                    #if DEBUG
+                    Menu("Debug tools", systemImage: "ladybug") {
+                        Button(
+                            "Shorten session intervals",
+                            systemImage: shortenedSessionIntervals ? "checkmark.square" : "square"
+                        ) { onSetShortenedSessionIntervals(!shortenedSessionIntervals) }
+                        .menuActionDismissBehavior(.disabled)
+                        .accessibilityValue(shortenedSessionIntervals ? Text("On") : Text("Off"))
+                        .accessibilityIdentifier("debug-shorten-session-intervals")
+                    }
+                    #endif
                 } label: {
                     // Same glyph size as the About glyph it replaces, so
                     // the header keeps its height; the menu opens across

@@ -2,10 +2,53 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import XCTest
+import PTimerKit
 import PTimerCore
 @testable import PTimer
 
 final class TimerManagerPersistenceRestoreTests: XCTestCase {
+    @MainActor
+    func testAtomicRecordArchiveRetainsTimersAndSessionsAcrossRelaunch() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("records.json")
+        var now = Date(timeIntervalSince1970: 1000)
+        func repository() -> TimerRecordRepository {
+            TimerRecordRepository(read: {
+                guard FileManager.default.fileExists(atPath: file.path) else { return nil }
+                return try Data(contentsOf: file)
+            }, write: { data in
+                do { try data.write(to: file, options: .atomic); return .saved }
+                catch { return .uncertain }
+            })
+        }
+        let first = repository()
+        let manager = TimerManager(tickInterval: 60, dateProvider: { now }, persistenceStore: TimerRecordRuntimeStore(repository: first))
+        let workspace = TimerWorkspaceModel(timerManager: manager, metadataPersistenceStore: TimerRecordMetadataStore(repository: first), defaultName: { _ in "Timer" }, sessionStore: first)
+        let a = try XCTUnwrap(workspace.startTimer(duration: 900, name: "Saved exposure", basisSummary: "Base 1s"))
+        now += 10
+        workspace.pauseTimer(id: a)
+        let originalSession = try XCTUnwrap(workspace.sessions.membership(for: a)?.sessionID)
+        let second = repository()
+        let restoredManager = TimerManager(tickInterval: 60, dateProvider: { now }, persistenceStore: TimerRecordRuntimeStore(repository: second))
+        let restored = TimerWorkspaceModel(timerManager: restoredManager, metadataPersistenceStore: TimerRecordMetadataStore(repository: second), defaultName: { _ in "Timer" }, sessionStore: second)
+        XCTAssertEqual(restored.timers.map(\.id), [a])
+        XCTAssertEqual(restored.timers.first?.name, "Saved exposure")
+        XCTAssertEqual(restored.timers.first?.status, .paused)
+        XCTAssertEqual(restored.timers.first?.pausedRemainingTime, 890)
+        XCTAssertEqual(restored.sessions.membership(for: a)?.sessionID, originalSession)
+        now += 30
+        let b = try XCTUnwrap(restored.startTimer(duration: 120, name: "Next exposure", basisSummary: "Base 1s"))
+        let third = repository()
+        let againManager = TimerManager(tickInterval: 60, dateProvider: { now }, persistenceStore: TimerRecordRuntimeStore(repository: third))
+        let again = TimerWorkspaceModel(timerManager: againManager, metadataPersistenceStore: TimerRecordMetadataStore(repository: third), defaultName: { _ in "Timer" }, sessionStore: third)
+        XCTAssertEqual(Set(again.timers.map(\.id)), Set([a, b]))
+        XCTAssertEqual(again.timers.first(where: { $0.id == a })?.status, .canceled)
+        XCTAssertEqual(again.sessions.membership(for: a)?.sessionID, originalSession)
+        XCTAssertEqual(again.sessions.membership(for: b)?.sessionID, originalSession)
+    }
+
     @MainActor
     func testPersistedPausedSnapshotOmitsExpectedCompletionAt() throws {
         // Per Timer Spec §3.1, `expectedCompletionAt` is meaningful for

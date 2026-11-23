@@ -32,6 +32,7 @@ final class RuntimeBackedTimerManaging: TimerManaging {
     var timers: [TimerState] { runtime.timers }
     var timersPublisher: AnyPublisher<[TimerState], Never> { runtime.$timers.eraseToAnyPublisher() }
     var currentDate: Date { runtime.currentDate }
+    var startSaveResult: TimerSnapshotSaveResult { runtime.startSaveResult }
 
     init(
         tickInterval: TimeInterval = 0.1,

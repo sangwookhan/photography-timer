@@ -102,6 +102,9 @@
 		F221815D3D8C29084661F2CC /* FilterSourcePlusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2217D2F87BE218285DF72B3 /* FilterSourcePlusControl.swift */; };
 		F2219C060D65BFEE7277AF1D /* FilterSetManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221520C175BD2765DF70B50 /* FilterSetManagementView.swift */; };
 		F24300000000000000000001 /* FilmClassificationBadgeVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */; };
+		61ABB64D290E6D6033771073 /* UserDefaultsShootingSessionTimingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C462F55FE8558EF928BC8B9D /* UserDefaultsShootingSessionTimingStore.swift */; };
+		A0F5964B2EB3B92D2691704C /* ShootingSessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EAECFEAEF87A2904DBA2CCA /* ShootingSessionDetailView.swift */; };
+		62A729D51315057B729D2E98 /* TimerStartFailureModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 403269835073EA03F5A04EBF /* TimerStartFailureModifier.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +234,9 @@
 		F221C8C8D9B325A2CF487F9F /* UserDefaultsFilterInventoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsFilterInventoryStore.swift; sourceTree = "<group>"; };
 		F24300000000000000000002 /* FilmClassificationBadgeVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmClassificationBadgeVisibilityTests.swift; sourceTree = "<group>"; };
 		F2683D862F7A020F009BCD7F /* PTimer.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PTimer.xctestplan; sourceTree = "<group>"; };
+		C462F55FE8558EF928BC8B9D /* UserDefaultsShootingSessionTimingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsShootingSessionTimingStore.swift; sourceTree = "<group>"; };
+		5EAECFEAEF87A2904DBA2CCA /* ShootingSessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShootingSessionDetailView.swift; sourceTree = "<group>"; };
+		403269835073EA03F5A04EBF /* TimerStartFailureModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStartFailureModifier.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -396,6 +402,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000015 /* TimerManager.swift */,
+				C462F55FE8558EF928BC8B9D /* UserDefaultsShootingSessionTimingStore.swift */,
 				A0000000000000000000001E /* TimerCompletionNotificationScheduler.swift */,
 				A000000000000000000009A1 /* TimerAlarmAudioPlayer.swift */,
 				A0000000000000000000B0A1 /* SilentModeAdvisory.swift */,
@@ -471,6 +478,8 @@
 			isa = PBXGroup;
 			children = (
 				A000000000000000000000D1 /* BottomSheetWorkspaceShell.swift */,
+				403269835073EA03F5A04EBF /* TimerStartFailureModifier.swift */,
+				5EAECFEAEF87A2904DBA2CCA /* ShootingSessionDetailView.swift */,
 			);
 			path = Workspace;
 			sourceTree = "<group>";
@@ -691,6 +700,9 @@
 				A00000000000000000000102 /* ExposureCalculatorLayoutMetrics.swift in Sources */,
 				A00000000000000000000104 /* RunningTimerPanelView.swift in Sources */,
 				A00000000000000000000005 /* TimerManager.swift in Sources */,
+				62A729D51315057B729D2E98 /* TimerStartFailureModifier.swift in Sources */,
+				A0F5964B2EB3B92D2691704C /* ShootingSessionDetailView.swift in Sources */,
+				61ABB64D290E6D6033771073 /* UserDefaultsShootingSessionTimingStore.swift in Sources */,
 				A0000000000000000000000D /* TimerCompletionNotificationScheduler.swift in Sources */,
 				A000000000000000000009A0 /* TimerAlarmAudioPlayer.swift in Sources */,
 				A0000000000000000000B0A0 /* SilentModeAdvisory.swift in Sources */,

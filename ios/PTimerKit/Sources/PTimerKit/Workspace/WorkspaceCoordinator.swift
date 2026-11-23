@@ -40,7 +40,9 @@ public final class WorkspaceCoordinator: ObservableObject {
             metadataPersistenceStore: dependencies.metadataPersistenceStore,
             defaultName: { duration in
                 String(localized: "Timer - \(calculatorModel.calculator.formatShutter(duration))")
-            }
+            },
+            sessionStore: dependencies.shootingSessionStore,
+            timingStore: dependencies.shootingSessionTimingStore
         )
         // The slot session model is built before `FilmSelectionModel`
         // so the film-selection closure can read the active slot at

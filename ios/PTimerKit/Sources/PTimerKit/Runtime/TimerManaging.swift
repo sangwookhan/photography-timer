@@ -14,6 +14,7 @@ public protocol TimerManaging: AnyObject {
     var timers: [TimerState] { get }
     var timersPublisher: AnyPublisher<[TimerState], Never> { get }
     var currentDate: Date { get }
+    var startSaveResult: TimerSnapshotSaveResult { get }
 
     @discardableResult
     func start(id: UUID, duration: TimeInterval) -> UUID?
@@ -24,4 +25,8 @@ public protocol TimerManaging: AnyObject {
     func removeCompletedTimers()
     func reconcile(now: Date?)
     func acknowledgeCancellationNotices(ids: Set<UUID>)
+}
+
+public extension TimerManaging {
+    var startSaveResult: TimerSnapshotSaveResult { .saved }
 }

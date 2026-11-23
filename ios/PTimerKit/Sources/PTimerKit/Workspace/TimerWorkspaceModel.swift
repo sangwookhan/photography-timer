@@ -31,6 +31,14 @@ public final class TimerWorkspaceModel: ObservableObject {
     /// model mutates it via persistence + lifecycle paths.
     public private(set) var nextTimerOrder = 1
 
+    public let sessions: ShootingSessionLedger
+    @Published public var shortenedSessionIntervals = false {
+        didSet { timingStore.saveShortenedIntervals(shortenedSessionIntervals) }
+    }
+    private let timingStore: ShootingSessionTimingStoring
+    @Published public private(set) var startError: String?
+    private var pendingStart: (id: UUID, duration: TimeInterval)?
+
     public let cancellationNotice: TimerCancellationNoticeModel
     public let timerManager: any TimerManaging
 
@@ -51,8 +59,13 @@ public final class TimerWorkspaceModel: ObservableObject {
     public init(
         timerManager: any TimerManaging,
         metadataPersistenceStore: TimerMetadataPersistenceStoring,
-        defaultName: @escaping (TimeInterval) -> String
+        defaultName: @escaping (TimeInterval) -> String,
+        sessionStore: ShootingSessionStoring = NoOpShootingSessionStore(),
+        timingStore: ShootingSessionTimingStoring = NoOpShootingSessionTimingStore()
     ) {
+        self.timingStore = timingStore
+        self.shortenedSessionIntervals = timingStore.loadShortenedIntervals()
+        self.sessions = ShootingSessionLedger(store: sessionStore)
         self.cancellationNotice = TimerCancellationNoticeModel(timerManager: timerManager)
         self.timerManager = timerManager
         self.metadataPersistenceStore = metadataPersistenceStore
@@ -91,33 +104,47 @@ public final class TimerWorkspaceModel: ObservableObject {
         filterSummary: [FilterSummaryEntry]? = nil,
         filterReferenceText: String? = nil
     ) -> UUID? {
+        guard duration.isFinite, duration > 0 else { return nil }
+        startError = nil
+        let requestedID = pendingStart?.id ?? id
+        let requestedDuration = pendingStart?.duration ?? duration
         let order = nextTimerOrder
-        timerMetadata[id] = TimerMetadataEntry(
-            order: order,
-            name: name,
-            basisSummary: basisSummary,
-            cameraSlot: cameraSlot,
-            filmDisplayName: filmDisplayName,
-            filmProfileQualifier: filmProfileQualifier,
-            exposureSource: exposureSource,
-            isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
-            customProfileSummary: customProfileSummary,
-            selectedModelLabel: selectedModelLabel,
-            ndStops: ndStops,
-            baseShutterSeconds: baseShutterSeconds,
-            adjustedShutterSeconds: adjustedShutterSeconds,
-            filterSummary: filterSummary,
-            filterReferenceText: filterReferenceText
-        )
-
-        guard timerManager.start(id: id, duration: duration) != nil else {
-            timerMetadata.removeValue(forKey: id)
+        if pendingStart == nil {
+            timerMetadata[requestedID] = TimerMetadataEntry(
+                order: order,
+                name: name,
+                basisSummary: basisSummary,
+                cameraSlot: cameraSlot,
+                filmDisplayName: filmDisplayName,
+                filmProfileQualifier: filmProfileQualifier,
+                exposureSource: exposureSource,
+                isOutsideManufacturerGuidance: isOutsideManufacturerGuidance,
+                customProfileSummary: customProfileSummary,
+                selectedModelLabel: selectedModelLabel,
+                ndStops: ndStops,
+                baseShutterSeconds: baseShutterSeconds,
+                adjustedShutterSeconds: adjustedShutterSeconds,
+                filterSummary: filterSummary,
+                filterReferenceText: filterReferenceText,
+                sessionActivity: .init(
+                    startedAt: timerManager.currentDate,
+                    policy: shortenedSessionIntervals ? .shortened : .normal
+                )
+            )
+        }
+        let preparation = metadataPersistenceStore.savePreparingSnapshot(metadataSnapshot(nextOrder: order + 1))
+        guard preparation == .saved else {
+            handleStartFailure(id: requestedID, duration: requestedDuration, outcome: preparation)
             return nil
         }
-
+        guard timerManager.start(id: requestedID, duration: requestedDuration) != nil else {
+            handleStartFailure(id: requestedID, duration: requestedDuration, outcome: timerManager.startSaveResult)
+            return nil
+        }
+        pendingStart = nil
         nextTimerOrder += 1
         persistTimerMetadata()
-        return id
+        return requestedID
     }
 
     /// Starts a fresh timer from the source's full duration and captured
@@ -158,6 +185,27 @@ public final class TimerWorkspaceModel: ObservableObject {
             filterReferenceText: source.filterReferenceText
         )
     }
+
+    private func handleStartFailure(id: UUID, duration: TimeInterval, outcome: TimerSnapshotSaveResult) {
+        if outcome == .uncertain {
+            pendingStart = (id, duration)
+            startError = String(localized: "Timer start could not be confirmed. Try again to check the same timer.")
+        } else {
+            pendingStart = nil
+            timerMetadata.removeValue(forKey: id)
+            startError = String(localized: "Timer could not start because it could not be saved.")
+        }
+    }
+
+    public func dismissStartError() { startError = nil }
+
+    public func sessionLabel(for timerID: UUID) -> String {
+        if let membership = sessions.membership(for: timerID) { return sessions.title(for: membership.sessionID) }
+        return timerMetadata[timerID]?.sessionActivity == nil
+            ? String(localized: "Unassigned") : String(localized: "Session pending")
+    }
+
+    public func retrySessionAssignments() { syncTimers(with: timerManager.timers) }
 
     public func pauseTimer(id: UUID) {
         timerManager.pause(id: id)
@@ -267,7 +315,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                         baseShutterSeconds: entry.baseShutterSeconds,
                         adjustedShutterSeconds: entry.adjustedShutterSeconds,
                         filterSummary: entry.filterSummary,
-                        filterReferenceText: entry.filterReferenceText
+                        filterReferenceText: entry.filterReferenceText,
+                        sessionActivity: entry.sessionActivity
                     )
                 )
             }
@@ -280,8 +329,12 @@ public final class TimerWorkspaceModel: ObservableObject {
             return
         }
 
-        let snapshot = PersistentTimerMetadataCollection(
-            nextTimerOrder: nextTimerOrder,
+        metadataPersistenceStore.saveSnapshot(metadataSnapshot(nextOrder: nextTimerOrder))
+    }
+
+    private func metadataSnapshot(nextOrder: Int) -> PersistentTimerMetadataCollection {
+        PersistentTimerMetadataCollection(
+            nextTimerOrder: nextOrder,
             timers: timerMetadata
                 .map { id, metadata in
                     PersistentTimerMetadataSnapshot(
@@ -303,7 +356,8 @@ public final class TimerWorkspaceModel: ObservableObject {
                         baseShutterSeconds: metadata.baseShutterSeconds,
                         adjustedShutterSeconds: metadata.adjustedShutterSeconds,
                         filterSummary: metadata.filterSummary,
-                        filterReferenceText: metadata.filterReferenceText
+                        filterReferenceText: metadata.filterReferenceText,
+                        sessionActivity: metadata.sessionActivity
                     )
                 }
                 .sorted { lhs, rhs in
@@ -315,17 +369,27 @@ public final class TimerWorkspaceModel: ObservableObject {
                 }
         )
 
-        metadataPersistenceStore.saveSnapshot(snapshot)
     }
 
     private func syncTimers(with states: [TimerState]) {
-        let validIDs = Set(states.map(\.id))
+        var validIDs = Set(states.map(\.id))
+        if let pendingStart { validIDs.insert(pendingStart.id) }
         let originalCount = timerMetadata.count
         timerMetadata = timerMetadata.filter { validIDs.contains($0.key) }
         if timerMetadata.count != originalCount {
             persistTimerMetadata()
         }
         let referenceDate = timerManager.currentDate
+        for state in states {
+            if let activity = timerMetadata[state.id]?.sessionActivity,
+               activity.startedAt != state.startDate {
+                timerMetadata[state.id]?.sessionActivity = .init(startedAt: state.startDate, policy: activity.policy)
+            }
+        }
+        sessions.reconcile(activities: states.compactMap { state in
+            guard let metadata = timerMetadata[state.id], let activity = metadata.sessionActivity else { return nil }
+            return (state.id, metadata.order, activity)
+        })
 
         timers = states
             .map { state in
@@ -420,6 +484,7 @@ public final class TimerWorkspaceModel: ObservableObject {
 }
 
 private struct TimerMetadataEntry {
+    var sessionActivity: ShootingSessionActivity?
     let order: Int
     let name: String
     let basisSummary: String
@@ -451,8 +516,10 @@ private struct TimerMetadataEntry {
         baseShutterSeconds: TimeInterval? = nil,
         adjustedShutterSeconds: TimeInterval? = nil,
         filterSummary: [FilterSummaryEntry]? = nil,
-        filterReferenceText: String? = nil
+        filterReferenceText: String? = nil,
+        sessionActivity: ShootingSessionActivity? = nil
     ) {
+        self.sessionActivity = sessionActivity
         self.order = order
         self.name = name
         self.basisSummary = basisSummary
